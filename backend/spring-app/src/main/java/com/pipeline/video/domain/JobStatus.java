@@ -1,0 +1,17 @@
+package com.pipeline.video.domain;
+
+public enum JobStatus {
+    KEYWORD_RESOLVED,
+    SYNOPSIS_PENDING,
+    SCRIPT_PENDING,
+    ASSETS_GENERATING,
+    ASSET_REVIEW_PENDING,
+    ASSEMBLING,
+    PREVIEW_PENDING,
+    SHORTS_GENERATING,
+    SHORTS_PREVIEW_PENDING,
+    READY,
+    PUBLISHED,
+    BUDGET_BLOCKED,
+    FAILED
+}
