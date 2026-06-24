@@ -7,13 +7,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "approval")
+@Table(name = "asset")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Approval {
+public class Asset {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,16 +24,14 @@ public class Approval {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private GateName gate;
+    private AssetType assetType;
 
-    // APPROVED / REJECTED / AUTO_APPROVED
-    @Column(nullable = false)
-    private String result;
+    private String localPath;
+    private String s3Key;
 
-    private String approvedBy;
-
+    // 씬 인덱스, 시작/종료 시간, 텍스트, 프롬프트 등 자유 필드
     @Column(columnDefinition = "TEXT")
-    private String comment;
+    private String metaJson;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

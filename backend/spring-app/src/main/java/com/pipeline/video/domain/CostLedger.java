@@ -4,16 +4,17 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "approval")
+@Table(name = "cost_ledger")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Approval {
+public class CostLedger {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,18 +23,16 @@ public class Approval {
     @Column(nullable = false)
     private Long jobId;
 
-    @Enumerated(EnumType.STRING)
+    // 예: KLING_VIDEO, NANA_IMAGE, ELEVENLABS_TTS, CLAUDE_LLM, KEYWORD_TOOL
     @Column(nullable = false)
-    private GateName gate;
+    private String category;
 
-    // APPROVED / REJECTED / AUTO_APPROVED
     @Column(nullable = false)
-    private String result;
+    private BigDecimal amount;
 
-    private String approvedBy;
+    private String currency;     // USD or KRW
 
-    @Column(columnDefinition = "TEXT")
-    private String comment;
+    private String note;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

@@ -33,6 +33,13 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Swagger UI 허용
+                .requestMatchers(
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/v3/api-docs"
+                ).permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/**").hasAnyRole("ADMIN", "EDITOR")
@@ -43,7 +50,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 로컬 개발용 인메모리 유저 (나중에 DB 기반으로 교체)
     @Bean
     public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
         var admin = User.builder()

@@ -50,9 +50,13 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       APP_MODE: local
       APP_SECRET_KEY: video-pipeline-jwt-secret-key-must-be-32chars-minimum-2026!!
+      FASTAPI_URL: http://fastapi-workers:8001
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 500MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 500MB
     depends_on:
       - postgres
       - redis
+      - fastapi-workers
 
   fastapi-workers:
     build:
@@ -75,7 +79,9 @@ services:
       - minio
     volumes:
       - ./backend/fastapi-workers:/app
+      - fastapi_data:/app/data
 
 volumes:
   postgres_data:
   minio_data:
+  fastapi_data:

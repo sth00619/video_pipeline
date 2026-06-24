@@ -1,6 +1,5 @@
 package com.pipeline.video.service;
 
-import com.pipeline.video.domain.Autonomy;
 import com.pipeline.video.domain.JobStatus;
 import com.pipeline.video.domain.VideoJob;
 import com.pipeline.video.dto.CreateJobRequest;
@@ -25,13 +24,16 @@ public class JobService {
         VideoJob job = VideoJob.builder()
                 .title(request.getTitle())
                 .keyword(request.getKeyword())
-                .status(JobStatus.KEYWORD_RESOLVED)
+                .status(JobStatus.DRAFT)
                 .autonomy(request.getAutonomy())
+                .format(request.getFormat())
                 .renderProfile(request.getRenderProfile())
                 .makeShorts(request.isMakeShorts())
                 .shortsCount(request.getShortsCount())
+                .longformTargetMinutes(request.getLongformTargetMinutes())
                 .budgetCap(request.getBudgetCap())
                 .costAccumulated(BigDecimal.ZERO)
+                .policyJson(request.getPolicyJson())
                 .createdBy(username)
                 .build();
 
@@ -40,9 +42,7 @@ public class JobService {
 
     public List<JobResponse> getMyJobs(String username) {
         return jobRepository.findByCreatedByOrderByCreatedAtDesc(username)
-                .stream()
-                .map(JobResponse::from)
-                .collect(Collectors.toList());
+                .stream().map(JobResponse::from).collect(Collectors.toList());
     }
 
     public JobResponse getJob(Long id) {
@@ -53,16 +53,6 @@ public class JobService {
 
     public List<JobResponse> getAllJobs() {
         return jobRepository.findAll()
-                .stream()
-                .map(JobResponse::from)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public JobResponse updateStatus(Long id, JobStatus newStatus) {
-        VideoJob job = jobRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job not found: " + id));
-        job.setStatus(newStatus);
-        return JobResponse.from(jobRepository.save(job));
+                .stream().map(JobResponse::from).collect(Collectors.toList());
     }
 }
