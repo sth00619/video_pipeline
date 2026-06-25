@@ -1,9 +1,7 @@
 package com.pipeline.video.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pipeline.video.dto.ShortClipInfo;
-import com.pipeline.video.dto.ShortsAnalyzeResponse;
-import com.pipeline.video.dto.ShortsConfirmRequest;
+import com.pipeline.video.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,9 +31,9 @@ public class FastApiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /**
-     * 영상 업로드 → Whisper 분석
-     */
+    // ============================
+    // Phase 2 — 쇼츠 (analyze + cut)
+    // ============================
     public ShortsAnalyzeResponse analyzeShorts(MultipartFile file, int shortsCount, Long jobId)
             throws IOException {
         String urlStr = String.format("%s/workers/shorts/analyze?shorts_count=%d&job_id=%d",
@@ -73,17 +71,11 @@ public class FastApiClient {
             log.error("FastAPI analyze 오류: {} {}", code, body);
             throw new RuntimeException("FastAPI analyze 실패: " + code + " " + body);
         }
-
-        log.info("FastAPI analyze 성공: jobId={}", jobId);
         return objectMapper.readValue(body, ShortsAnalyzeResponse.class);
     }
 
-    /**
-     * 확정된 구간으로 자르기 — HttpURLConnection 사용 (RestTemplate 대신)
-     */
     @SuppressWarnings("unchecked")
-    public List<ShortClipInfo> cutShorts(Long jobId, String sourceVideoPath,
-                                          ShortsConfirmRequest request) {
+    public List<ShortClipInfo> cutShorts(Long jobId, String sourceVideoPath, ShortsConfirmRequest request) {
         try {
             String urlStr = String.format("%s/workers/shorts/cut", fastApiUrl);
 
@@ -102,33 +94,7 @@ public class FastApiClient {
             bodyMap.put("segments", segmentMaps);
             bodyMap.put("job_id", jobId);
 
-            String jsonBody = objectMapper.writeValueAsString(bodyMap);
-            log.info("FastAPI cut 호출: jobId={}, segments={}, body={}",
-                    jobId, request.getSegments().size(), jsonBody);
-
-            URL url = new URL(urlStr);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(10_000);
-            conn.setReadTimeout(600_000);
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("Accept", "application/json");
-
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
-                os.flush();
-            }
-
-            int code = conn.getResponseCode();
-            InputStream is = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
-            String responseBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-            log.info("FastAPI cut 응답: code={}, body={}", code, responseBody);
-
-            if (code < 200 || code >= 300) {
-                throw new RuntimeException("FastAPI cut 실패: " + code + " " + responseBody);
-            }
-
+            String responseBody = postJson(urlStr, bodyMap);
             Map<String, Object> response = objectMapper.readValue(responseBody, Map.class);
             List<Map<String, Object>> rawClips = (List<Map<String, Object>>) response.get("clips");
             if (rawClips == null) return List.of();
@@ -143,12 +109,80 @@ public class FastApiClient {
                 info.setOutputPath((String) m.get("output_path"));
                 clips.add(info);
             }
-            log.info("FastAPI cut 완료: {}개 클립 생성", clips.size());
             return clips;
-
         } catch (Exception e) {
             log.error("FastAPI cut 예외: {}", e.getMessage(), e);
             throw new RuntimeException("FastAPI cut 오류: " + e.getMessage(), e);
         }
+    }
+
+    // ============================
+    // Phase 3-1 — 키워드 탐색
+    // ============================
+    public KeywordSearchResponse searchKeywords(String seed, int limit, Long jobId) {
+        try {
+            String urlStr = String.format("%s/workers/keyword/search", fastApiUrl);
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("seed", seed);
+            bodyMap.put("limit", limit);
+            bodyMap.put("job_id", jobId);
+
+            String responseBody = postJson(urlStr, bodyMap);
+            return objectMapper.readValue(responseBody, KeywordSearchResponse.class);
+        } catch (Exception e) {
+            log.error("FastAPI keyword search 예외: {}", e.getMessage(), e);
+            throw new RuntimeException("키워드 탐색 오류: " + e.getMessage(), e);
+        }
+    }
+
+    // ============================
+    // Phase 3-2 — 스크립트 생성
+    // ============================
+    public ScriptGenerateResponse generateScript(Long jobId, String keyword, int targetMinutes) {
+        try {
+            String urlStr = String.format("%s/workers/script/generate", fastApiUrl);
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            bodyMap.put("keyword", keyword);
+            bodyMap.put("target_minutes", targetMinutes);
+
+            String responseBody = postJson(urlStr, bodyMap);
+            return objectMapper.readValue(responseBody, ScriptGenerateResponse.class);
+        } catch (Exception e) {
+            log.error("FastAPI script generate 예외: {}", e.getMessage(), e);
+            throw new RuntimeException("스크립트 생성 오류: " + e.getMessage(), e);
+        }
+    }
+
+    // ============================
+    // 공통 POST helper
+    // ============================
+    private String postJson(String urlStr, Map<String, Object> bodyMap) throws IOException {
+        String jsonBody = objectMapper.writeValueAsString(bodyMap);
+        log.info("FastAPI POST: {} body={}", urlStr, jsonBody);
+
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setConnectTimeout(10_000);
+        conn.setReadTimeout(600_000);
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept", "application/json");
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
+            os.flush();
+        }
+
+        int code = conn.getResponseCode();
+        InputStream is = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
+        String responseBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        log.info("FastAPI 응답: code={}, body length={}", code, responseBody.length());
+
+        if (code < 200 || code >= 300) {
+            throw new RuntimeException("FastAPI 호출 실패: " + code + " " + responseBody);
+        }
+        return responseBody;
     }
 }

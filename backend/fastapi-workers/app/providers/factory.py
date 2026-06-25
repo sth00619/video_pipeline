@@ -1,12 +1,15 @@
 from app.config import APP_MODE
-from app.providers.base import TranscriptProvider, LLMProvider, ImageProvider, VideoProvider, TTSProvider
+from app.providers.base import (
+    TranscriptProvider, LLMProvider, ImageProvider,
+    VideoProvider, TTSProvider, KeywordToolProvider
+)
 from app.providers.mock.transcript import WhisperTranscriptProvider
 from app.providers.mock.llm import MockLLMProvider
 from app.providers.mock.assets import MockImageProvider, MockVideoProvider, MockTTSProvider
+from app.providers.mock.keyword import MockKeywordToolProvider
 
 
 def get_transcript_provider() -> TranscriptProvider:
-    # local/prod 모두 faster-whisper 사용 (무료)
     return WhisperTranscriptProvider(model_size="base")
 
 
@@ -36,3 +39,10 @@ def get_tts_provider() -> TTSProvider:
         from app.providers.real.tts import ElevenLabsProvider
         return ElevenLabsProvider()
     return MockTTSProvider()
+
+
+def get_keyword_tool_provider() -> KeywordToolProvider:
+    if APP_MODE == "prod":
+        from app.providers.real.keyword import RealKeywordToolProvider
+        return RealKeywordToolProvider()
+    return MockKeywordToolProvider()
