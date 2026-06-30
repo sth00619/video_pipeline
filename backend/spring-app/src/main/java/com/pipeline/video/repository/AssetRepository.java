@@ -11,4 +11,7 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
     List<Asset> findByJobIdOrderByCreatedAtAsc(Long jobId);
     List<Asset> findByJobIdAndAssetType(Long jobId, AssetType assetType);
     Optional<Asset> findFirstByJobIdAndAssetType(Long jobId, AssetType assetType);
+
+    // 가장 최근 Asset (script 최종본 조회용)
+    Optional<Asset> findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(Long jobId, AssetType assetType);
 }

@@ -8,16 +8,19 @@ import java.util.List;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class KeywordSearchResponse {
+public class ImagesGenerateResponse {
     @JsonProperty("job_id")
     private Long jobId;
 
-    @JsonProperty("seed")
-    private String seed;
+    @JsonProperty("scene_count")
+    private Integer sceneCount;
 
-    @JsonProperty("category")
-    private String category;
+    @JsonProperty("gif_count")
+    private Integer gifCount;
 
-    @JsonProperty("candidates")
-    private List<KeywordItemDto> candidates;
+    @JsonProperty("scenes")
+    private List<SceneImageDto> scenes;
+
+    @JsonProperty("gifs")
+    private List<GifClipDto> gifs;
 }

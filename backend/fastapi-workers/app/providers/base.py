@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
@@ -21,11 +21,16 @@ class GeneratedAsset:
 
 
 @dataclass
-class KeywordItem:
-    keyword: str
-    search_volume: int
-    competition: str  # LOW / MEDIUM / HIGH
-    reason: str = ""
+class TrendingVideo:
+    """YouTube 영상 + 채널 통계 통합 모델"""
+    title: str
+    channel_title: str
+    video_id: str
+    views: int
+    subscribers: int
+    channel_avg_views: int
+    published_at: str
+    hours_since_publish: float
 
 
 @dataclass
@@ -66,15 +71,12 @@ class TTSProvider(ABC):
         pass
 
 
-class KeywordToolProvider(ABC):
-    """키워드 탐색 도구 추상화 (KeywordTool.io, YouTube Data API 등)"""
+class TrendingVideoAnalyzer(ABC):
+    """
+    트렌딩 영상 풀 + 통계 조회 추상화.
+    Phase 1 (Mock): 시뮬레이션
+    Phase 2 (Real): YouTube Data API v3 (search.list + videos.list + channels.list)
+    """
     @abstractmethod
-    def search(self, seed: str, limit: int = 5) -> list[KeywordItem]:
-        pass
-
-
-class ScriptProvider(ABC):
-    """스크립트 생성 추상화 (LLM 활용)"""
-    @abstractmethod
-    def generate(self, keyword: str, target_minutes: int) -> ScriptResult:
+    def collect(self, category: str, seed: str, limit: int = 30) -> list[TrendingVideo]:
         pass

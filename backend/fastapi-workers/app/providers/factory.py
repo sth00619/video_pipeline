@@ -1,12 +1,12 @@
 from app.config import APP_MODE
 from app.providers.base import (
     TranscriptProvider, LLMProvider, ImageProvider,
-    VideoProvider, TTSProvider, KeywordToolProvider
+    VideoProvider, TTSProvider, TrendingVideoAnalyzer
 )
 from app.providers.mock.transcript import WhisperTranscriptProvider
 from app.providers.mock.llm import MockLLMProvider
 from app.providers.mock.assets import MockImageProvider, MockVideoProvider, MockTTSProvider
-from app.providers.mock.keyword import MockKeywordToolProvider
+from app.providers.mock.trending import MockTrendingVideoAnalyzer
 
 
 def get_transcript_provider() -> TranscriptProvider:
@@ -41,8 +41,12 @@ def get_tts_provider() -> TTSProvider:
     return MockTTSProvider()
 
 
-def get_keyword_tool_provider() -> KeywordToolProvider:
+def get_trending_video_analyzer() -> TrendingVideoAnalyzer:
+    """
+    Phase 1 (Mock): 시뮬레이션 데이터
+    Phase 2 (Real): YouTube Data API v3 통합 예정
+    """
     if APP_MODE == "prod":
-        from app.providers.real.keyword import RealKeywordToolProvider
-        return RealKeywordToolProvider()
-    return MockKeywordToolProvider()
+        from app.providers.real.trending import YouTubeTrendingAnalyzer
+        return YouTubeTrendingAnalyzer()
+    return MockTrendingVideoAnalyzer()

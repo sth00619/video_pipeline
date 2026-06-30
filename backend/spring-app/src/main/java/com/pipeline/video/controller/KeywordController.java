@@ -11,12 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * Phase 3-1 키워드 탐색 API
- *
- * 1. POST /api/jobs/{id}/keyword/search   — seed 키워드 → 후보 N개
- * 2. POST /api/jobs/{id}/keyword/confirm  — 선택된 키워드 확정 → SCRIPT_PENDING
- */
 @RestController
 @RequestMapping("/api/jobs/{jobId}/keyword")
 @RequiredArgsConstructor
@@ -30,7 +24,13 @@ public class KeywordController {
             @RequestBody KeywordSearchRequest request,
             @AuthenticationPrincipal String username) {
         int limit = request.getLimit() != null ? request.getLimit() : 5;
-        return ResponseEntity.ok(keywordService.search(jobId, request.getSeedKeyword(), limit, username));
+        return ResponseEntity.ok(keywordService.search(
+                jobId,
+                request.getSeedKeyword(),
+                limit,
+                request.getCategory(),
+                username
+        ));
     }
 
     @PostMapping("/confirm")

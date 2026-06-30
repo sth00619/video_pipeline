@@ -11,6 +11,7 @@ public class JobResponse {
     private Long id;
     private String title;
     private String keyword;
+    private Category category;
     private JobStatus status;
     private Autonomy autonomy;
     private Format format;
@@ -32,6 +33,7 @@ public class JobResponse {
         r.setId(job.getId());
         r.setTitle(job.getTitle());
         r.setKeyword(job.getKeyword());
+        r.setCategory(job.getCategory());
         r.setStatus(job.getStatus());
         r.setAutonomy(job.getAutonomy());
         r.setFormat(job.getFormat());

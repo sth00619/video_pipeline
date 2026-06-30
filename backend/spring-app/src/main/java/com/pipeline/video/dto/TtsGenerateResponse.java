@@ -8,16 +8,19 @@ import java.util.List;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class KeywordSearchResponse {
+public class TtsGenerateResponse {
     @JsonProperty("job_id")
     private Long jobId;
 
-    @JsonProperty("seed")
-    private String seed;
+    @JsonProperty("audio_path")
+    private String audioPath;
 
-    @JsonProperty("category")
-    private String category;
+    @JsonProperty("voice_id")
+    private String voiceId;
 
-    @JsonProperty("candidates")
-    private List<KeywordItemDto> candidates;
+    @JsonProperty("total_duration")
+    private Double totalDuration;
+
+    @JsonProperty("chunks")
+    private List<TtsChunkDto> chunks;
 }
