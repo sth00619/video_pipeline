@@ -12,12 +12,13 @@ from app.workers.keyword_worker import KeywordWorker
 from app.workers.script_worker import ScriptWorker
 from app.workers.tts_worker import TtsWorker
 from app.workers.images_worker import ImagesWorker
+from app.workers.longform_worker import LongformWorker
 from app.config import APP_MODE
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AI Video Pipeline Workers", version="0.3.5")
+app = FastAPI(title="AI Video Pipeline Workers", version="0.4.0")
 
 DATA_DIR = Path("/app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -27,6 +28,7 @@ keyword_worker = None
 script_worker = None
 tts_worker = None
 images_worker = None
+longform_worker = None
 
 
 def get_shorts_worker():
@@ -58,6 +60,12 @@ def get_images_worker():
     if images_worker is None:
         images_worker = ImagesWorker()
     return images_worker
+
+def get_longform_worker():
+    global longform_worker
+    if longform_worker is None:
+        longform_worker = LongformWorker()
+    return longform_worker
 
 
 @app.get("/health")
@@ -198,6 +206,35 @@ def download_image(path: str):
     media = "image/png" if path.endswith(".png") else "image/gif"
     return FileResponse(path, media_type=media, filename=os.path.basename(path))
 
+
+
+
+# ============================
+# Phase 3-5A — 롱폼 조립
+# ============================
+class LongformGenerateRequest(BaseModel):
+    tts_meta: str
+    scenes_meta: str
+    gifs_meta: str
+    job_id: Optional[int] = 0
+
+@app.post("/workers/longform/generate")
+async def longform_generate(request: LongformGenerateRequest):
+    try:
+        return get_longform_worker().assemble(
+            tts_meta_json=request.tts_meta,
+            scenes_meta_json=request.scenes_meta,
+            gifs_meta_json=request.gifs_meta,
+            job_id=request.job_id or 0,
+        )
+    except Exception as e:
+        logger.exception("롱폼 조립 실패")
+        raise HTTPException(500, f"롱폼 조립 실패: {str(e)}")
+
+@app.get("/workers/longform/download")
+def download_longform(path: str):
+    if not os.path.exists(path): raise HTTPException(404, "파일 없음")
+    return FileResponse(path, media_type="video/mp4", filename=os.path.basename(path))
 
 # ============================
 # 디버깅

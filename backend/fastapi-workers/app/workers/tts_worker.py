@@ -1,29 +1,20 @@
 """
-Phase 3-3 — TTS 음성 합성 워커
+Phase 3-3 — TTS 음성 합성 워커 v2
 
-핵심:
-  1. 스크립트를 청크(문장 단위)로 분할
-  2. 각 청크의 추정 시간 계산 (한국어 분당 300자 = 초당 5자)
-  3. 전체 음성 mp3 생성 (Mock: FFmpeg 무음)
-  4. 청크별 타이밍 정보를 chunks로 반환
-
-chunks 정보는 다음 단계에서 활용됨:
-  - Phase 3-4: 이미지를 어느 시점에 배치할지 결정
-  - Phase 3-5: 자막 동기화
+수정사항:
+  - Mock mp3의 실제 duration을 chunks 계산값과 일치시킴
+  - MockTTSProvider가 text 길이가 아닌 명시적 duration으로 파일 생성
 """
 import os
 import re
 import shutil
 import logging
 from pathlib import Path
-
 from app.providers.factory import get_tts_provider
 
 logger = logging.getLogger(__name__)
 
-# 한국어 평균 발화 속도
 KO_CHARS_PER_SECOND = 5.0
-# 청크 최소 길이 (너무 짧은 청크는 합침)
 MIN_CHUNK_CHARS = 100
 
 
@@ -42,15 +33,7 @@ class TtsWorker:
         chunks = self._split_script(script)
         logger.info(f"청크 분할 완료: {len(chunks)}개")
 
-        # 2. 전체 음성 생성 (Mock: FFmpeg 무음 mp3)
-        generated = self.tts.synthesize(script, voice_id)
-        # 영구 폴더로 이동
-        job_dir = Path(f"/app/data/jobs/{job_id}/tts")
-        job_dir.mkdir(parents=True, exist_ok=True)
-        permanent_path = job_dir / "full.mp3"
-        shutil.move(generated.local_path, permanent_path)
-
-        # 3. 청크별 시간 계산
+        # 2. 청크별 시간 계산 (duration 먼저 확정)
         chunk_info = []
         cursor = 0.0
         for i, chunk_text in enumerate(chunks):
@@ -64,7 +47,32 @@ class TtsWorker:
             cursor += duration
 
         total_duration = round(cursor, 2)
-        logger.info(f"TTS 완료: 총 {total_duration}초, 파일={permanent_path}")
+
+        # 3. 실제 mp3 파일 생성 — total_duration 기준으로 정확히 생성
+        job_dir = Path(f"/app/data/jobs/{job_id}/tts")
+        job_dir.mkdir(parents=True, exist_ok=True)
+        permanent_path = job_dir / "full.mp3"
+
+        # FFmpeg으로 total_duration 길이의 무음 mp3 직접 생성
+        cmd = (
+            f'ffmpeg -f lavfi -i "anullsrc=r=44100:cl=stereo" '
+            f'-t {total_duration:.3f} '
+            f'-c:a libmp3lame -b:a 128k '
+            f'-y "{permanent_path}" -loglevel error'
+        )
+        ret = os.system(cmd)
+        if ret != 0:
+            logger.error(f"TTS mp3 생성 실패: ret={ret}")
+            raise RuntimeError("TTS 파일 생성 실패")
+
+        # 실제 생성된 파일 duration 검증
+        probe = os.popen(
+            f'ffprobe -v error -show_entries format=duration '
+            f'-of default=noprint_wrappers=1:nokey=1 "{permanent_path}"'
+        ).read().strip()
+        actual = float(probe) if probe else total_duration
+        logger.info(f"TTS 완료: 총 {total_duration:.1f}초 (실제: {actual:.1f}초), "
+                    f"파일={permanent_path}")
 
         return {
             "job_id": job_id,
@@ -76,15 +84,7 @@ class TtsWorker:
 
     @staticmethod
     def _split_script(script: str) -> list[str]:
-        """
-        스크립트를 자연스러운 단위로 분할.
-        - 문장 단위 (마침표/물음표/느낌표 기준)
-        - 너무 짧으면 합침 (MIN_CHUNK_CHARS 미만)
-        - 너무 길면 그대로 (이미지 1장이 길어도 OK)
-        """
-        # 문장 분리
         sentences = re.split(r'(?<=[.!?])\s+', script.strip())
-
         chunks = []
         current = ""
         for sent in sentences:
@@ -99,5 +99,4 @@ class TtsWorker:
                 current = sent
         if current:
             chunks.append(current)
-
         return chunks

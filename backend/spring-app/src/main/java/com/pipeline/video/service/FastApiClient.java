@@ -169,6 +169,26 @@ public class FastApiClient {
         }
     }
 
+
+    // ============================
+    // Phase 3-5A — 롱폼 조립
+    // ============================
+    public LongformGenerateResponse generateLongform(Long jobId, String ttsMetaJson,
+                                                       String scenesJson, String gifsJson) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            bodyMap.put("tts_meta", ttsMetaJson);
+            bodyMap.put("scenes_meta", scenesJson);
+            bodyMap.put("gifs_meta", gifsJson);
+            return objectMapper.readValue(
+                    postJson(fastApiUrl + "/workers/longform/generate", bodyMap),
+                    LongformGenerateResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("롱폼 조립 오류: " + e.getMessage(), e);
+        }
+    }
+
     // ============================
     // 공통 POST helper
     // ============================
