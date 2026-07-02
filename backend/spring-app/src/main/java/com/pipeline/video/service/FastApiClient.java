@@ -31,9 +31,7 @@ public class FastApiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ============================
     // Phase 2 — 쇼츠
-    // ============================
     public ShortsAnalyzeResponse analyzeShorts(MultipartFile file, int shortsCount, Long jobId)
             throws IOException {
         String urlStr = String.format("%s/workers/shorts/analyze?shorts_count=%d&job_id=%d",
@@ -47,7 +45,7 @@ public class FastApiClient {
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
         conn.setConnectTimeout(10_000);
-        conn.setReadTimeout(600_000);
+        conn.setReadTimeout(1_800_000); // 30분
         conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
         try (OutputStream os = conn.getOutputStream()) {
             String partHeader = "--" + boundary + "\r\n"
@@ -81,7 +79,6 @@ public class FastApiClient {
             bodyMap.put("source_video_path", sourceVideoPath);
             bodyMap.put("segments", segmentMaps);
             bodyMap.put("job_id", jobId);
-
             String responseBody = postJson(fastApiUrl + "/workers/shorts/cut", bodyMap);
             Map<String, Object> response = objectMapper.readValue(responseBody, Map.class);
             List<Map<String, Object>> rawClips = (List<Map<String, Object>>) response.get("clips");
@@ -102,7 +99,7 @@ public class FastApiClient {
         }
     }
 
-    // Phase 3-1
+    // Phase 3-1 — 키워드
     public KeywordSearchResponse searchKeywords(String seed, int limit, String category,
                                                 int outperformerCount, Long jobId) {
         try {
@@ -120,7 +117,7 @@ public class FastApiClient {
         }
     }
 
-    // Phase 3-2
+    // Phase 3-2 — 스크립트
     public ScriptGenerateResponse generateScript(Long jobId, String keyword, int targetMinutes,
                                                   String category) {
         try {
@@ -137,7 +134,7 @@ public class FastApiClient {
         }
     }
 
-    // Phase 3-3
+    // Phase 3-3 — TTS
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
@@ -152,9 +149,7 @@ public class FastApiClient {
         }
     }
 
-    // ============================
-    // Phase 3-4 — 이미지 + GIF 생성
-    // ============================
+    // Phase 3-4 — 이미지
     public ImagesGenerateResponse generateImages(Long jobId, String ttsMetaJson, String scriptMetaJson) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
@@ -169,10 +164,7 @@ public class FastApiClient {
         }
     }
 
-
-    // ============================
-    // Phase 3-5A — 롱폼 조립
-    // ============================
+    // Phase 3-5 — 롱폼
     public LongformGenerateResponse generateLongform(Long jobId, String ttsMetaJson,
                                                        String scenesJson, String gifsJson) {
         try {
@@ -190,7 +182,7 @@ public class FastApiClient {
     }
 
     // ============================
-    // 공통 POST helper
+    // 공통 POST helper — UTF-8 charset 명시
     // ============================
     private String postJson(String urlStr, Map<String, Object> bodyMap) throws IOException {
         String jsonBody = objectMapper.writeValueAsString(bodyMap);
@@ -201,11 +193,15 @@ public class FastApiClient {
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
         conn.setConnectTimeout(10_000);
-        conn.setReadTimeout(600_000);
-        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setReadTimeout(1_800_000); // 30분
+        // UTF-8 charset 명시 — 한글 깨짐 방지 핵심
+        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         conn.setRequestProperty("Accept", "application/json");
+
+        // UTF-8 바이트로 명시적 인코딩
+        byte[] bodyBytes = jsonBody.getBytes(StandardCharsets.UTF_8);
         try (OutputStream os = conn.getOutputStream()) {
-            os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
+            os.write(bodyBytes);
             os.flush();
         }
         int code = conn.getResponseCode();

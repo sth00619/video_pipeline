@@ -14,7 +14,7 @@ public class RestTemplateConfig {
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
         return builder
                 .connectTimeout(Duration.ofSeconds(10))
-                .readTimeout(Duration.ofMinutes(10))   // Whisper 처리 시간 고려
+                .readTimeout(Duration.ofMinutes(30))  // 롱폼 조립 여유 확보
                 .build();
     }
 }

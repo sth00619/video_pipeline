@@ -1,19 +1,24 @@
 """
-Phase 3-5A v3 — 롱폼 조립 + TTS 기반 자막 오버레이
+Phase 3-5 v5 — 롱폼 조립 (경제사냥꾼 스타일 자막)
 
-주식 플랫폼 특화:
-  - TTS chunks의 start/duration 기반 자막 동기화
-  - 자막 스타일: 하단 중앙, 반투명 박스, NanumGothic
-  - 자막이 없는 구간은 투명 처리
+자막 스타일 개선:
+  - 굵은 흰색 텍스트 + 검정 박스 배경 (Image 2 참조)
+  - 폰트 크기 72px (이전 52px → 큰 폰트)
+  - BorderStyle=3 (불투명 박스) → 가독성 최우선
+  - 최대 20자 1줄
+
+청크별 gTTS 덕분에 타임스탬프 정확도 대폭 향상
 """
 import json
 import os
+import re
 import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-NANUM_FONT = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+NANUM_BOLD = "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
+NANUM_REGULAR = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
 
 
 class LongformWorker:
@@ -50,13 +55,17 @@ class LongformWorker:
             img_path = scene.get("image_path", "")
             duration = float(scene.get("duration", 15.0))
             clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
+            section = scene.get("section", "default")
+            bg_color = {
+                "intro": "1a1a2e", "background": "16213e",
+                "data": "0f3460", "scenario": "1b1464",
+                "action": "0d3b2e", "conclusion": "1a1a2e",
+            }.get(section, "0d1b2a")
 
             if not os.path.exists(img_path):
                 cmd = (
-                    f'ffmpeg -f lavfi '
-                    f'-i "color=c=0f3460:s=1920x1080:r=30" '
-                    f'-t {duration:.3f} '
-                    f'-c:v libx264 -pix_fmt yuv420p '
+                    f'ffmpeg -f lavfi -i "color=c={bg_color}:s=1920x1080:r=30" '
+                    f'-t {duration:.3f} -c:v libx264 -pix_fmt yuv420p '
                     f'-y "{clip_path}" -loglevel error'
                 )
             else:
@@ -64,7 +73,7 @@ class LongformWorker:
                     f'ffmpeg -framerate 1 -loop 1 -i "{img_path}" '
                     f'-t {duration:.3f} '
                     f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
-                    f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:0f3460,'
+                    f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},'
                     f'setsar=1,fps=30" '
                     f'-c:v libx264 -preset fast -pix_fmt yuv420p '
                     f'-y "{clip_path}" -loglevel error'
@@ -72,7 +81,6 @@ class LongformWorker:
 
             ret = os.system(cmd)
             if ret != 0:
-                logger.warning(f"clip_{i:03d} 실패, 폴백 생성")
                 os.system(
                     f'ffmpeg -f lavfi -i "color=c=1a1a2e:s=1920x1080:r=30" '
                     f'-t {duration:.3f} -c:v libx264 -pix_fmt yuv420p '
@@ -86,54 +94,41 @@ class LongformWorker:
                 f.write(f"file '{cp}'\n")
 
         silent_video = str(temp_dir / "silent.mp4")
-        ret = os.system(
+        os.system(
             f'ffmpeg -f concat -safe 0 -i "{clip_list_path}" '
             f'-c:v libx264 -preset fast -pix_fmt yuv420p '
             f'-y "{silent_video}" -loglevel error'
         )
 
-        # 3. 자막 SRT 생성 (TTS chunks 기반)
-        srt_path = str(temp_dir / "subtitles.srt")
-        self._generate_srt(chunks, srt_path)
+        # 3. ASS 자막 생성 (경제사냥꾼 스타일)
+        ass_path = str(temp_dir / "subtitles.ass")
+        self._generate_ass(chunks, ass_path)
 
         # 4. 음성 + 자막 합성
-        font = NANUM_FONT if os.path.exists(NANUM_FONT) else ""
+        font_available = os.path.exists(NANUM_BOLD) or os.path.exists(NANUM_REGULAR)
+        ass_exists = os.path.exists(ass_path) and os.path.getsize(ass_path) > 200
+        audio_exists = os.path.exists(audio_path) and os.path.getsize(audio_path) > 0
 
-        if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
-            if font and os.path.exists(srt_path):
-                # 음성 + 자막 동시 적용
+        if audio_exists:
+            if font_available and ass_exists:
                 merge_cmd = (
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
-                    f'-vf "subtitles=\'{srt_path}\':'
-                    f'force_style=\'FontName=NanumGothic,'
-                    f'FontSize=22,'
-                    f'PrimaryColour=&Hffffff,'
-                    f'OutlineColour=&H000000,'
-                    f'BorderStyle=3,'
-                    f'BackColour=&H80000000,'
-                    f'Outline=2,'
-                    f'Shadow=0,'
-                    f'Alignment=2,'
-                    f'MarginV=40\'" '
+                    f'-vf "ass=\'{ass_path}\'" '
                     f'-c:v libx264 -preset fast -pix_fmt yuv420p '
                     f'-c:a aac -b:a 192k -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
             else:
-                # 자막 없이 음성만
                 merge_cmd = (
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
                     f'-c:v copy -c:a aac -b:a 192k -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
         else:
-            if font and os.path.exists(srt_path):
+            if font_available and ass_exists:
                 merge_cmd = (
                     f'ffmpeg -i "{silent_video}" '
-                    f'-vf "subtitles=\'{srt_path}\':'
-                    f'force_style=\'FontName=NanumGothic,FontSize=22,'
-                    f'PrimaryColour=&Hffffff,BorderStyle=3,'
-                    f'BackColour=&H80000000,Alignment=2,MarginV=40\'" '
+                    f'-vf "ass=\'{ass_path}\'" '
                     f'-c:v libx264 -preset fast -pix_fmt yuv420p '
                     f'-y "{output_path}" -loglevel error'
                 )
@@ -142,18 +137,19 @@ class LongformWorker:
 
         ret = os.system(merge_cmd)
         if ret != 0:
-            logger.error("자막 합성 실패, 자막 없이 재시도")
-            fallback = (
-                f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
-                f'-c:v copy -c:a aac -b:a 192k -shortest '
-                f'-y "{output_path}" -loglevel error'
-            )
-            os.system(fallback)
+            logger.error("자막 합성 실패, 폴백")
+            if audio_exists:
+                os.system(
+                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
+                    f'-c:v copy -c:a aac -shortest '
+                    f'-y "{output_path}" -loglevel error'
+                )
+            else:
+                os.system(f'cp "{silent_video}" "{output_path}"')
 
         if not os.path.exists(output_path):
             raise RuntimeError("롱폼 영상 생성 실패")
 
-        # 실제 duration 확인
         probe = os.popen(
             f'ffprobe -v error -show_entries format=duration '
             f'-of default=noprint_wrappers=1:nokey=1 "{output_path}"'
@@ -161,11 +157,10 @@ class LongformWorker:
         actual_duration = float(probe) if probe else total_duration
 
         file_size = os.path.getsize(output_path)
-        has_subtitles = font and os.path.exists(srt_path)
+        has_subtitles = font_available and ass_exists
         logger.info(f"롱폼 조립 완료: size={file_size/1024/1024:.1f}MB, "
                     f"actual={actual_duration:.0f}s, subtitles={has_subtitles}")
 
-        # temp 정리
         for cp in clip_paths:
             if os.path.exists(cp):
                 os.remove(cp)
@@ -178,36 +173,91 @@ class LongformWorker:
             "duration_seconds": round(actual_duration, 1),
             "scene_count": len(scenes),
             "gif_count": len(gifs),
-            "has_subtitles": bool(has_subtitles),
+            "has_subtitles": has_subtitles,
             "resolution": "1920x1080",
         }
 
-    def _generate_srt(self, chunks: list, srt_path: str):
-        """TTS chunks → SRT 자막 파일 생성"""
-        def to_srt_time(seconds: float) -> str:
-            h = int(seconds // 3600)
-            m = int((seconds % 3600) // 60)
-            s = int(seconds % 60)
-            ms = int((seconds % 1) * 1000)
-            return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+    def _generate_ass(self, chunks: list, ass_path: str):
+        """
+        ASS 자막 — 경제사냥꾼 스타일
+        - NanumGothicBold 72px (이전 52px → 더 큼)
+        - 검정 불투명 박스 배경 (BorderStyle=3)
+        - 흰색 굵은 텍스트
+        - 하단 중앙 배치 (Alignment=2)
+        - 최대 20자 1줄
+        """
+        font_name = "NanumGothicBold" if os.path.exists(NANUM_BOLD) else "NanumGothic"
 
-        with open(srt_path, "w", encoding="utf-8") as f:
-            for i, chunk in enumerate(chunks, 1):
-                start = chunk.get("start", 0)
-                duration = chunk.get("duration", 3.0)
-                end = start + duration
-                text = chunk.get("text", "").strip()
-                if not text:
-                    continue
-                # 자막 한 줄 최대 40자
-                if len(text) > 40:
-                    mid = len(text) // 2
-                    # 공백 기준으로 나누기
-                    split_at = text.rfind(" ", 0, mid) if " " in text[:mid] else mid
-                    text = text[:split_at] + "\n" + text[split_at:].strip()
+        header = f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 0
+ScaledBorderAndShadow: yes
 
-                f.write(f"{i}\n")
-                f.write(f"{to_srt_time(start)} --> {to_srt_time(end)}\n")
-                f.write(f"{text}\n\n")
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Main,{font_name},72,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,3,0,0,2,20,20,50,1
 
-        logger.info(f"SRT 자막 생성: {len(chunks)}개 항목")
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+"""
+        # 스타일 설명:
+        # Fontsize=72 → 이전 52에서 증가 (경제사냥꾼 수준)
+        # BorderStyle=3 → 불투명 박스 배경 (OutlineColour 무시, BackColour 사용)
+        # BackColour=&H80000000 → 반투명 검정 박스 (Alpha=80)
+        # Bold=-1 → 굵게
+        # Outline=0, Shadow=0 → 박스 모드에서 외곽선/그림자 없음
+        # Alignment=2 → 하단 중앙
+        # MarginV=50 → 하단 50px 여백
+
+        def to_ass_time(s: float) -> str:
+            h = int(s // 3600)
+            m = int((s % 3600) // 60)
+            sec = s % 60
+            return f"{h}:{m:02d}:{sec:05.2f}"
+
+        lines = [header]
+        for chunk in chunks:
+            text = chunk.get("text", "").strip()
+            if not text:
+                continue
+
+            start_sec = chunk.get("start", 0.0)
+            dur = chunk.get("duration", 3.0)
+            # 자막 표시 시간 = 청크 실제 duration의 92% (다음 자막과 약간 gap)
+            end_sec = start_sec + dur * 0.92
+
+            # 20자 제한 (의미 단위)
+            display = self._trim_to_20(text)
+
+            # 주식 수치 강조
+            display = self._highlight_stock_numbers(display)
+
+            start_str = to_ass_time(start_sec)
+            end_str = to_ass_time(end_sec)
+            lines.append(f"Dialogue: 0,{start_str},{end_str},Main,,0,0,0,,{display}")
+
+        # UTF-8-SIG 저장
+        with open(ass_path, "w", encoding="utf-8-sig") as f:
+            f.write("\n".join(lines))
+
+        logger.info(f"ASS 자막 생성: {len(chunks)}개 항목")
+
+    @staticmethod
+    def _trim_to_20(text: str) -> str:
+        if len(text) <= 20:
+            return text
+        trimmed = text[:20]
+        last_space = trimmed.rfind(' ')
+        if last_space > 12:
+            return trimmed[:last_space]
+        return trimmed
+
+    @staticmethod
+    def _highlight_stock_numbers(text: str) -> str:
+        """주식 수치 노란색 강조"""
+        text = re.sub(r'([+-]?\d+\.?\d*퍼센트)', r'{\\c&H00FFFF&}\1{\\c&HFFFFFF&}', text)
+        text = re.sub(r'(\d+포인트)', r'{\\c&H00FFFF&}\1{\\c&HFFFFFF&}', text)
+        text = re.sub(r'(\d+(?:억|만|천)?(?:원|달러))', r'{\\c&H00FFFF&}\1{\\c&HFFFFFF&}', text)
+        return text
