@@ -81,6 +81,17 @@ services:
       - ./backend/fastapi-workers:/app
       - fastapi_data:/app/data
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pipeline_frontend
+    restart: unless-stopped
+    ports:
+      - '3000:80'
+    depends_on:
+      - spring-app
+
 volumes:
   postgres_data:
   minio_data:
