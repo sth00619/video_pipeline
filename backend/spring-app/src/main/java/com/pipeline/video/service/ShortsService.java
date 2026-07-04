@@ -1,11 +1,12 @@
 package com.pipeline.video.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pipeline.video.domain.*;
 import com.pipeline.video.dto.ShortClipInfo;
 import com.pipeline.video.dto.ShortsAnalyzeResponse;
 import com.pipeline.video.dto.ShortsConfirmRequest;
+import com.pipeline.video.dto.ShortsSegmentDto;
 import com.pipeline.video.repository.AssetRepository;
 import com.pipeline.video.repository.VideoJobRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,18 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.io.File;
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.*;
 
-/**
- * Phase 2-A + 2-B 통합 ShortsService.
- *
- *  - analyze(): Whisper 분석. 자율성 정책에 따라 AUTO 모드면 confirm까지 자동 호출.
- *  - confirm(): 확정 구간으로 자르기. AUTO/GUIDED-skipped 라면 SHORTS_PREVIEW도 자동 승인.
- *
- *  Mock 단계라 모든 비용은 $0이지만 CostService.record() 흐름은 갖춰둠 (Phase 3 실제 비용 발생 시 동작).
- */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -34,124 +27,117 @@ public class ShortsService {
     private final VideoJobRepository jobRepository;
     private final AssetRepository assetRepository;
     private final FastApiClient fastApiClient;
-    private final GateService gateService;
-    private final AutonomyService autonomyService;
     private final CostService costService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // ============================
+    // AUTO/GUIDED: Whisper 분석
+    // ============================
     @Transactional
-    public ShortsAnalyzeResponse analyze(Long jobId, MultipartFile file, int shortsCount, String username)
-            throws IOException {
+    public ShortsAnalyzeResponse analyze(Long jobId, MultipartFile file,
+                                          int shortsCount, String username) throws Exception {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        log.info("쇼츠 분석 시작: jobId={}, count={}, autonomy={}",
-                jobId, shortsCount, job.getAutonomy());
+        log.info("쇼츠 분석 시작: jobId={}, count={}, file={}",
+                jobId, shortsCount, file.getOriginalFilename());
 
-        // FastAPI 호출
         ShortsAnalyzeResponse result = fastApiClient.analyzeShorts(file, shortsCount, jobId);
 
-        // 비용 기록 (Mock $0, Phase 3에서 실제 가격)
-        costService.record(jobId, "WHISPER_TRANSCRIBE",
-                BigDecimal.ZERO, "USD", "쇼츠 분석용 Whisper 처리");
-
-        // 작업 상태 업데이트
         job.setSourceVideoPath(result.getSourceVideoPath());
-        job.setMakeShorts(true);
-        job.setShortsCount(shortsCount);
         job.setStatus(JobStatus.SHORTS_SEGMENTS_PENDING);
         jobRepository.save(job);
 
-        // Asset 저장
-        saveAsset(jobId, AssetType.SOURCE_VIDEO, result.getSourceVideoPath(),
-                buildSourceMeta(file));
-        saveAsset(jobId, AssetType.TRANSCRIPT, null, safeJson(result));
-
-        // 자율성 정책: AUTO 모드면 즉시 confirm까지 자동 실행
-        if (autonomyService.isAuto(job) && result.getSuggestedSegments() != null
-                && !result.getSuggestedSegments().isEmpty()) {
-            log.info("AUTO 모드 — 제안 구간으로 즉시 confirm 자동 호출");
-            ShortsConfirmRequest autoReq = new ShortsConfirmRequest();
-            autoReq.setSegments(result.getSuggestedSegments());
-            confirm(jobId, autoReq, "AUTO");
-        }
-
+        costService.record(jobId, "WHISPER_STT", BigDecimal.ZERO, "USD", "쇼츠 분석");
+        log.info("쇼츠 분석 완료: jobId={}", jobId);
         return result;
     }
 
+    // ============================
+    // MANUAL: 분석 없이 직접 구간 → 쇼츠 생성
+    // ============================
+    @Transactional
+    public List<ShortClipInfo> cutDirect(Long jobId, MultipartFile file,
+                                          String segmentsJson, String username) throws Exception {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+
+        log.info("MANUAL 쇼츠 직접 생성: jobId={}", jobId);
+
+        // 영상 저장 (/app/data/jobs/:id/ — fastapi_data 볼륨)
+        String dir = "/app/data/jobs/" + jobId;
+        new File(dir).mkdirs();
+        String sourcePath = dir + "/source_manual.mp4";
+        file.transferTo(new File(sourcePath));
+        job.setSourceVideoPath(sourcePath);
+
+        // JSON 구간 파싱 → ShortsSegmentDto 리스트
+        List<Map<String, Object>> segMaps = objectMapper.readValue(
+                segmentsJson, new TypeReference<>() {});
+
+        ShortsConfirmRequest req = new ShortsConfirmRequest();
+        List<ShortsSegmentDto> segs = new ArrayList<>();
+        for (int i = 0; i < segMaps.size(); i++) {
+            Map<String, Object> m = segMaps.get(i);
+            ShortsSegmentDto s = new ShortsSegmentDto();
+            s.setIndex(i + 1);
+            s.setText(m.getOrDefault("label", "구간 " + (i + 1)).toString());
+            s.setStart(((Number) m.get("start")).doubleValue());
+            s.setEnd(((Number) m.get("end")).doubleValue());
+            segs.add(s);
+        }
+        req.setSegments(segs);
+
+        List<ShortClipInfo> clips = fastApiClient.cutShorts(jobId, sourcePath, req);
+        saveClips(jobId, clips);
+
+        job.setStatus(JobStatus.READY);
+        jobRepository.save(job);
+        costService.record(jobId, "FFMPEG_CUT", BigDecimal.ZERO, "USD",
+                "MANUAL 쇼츠 " + clips.size() + "개");
+
+        log.info("MANUAL 쇼츠 생성 완료: {}개", clips.size());
+        return clips;
+    }
+
+    // ============================
+    // AUTO/GUIDED: 구간 확정 → 쇼츠 생성
+    // ============================
     @Transactional
     public List<ShortClipInfo> confirm(Long jobId, ShortsConfirmRequest request, String username) {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.SHORTS_SEGMENTS_PENDING) {
-            throw new IllegalStateException(
-                    "쇼츠 구간 확정은 SHORTS_SEGMENTS_PENDING 상태에서만 가능. 현재: " + job.getStatus());
-        }
-        if (job.getSourceVideoPath() == null) {
-            throw new IllegalStateException("원본 영상 경로 없음. analyze를 먼저 호출하세요.");
-        }
+        String sourcePath = job.getSourceVideoPath();
+        if (sourcePath == null || sourcePath.isBlank())
+            throw new IllegalStateException("원본 영상 경로 없음. 먼저 분석을 실행하세요.");
 
-        // 게이트 통과 (자율성 정책상 자동/수동 자동 판정)
-        gateService.approve(jobId, GateName.SHORTS_SEGMENTS, username, "구간 확정");
+        log.info("쇼츠 확정: jobId={}, segments={}개",
+                jobId, request.getSegments().size());
 
-        // FastAPI cut 호출
-        log.info("쇼츠 자르기 시작: jobId={}, segments={}", jobId, request.getSegments().size());
-        List<ShortClipInfo> clips = fastApiClient.cutShorts(jobId, job.getSourceVideoPath(), request);
+        List<ShortClipInfo> clips = fastApiClient.cutShorts(jobId, sourcePath, request);
+        saveClips(jobId, clips);
 
-        // 비용 기록 (Mock $0)
-        costService.record(jobId, "FFMPEG_CUT",
-                BigDecimal.ZERO, "USD", "쇼츠 자르기 + 9:16 변환");
-
-        // Asset 저장
-        for (ShortClipInfo clip : clips) {
-            saveAsset(jobId, AssetType.SHORT_CLIP, clip.getOutputPath(), safeJson(clip));
-        }
-
-        // 자르기 완료 → 미리보기 대기
-        job.setStatus(JobStatus.SHORTS_PREVIEW_PENDING);
+        job.setStatus(JobStatus.READY);
         jobRepository.save(job);
-        log.info("쇼츠 {}개 생성 완료: jobId={}", clips.size(), jobId);
 
-        // 자율성 정책: AUTO 모드면 SHORTS_PREVIEW 게이트도 자동 승인 → READY
-        if (autonomyService.shouldAutoApprove(job, GateName.SHORTS_PREVIEW)) {
-            gateService.approve(jobId, GateName.SHORTS_PREVIEW, "AUTO",
-                    "자율성 정책에 의한 미리보기 자동 승인");
-        }
-
+        log.info("쇼츠 확정 완료: {}개", clips.size());
         return clips;
     }
 
-    public List<Asset> getShortsAssets(Long jobId) {
-        return assetRepository.findByJobIdAndAssetType(jobId, AssetType.SHORT_CLIP);
-    }
-
-    // ============================
-    // helpers
-    // ============================
-    private void saveAsset(Long jobId, AssetType type, String localPath, String metaJson) {
-        Asset asset = Asset.builder()
-                .jobId(jobId)
-                .assetType(type)
-                .localPath(localPath)
-                .metaJson(metaJson)
-                .build();
-        assetRepository.save(asset);
-    }
-
-    private String buildSourceMeta(MultipartFile file) {
-        return safeJson(java.util.Map.of(
-                "originalFilename", file.getOriginalFilename() == null ? "" : file.getOriginalFilename(),
-                "size", file.getSize(),
-                "contentType", file.getContentType() == null ? "" : file.getContentType()
-        ));
-    }
-
-    private String safeJson(Object obj) {
-        try {
-            return objectMapper.writeValueAsString(obj);
-        } catch (JsonProcessingException e) {
-            return "{}";
+    private void saveClips(Long jobId, List<ShortClipInfo> clips) {
+        for (ShortClipInfo clip : clips) {
+            try {
+                Asset asset = Asset.builder()
+                        .jobId(jobId)
+                        .assetType(AssetType.SHORT_CLIP)
+                        .localPath(clip.getOutputPath())
+                        .metaJson(objectMapper.writeValueAsString(clip))
+                        .build();
+                assetRepository.save(asset);
+            } catch (Exception e) {
+                log.error("Asset 저장 실패: {}", e.getMessage());
+            }
         }
     }
 }

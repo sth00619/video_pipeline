@@ -1,0 +1,48 @@
+import apiClient from './client'
+
+export const jobsApi = {
+  list: () => apiClient.get('/jobs').then(r => r.data),
+  myList: () => apiClient.get('/jobs/my').then(r => r.data),
+  get: (id) => apiClient.get(`/jobs/${id}`).then(r => r.data),
+  create: (data) => apiClient.post('/jobs', data).then(r => r.data),
+
+  // Assets — 페이지 재진입 시 서버 상태 복원
+  assets: (id, type) => {
+    const url = type ? `/jobs/${id}/assets?type=${type}` : `/jobs/${id}/assets`
+    return apiClient.get(url).then(r => r.data)
+  },
+
+  // 키워드
+  searchKeyword: (id, seed, limit = 5) =>
+    apiClient.post(`/jobs/${id}/keyword/search`, { seedKeyword: seed, limit }).then(r => r.data),
+  confirmKeyword: (id, keyword) =>
+    apiClient.post(`/jobs/${id}/keyword/confirm`, { selectedKeyword: keyword }).then(r => r.data),
+
+  // 스크립트
+  generateScript: (id) => apiClient.post(`/jobs/${id}/script/generate`).then(r => r.data),
+  confirmScript: (id, script) =>
+    apiClient.post(`/jobs/${id}/script/confirm`, { finalScript: script }).then(r => r.data),
+
+  // TTS
+  generateTts: (id) =>
+    apiClient.post(`/jobs/${id}/tts/generate`, { voiceId: 'default_ko' }).then(r => r.data),
+  confirmTts: (id) => apiClient.post(`/jobs/${id}/tts/confirm`, {}).then(r => r.data),
+
+  // 이미지
+  generateImages: (id) => apiClient.post(`/jobs/${id}/images/generate`).then(r => r.data),
+  confirmImages: (id) => apiClient.post(`/jobs/${id}/images/confirm`, {}).then(r => r.data),
+
+  // 롱폼
+  generateLongform: (id) => apiClient.post(`/jobs/${id}/longform/generate`).then(r => r.data),
+  confirmLongform: (id) => apiClient.post(`/jobs/${id}/longform/confirm`, {}).then(r => r.data),
+
+  // 게이트
+  approvals: (id) => apiClient.get(`/jobs/${id}/approvals`).then(r => r.data),
+  approve: (id, gate, comment = '') =>
+    apiClient.post(`/jobs/${id}/gates/${gate}/approve`, { comment }).then(r => r.data),
+  reject: (id, gate, comment = '') =>
+    apiClient.post(`/jobs/${id}/gates/${gate}/reject`, { comment }).then(r => r.data),
+
+  // 비용
+  costs: (id) => apiClient.get(`/jobs/${id}/costs/summary`).then(r => r.data),
+}

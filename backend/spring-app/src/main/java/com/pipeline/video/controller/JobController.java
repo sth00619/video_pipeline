@@ -1,7 +1,10 @@
 package com.pipeline.video.controller;
 
+import com.pipeline.video.domain.Asset;
+import com.pipeline.video.domain.AssetType;
 import com.pipeline.video.dto.CreateJobRequest;
 import com.pipeline.video.dto.JobResponse;
+import com.pipeline.video.repository.AssetRepository;
 import com.pipeline.video.service.JobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +20,7 @@ import java.util.List;
 public class JobController {
 
     private final JobService jobService;
+    private final AssetRepository assetRepository;
 
     @PostMapping
     public ResponseEntity<JobResponse> createJob(
@@ -26,8 +30,7 @@ public class JobController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<JobResponse>> getMyJobs(
-            @AuthenticationPrincipal String username) {
+    public ResponseEntity<List<JobResponse>> getMyJobs(@AuthenticationPrincipal String username) {
         return ResponseEntity.ok(jobService.getMyJobs(username));
     }
 
@@ -40,5 +43,24 @@ public class JobController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<JobResponse>> getAllJobs() {
         return ResponseEntity.ok(jobService.getAllJobs());
+    }
+
+    /**
+     * Asset 조회 — 페이지 재진입 시 서버 상태 복원용
+     * GET /api/jobs/{id}/assets?type=KEYWORD
+     */
+    @GetMapping("/{id}/assets")
+    public ResponseEntity<List<Asset>> getAssets(
+            @PathVariable Long id,
+            @RequestParam(required = false) String type) {
+        if (type != null) {
+            try {
+                AssetType assetType = AssetType.valueOf(type.toUpperCase());
+                return ResponseEntity.ok(assetRepository.findByJobIdAndAssetType(id, assetType));
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().build();
+            }
+        }
+        return ResponseEntity.ok(assetRepository.findByJobIdOrderByCreatedAtAsc(id));
     }
 }
