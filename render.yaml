@@ -1,0 +1,94 @@
+services:
+  # 1. PostgreSQL 데이터베이스
+  - type: db
+    name: pipeline-postgres
+    databaseName: ai_video_pipeline
+    user: pipeline_user
+    plan: free
+
+  # 2. Redis
+  - type: redis
+    name: pipeline-redis
+    plan: free
+    ipAllowList: [] # Render 내부 통신만 허용
+
+  # 3. FastAPI Workers (파이썬)
+  - type: web
+    name: pipeline-fastapi
+    env: docker
+    repo: https://github.com/sth00619/video_pipeline
+    rootDir: backend/fastapi-workers
+    plan: free
+    envVars:
+      - key: APP_MODE
+        value: production
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: pipeline-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: pipeline-redis
+          property: port
+      - key: ANTHROPIC_API_KEY
+        sync: false # Render 대시보드에서 직접 입력하도록 유도
+      - key: FINNHUB_API_KEY
+        value: d951j4pr01qq8ms6uaa0d951j4pr01qq8ms6uaag
+
+  # 4. Spring Boot 백엔드 (자바)
+  - type: web
+    name: pipeline-spring
+    env: docker
+    repo: https://github.com/sth00619/video_pipeline
+    rootDir: backend/spring-app
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://${db.host}:${db.port}/${db.name}
+      - key: SPRING_DATASOURCE_USERNAME
+        value: pipeline_user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromService:
+          type: db
+          name: pipeline-postgres
+          property: password
+      - key: SPRING_DATA_REDIS_HOST
+        fromService:
+          type: redis
+          name: pipeline-redis
+          property: host
+      - key: SPRING_DATA_REDIS_PORT
+        fromService:
+          type: redis
+          name: pipeline-redis
+          property: port
+      - key: APP_SECRET_KEY
+        value: video-pipeline-jwt-secret-key-must-be-32chars-minimum-2026!!
+      - key: FASTAPI_URL
+        fromService:
+          type: web
+          name: pipeline-fastapi
+          property: url
+      - key: SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE
+        value: 500MB
+      - key: SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE
+        value: 500MB
+      - key: SERVER_PORT
+        value: 8080
+
+  # 5. Frontend (리액트 Nginx)
+  - type: web
+    name: pipeline-frontend
+    env: docker
+    repo: https://github.com/sth00619/video_pipeline
+    rootDir: frontend
+    plan: free
+    envVars:
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: pipeline-spring
+          property: url
