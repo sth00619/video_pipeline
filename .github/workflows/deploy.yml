@@ -18,12 +18,12 @@ jobs:
           key: ${{ secrets.ORACLE_SSH_KEY }}
           script: |
             # 디렉토리 체크 및 클론
-            if [ ! -d "/home/ubuntu/video_pipeline" ]; then
-              cd /home/ubuntu
+            if [ ! -d "$HOME/video_pipeline" ]; then
+              cd $HOME
               git clone https://github.com/sth00619/video_pipeline.git
             fi
             
-            cd /home/ubuntu/video_pipeline
+            cd $HOME/video_pipeline
             git fetch --all
             git reset --hard origin/main
             
