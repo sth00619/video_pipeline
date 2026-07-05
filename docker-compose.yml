@@ -71,6 +71,7 @@ services:
       APP_MODE: local
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     depends_on:
       - redis
       - minio
