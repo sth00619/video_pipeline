@@ -17,20 +17,27 @@ jobs:
           username: ${{ secrets.ORACLE_USER }}
           key: ${{ secrets.ORACLE_SSH_KEY }}
           script: |
-            cd /home/ubuntu/video_pipeline
-            git pull origin main
+            # 디렉토리 체크 및 클론
+            if [ ! -d "/home/ubuntu/video_pipeline" ]; then
+              cd /home/ubuntu
+              git clone https://github.com/sth00619/video_pipeline.git
+            fi
             
-            # .env 파일 생성 (Secrets에서 주입)
+            cd /home/ubuntu/video_pipeline
+            git fetch --all
+            git reset --hard origin/main
+            
+            # .env 파일 생성
             cat > .env << 'EOF'
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             FINNHUB_API_KEY=${{ secrets.FINNHUB_API_KEY }}
             EOF
             
-            # Docker Compose 재시작
-            docker compose down
-            docker compose up -d --build
+            # Docker Compose 재시작 (sudo 권한 부여)
+            sudo docker compose down --remove-orphans
+            sudo docker compose up -d --build
             
             # 헬스체크
             sleep 10
             echo "=== 배포 완료 ==="
-            docker compose ps
+            sudo docker compose ps

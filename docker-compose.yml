@@ -68,7 +68,7 @@ services:
     ports:
       - '8001:8001'
     environment:
-      APP_MODE: local
+      APP_MODE: production
       REDIS_HOST: redis
       REDIS_PORT: 6379
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -81,7 +81,6 @@ services:
       - redis
       - minio
     volumes:
-      - ./backend/fastapi-workers:/app
       - fastapi_data:/app/data
 
   frontend:
@@ -92,6 +91,8 @@ services:
     restart: unless-stopped
     ports:
       - '3000:80'
+    environment:
+      BACKEND_URL: http://spring-app:8080
     depends_on:
       - spring-app
 
