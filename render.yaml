@@ -1,18 +1,18 @@
-services:
-  # 1. PostgreSQL 데이터베이스
-  - type: db
-    name: pipeline-postgres
+# Render Blueprint IaC Specification
+databases:
+  - name: pipeline-postgres
     databaseName: ai_video_pipeline
     user: pipeline_user
     plan: free
 
-  # 2. Redis
+services:
+  # 1. Redis
   - type: redis
     name: pipeline-redis
     plan: free
     ipAllowList: [] # Render 내부 통신만 허용
 
-  # 3. FastAPI Workers (파이썬)
+  # 2. FastAPI Workers (파이썬)
   - type: web
     name: pipeline-fastapi
     env: docker
@@ -37,7 +37,7 @@ services:
       - key: FINNHUB_API_KEY
         value: d951j4pr01qq8ms6uaa0d951j4pr01qq8ms6uaag
 
-  # 4. Spring Boot 백엔드 (자바)
+  # 3. Spring Boot 백엔드 (자바)
   - type: web
     name: pipeline-spring
     env: docker
@@ -47,12 +47,11 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://${db.host}:${db.port}/${db.name}
+        value: jdbc:postgresql://${database.host}:${database.port}/${database.name}
       - key: SPRING_DATASOURCE_USERNAME
         value: pipeline_user
       - key: SPRING_DATASOURCE_PASSWORD
-        fromService:
-          type: db
+        fromDatabase:
           name: pipeline-postgres
           property: password
       - key: SPRING_DATA_REDIS_HOST
@@ -79,7 +78,7 @@ services:
       - key: SERVER_PORT
         value: 8080
 
-  # 5. Frontend (리액트 Nginx)
+  # 4. Frontend (리액트 Nginx)
   - type: web
     name: pipeline-frontend
     env: docker
