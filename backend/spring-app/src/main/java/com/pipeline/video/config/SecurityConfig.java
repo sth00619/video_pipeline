@@ -40,6 +40,7 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/health").permitAll()
                 // 파일 다운로드 — 인증된 사용자만 (JWT 필터 통과)
                 .requestMatchers("/api/files/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -57,7 +58,9 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://localhost:80",
-                "http://localhost"
+                "http://localhost",
+                "https://*.railway.app",
+                "https://*.up.railway.app"
         ));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
         config.setAllowedHeaders(List.of("*"));

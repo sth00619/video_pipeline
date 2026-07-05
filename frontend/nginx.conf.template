@@ -1,0 +1,21 @@
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA 라우팅
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API 프록시 - Spring Boot로 전달 (환경변수 BACKEND_URL 사용)
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 1800s;
+        client_max_body_size 500M;
+    }
+}
