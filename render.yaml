@@ -67,10 +67,7 @@ services:
       - key: APP_SECRET_KEY
         value: video-pipeline-jwt-secret-key-must-be-32chars-minimum-2026!!
       - key: FASTAPI_URL
-        fromService:
-          type: web
-          name: pipeline-fastapi
-          property: url
+        value: https://${pipeline-fastapi.host}
       - key: SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE
         value: 500MB
       - key: SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE
@@ -87,7 +84,4 @@ services:
     plan: free
     envVars:
       - key: BACKEND_URL
-        fromService:
-          type: web
-          name: pipeline-spring
-          property: url
+        value: https://${pipeline-spring.host}
