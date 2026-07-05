@@ -247,6 +247,15 @@ export default function JobDetail() {
           <p className="text-sm text-accent-cyan"><span className="font-semibold">반자동 모드</span> — 키워드 선택과 최종 미리보기만 검토하면 나머지는 자동 진행됩니다.</p>
         </div>
       )}
+      {isAuto && !isDone && (
+        <div className="bg-accent-green/10 border border-accent-green/30 rounded-xl px-5 py-3 mb-5 flex items-center gap-3">
+          <Zap className="text-accent-green flex-shrink-0" size={18}/>
+          <div>
+            <p className="text-sm text-accent-green"><span className="font-semibold">완전 자동 모드</span> — 백엔드 서버가 모든 단계를 자율적으로 실행합니다.</p>
+            <p className="text-xs text-accent-green/70 mt-0.5">브라우저를 닫으셔도 진행됩니다. 이 페이지에서 실시간 진행 현황을 모니터링할 수 있습니다.</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-3">

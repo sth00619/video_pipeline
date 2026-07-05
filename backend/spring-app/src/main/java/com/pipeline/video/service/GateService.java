@@ -30,6 +30,7 @@ public class GateService {
     private final VideoJobRepository jobRepository;
     private final ApprovalRepository approvalRepository;
     private final AutonomyService autonomyService;
+    private final WorkflowOrchestrator workflowOrchestrator;
 
     // 게이트 승인 후 다음 상태 (PENDING)
     private static final Map<GateName, JobStatus> NEXT_STATUS_ON_APPROVE = Map.of(
@@ -94,6 +95,11 @@ public class GateService {
         job.setStatus(next);
         jobRepository.save(job);
         log.info("Gate {} {}: job={} → {}", gate, result, jobId, next);
+
+        // AUTO 모드: 다음 단계 백그라운드 자동 실행
+        if (autonomyService.isAuto(job)) {
+            workflowOrchestrator.triggerNextStepAsync(jobId, next);
+        }
 
         return approval;
     }

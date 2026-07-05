@@ -21,10 +21,14 @@ def get_llm_provider() -> LLMProvider:
 
 
 def get_image_provider() -> ImageProvider:
-    if APP_MODE == "prod":
+    """Nana Banana AI 이미지 프로바이더 (pollinations.ai 기반, 무인증)"""
+    try:
         from app.providers.real.image import NanaBananaProvider
         return NanaBananaProvider()
-    return MockImageProvider()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"NanaBananaProvider 로드 실패, Mock 사용: {e}")
+        return MockImageProvider()
 
 
 def get_video_provider() -> VideoProvider:

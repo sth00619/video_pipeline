@@ -36,7 +36,24 @@ FONT_PATH = "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
 
 class ImagesWorker:
 
-    def generate(self, scenes_meta: list, job_id: int = 0) -> dict:
+    def generate(self, scenes_meta: list = None, job_id: int = 0,
+                 tts_meta_json: str = None, script_meta_json: str = None) -> dict:
+        # scenes_meta가 주어지지 않은 경우 script_meta_json에서 복원
+        if not scenes_meta and script_meta_json:
+            try:
+                import json
+                script_data = json.loads(script_meta_json)
+                if isinstance(script_data, str):
+                    script_data = json.loads(script_data)
+                scenes_meta = script_data.get("sections", [])
+                logger.info(f"script_meta_json에서 {len(scenes_meta)}개 씬 복원 성공")
+            except Exception as e:
+                logger.error(f"script_meta_json에서 씬 목록 추출 실패: {e}")
+                scenes_meta = []
+
+        if not scenes_meta:
+            scenes_meta = []
+
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
@@ -47,6 +64,16 @@ class ImagesWorker:
             plt.rcParams["font.family"] = fm.FontProperties(fname=FONT_PATH).get_name()
         plt.rcParams["axes.unicode_minus"] = False
 
+        # AI 이미지 프로바이더 로드 (하이브리드 모드)
+        ai_provider = None
+        AI_SECTIONS = {"intro", "action", "conclusion"}
+        try:
+            from app.providers.factory import get_image_provider
+            ai_provider = get_image_provider()
+            logger.info("하이브리드 모드 활성화: AI 이미지 + Matplotlib 차트")
+        except Exception as e:
+            logger.warning(f"AI 이미지 프로바이더 로드 실패, 전체 Matplotlib: {e}")
+
         job_dir = Path(f"/app/data/jobs/{job_id}/images")
         job_dir.mkdir(parents=True, exist_ok=True)
 
@@ -56,6 +83,28 @@ class ImagesWorker:
             text = scene.get("text", "")
             img_path = str(job_dir / f"scene_{i:03d}.png")
 
+            # 하이브리드 분기: AI 일러스트 vs Matplotlib 차트
+            if ai_provider and section in AI_SECTIONS:
+                try:
+                    ai_provider.generate_image(
+                        prompt=text,
+                        output_path=img_path,
+                        section=section,
+                        keyword=text[:30]
+                    )
+                    generated.append({
+                        "index": i,
+                        "section": section,
+                        "image_path": img_path,
+                        "generation_method": "nana_banana_ai",
+                        "prompt": text[:100],
+                    })
+                    logger.info(f"씬 {i} AI 이미지 생성 완료 (section={section})")
+                    continue
+                except Exception as e:
+                    logger.warning(f"씬 {i} AI 이미지 실패, Matplotlib 폴백: {e}")
+
+            # Matplotlib 차트 렌더링 (기존 로직)
             try:
                 self._render_section(section, text, img_path, plt)
                 generated.append({
@@ -72,8 +121,14 @@ class ImagesWorker:
                     "image_path": img_path, "generation_method": "fallback_solid",
                 })
 
-        logger.info(f"이미지 생성 완료: {len(generated)}개 (matplotlib 기반)")
-        return {"job_id": job_id, "images": generated, "count": len(generated)}
+        logger.info(f"이미지 생성 완료: {len(generated)}개 (하이브리드 모드)")
+        return {
+            "job_id": job_id,
+            "scenes": generated,
+            "scene_count": len(generated),
+            "gifs": [],
+            "gif_count": 0
+        }
 
     # ============================
     # 섹션별 시각화 라우팅

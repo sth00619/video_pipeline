@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -98,19 +99,39 @@ public class ScriptService {
             throw new IllegalStateException("최종 스크립트가 비어있습니다.");
         }
 
+        // 기존에 generate 시점에 저장했던 스CRIPT 에셋에서 sections, verified_facts 복원
+        List<Map<String, Object>> sections = List.of();
+        List<Map<String, Object>> verifiedFacts = List.of();
+        try {
+            java.util.Optional<Asset> prevAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
+            if (prevAssetOpt.isPresent()) {
+                ScriptGenerateResponse prevDto = objectMapper.readValue(prevAssetOpt.get().getMetaJson(), ScriptGenerateResponse.class);
+                if (prevDto.getSections() != null) {
+                    sections = prevDto.getSections();
+                }
+                if (prevDto.getVerifiedFacts() != null) {
+                    verifiedFacts = prevDto.getVerifiedFacts();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("이전 스크립트 에셋 메타데이터 파싱 실패: {}", e.getMessage());
+        }
+
         Asset finalAsset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.SCRIPT)
                 .metaJson(safeJson(Map.of(
                         "script", finalScript,
                         "final", true,
-                        "char_count", finalScript.length()
+                        "char_count", finalScript.length(),
+                        "sections", sections,
+                        "verified_facts", verifiedFacts
                 )))
                 .build();
         assetRepository.save(finalAsset);
 
         gateService.approve(jobId, GateName.SCRIPT, username, "스크립트 확정");
-        log.info("스크립트 확정: jobId={}, length={}자", jobId, finalScript.length());
+        log.info("스크립트 확정: jobId={}, length={}자, sections={}개", jobId, finalScript.length(), sections.size());
     }
 
     private String safeJson(Object obj) {

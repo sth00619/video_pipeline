@@ -53,7 +53,8 @@ class LongformWorker:
 
         for i, scene in enumerate(scenes):
             img_path = scene.get("image_path", "")
-            duration = float(scene.get("duration", 15.0))
+            raw_dur = scene.get("duration")
+            duration = float(raw_dur) if raw_dur is not None else 15.0
             clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
             section = scene.get("section", "default")
             bg_color = {
