@@ -47,7 +47,9 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:postgresql://${pipeline_postgres.host}:${pipeline_postgres.port}/${pipeline_postgres.database}
+        fromDatabase:
+          name: pipeline-postgres
+          property: connectionString
       - key: SPRING_DATASOURCE_USERNAME
         value: pipeline_user
       - key: SPRING_DATASOURCE_PASSWORD
@@ -84,4 +86,4 @@ services:
     plan: free
     envVars:
       - key: BACKEND_URL
-        value: https://pipeline-spring.onrender.com # 고정 가상 호스트명 대신 Render 전용 도메인 형식으로 확실하게 바인딩
+        value: https://pipeline-spring.onrender.com
