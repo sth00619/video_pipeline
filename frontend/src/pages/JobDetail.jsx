@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft, Download, CheckCircle, Loader,
   ThumbsUp, ThumbsDown, Zap, Star, AlertCircle,
-  FileText, Image as ImageIcon, Music, ChevronDown, ChevronUp
+  FileText, Image as ImageIcon, Music, ChevronDown, ChevronUp,
+  Clock, Edit, Save, Printer
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import { jobsApi } from '../api/jobs'
@@ -22,6 +23,29 @@ const PIPELINE_STEPS = [
   { key: 'longform', label: '영상 조립', pendingStatus: 'ASSEMBLING', gate: 'PREVIEW',
     runFn: (id) => jobsApi.generateLongform(id) },
 ]
+
+const STEP_PROGRESS_INFO = {
+  keyword: {
+    est: '약 20초 ~ 30초 소요',
+    desc: '실시간 국내/해외 주요 지수 및 환율 정보를 조회하고 당일 뉴스 RSS 피드를 수집하여 팩트를 분석하고 트렌디한 영상 키워드 후보를 도출합니다.',
+  },
+  script: {
+    est: '약 1분 ~ 1분 30초 소요',
+    desc: '수집한 주식 및 경제 수치들에 대해 3단계 교차 검증(3-Round Fact Checker)을 거쳐 정확한 사실만 확정합니다. 확정된 수치만을 사용하여 영상 길이에 맞춘 스토리보드 대본을 생성합니다. (분량에 비례하여 글자 수가 타겟팅됩니다.)',
+  },
+  tts: {
+    est: '약 20초 ~ 30초 소요',
+    desc: '작성된 영상 대본의 톤앤매너에 맞게 고음질 인공지능 성우의 음성 오디오 데이터로 합성하는 과정을 진행합니다.',
+  },
+  images: {
+    est: '약 40초 ~ 50초 소요',
+    desc: '각 시나리오 씬별 경제 뉴스와 수치 데이터의 흐름에 맞춰 직관적인 주식 차트, 차트 그래프, 다이어그램을 Matplotlib 라이브러리를 통해 시각화하고 그립니다.',
+  },
+  longform: {
+    est: '약 1분 ~ 2분 소요',
+    desc: '최종 생성된 스크립트 대본, TTS 오디오 타임라인, Matplotlib 차트 이미지를 시간 동기화하여 고화질 MP4 동영상 파일로 합치고 인코딩합니다.',
+  },
+}
 
 const STATUS_ORDER = [
   'DRAFT','KEYWORD_PENDING','SCRIPT_PENDING','TTS_PENDING',
@@ -55,6 +79,14 @@ export default function JobDetail() {
   const [runningStep, setRunningStep] = useState(null)
   const [expandedScript, setExpandedScript] = useState(false)
 
+  // 스크립트 및 씬 이미지 편집 상태들
+  const [isEditingScript, setIsEditingScript] = useState(false)
+  const [editedScriptText, setEditedScriptText] = useState('')
+  const [scriptViewMode, setScriptViewMode] = useState('paragraphs') // 'paragraphs' | 'raw'
+  const [editingSceneIndex, setEditingSceneIndex] = useState(null)
+  const [editingSceneText, setEditingSceneText] = useState('')
+  const [imageSalt, setImageSalt] = useState(0)
+
   const { data: job, isLoading } = useQuery({
     queryKey: ['job', id], queryFn: () => jobsApi.get(id), refetchInterval: 3000,
   })
@@ -65,6 +97,21 @@ export default function JobDetail() {
     queryKey: ['costs', id], queryFn: () => jobsApi.costs(id), refetchInterval: 10000,
   })
 
+  // ── AUTO 모드일 때 활성화된 단계를 자동으로 실행 ──
+  useEffect(() => {
+    if (!job || job.autonomy !== 'AUTO' || runningStep || isLoading) return;
+
+    const activeStep = PIPELINE_STEPS.find(step => {
+      const ss = getStepStatus(step, job, approvals);
+      return ss === 'active';
+    });
+
+    if (activeStep) {
+      console.log('AUTO 모드: 자동 실행 트리거 ->', activeStep.key);
+      handleRun(activeStep);
+    }
+  }, [job, approvals, runningStep, isLoading]);
+
   // ── 각 단계 산출물 조회 (Asset 기반, 서버 상태 완전 복원) ──
   const { data: kwAssets = [] } = useQuery({
     queryKey: ['assets', id, 'KEYWORD'], queryFn: () => jobsApi.assets(id, 'KEYWORD'), enabled: !!job,
@@ -73,10 +120,10 @@ export default function JobDetail() {
     queryKey: ['assets', id, 'SCRIPT'], queryFn: () => jobsApi.assets(id, 'SCRIPT'), enabled: !!job,
   })
   const { data: imageAssets = [] } = useQuery({
-    queryKey: ['assets', id, 'IMAGE'], queryFn: () => jobsApi.assets(id, 'IMAGE'), enabled: !!job,
+    queryKey: ['assets', id, 'SCENE_IMAGE'], queryFn: () => jobsApi.assets(id, 'SCENE_IMAGE'), enabled: !!job,
   })
   const { data: ttsAssets = [] } = useQuery({
-    queryKey: ['assets', id, 'TTS'], queryFn: () => jobsApi.assets(id, 'TTS'), enabled: !!job,
+    queryKey: ['assets', id, 'TTS_AUDIO'], queryFn: () => jobsApi.assets(id, 'TTS_AUDIO'), enabled: !!job,
   })
 
   const kwCandidates = useMemo(() => {
@@ -94,11 +141,22 @@ export default function JobDetail() {
     } catch { return null }
   }, [scriptAssets])
 
+  const fmt = (s) => {
+    if (s == null || isNaN(s)) return '0:00'
+    const m = Math.floor(s / 60)
+    const sec = Math.floor(s % 60)
+    return `${m}:${sec < 10 ? '0' : ''}${sec}`
+  }
+
   const imageList = useMemo(() => {
     return imageAssets.map(a => {
       try { return JSON.parse(a.metaJson || '{}') } catch { return null }
     }).filter(Boolean)
   }, [imageAssets])
+
+  const sortedImageList = useMemo(() => {
+    return [...imageList].sort((a, b) => (a.index || 0) - (b.index || 0))
+  }, [imageList])
 
   const ttsInfo = useMemo(() => {
     if (!ttsAssets.length) return null
@@ -112,6 +170,31 @@ export default function JobDetail() {
   const rejectMut = useMutation({
     mutationFn: ({ gate, comment }) => jobsApi.reject(id, gate, comment),
     onSuccess: () => { qc.invalidateQueries(['job',id]); qc.invalidateQueries(['approvals',id]); setGateModal(null) },
+  })
+
+  const saveScriptMut = useMutation({
+    mutationFn: (text) => jobsApi.confirmScript(id, text),
+    onSuccess: () => {
+      qc.invalidateQueries(['job', id])
+      qc.invalidateQueries(['assets', id, 'SCRIPT'])
+      setIsEditingScript(false)
+    },
+    onError: (err) => {
+      alert('스크립트 저장 실패: ' + (err.response?.data?.message || err.message))
+    }
+  })
+
+  const regenImageMut = useMutation({
+    mutationFn: ({ index, text, section }) => jobsApi.updateSceneImage(id, index, text, section),
+    onSuccess: () => {
+      qc.invalidateQueries(['assets', id, 'SCENE_IMAGE'])
+      setEditingSceneIndex(null)
+      setImageSalt(prev => prev + 1)
+      alert('이미지가 재생성되었습니다.')
+    },
+    onError: (err) => {
+      alert('이미지 재생성 실패: ' + (err.response?.data?.message || err.message))
+    }
   })
 
   const handleRun = async (step) => {
@@ -184,6 +267,7 @@ export default function JobDetail() {
                       <div className="font-medium text-sm">{step.label}</div>
                       {approval && <div className="text-xs text-gray-500 mt-0.5">{approval.result === 'AUTO_APPROVED' ? '⚡ 자동 승인' : `✓ ${approval.approvedBy}`}</div>}
                       {ss === 'active' && isAuto && <div className="text-xs text-accent-cyan mt-0.5 flex items-center gap-1"><Loader size={10} className="animate-spin"/>자동 진행 중</div>}
+                      {ss === 'active' && !isAuto && <div className="text-xs text-accent-gold mt-0.5">승인 대기 중</div>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -200,6 +284,34 @@ export default function JobDetail() {
                     {ss === 'active' && isAuto && <Loader size={14} className="animate-spin text-accent-cyan"/>}
                   </div>
                 </div>
+
+                {/* ── 단계별 상세 진척 안내 팁 ── */}
+                {ss === 'active' && (
+                  <div className="mx-5 mb-4 p-3.5 bg-navy-900/50 rounded-lg border border-navy-700/60 text-xs space-y-2">
+                    <div className="flex items-center justify-between text-gray-300 font-semibold">
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={12} className="text-accent-cyan"/>
+                        <span>예상 대기 시간:</span>
+                        <span className="text-accent-cyan">{STEP_PROGRESS_INFO[step.key]?.est}</span>
+                      </div>
+                      {step.key === 'script' && (
+                        <div className="text-gray-400">
+                          목표 분량: <span className="text-accent-cyan">{job.longformTargetMinutes || 20}분</span> 
+                          (약 <span className="text-accent-cyan">{(job.longformTargetMinutes || 20) * 300}자</span> 생성)
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-gray-400 leading-relaxed text-[11px]">
+                      {STEP_PROGRESS_INFO[step.key]?.desc}
+                    </div>
+                    {isAuto && (
+                      <div className="pt-2 border-t border-navy-700/40 flex items-center gap-2 text-accent-cyan text-[10px]">
+                        <Loader size={10} className="animate-spin"/>
+                        <span>자동 모드가 실행 중입니다. 브라우저 창을 켜둔 채 잠시만 기다려 주세요.</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── 키워드 후보 ── */}
                 {step.key === 'keyword' && kwCandidates.length > 0 && (
@@ -226,35 +338,278 @@ export default function JobDetail() {
                 {/* ── 스크립트 미리보기 (신규) ── */}
                 {step.key === 'script' && scriptData && (
                   <div className="px-5 pb-4 border-t border-navy-700">
-                    <div className="flex items-center justify-between mt-3 mb-2">
+                    {/* 상단 툴바 */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-3 mb-3 border-b border-navy-700/50 pb-2">
                       <div className="flex items-center gap-2">
                         <FileText size={13} className="text-accent-cyan"/>
                         <span className="text-xs text-gray-400">
                           {scriptData.char_count?.toLocaleString()}자
                           {scriptData.used_real_llm === false && (
-                            <span className="ml-2 text-accent-gold">⚠ Mock 스크립트 (ANTHROPIC_API_KEY 미설정)</span>
+                            <span className="ml-2 text-accent-gold">⚠ Mock 스크립트</span>
                           )}
                           {scriptData.used_real_llm === true && (
-                            <span className="ml-2 text-accent-green">✓ Claude Sonnet 5 생성</span>
+                            <span className="ml-2 text-accent-green">✓ LLM 생성</span>
                           )}
                         </span>
                       </div>
-                      <button onClick={() => setExpandedScript(!expandedScript)}
-                        className="text-xs text-accent-cyan flex items-center gap-1 hover:underline">
-                        {expandedScript ? '접기' : '전체 보기'}
-                        {expandedScript ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
-                      </button>
+                      
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* 뷰 모드 토글 */}
+                        <div className="flex bg-navy-700 rounded p-0.5 text-[10px]">
+                          <button onClick={() => setScriptViewMode('paragraphs')}
+                            className={`px-2 py-0.5 rounded transition ${scriptViewMode === 'paragraphs' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-gray-400 hover:text-white'}`}>단락 가독성</button>
+                          {sortedImageList.length > 0 && (
+                            <button onClick={() => setScriptViewMode('mixed')}
+                              className={`px-2 py-0.5 rounded transition ${scriptViewMode === 'mixed' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-gray-400 hover:text-white'}`}>대본 + 이미지</button>
+                          )}
+                          <button onClick={() => setScriptViewMode('raw')}
+                            className={`px-2 py-0.5 rounded transition ${scriptViewMode === 'raw' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-gray-400 hover:text-white'}`}>기본 텍스트</button>
+                        </div>
+
+                        {/* 문서 내보내기 */}
+                        <div className="flex gap-1">
+                          <button onClick={() => {
+                            const txt = scriptData.script || '';
+                            const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `script_${id}.txt`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }} className="bg-navy-700 text-gray-300 hover:text-white text-[10px] px-2 py-1 rounded border border-navy-600 transition">TXT</button>
+                          
+                          <button onClick={() => {
+                            const txt = scriptData.script || '';
+                            const cleanParas = txt.split(/\r?\n+/).map(p => p.trim()).filter(Boolean);
+                            
+                            const bodyContent = sortedImageList.length > 0 ? `
+                              <h2>주식 자동화 영상 스토리보드 대본 (Job #${id})</h2>
+                              <div class="meta">
+                                <p style="margin-bottom: 4pt;"><strong>영상 주제:</strong> ${job.title}</p>
+                                <p style="margin-bottom: 0pt;"><strong>선택 키워드:</strong> ${job.keyword || ''}</p>
+                              </div>
+                              <hr style="margin-bottom: 20pt; border: none; border-top: 1px solid #dddddd;"/>
+                              ${sortedImageList.map(img => `
+                                <div style="margin-bottom: 20pt; page-break-inside: avoid;">
+                                  <p style="font-family: Arial, sans-serif; font-size: 11pt; font-weight: bold; color: #0088cc; margin-bottom: 6pt;">[씬 #${img.index}] (${fmt(img.start)} ~ ${fmt(img.start + img.duration)})</p>
+                                  <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                      <td style="width: 240px; padding-right: 15px; vertical-align: top;">
+                                        <img src="${window.location.origin}/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}" width="240" height="135" style="border: 1px solid #dddddd; display: block;" />
+                                      </td>
+                                      <td style="vertical-align: top; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; text-align: justify; color: #333333;">
+                                        ${img.prompt || ''}
+                                      </td>
+                                    </tr>
+                                  </table>
+                                </div>
+                              `).join('')}
+                            ` : `
+                              <h2>주식 자동화 영상 스크립트 (Job #${id})</h2>
+                              <div class="meta">
+                                <p style="margin-bottom: 4pt;"><strong>영상 주제:</strong> ${job.title}</p>
+                                <p style="margin-bottom: 0pt;"><strong>선택 키워드:</strong> ${job.keyword || ''}</p>
+                              </div>
+                              <hr style="margin-bottom: 20pt; border: none; border-top: 1px solid #dddddd;"/>
+                              ${cleanParas.map(p => `<p>${p}</p>`).join('')}
+                            `;
+
+                            const html = `
+                              <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+                              <head>
+                                <meta charset="utf-8">
+                                <title>Script</title>
+                                <style>
+                                  body { padding: 40px; }
+                                  h2 { font-family: 'Malgun Gothic', Arial, sans-serif; color: #0d1b2a; margin-bottom: 16pt; border-bottom: 2px solid #0d1b2a; padding-bottom: 6pt; }
+                                  .meta { font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 10pt; color: #555555; margin-bottom: 20pt; background: #f4f6f9; padding: 10pt; }
+                                  p { font-family: 'Malgun Gothic', Arial, sans-serif; line-height: 1.6; font-size: 11pt; margin-top: 0pt; margin-bottom: 12pt; text-align: justify; }
+                                </style>
+                              </head>
+                              <body>
+                                ${bodyContent}
+                              </body>
+                              </html>
+                            `;
+                            const blob = new Blob([html], { type: 'application/msword;charset=utf-8' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `script_${id}.doc`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }} className="bg-navy-700 text-gray-300 hover:text-white text-[10px] px-2 py-1 rounded border border-navy-600 transition">Word</button>
+                          
+                          <button onClick={() => {
+                            const txt = scriptData.script || '';
+                            const cleanParas = txt.split(/\r?\n+/).map(p => p.trim()).filter(Boolean);
+                            const printWindow = window.open('', '_blank');
+                            
+                            const bodyContent = sortedImageList.length > 0 ? `
+                              <h2>주식 자동화 영상 스토리보드 대본</h2>
+                              <div class="meta">
+                                <div><strong>작업 ID:</strong> Job #${id}</div>
+                                <div><strong>영상 주제:</strong> ${job.title}</div>
+                                <div><strong>선택 키워드:</strong> ${job.keyword || ''}</div>
+                              </div>
+                              ${sortedImageList.map(img => `
+                                <div class="scene-block" style="margin-bottom: 25px; page-break-inside: avoid; border-bottom: 1px solid #eeeeee; padding-bottom: 15px; display: flex; gap: 20px;">
+                                  <div style="width: 240px; flex-shrink: 0;">
+                                    <img src="${window.location.origin}/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}" style="width: 240px; height: 135px; object-fit: cover; border: 1px solid #cccccc; border-radius: 4px;" />
+                                  </div>
+                                  <div style="flex: 1;">
+                                    <div style="font-weight: bold; color: #0d1b2a; font-size: 13px; margin-bottom: 6px;">씬 #${img.index} (${fmt(img.start)} ~ ${fmt(img.start + img.duration)})</div>
+                                    <p style="margin-top: 0; margin-bottom: 0; text-align: justify; font-size: 13px; line-height: 1.8;">
+                                      ${img.prompt || ''}
+                                    </p>
+                                  </div>
+                                </div>
+                              `).join('')}
+                            ` : `
+                              <h2>주식 자동화 영상 스크립트</h2>
+                              <div class="meta">
+                                <div><strong>작업 ID:</strong> Job #${id}</div>
+                                <div><strong>영상 주제:</strong> ${job.title}</div>
+                                <div><strong>선택 키워드:</strong> ${job.keyword || ''}</div>
+                              </div>
+                              ${cleanParas.map(p => `<p>${p}</p>`).join('')}
+                            `;
+
+                            const htmlContent = `
+                              <html>
+                              <head>
+                                <title>스크립트 인쇄 - Job #${id}</title>
+                                <style>
+                                  body { font-family: 'Malgun Gothic', 'Nanum Gothic', Arial, sans-serif; padding: 40px; line-height: 1.8; color: #333; }
+                                  h2 { border-bottom: 2px solid #0d1b2a; padding-bottom: 10px; margin-bottom: 20px; color: #0d1b2a; }
+                                  .meta { margin-bottom: 30px; font-size: 13px; color: #555; background: #f8f9fa; padding: 15px; border-left: 4px solid #00d4ff; }
+                                  .meta div { margin-bottom: 6px; }
+                                  p { margin-top: 0; margin-bottom: 16px; text-align: justify; font-size: 14px; text-justify: inter-word; }
+                                </style>
+                              </head>
+                              <body>
+                                ${bodyContent}
+                                <script>window.onload = function() { window.print(); window.close(); }</script>
+                              </body>
+                              </html>
+                            `;
+                            printWindow.document.write(htmlContent);
+                            printWindow.document.close();
+                          }} className="bg-navy-700 text-gray-300 hover:text-white text-[10px] px-2 py-1 rounded border border-navy-600 transition flex items-center gap-1">
+                            <Printer size={10}/>PDF 인쇄
+                          </button>
+                        </div>
+
+                        {/* 편집 모드 토글 (SCRIPT_PENDING 때만 노출) */}
+                        {job.status === 'SCRIPT_PENDING' && (
+                          <button onClick={() => {
+                            if (isEditingScript) {
+                              setIsEditingScript(false);
+                            } else {
+                              setEditedScriptText(scriptData.script || '');
+                              setIsEditingScript(true);
+                            }
+                          }} className="flex items-center gap-1 text-[10px] bg-accent-gold/20 text-accent-gold border border-accent-gold/30 px-2 py-1 rounded hover:bg-accent-gold/30 transition">
+                            <Edit size={10}/>{isEditingScript ? '편집 취소' : '스크립트 수정'}
+                          </button>
+                        )}
+
+                        <button onClick={() => setExpandedScript(!expandedScript)}
+                          className="text-xs text-accent-cyan flex items-center gap-1 hover:underline">
+                          {expandedScript ? '접기' : '전체 보기'}
+                          {expandedScript ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                        </button>
+                      </div>
                     </div>
-                    {scriptData.sections && (
-                      <div className="space-y-2">
-                        {scriptData.sections.map((sec, i) => (
-                          <div key={i} className="bg-navy-700/40 rounded-lg p-3">
-                            <div className="text-xs font-semibold text-accent-gold mb-1">{sec.title}</div>
-                            <p className="text-xs text-gray-300 leading-relaxed">
-                              {expandedScript ? sec.content : (sec.content?.slice(0, 80) + (sec.content?.length > 80 ? '...' : ''))}
-                            </p>
+
+                    {/* 스크립트 본문 */}
+                    {isEditingScript ? (
+                      <div className="space-y-3">
+                        <textarea
+                          value={editedScriptText}
+                          onChange={e => setEditedScriptText(e.target.value)}
+                          className="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan font-mono resize-y"
+                          rows={12}
+                        />
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => setIsEditingScript(false)}
+                            className="bg-navy-700 text-gray-400 hover:text-white text-xs px-3 py-1.5 rounded transition"
+                          >
+                            취소
+                          </button>
+                          <button
+                            onClick={() => saveScriptMut.mutate(editedScriptText)}
+                            disabled={saveScriptMut.isPending}
+                            className="flex items-center gap-1.5 bg-accent-green text-navy-950 text-xs font-semibold px-3 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                          >
+                            <Save size={12}/>
+                            {saveScriptMut.isPending ? '저장 중...' : '수정 저장 및 확정'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {scriptViewMode === 'paragraphs' ? (
+                          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-4 border border-navy-700/50">
+                            {(expandedScript ? (scriptData.script || '') : ((scriptData.script || '').slice(0, 400) + ((scriptData.script || '').length > 400 ? '...' : '')))
+                              .split(/\n+/)
+                              .filter(Boolean)
+                              .map((para, idx) => (
+                                <p key={idx} className="text-xs text-gray-300 leading-relaxed text-justify">
+                                  {para}
+                                </p>
+                              ))}
                           </div>
-                        ))}
+                        ) : scriptViewMode === 'mixed' && sortedImageList.length > 0 ? (
+                          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-4 border border-navy-700/50">
+                            {sortedImageList.map((img, idx) => (
+                              <div key={img.index || idx} className="flex gap-4 border-b border-navy-800 pb-3 last:border-0 last:pb-0">
+                                <div className="w-28 aspect-video bg-navy-700 rounded overflow-hidden border border-navy-600 flex-shrink-0">
+                                  <img
+                                    src={`/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}&salt=${imageSalt}`}
+                                    alt={`씬 ${img.index}`}
+                                    className="w-full h-full object-cover"
+                                    onError={e => { e.target.style.display = 'none' }}
+                                  />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="text-[10px] font-bold text-accent-cyan mb-1 flex items-center gap-1.5">
+                                    <span>씬 #{img.index}</span>
+                                    <span className="text-gray-500 font-normal">
+                                      {fmt(img.start)} ~ {fmt(img.start + img.duration)}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-300 leading-relaxed text-justify">
+                                    {img.prompt || '(내용 없음)'}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div>
+                            {scriptData.sections && scriptData.sections.length > 0 ? (
+                              <div className="space-y-2">
+                                {scriptData.sections.map((sec, i) => (
+                                  <div key={i} className="bg-navy-700/40 rounded-lg p-3">
+                                    <div className="text-xs font-semibold text-accent-gold mb-1">{sec.title}</div>
+                                    <p className="text-xs text-gray-300 leading-relaxed">
+                                      {expandedScript ? sec.content : (sec.content?.slice(0, 80) + (sec.content?.length > 80 ? '...' : ''))}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : scriptData.script ? (
+                              <div className="bg-navy-700/40 rounded-lg p-3">
+                                <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                  {expandedScript ? scriptData.script : (scriptData.script.slice(0, 300) + (scriptData.script.length > 300 ? '...' : ''))}
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -273,34 +628,121 @@ export default function JobDetail() {
                     </div>
                     {ttsInfo.audio_path && (
                       <audio controls className="w-full h-8" style={{ filter: 'invert(0.9)' }}>
-                        <source src={`/api/files/download?path=${encodeURIComponent(ttsInfo.audio_path)}`} type="audio/mpeg"/>
+                        <source src={`/api/files/download?path=${encodeURIComponent(ttsInfo.audio_path)}&token=${token}`} type="audio/mpeg"/>
                       </audio>
                     )}
                   </div>
                 )}
 
-                {/* ── 이미지 갤러리 (신규) ── */}
-                {step.key === 'images' && imageList.length > 0 && (
+                {/* ── 이미지 갤러리 및 씬 편집기 ── */}
+                {step.key === 'images' && sortedImageList.length > 0 && (
                   <div className="px-5 pb-4 border-t border-navy-700">
-                    <div className="flex items-center gap-2 mt-3 mb-2">
-                      <ImageIcon size={13} className="text-accent-cyan"/>
-                      <span className="text-xs text-gray-400">{imageList.length}개 씬 이미지 (matplotlib 차트 기반)</span>
+                    <div className="flex items-center justify-between mt-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon size={13} className="text-accent-cyan"/>
+                        <span className="text-xs text-gray-400">
+                          {sortedImageList.length}개 씬 이미지 (matplotlib 차트 기반)
+                        </span>
+                      </div>
+                      {job.status === 'IMAGES_PENDING' && (
+                        <span className="text-[10px] bg-accent-cyan/10 text-accent-cyan px-2 py-0.5 rounded-full font-semibold">
+                          수정/재생성 활성화됨
+                        </span>
+                      )}
                     </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {imageList.slice(0, 8).map((img, i) => (
-                        <div key={i} className="aspect-video bg-navy-700 rounded overflow-hidden border border-navy-600">
-                          <img
-                            src={`/api/files/download?path=${encodeURIComponent(img.image_path)}`}
-                            alt={`씬 ${i+1}`}
-                            className="w-full h-full object-cover"
-                            onError={e => { e.target.style.display = 'none' }}
-                          />
-                        </div>
-                      ))}
+
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-3 border border-navy-700/50">
+                      {sortedImageList.map((img, i) => {
+                        const isEditingThis = editingSceneIndex === img.index;
+                        const isRegeneratingThis = regenImageMut.isPending && editingSceneIndex === img.index;
+                        
+                        return (
+                          <div key={img.index || i} className="flex gap-4 bg-navy-800/40 border border-navy-700/60 rounded-lg p-3 hover:border-navy-600 transition">
+                            {/* 왼쪽: 이미지 썸네일 */}
+                            <div className="w-40 aspect-video bg-navy-700 rounded overflow-hidden border border-navy-600 flex-shrink-0 relative">
+                              <img
+                                src={`/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}&salt=${imageSalt}`}
+                                alt={`씬 ${img.index}`}
+                                className="w-full h-full object-cover"
+                                onError={e => { e.target.style.display = 'none' }}
+                              />
+                            </div>
+
+                            {/* 오른쪽: 상세 정보 및 편집 */}
+                            <div className="flex-1 flex flex-col justify-between">
+                              <div>
+                                <div className="flex items-center justify-between">
+                                  <div className="text-[11px] font-semibold text-accent-cyan flex items-center gap-1.5">
+                                    <span className="bg-accent-cyan/10 px-1.5 py-0.5 rounded font-bold">씬 #{img.index}</span>
+                                    <span className="text-gray-500 font-normal flex items-center gap-0.5">
+                                      <Clock size={10}/>
+                                      {fmt(img.start)} ~ {fmt(img.start + img.duration)} ({img.duration?.toFixed(1)}초)
+                                    </span>
+                                  </div>
+                                  <span className="text-[9px] bg-navy-700 text-gray-400 px-1.5 py-0.5 rounded border border-navy-600">
+                                    구분: {img.section}
+                                  </span>
+                                </div>
+
+                                <div className="mt-2">
+                                  {isEditingThis ? (
+                                    <textarea
+                                      value={editingSceneText}
+                                      onChange={e => setEditingSceneText(e.target.value)}
+                                      className="w-full bg-navy-700 border border-navy-600 rounded p-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
+                                      rows={2}
+                                    />
+                                  ) : (
+                                    <p className="text-xs text-gray-300 leading-relaxed text-justify line-clamp-3">
+                                      {img.prompt || '(내용 없음)'}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end gap-2 mt-2">
+                                {isEditingThis ? (
+                                  <>
+                                    <button
+                                      onClick={() => setEditingSceneIndex(null)}
+                                      disabled={isRegeneratingThis}
+                                      className="bg-navy-700 text-gray-400 hover:text-white text-[10px] px-2.5 py-1 rounded transition"
+                                    >
+                                      취소
+                                    </button>
+                                    <button
+                                      onClick={() => regenImageMut.mutate({
+                                        index: img.index,
+                                        text: editingSceneText,
+                                        section: img.section
+                                      })}
+                                      disabled={isRegeneratingThis}
+                                      className="flex items-center gap-1 bg-accent-gold text-navy-950 text-[10px] font-semibold px-2.5 py-1 rounded hover:opacity-90 transition"
+                                    >
+                                      {isRegeneratingThis ? <Loader size={10} className="animate-spin"/> : <Save size={10}/>}
+                                      적용 및 재생성
+                                    </button>
+                                  </>
+                                ) : (
+                                  job.status === 'IMAGES_PENDING' && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingSceneIndex(img.index);
+                                        setEditingSceneText(img.prompt || '');
+                                      }}
+                                      className="flex items-center gap-1 text-[10px] bg-navy-700 text-gray-300 hover:text-white border border-navy-600 px-2 py-1 rounded transition"
+                                    >
+                                      <Edit size={10}/>
+                                      텍스트 수정 / 재생성
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    {imageList.length > 8 && (
-                      <p className="text-xs text-gray-500 mt-1">외 {imageList.length - 8}개 씬</p>
-                    )}
                   </div>
                 )}
               </div>
@@ -317,7 +759,7 @@ export default function JobDetail() {
                     <div className="text-xs text-gray-400 mt-0.5">{job.longformTargetMinutes}분 · 1920×1080</div>
                   </div>
                 </div>
-                <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}`}
+                <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
                   className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 transition" download>
                   <Download size={14}/>MP4 다운로드
                 </a>

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.List;
 
 /**
  * Phase 3-4 — 이미지 + GIF 생성 서비스
@@ -108,6 +109,41 @@ public class ImagesService {
 
         gateService.approve(jobId, GateName.IMAGES, username, "이미지/GIF 확정");
         log.info("이미지 확정 완료: jobId={}", jobId);
+    }
+
+    @Transactional
+    public void updateScene(Long jobId, int index, String text, String section) {
+        // 1. SCENE_IMAGE 타입의 에셋 전체 조회
+        List<Asset> assets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+        Asset target = null;
+        SceneImageDto sceneDto = null;
+        for (Asset asset : assets) {
+            try {
+                SceneImageDto dto = objectMapper.readValue(asset.getMetaJson(), SceneImageDto.class);
+                if (dto.getIndex() == index) {
+                    target = asset;
+                    sceneDto = dto;
+                    break;
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        if (target == null) {
+            throw new IllegalArgumentException("해당 씬 이미지를 찾을 수 없습니다: index=" + index);
+        }
+
+        // 2. prompt 변경
+        sceneDto.setPrompt(text);
+        if (section != null && !section.isBlank()) {
+            sceneDto.setSection(section);
+        }
+        target.setMetaJson(safeJson(sceneDto));
+        assetRepository.save(target);
+
+        // 3. FastAPI에 단일 이미지 재생성 요청
+        fastApiClient.generateSingleImage(jobId, index, text, sceneDto.getSection());
+        log.info("씬 이미지 재생성 요청 완료: jobId={}, index={}, section={}", jobId, index, sceneDto.getSection());
     }
 
     // ============================

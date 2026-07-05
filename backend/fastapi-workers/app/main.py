@@ -149,11 +149,18 @@ class ScriptGenerateRequest(BaseModel):
     target_minutes: int = 20
     category: str = "CUSTOM"
     job_id: Optional[int] = 0
+    market_data: Optional[dict] = None  # KeywordWorker에서 전달된 market_snapshot
 
 @app.post("/workers/script/generate")
 async def script_generate(request: ScriptGenerateRequest):
     try:
-        return get_script_worker().generate(keyword=request.keyword, target_minutes=request.target_minutes, category=request.category, job_id=request.job_id or 0)
+        return get_script_worker().generate(
+            keyword=request.keyword,
+            target_minutes=request.target_minutes,
+            category=request.category,
+            market_data=request.market_data,
+            job_id=request.job_id or 0,
+        )
     except Exception as e:
         raise HTTPException(500, f"스크립트 생성 실패: {str(e)}")
 
@@ -235,6 +242,30 @@ async def longform_generate(request: LongformGenerateRequest):
 def download_longform(path: str):
     if not os.path.exists(path): raise HTTPException(404, "파일 없음")
     return FileResponse(path, media_type="video/mp4", filename=os.path.basename(path))
+
+class SingleImageGenerateRequest(BaseModel):
+    index: int
+    text: str
+    section: str
+    job_id: int
+
+@app.post("/workers/images/generate-single")
+async def generate_single_image(request: SingleImageGenerateRequest):
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        
+        job_dir = DATA_DIR / "jobs" / str(request.job_id) / "images"
+        job_dir.mkdir(parents=True, exist_ok=True)
+        img_path = str(job_dir / f"scene_{request.index:03d}.png")
+        
+        images_worker = get_images_worker()
+        images_worker._render_section(request.section, request.text, img_path, plt)
+        return {"status": "ok", "image_path": img_path}
+    except Exception as e:
+        logger.exception("단일 이미지 생성 실패")
+        raise HTTPException(500, f"단일 이미지 생성 실패: {str(e)}")
 
 # ============================
 # 디버깅

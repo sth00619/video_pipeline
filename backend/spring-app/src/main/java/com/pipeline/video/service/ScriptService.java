@@ -46,8 +46,26 @@ public class ScriptService {
         log.info("스크립트 생성: jobId={}, keyword={}, target={}분, category={}",
                 jobId, job.getKeyword(), targetMinutes, categoryName);
 
+        String marketSnapshotJson = null;
+        try {
+            // 해당 jobId의 KEYWORD 에셋 조회
+            java.util.List<Asset> keywordAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.KEYWORD);
+            for (Asset a : keywordAssets) {
+                if (a.getMetaJson() != null && a.getMetaJson().contains("market_snapshot")) {
+                    Map<String, Object> metaMap = objectMapper.readValue(a.getMetaJson(), Map.class);
+                    if (metaMap.containsKey("market_snapshot")) {
+                        marketSnapshotJson = objectMapper.writeValueAsString(metaMap.get("market_snapshot"));
+                        log.info("KEYWORD 에셋에서 market_snapshot 추출 성공");
+                        break;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("KEYWORD 에셋에서 market_snapshot 추출 오류: {}", ex.getMessage());
+        }
+
         ScriptGenerateResponse result = fastApiClient.generateScript(
-                jobId, job.getKeyword(), targetMinutes, categoryName);
+                jobId, job.getKeyword(), targetMinutes, categoryName, marketSnapshotJson);
 
         costService.record(jobId, "CLAUDE_LLM", BigDecimal.ZERO, "USD",
                 String.format("스크립트 %d분 %d자", targetMinutes,

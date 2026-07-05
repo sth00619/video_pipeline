@@ -37,6 +37,10 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [quickTitle, setQuickTitle] = useState('')
   const [creating, setCreating] = useState(false)
+  const [filter, setFilter] = useState('ALL')
+  const [category, setCategory] = useState('KOSPI')
+  const [duration, setDuration] = useState(20)
+  const [autonomy, setAutonomy] = useState('AUTO')
 
   const { data: jobs = [], refetch } = useQuery({
     queryKey: ['jobs'],
@@ -50,6 +54,13 @@ export default function Dashboard() {
   const completed = jobs.filter(j => ['READY', 'PUBLISHED'].includes(j.status))
   const failed = jobs.filter(j => ['FAILED', 'BUDGET_BLOCKED'].includes(j.status))
 
+  const filteredJobs = jobs.filter(j => {
+    if (filter === 'IN_PROGRESS') return !['READY', 'PUBLISHED', 'FAILED', 'BUDGET_BLOCKED', 'DRAFT'].includes(j.status)
+    if (filter === 'COMPLETED') return ['READY', 'PUBLISHED'].includes(j.status)
+    if (filter === 'FAILED') return ['FAILED', 'BUDGET_BLOCKED'].includes(j.status)
+    return true
+  })
+
   const handleQuickStart = async (e) => {
     e.preventDefault()
     if (!quickTitle.trim()) return
@@ -57,13 +68,14 @@ export default function Dashboard() {
     try {
       const job = await jobsApi.create({
         title: quickTitle,
-        category: 'KOSPI',
-        autonomy: 'AUTO',
-        longformTargetMinutes: 20,
+        category: category,
+        autonomy: autonomy,
+        longformTargetMinutes: duration,
         budgetCap: 100,
       })
-      // AUTO 모드: 즉시 키워드 탐색 시작
-      await jobsApi.searchKeyword(job.id, quickTitle, 5)
+      if (autonomy !== 'MANUAL') {
+        await jobsApi.searchKeyword(job.id, quickTitle, 5)
+      }
       navigate(`/jobs/${job.id}`)
     } catch (err) {
       console.error(err)
@@ -81,17 +93,73 @@ export default function Dashboard() {
 
       {/* 통계 카드 */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <StatCard icon={<Clock className="text-accent-cyan" />} label="진행 중" value={inProgress.length} />
-        <StatCard icon={<CheckCircle className="text-accent-green" />} label="완료" value={completed.length} />
-        <StatCard icon={<AlertCircle className="text-accent-red" />} label="오류" value={failed.length} />
+        <StatCard
+          icon={<Clock className="text-accent-cyan" />}
+          label="진행 중"
+          value={inProgress.length}
+          active={filter === 'IN_PROGRESS'}
+          onClick={() => setFilter(filter === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS')}
+        />
+        <StatCard
+          icon={<CheckCircle className="text-accent-green" />}
+          label="완료"
+          value={completed.length}
+          active={filter === 'COMPLETED'}
+          onClick={() => setFilter(filter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
+        />
+        <StatCard
+          icon={<AlertCircle className="text-accent-red" />}
+          label="오류"
+          value={failed.length}
+          active={filter === 'FAILED'}
+          onClick={() => setFilter(filter === 'FAILED' ? 'ALL' : 'FAILED')}
+        />
       </div>
 
-      {/* AUTO 빠른 시작 */}
+      {/* 빠른 영상 시작 */}
       <div className="bg-navy-800 rounded-xl p-6 mb-8 border border-navy-700">
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="text-accent-gold" size={20} />
-          <h2 className="font-semibold">AUTO 빠른 시작</h2>
-          <span className="text-xs bg-accent-cyan/20 text-accent-cyan px-2 py-0.5 rounded-full">KOSPI · 20분 · 자동</span>
+        <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Zap className="text-accent-gold" size={20} />
+            <h2 className="font-semibold">빠른 영상 시작</h2>
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1 text-xs text-accent-cyan font-semibold focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
+            >
+              <option value="KOSPI">KOSPI</option>
+              <option value="KOSDAQ">KOSDAQ</option>
+              <option value="US_STOCKS">미국 주식</option>
+              <option value="INDIVIDUAL_STOCK">개별 종목</option>
+              <option value="GLOBAL_MACRO">글로벌 거시</option>
+              <option value="CRYPTO">암호화폐</option>
+              <option value="CUSTOM">직접 입력 (CUSTOM)</option>
+            </select>
+
+            <select
+              value={duration}
+              onChange={e => setDuration(Number(e.target.value))}
+              className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1 text-xs text-accent-cyan font-semibold focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
+            >
+              <option value="5">5분</option>
+              <option value="10">10분</option>
+              <option value="15">15분</option>
+              <option value="20">20분</option>
+              <option value="30">30분</option>
+            </select>
+
+            <select
+              value={autonomy}
+              onChange={e => setAutonomy(e.target.value)}
+              className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1 text-xs text-accent-cyan font-semibold focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
+            >
+              <option value="AUTO">자동 (AUTO)</option>
+              <option value="GUIDED">반자동 (GUIDED)</option>
+              <option value="MANUAL">수동 (MANUAL)</option>
+            </select>
+          </div>
         </div>
         <form onSubmit={handleQuickStart} className="flex gap-3">
           <input
@@ -111,14 +179,23 @@ export default function Dashboard() {
           </button>
         </form>
         <p className="text-xs text-gray-500 mt-2">
-          키워드 탐색 → 스크립트 → 음성 → 이미지 → 영상 조립까지 자동으로 진행됩니다.
+          {autonomy === 'AUTO' && '키워드 탐색 → 스크립트 → 음성 → 이미지 → 영상 조립까지 완전 자동으로 가동됩니다.'}
+          {autonomy === 'GUIDED' && '단계마다 생성 결과를 검토하고 수동 승인/수정하며 진행하는 모드입니다.'}
+          {autonomy === 'MANUAL' && '직접 키워드를 작성하거나 영상 조립 구간을 정의하는 모드입니다.'}
         </p>
       </div>
 
       {/* 최근 작업 목록 */}
       <div className="bg-navy-800 rounded-xl border border-navy-700">
         <div className="flex items-center justify-between px-6 py-4 border-b border-navy-700">
-          <h2 className="font-semibold">최근 작업</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold">최근 작업</h2>
+            {filter !== 'ALL' && (
+              <span className="text-[10px] bg-accent-cyan/10 text-accent-cyan px-2 py-0.5 rounded-full font-semibold">
+                필터: {filter === 'IN_PROGRESS' ? '진행 중' : filter === 'COMPLETED' ? '완료' : '오류'}
+              </span>
+            )}
+          </div>
           <button
             onClick={() => navigate('/jobs')}
             className="text-sm text-accent-cyan hover:underline"
@@ -126,15 +203,19 @@ export default function Dashboard() {
             전체 보기
           </button>
         </div>
-        {jobs.length === 0 ? (
+        {filteredJobs.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <Video size={40} className="mx-auto mb-3 opacity-30" />
-            <p>작업이 없습니다.</p>
-            <p className="text-sm mt-1">위에서 첫 번째 영상을 만들어보세요.</p>
+            <p>조건에 부합하는 작업이 없습니다.</p>
+            {filter !== 'ALL' && (
+              <button onClick={() => setFilter('ALL')} className="text-xs text-accent-cyan hover:underline mt-2">
+                필터 해제하기
+              </button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-navy-700">
-            {jobs.slice(0, 8).map(job => (
+            {filteredJobs.slice(0, 8).map(job => (
               <button
                 key={job.id}
                 onClick={() => navigate(`/jobs/${job.id}`)}
@@ -163,14 +244,20 @@ export default function Dashboard() {
   )
 }
 
-function StatCard({ icon, label, value }) {
+function StatCard({ icon, label, value, active, onClick }) {
   return (
-    <div className="bg-navy-800 rounded-xl p-5 border border-navy-700">
+    <button
+      onClick={onClick}
+      className={`w-full text-left bg-navy-800 rounded-xl p-5 border transition hover:bg-navy-700/40 cursor-pointer ${
+        active ? 'border-accent-cyan shadow-lg shadow-accent-cyan/10' : 'border-navy-700'
+      }`}
+    >
       <div className="flex items-center justify-between mb-3">
         {icon}
+        {active && <span className="text-[10px] bg-accent-cyan/20 text-accent-cyan px-1.5 py-0.5 rounded font-bold">필터 적용</span>}
       </div>
       <div className="text-2xl font-bold">{value}</div>
       <div className="text-sm text-gray-400 mt-1">{label}</div>
-    </div>
+    </button>
   )
 }

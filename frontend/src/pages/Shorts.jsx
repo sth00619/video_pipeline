@@ -6,6 +6,7 @@ import {
 import Layout from '../components/Layout'
 import apiClient from '../api/client'
 import { authStore } from '../store/auth'
+import { useShortsStore } from '../store/shortsStore'
 
 const SEG_LABELS = ['핵심 분석','시나리오 분석','실행 가이드','결론 요약','데이터 정리']
 const COLORS = ['text-accent-cyan','text-accent-gold','text-accent-green','text-purple-400','text-pink-400']
@@ -52,30 +53,63 @@ async function downloadFile(path, filename) {
 
 export default function Shorts() {
   const fileRef = useRef(null), videoRef = useRef(null), tlRef = useRef(null)
-  const [file, setFile] = useState(null)
-  const [fileUrl, setFileUrl] = useState(null)
-  const [shortsCount, setShortsCount] = useState(3)
-  const [clipDur, setClipDur] = useState(60)
-  const [mode, setMode] = useState('GUIDED')
-  const [analyzing, setAnalyzing] = useState(false)
-  const [cutting, setCutting] = useState(false)
-  const [segments, setSegments] = useState([])
-  const [clips, setClips] = useState([])
+  
+  const [storeState, setStoreState] = useShortsStore()
+  const {
+    file, fileUrl, shortsCount, clipDur, mode, analyzing, cutting,
+    autoSegments, autoClips, guidedSegments, guidedClips, manualSegments, manualClips,
+    jobId, totalDur, curTime, playing, activeSeg, phase, downloadingIdx
+  } = storeState
+
+  const setFile = (val) => setStoreState(prev => ({ file: typeof val === 'function' ? val(prev.file) : val }))
+  const setFileUrl = (val) => setStoreState(prev => ({ fileUrl: typeof val === 'function' ? val(prev.fileUrl) : val }))
+  const setShortsCount = (val) => setStoreState(prev => ({ shortsCount: typeof val === 'function' ? val(prev.shortsCount) : val }))
+  const setClipDur = (val) => setStoreState(prev => ({ clipDur: typeof val === 'function' ? val(prev.clipDur) : val }))
+  const setMode = (val) => setStoreState(prev => ({ mode: typeof val === 'function' ? val(prev.mode) : val }))
+  const setAnalyzing = (val) => setStoreState(prev => ({ analyzing: typeof val === 'function' ? val(prev.analyzing) : val }))
+  const setCutting = (val) => setStoreState(prev => ({ cutting: typeof val === 'function' ? val(prev.cutting) : val }))
+  const setJobId = (val) => setStoreState(prev => ({ jobId: typeof val === 'function' ? val(prev.jobId) : val }))
+  const setTotalDur = (val) => setStoreState(prev => ({ totalDur: typeof val === 'function' ? val(prev.totalDur) : val }))
+  const setCurTime = (val) => setStoreState(prev => ({ curTime: typeof val === 'function' ? val(prev.curTime) : val }))
+  const setPlaying = (val) => setStoreState(prev => ({ playing: typeof val === 'function' ? val(prev.playing) : val }))
+  const setActiveSeg = (val) => setStoreState(prev => ({ activeSeg: typeof val === 'function' ? val(prev.activeSeg) : val }))
+  const setPhase = (val) => setStoreState(prev => ({ phase: typeof val === 'function' ? val(prev.phase) : val }))
+  const setDownloadingIdx = (val) => setStoreState(prev => ({ downloadingIdx: typeof val === 'function' ? val(prev.downloadingIdx) : val }))
+
+  const setAutoSegments = (val) => setStoreState(prev => ({ autoSegments: typeof val === 'function' ? val(prev.autoSegments) : val }))
+  const setAutoClips = (val) => setStoreState(prev => ({ autoClips: typeof val === 'function' ? val(prev.autoClips) : val }))
+  const setGuidedSegments = (val) => setStoreState(prev => ({ guidedSegments: typeof val === 'function' ? val(prev.guidedSegments) : val }))
+  const setGuidedClips = (val) => setStoreState(prev => ({ guidedClips: typeof val === 'function' ? val(prev.guidedClips) : val }))
+  const setManualSegments = (val) => setStoreState(prev => ({ manualSegments: typeof val === 'function' ? val(prev.manualSegments) : val }))
+  const setManualClips = (val) => setStoreState(prev => ({ manualClips: typeof val === 'function' ? val(prev.manualClips) : val }))
+
+  const segments = mode === 'AUTO' ? autoSegments : mode === 'GUIDED' ? guidedSegments : manualSegments
+  const setSegments = (val) => {
+    if (mode === 'AUTO') setAutoSegments(val)
+    else if (mode === 'GUIDED') setGuidedSegments(val)
+    else setManualSegments(val)
+  }
+  const clips = mode === 'AUTO' ? autoClips : mode === 'GUIDED' ? guidedClips : manualClips
+  const setClips = (val) => {
+    if (mode === 'AUTO') setAutoClips(val)
+    else if (mode === 'GUIDED') setGuidedClips(val)
+    else setManualClips(val)
+  }
+
   const [drag, setDrag] = useState(false)
-  const [jobId, setJobId] = useState(null)
-  const [totalDur, setTotalDur] = useState(0)
-  const [curTime, setCurTime] = useState(0)
-  const [playing, setPlaying] = useState(false)
   const [dragging, setDragging] = useState(null)
-  const [activeSeg, setActiveSeg] = useState(null)
-  const [phase, setPhase] = useState('upload')
-  const [downloadingIdx, setDownloadingIdx] = useState(null)
 
   const handleFile = (f) => {
     if (!f || !f.type.startsWith('video/')) return
     if (fileUrl) URL.revokeObjectURL(fileUrl)
     setFile(f); setFileUrl(URL.createObjectURL(f))
-    setSegments([]); setClips([]); setJobId(null)
+    setAutoSegments([])
+    setAutoClips([])
+    setGuidedSegments([])
+    setGuidedClips([])
+    setManualSegments([])
+    setManualClips([])
+    setJobId(null)
     setActiveSeg(null); setPhase('upload')
   }
 
@@ -168,6 +202,29 @@ export default function Shorts() {
   }
 
   const handleGuidedCut = () => executeCut(jobId, segments)
+
+  const updClip = (i, field, value) => {
+    setClips(cls => cls.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
+  }
+
+  const handleRegenerate = async () => {
+    if (!jobId) { alert('작업 ID가 없습니다.'); return }
+    setCutting(true)
+    try {
+      const res = await apiClient.post(`/jobs/${jobId}/shorts/confirm`, {
+        segments: clips.map((c) => ({
+          index: c.index,
+          text: c.text || c.label || `쇼츠 ${c.index}`,
+          start: c.start,
+          end: c.end,
+        }))
+      })
+      setClips(Array.isArray(res.data) ? res.data : [])
+      alert('쇼츠 영상이 성공적으로 재생성되었습니다.')
+    } catch (e) {
+      alert('재생성 실패: ' + (e.response?.data?.message || e.message))
+    } finally { setCutting(false) }
+  }
 
   // ── 구간 관리 ──
   const addSeg = () => {
@@ -302,7 +359,7 @@ export default function Shorts() {
                   { m: 'GUIDED', label: '반자동', desc: '분석 후 편집 가능' },
                   { m: 'MANUAL', label: '수동', desc: '직접 구간 지정' },
                 ].map(({ m, label, desc }) => (
-                  <button key={m} onClick={() => { setMode(m); setSegments([]); setClips([]) }}
+                  <button key={m} onClick={() => { setMode(m) }}
                     title={desc}
                     className={`flex-1 py-1.5 rounded text-xs font-semibold transition ${mode === m
                         ? m === 'AUTO' ? 'bg-accent-green text-navy-950'
@@ -487,18 +544,38 @@ export default function Shorts() {
       {/* 결과 */}
       {clips.length > 0 && (
         <div className="bg-navy-800 rounded-xl border border-accent-green p-5">
-          <h3 className="font-semibold text-sm mb-4 text-accent-green">
-            ✓ 쇼츠 {clips.length}개 생성 완료 (9:16 세로 비율)
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-sm text-accent-green">
+              ✓ 쇼츠 {clips.length}개 생성 완료 (9:16 세로 비율)
+            </h3>
+            <button onClick={handleRegenerate} disabled={cutting}
+              className="flex items-center gap-1.5 bg-accent-gold text-navy-950 text-xs font-semibold py-1.5 px-3 rounded-lg hover:opacity-90 transition disabled:opacity-50">
+              {cutting ? <Loader size={12} className="animate-spin" /> : <Scissors size={12} />}
+              구간 적용 및 재생성
+            </button>
+          </div>
           <div className="space-y-2">
             {clips.map((clip, i) => (
               <div key={i} className="flex items-center justify-between bg-navy-700/50 rounded-lg px-4 py-3">
                 <div className="flex items-center gap-3">
                   <span className={`text-xs font-bold ${COLORS[i % COLORS.length]}`}>#{clip.index}</span>
                   <div>
-                    <div className="text-sm">{clip.label || clip.text || `쇼츠 ${clip.index}`}</div>
-                    <div className="text-xs text-gray-500">
-                      {fmt(clip.start)} → {fmt(clip.end)} · {clip.duration?.toFixed(0)}초
+                    <input value={clip.text || clip.label || ''}
+                      onChange={e => updClip(i, 'text', e.target.value)}
+                      className="bg-transparent text-sm font-semibold w-48 focus:outline-none focus:text-accent-cyan truncate"
+                      placeholder={`쇼츠 ${clip.index}`} />
+                    <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                      <Clock size={9} />
+                      <span contentEditable suppressContentEditableWarning
+                        onBlur={e => updClip(i, 'start', parseSec(e.target.innerText))}
+                        className="focus:outline-none focus:text-accent-cyan cursor-text font-medium"
+                      >{fmt(clip.start)}</span>
+                      <span>→</span>
+                      <span contentEditable suppressContentEditableWarning
+                        onBlur={e => updClip(i, 'end', parseSec(e.target.innerText))}
+                        className="focus:outline-none focus:text-accent-cyan cursor-text font-medium"
+                      >{fmt(clip.end)}</span>
+                      <span className="text-gray-600 font-medium">{(clip.end - clip.start).toFixed(0)}s</span>
                       {clip.file_size_mb && <span className="ml-2 text-gray-600">{clip.file_size_mb}MB</span>}
                     </div>
                   </div>
@@ -517,7 +594,7 @@ export default function Shorts() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-3">9:16 세로 비율 (유튜브 쇼츠 포맷)</p>
+          <p className="text-xs text-gray-500 mt-3">9:16 세로 비율 (유튜브 쇼츠 포맷 · 재생성 시 변경 사항이 즉시 영상에 인코딩되어 반영됩니다)</p>
         </div>
       )}
     </Layout>

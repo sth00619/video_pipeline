@@ -38,4 +38,16 @@ public class ImagesController {
         imagesService.confirm(jobId, username);
         return ResponseEntity.ok(Map.of("status", "OK"));
     }
+
+    @PostMapping("/scenes/{index}")
+    public ResponseEntity<Map<String, String>> updateScene(
+            @PathVariable Long jobId,
+            @PathVariable int index,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal String username) {
+        String text = body.get("text");
+        String section = body.get("section");
+        imagesService.updateScene(jobId, index, text, section);
+        return ResponseEntity.ok(Map.of("status", "OK"));
+    }
 }

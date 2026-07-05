@@ -119,13 +119,23 @@ public class FastApiClient {
 
     // Phase 3-2 — 스크립트
     public ScriptGenerateResponse generateScript(Long jobId, String keyword, int targetMinutes,
-                                                  String category) {
+                                                  String category, String marketSnapshotJson) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
             bodyMap.put("keyword", keyword);
             bodyMap.put("target_minutes", targetMinutes);
             bodyMap.put("category", category != null ? category : "CUSTOM");
+            
+            if (marketSnapshotJson != null && !marketSnapshotJson.isBlank()) {
+                try {
+                    Map<String, Object> marketDataMap = objectMapper.readValue(marketSnapshotJson, Map.class);
+                    bodyMap.put("market_data", marketDataMap);
+                } catch (Exception parseEx) {
+                    log.warn("marketSnapshotJson 파싱 실패: {}", parseEx.getMessage());
+                }
+            }
+            
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/script/generate", bodyMap),
                     ScriptGenerateResponse.class);
@@ -161,6 +171,20 @@ public class FastApiClient {
                     ImagesGenerateResponse.class);
         } catch (Exception e) {
             throw new RuntimeException("이미지 생성 오류: " + e.getMessage(), e);
+        }
+    }
+
+    // Phase 3-4B — 단일 이미지 재생성
+    public void generateSingleImage(Long jobId, int index, String text, String section) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            bodyMap.put("index", index);
+            bodyMap.put("text", text);
+            bodyMap.put("section", section);
+            postJson(fastApiUrl + "/workers/images/generate-single", bodyMap);
+        } catch (Exception e) {
+            throw new RuntimeException("단일 이미지 생성 오류: " + e.getMessage(), e);
         }
     }
 

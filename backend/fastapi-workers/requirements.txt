@@ -13,4 +13,23 @@ python-multipart==0.0.12
 gTTS==2.5.1
 anthropic==0.40.0
 matplotlib==3.9.2
-numpy==2.1.3
+numpy>=1.24.0,<2.0
+
+# ─── 신규: 한국 주식 시장 데이터 ───────────────────────
+pykrx<1.2.7
+finance-datareader>=0.9.50
+opendartreader<=0.2.1
+
+# ─── 신규: 한국어 NLP 키워드 추출 ────────────────────────
+kiwipiepy>=0.17.0
+feedparser>=6.0.11
+beautifulsoup4>=4.12.3
+scikit-learn>=1.5.0
+
+# ─── 신규: 미국 주식 시장 데이터 ───────────────────────
+finnhub-python>=2.4.20
+yfinance>=0.2.38
+fredapi>=0.5.2
+
+# ─── 신규: 데이터 처리 ──────────────────────────────
+pandas>=2.2.0

@@ -31,6 +31,8 @@ export const jobsApi = {
   // 이미지
   generateImages: (id) => apiClient.post(`/jobs/${id}/images/generate`).then(r => r.data),
   confirmImages: (id) => apiClient.post(`/jobs/${id}/images/confirm`, {}).then(r => r.data),
+  updateSceneImage: (id, index, text, section = 'default') =>
+    apiClient.post(`/jobs/${id}/images/scenes/${index}`, { text, section }).then(r => r.data),
 
   // 롱폼
   generateLongform: (id) => apiClient.post(`/jobs/${id}/longform/generate`).then(r => r.data),

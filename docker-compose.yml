@@ -72,6 +72,11 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-d951j4pr01qq8ms6uaa0d951j4pr01qq8ms6uaag}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      DART_API_KEY: ${DART_API_KEY:-}
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
     depends_on:
       - redis
       - minio
