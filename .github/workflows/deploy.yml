@@ -17,7 +17,18 @@ jobs:
           host: ${{ secrets.ORACLE_HOST }}
           username: ${{ secrets.ORACLE_USER }}
           key: ${{ secrets.ORACLE_SSH_KEY }}
+          command_timeout: 30m
           script: |
+            # 1GB RAM 인스턴스를 위한 4GB Swap 메모리 생성 (메모리 부족으로 인한 dnf Killed 방지)
+            if [ ! -f /swapfile ]; then
+              echo "스왑 메모리를 생성합니다..."
+              sudo dd if=/dev/zero of=/swapfile bs=1M count=4096
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            fi
+            
             # Git이 없으면 자동 설치
             if ! command -v git &> /dev/null; then
               echo "Git을 설치합니다..."
