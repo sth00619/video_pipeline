@@ -60,12 +60,13 @@ jobs:
               sudo systemctl enable docker
               sudo usermod -aG docker opc
               
-              # 방화벽 오픈 (최초 1회)
-              sudo firewall-cmd --zone=public --add-port=3000/tcp --permanent || true
-              sudo firewall-cmd --zone=public --add-port=8080/tcp --permanent || true
-              sudo firewall-cmd --zone=public --add-port=8001/tcp --permanent || true
-              sudo firewall-cmd --reload || true
             fi
+            
+            # 방화벽 오픈 (항상 확인)
+            sudo firewall-cmd --zone=public --add-port=3000/tcp --permanent || true
+            sudo firewall-cmd --zone=public --add-port=8080/tcp --permanent || true
+            sudo firewall-cmd --zone=public --add-port=8001/tcp --permanent || true
+            sudo firewall-cmd --reload || true
             
             # 혹시 모를 기존 충돌 컨테이너 및 네트워크 강제 정리
             sudo docker rm -f pipeline_postgres pipeline_redis pipeline_minio pipeline_fastapi pipeline_fastapi_workers pipeline_spring_app pipeline_frontend || true
