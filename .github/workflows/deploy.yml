@@ -17,7 +17,7 @@ jobs:
           host: ${{ secrets.ORACLE_HOST }}
           username: ${{ secrets.ORACLE_USER }}
           key: ${{ secrets.ORACLE_SSH_KEY }}
-          command_timeout: 120m
+          command_timeout: 360m
           script: |
             # 1GB RAM 인스턴스를 위한 4GB Swap 메모리 생성 (메모리 부족으로 인한 dnf Killed 방지)
             if [ ! -f /swapfile ]; then
