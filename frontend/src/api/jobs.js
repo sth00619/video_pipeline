@@ -37,6 +37,7 @@ export const jobsApi = {
   // 롱폼
   generateLongform: (id) => apiClient.post(`/jobs/${id}/longform/generate`).then(r => r.data),
   confirmLongform: (id) => apiClient.post(`/jobs/${id}/longform/confirm`, {}).then(r => r.data),
+  rebuildLongform: (id) => apiClient.post(`/jobs/${id}/longform/rebuild`, {}).then(r => r.data),
 
   // 게이트
   approvals: (id) => apiClient.get(`/jobs/${id}/approvals`).then(r => r.data),

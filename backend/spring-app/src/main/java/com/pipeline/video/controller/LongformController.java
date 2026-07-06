@@ -38,4 +38,11 @@ public class LongformController {
         longformService.confirm(jobId, username);
         return ResponseEntity.ok(Map.of("status", "OK"));
     }
+
+    @PostMapping("/rebuild")
+    public ResponseEntity<LongformGenerateResponse> rebuild(
+            @PathVariable Long jobId,
+            @AuthenticationPrincipal String username) {
+        return ResponseEntity.ok(longformService.rebuild(jobId, username));
+    }
 }

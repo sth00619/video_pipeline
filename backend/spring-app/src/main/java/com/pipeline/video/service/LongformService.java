@@ -13,6 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
+import com.pipeline.video.dto.SceneImageDto;
+import com.pipeline.video.dto.TtsChunkDto;
+import com.pipeline.video.dto.TtsGenerateResponse;
 
 /**
  * Phase 3-5A — 롱폼 영상 조립 서비스
@@ -139,5 +146,175 @@ public class LongformService {
         } catch (JsonProcessingException e) {
             return "[]";
         }
+    }
+
+    @Transactional
+    public LongformGenerateResponse rebuild(Long jobId, String username) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+
+        // 1. 모든 SCENE_IMAGE 에셋 조회 및 index 순서대로 정렬
+        List<Asset> sceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+        if (sceneAssets.isEmpty()) {
+            throw new IllegalStateException("재조립할 씬 이미지 에셋이 존재하지 않습니다.");
+        }
+
+        List<SceneImageDto> scenes = new ArrayList<>();
+        for (Asset a : sceneAssets) {
+            try {
+                SceneImageDto dto = objectMapper.readValue(a.getMetaJson(), SceneImageDto.class);
+                scenes.add(dto);
+            } catch (Exception e) {
+                log.warn("씬 이미지 에셋 파싱 실패: {}", e.getMessage());
+            }
+        }
+        scenes.sort(Comparator.comparing(SceneImageDto::getIndex));
+
+        // 2. 각 씬의 prompt를 순서대로 이어붙여 새로운 전체 스크립트 작성
+        StringBuilder fullScriptBuilder = new StringBuilder();
+        for (SceneImageDto scene : scenes) {
+            if (fullScriptBuilder.length() > 0) {
+                fullScriptBuilder.append("\n");
+            }
+            fullScriptBuilder.append(scene.getPrompt());
+        }
+        String newScript = fullScriptBuilder.toString();
+
+        // 3. SCRIPT 에셋 업데이트 (마지막 스크립트 상태 갱신)
+        Asset finalScriptAsset = Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.SCRIPT)
+                .metaJson(safeJson(Map.of(
+                        "script", newScript,
+                        "final", true,
+                        "char_count", newScript.length(),
+                        "sections", List.of(),
+                        "verified_facts", List.of()
+                )))
+                .build();
+        assetRepository.save(finalScriptAsset);
+
+        // 4. TTS 재생성 (gTTS + Whisper 호출)
+        log.info("재조립을 위한 TTS 재생성 시작: jobId={}, scriptLength={}자", jobId, newScript.length());
+        TtsGenerateResponse ttsResult = fastApiClient.generateTts(jobId, newScript, "default_ko");
+        
+        // TTS Asset 저장
+        Asset ttsAsset = Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.TTS_AUDIO)
+                .localPath(ttsResult.getAudioPath())
+                .metaJson(safeJson(ttsResult))
+                .build();
+        assetRepository.save(ttsAsset);
+
+        // 5. [핵심 알고리즘] 새로운 TTS chunks 타이밍 정보를 바탕으로 각 씬의 start, duration 동적 매칭!
+        List<TtsChunkDto> chunks = ttsResult.getChunks();
+        if (chunks != null && !chunks.isEmpty()) {
+            int chunkIdx = 0;
+            double currentStart = 0.0;
+            
+            for (int i = 0; i < scenes.size(); i++) {
+                SceneImageDto scene = scenes.get(i);
+                String cleanPrompt = scene.getPrompt().replaceAll("[\\s\\p{Punct}]+", "");
+                
+                String cleanNextPrompt = "";
+                if (i + 1 < scenes.size()) {
+                    cleanNextPrompt = scenes.get(i + 1).getPrompt().replaceAll("[\\s\\p{Punct}]+", "");
+                }
+                
+                double sceneDuration = 0.0;
+                boolean foundFirst = false;
+                
+                while (chunkIdx < chunks.size()) {
+                    TtsChunkDto chunk = chunks.get(chunkIdx);
+                    String cleanChunkText = chunk.getText().replaceAll("[\\s\\p{Punct}]+", "");
+                    
+                    if (cleanChunkText.isEmpty()) {
+                        chunkIdx++;
+                        continue;
+                    }
+                    
+                    // 다음 씬의 스크립트와 매칭되면 현재 씬 매칭 종료
+                    if (!cleanNextPrompt.isEmpty() && cleanNextPrompt.contains(cleanChunkText)) {
+                        break;
+                    }
+                    
+                    if (!foundFirst) {
+                        scene.setStart(chunk.getStart());
+                        foundFirst = true;
+                    }
+                    sceneDuration += chunk.getDuration();
+                    chunkIdx++;
+                }
+                
+                if (!foundFirst) {
+                    scene.setStart(currentStart);
+                    scene.setDuration(15.0); // fallback
+                } else {
+                    scene.setDuration(sceneDuration);
+                }
+                
+                currentStart = scene.getStart() + scene.getDuration();
+                
+                // 해당 SCENE_IMAGE 에셋 DB 업데이트
+                for (Asset a : sceneAssets) {
+                    try {
+                        SceneImageDto dto = objectMapper.readValue(a.getMetaJson(), SceneImageDto.class);
+                        if (dto.getIndex().equals(scene.getIndex())) {
+                            a.setMetaJson(safeJson(scene));
+                            assetRepository.save(a);
+                            break;
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+            }
+        }
+
+        // 6. 롱폼 영상 재조립 (FastAPI 호출)
+        log.info("재조립을 위한 롱폼 인코딩 시작: jobId={}", jobId);
+        
+        // 새로 업데이트된 씬 에셋 목록을 다시 로드
+        List<Asset> updatedSceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+        updatedSceneAssets.sort((a, b) -> {
+            try {
+                SceneImageDto dtoA = objectMapper.readValue(a.getMetaJson(), SceneImageDto.class);
+                SceneImageDto dtoB = objectMapper.readValue(b.getMetaJson(), SceneImageDto.class);
+                return Integer.compare(dtoA.getIndex(), dtoB.getIndex());
+            } catch (Exception e) {
+                return 0;
+            }
+        });
+        
+        List<Asset> gifAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.GIF_CLIP);
+
+        String scenesJson = safeJson(updatedSceneAssets.stream()
+                .map(Asset::getMetaJson).toList());
+        String gifsJson = safeJson(gifAssets.stream()
+                .map(Asset::getMetaJson).toList());
+
+        LongformGenerateResponse result = fastApiClient.generateLongform(
+                jobId, safeJson(ttsResult), scenesJson, gifsJson);
+
+        // 7. LONGFORM_VIDEO 에셋 저장 및 job outputPath 업데이트
+        Asset videoAsset = Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.LONGFORM_VIDEO)
+                .localPath(result.getVideoPath())
+                .metaJson(safeJson(result))
+                .build();
+        assetRepository.save(videoAsset);
+
+        job.setOutputPath(result.getVideoPath());
+        jobRepository.save(job);
+
+        // 비용 기록 (재조립 추가 비용)
+        costService.record(jobId, "FFMPEG_REASSEMBLE", BigDecimal.ZERO, "USD",
+                String.format("롱폼 재조립: %.0f초, %d씬", 
+                        result.getDurationSeconds(), result.getSceneCount()));
+
+        log.info("롱폼 동영상 재조립 완료: jobId={}, path={}", jobId, result.getVideoPath());
+        return result;
     }
 }

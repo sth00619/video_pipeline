@@ -197,6 +197,19 @@ export default function JobDetail() {
     }
   })
 
+  const rebuildLongformMut = useMutation({
+    mutationFn: () => jobsApi.rebuildLongform(id),
+    onSuccess: () => {
+      qc.invalidateQueries(['job', id])
+      qc.invalidateQueries(['assets', id])
+      setImageSalt(prev => prev + 1)
+      alert('동영상이 성공적으로 재조립되었습니다.')
+    },
+    onError: (err) => {
+      alert('동영상 재조립 실패: ' + (err.response?.data?.message || err.message))
+    }
+  })
+
   const handleRun = async (step) => {
     setRunningStep(step.key)
     try {
@@ -644,7 +657,7 @@ export default function JobDetail() {
                 )}
 
                 {/* ── 이미지 갤러리 및 씬 편집기 ── */}
-                {step.key === 'images' && sortedImageList.length > 0 && (
+                {((step.key === 'images' || step.key === 'longform') && sortedImageList.length > 0) && (
                   <div className="px-5 pb-4 border-t border-navy-700">
                     <div className="flex items-center justify-between mt-3 mb-3">
                       <div className="flex items-center gap-2">
@@ -653,7 +666,7 @@ export default function JobDetail() {
                           {sortedImageList.length}개 씬 이미지 (matplotlib 차트 기반)
                         </span>
                       </div>
-                      {job.status === 'IMAGES_PENDING' && (
+                      {['IMAGES_PENDING', 'PREVIEW_PENDING', 'READY'].includes(job.status) && (
                         <span className="text-[10px] bg-accent-cyan/10 text-accent-cyan px-2 py-0.5 rounded-full font-semibold">
                           수정/재생성 활성화됨
                         </span>
@@ -733,7 +746,7 @@ export default function JobDetail() {
                                     </button>
                                   </>
                                 ) : (
-                                  job.status === 'IMAGES_PENDING' && (
+                                  ['IMAGES_PENDING', 'PREVIEW_PENDING', 'READY'].includes(job.status) && (
                                     <button
                                       onClick={() => {
                                         setEditingSceneIndex(img.index);
@@ -758,20 +771,44 @@ export default function JobDetail() {
             )
           })}
 
-          {isDone && job.outputPath && (
-            <div className="bg-navy-800 rounded-xl border border-accent-green p-5">
+          {job.outputPath && (
+            <div className="bg-navy-800 rounded-xl border border-accent-green p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="text-accent-green" size={20}/>
                   <div>
-                    <div className="font-semibold text-sm">영상 생성 완료</div>
+                    <div className="font-semibold text-sm">
+                      {isDone ? '영상 생성 완료' : '영상 조립 완료 (미리보기)'}
+                    </div>
                     <div className="text-xs text-gray-400 mt-0.5">{job.longformTargetMinutes}분 · 1920×1080</div>
                   </div>
                 </div>
-                <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
-                  className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 transition" download>
-                  <Download size={14}/>MP4 다운로드
-                </a>
+                <div className="flex gap-2">
+                  {['PREVIEW_PENDING', 'READY'].includes(job.status) && (
+                    <button
+                      onClick={() => rebuildLongformMut.mutate()}
+                      disabled={rebuildLongformMut.isPending}
+                      className="flex items-center gap-1 bg-accent-gold text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
+                    >
+                      {rebuildLongformMut.isPending ? <Loader size={12} className="animate-spin"/> : <Zap size={12}/>}
+                      동영상 재조립
+                    </button>
+                  )}
+                  <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
+                    className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 transition" download>
+                    <Download size={12}/>MP4 다운로드
+                  </a>
+                </div>
+              </div>
+              
+              {/* 비디오 플레이어 */}
+              <div className="aspect-video bg-navy-950 rounded-lg overflow-hidden border border-navy-700">
+                <video 
+                  key={imageSalt}
+                  controls 
+                  className="w-full h-full"
+                  src={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
+                />
               </div>
             </div>
           )}
