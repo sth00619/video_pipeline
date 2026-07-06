@@ -200,33 +200,48 @@ class TtsWorker:
             return []
 
         # 단어를 MAX_SUBTITLE_CHARS 단위로 그룹핑 → 자막 청크
+        # 문장 종결 부호(. ! ? 。 요 다 죠 네)를 만나면 반드시 청크를 닫음
+        SENTENCE_ENDINGS = {'다', '요', '죠', '네', '야', '아', '어'}
+        HARD_ENDINGS = {'.', '!', '?', '。'}
+
         chunks = []
         current_words = []
         current_text = ""
 
+        def flush_chunk():
+            nonlocal current_words, current_text
+            if current_words:
+                chunks.append({
+                    "index": len(chunks) + 1,
+                    "text": current_text,
+                    "start": current_words[0]["start"],
+                    "duration": round(current_words[-1]["end"] - current_words[0]["start"], 3),
+                })
+            current_words = []
+            current_text = ""
+
         for w in words:
             word = w["word"]
-            if len(current_text) + len(word) + 1 <= MAX_SUBTITLE_CHARS:
-                current_words.append(w)
-                current_text = (current_text + word).strip()
-            else:
-                if current_words:
-                    chunks.append({
-                        "index": len(chunks) + 1,
-                        "text": current_text,
-                        "start": current_words[0]["start"],
-                        "duration": round(current_words[-1]["end"] - current_words[0]["start"], 3),
-                    })
-                current_words = [w]
-                current_text = word
+            word_stripped = word.strip()
 
-        if current_words:
-            chunks.append({
-                "index": len(chunks) + 1,
-                "text": current_text,
-                "start": current_words[0]["start"],
-                "duration": round(current_words[-1]["end"] - current_words[0]["start"], 3),
-            })
+            # 글자수 초과 시 먼저 flush
+            if len(current_text) + len(word_stripped) > MAX_SUBTITLE_CHARS and current_words:
+                flush_chunk()
+
+            current_words.append(w)
+            current_text = (current_text + word_stripped).strip()
+
+            # 문장 종결 감지: 마지막 문자가 종결 부호이거나 종결 어미인 경우
+            last_char = current_text[-1] if current_text else ''
+            is_hard_end = last_char in HARD_ENDINGS
+            # 어미 기반 종결: 단어가 2자 이상이고 마지막 문자가 종결 어미
+            is_soft_end = (len(current_text) >= 6 and last_char in SENTENCE_ENDINGS
+                           and len(current_words) >= 2)
+
+            if is_hard_end or is_soft_end:
+                flush_chunk()
+
+        flush_chunk()  # 남은 단어 처리
 
         logger.info(f"Whisper 세그먼트→청크: {len(words)}단어 → {len(chunks)}자막")
         return chunks
@@ -235,23 +250,25 @@ class TtsWorker:
     # 폴백 타이밍 (글자 수 비례)
     # ============================
     def _fallback_timing(self, script: str, total_duration: float) -> list[dict]:
-        """Whisper 실패 시 글자 수 비례로 타이밍 계산"""
-        sentences = re.split(r'(?<=[.!?。])\s+', script.strip())
+        """Whisper 실패 시 글자 수 비례로 타이밍 계산 (문장 경계 우선 적용)"""
+        # 문장 종결 부호와 어미 기반으로 문장 분리
+        sentences = re.split(r'(?<=[.!?。])\s*|(?<=다\.?)\s+|(?<=요\.?)\s+|(?<=죠\.?)\s+', script.strip())
+        sentences = [s.strip() for s in sentences if s.strip()]
         chunks = []
         cursor = 0.0
-        total_chars = sum(len(s) for s in sentences if s.strip())
+        total_chars = sum(len(s) for s in sentences)
 
         for sent in sentences:
-            sent = sent.strip()
             if not sent:
                 continue
             ratio = len(sent) / max(total_chars, 1)
             duration = round(total_duration * ratio, 3)
 
-            # 20자씩 분할
-            for i in range(0, len(sent), MAX_SUBTITLE_CHARS):
-                sub = sent[i:i + MAX_SUBTITLE_CHARS]
-                sub_ratio = len(sub) / len(sent)
+            # 문장 내에서 MAX_SUBTITLE_CHARS 기준으로 분할
+            chunk_size = MAX_SUBTITLE_CHARS
+            for i in range(0, len(sent), chunk_size):
+                sub = sent[i:i + chunk_size]
+                sub_ratio = len(sub) / max(len(sent), 1)
                 sub_dur = round(duration * sub_ratio, 3)
                 chunks.append({
                     "index": len(chunks) + 1,

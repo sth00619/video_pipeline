@@ -97,7 +97,7 @@ class ImagesWorker:
                         "section": section,
                         "image_path": img_path,
                         "generation_method": "nana_banana_ai",
-                        "prompt": text[:100],
+                        "prompt": text,
                     })
                     logger.info(f"씬 {i} AI 이미지 생성 완료 (section={section})")
                     continue
@@ -112,6 +112,7 @@ class ImagesWorker:
                     "section": section,
                     "image_path": img_path,
                     "generation_method": "matplotlib_chart",
+                    "prompt": text,
                 })
             except Exception as e:
                 logger.error(f"씬 {i} 이미지 생성 실패: {e}, 폴백 사용")
@@ -119,6 +120,7 @@ class ImagesWorker:
                 generated.append({
                     "index": i, "section": section,
                     "image_path": img_path, "generation_method": "fallback_solid",
+                    "prompt": text,
                 })
 
         logger.info(f"이미지 생성 완료: {len(generated)}개 (하이브리드 모드)")

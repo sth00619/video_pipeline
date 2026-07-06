@@ -99,22 +99,82 @@ public class ScriptService {
             throw new IllegalStateException("최종 스크립트가 비어있습니다.");
         }
 
-        // 기존에 generate 시점에 저장했던 스CRIPT 에셋에서 sections, verified_facts 복원
-        List<Map<String, Object>> sections = List.of();
+        // 최종 스크립트 텍스트를 파싱하여 섹션 분리 (사용자 수정 사항 반영)
+        List<Map<String, Object>> sections = new java.util.ArrayList<>();
         List<Map<String, Object>> verifiedFacts = List.of();
+        
         try {
+            // 기존 에셋에서 verified_facts만 복원
             java.util.Optional<Asset> prevAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
             if (prevAssetOpt.isPresent()) {
                 ScriptGenerateResponse prevDto = objectMapper.readValue(prevAssetOpt.get().getMetaJson(), ScriptGenerateResponse.class);
-                if (prevDto.getSections() != null) {
-                    sections = prevDto.getSections();
-                }
                 if (prevDto.getVerifiedFacts() != null) {
                     verifiedFacts = prevDto.getVerifiedFacts();
                 }
             }
         } catch (Exception e) {
             log.warn("이전 스크립트 에셋 메타데이터 파싱 실패: {}", e.getMessage());
+        }
+
+        try {
+            String[] parts = finalScript.split("(?m)^##\\s*");
+            for (String part : parts) {
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                
+                int firstNewline = part.indexOf('\n');
+                String title;
+                String content;
+                if (firstNewline != -1) {
+                    title = part.substring(0, firstNewline).trim();
+                    content = part.substring(firstNewline + 1).trim();
+                } else {
+                    title = "섹션";
+                    content = part;
+                }
+                
+                Map<String, Object> secMap = new java.util.HashMap<>();
+                secMap.put("title", title);
+                secMap.put("text", content);
+                secMap.put("content", content);
+                secMap.put("char_count", content.length());
+                
+                // section key도 매핑 (intro, background 등)
+                String sectionKey = "background";
+                if (title.contains("인트로") || title.toLowerCase().contains("intro")) {
+                    sectionKey = "intro";
+                } else if (title.contains("배경") || title.toLowerCase().contains("background")) {
+                    sectionKey = "background";
+                } else if (title.contains("데이터") || title.toLowerCase().contains("data")) {
+                    sectionKey = "data";
+                } else if (title.contains("시나리오") || title.toLowerCase().contains("scenario")) {
+                    sectionKey = "scenario";
+                } else if (title.contains("가이드") || title.toLowerCase().contains("action") || title.toLowerCase().contains("guide")) {
+                    sectionKey = "action";
+                } else if (title.contains("결론") || title.toLowerCase().contains("conclusion")) {
+                    sectionKey = "conclusion";
+                }
+                secMap.put("section", sectionKey);
+                
+                sections.add(secMap);
+            }
+        } catch (Exception parseEx) {
+            log.warn("최종 스크립트 섹션 파싱 실패, 이전 에셋 복원 폴백: {}", parseEx.getMessage());
+        }
+
+        if (sections.isEmpty()) {
+            // 폴백: 이전 에셋에서 복원
+            try {
+                java.util.Optional<Asset> prevAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
+                if (prevAssetOpt.isPresent()) {
+                    ScriptGenerateResponse prevDto = objectMapper.readValue(prevAssetOpt.get().getMetaJson(), ScriptGenerateResponse.class);
+                    if (prevDto.getSections() != null) {
+                        sections = prevDto.getSections();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("이전 스크립트 에셋 복원 실패: {}", e.getMessage());
+            }
         }
 
         Asset finalAsset = Asset.builder()
