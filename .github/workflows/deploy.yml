@@ -80,3 +80,24 @@ jobs:
             sleep 10
             echo "=== 배포 완료 ==="
             sudo docker compose ps
+            
+            # Cloudflare Tunnel을 이용한 외부 공개 URL 생성 (오라클 방화벽 우회)
+            sudo killall cloudflared || true
+            if [ ! -f /usr/local/bin/cloudflared ]; then
+              echo "Cloudflared 다운로드 중..."
+              sudo wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared
+              sudo chmod +x /usr/local/bin/cloudflared
+            fi
+            
+            echo "Cloudflare 임시 터널 주소 생성 중..."
+            sudo /usr/local/bin/cloudflared tunnel --url http://localhost:3000 > $HOME/cloudflared.log 2>&1 &
+            
+            # 터널이 완전히 열릴 때까지 대기
+            sleep 8
+            
+            # 생성된 임시 주소 추출 및 출력
+            TUNNEL_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" $HOME/cloudflared.log | head -n 1)
+            echo "==============================================="
+            echo "👉 외부 접속용 무료 공유 링크 (HTTPS):"
+            echo "🔗 $TUNNEL_URL"
+            echo "==============================================="
