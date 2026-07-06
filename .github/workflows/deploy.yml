@@ -96,7 +96,7 @@ jobs:
             sleep 8
             
             # 생성된 임시 주소 추출 및 출력
-            TUNNEL_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" $HOME/cloudflared.log | head -n 1)
+            TUNNEL_URL=$(grep -a -oE "https://[a-zA-Z0-9.-]+\.trycloudflare\.com" $HOME/cloudflared.log | head -n 1)
             echo "==============================================="
             echo "👉 외부 접속용 무료 공유 링크 (HTTPS):"
             echo "🔗 $TUNNEL_URL"
