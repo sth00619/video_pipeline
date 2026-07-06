@@ -67,6 +67,10 @@ jobs:
               sudo firewall-cmd --reload || true
             fi
             
+            # 혹시 모를 기존 충돌 컨테이너 및 네트워크 강제 정리
+            sudo docker rm -f pipeline_postgres pipeline_redis pipeline_minio pipeline_fastapi pipeline_fastapi_workers pipeline_spring_app pipeline_frontend || true
+            sudo docker network rm video_pipeline_default || true
+            
             # Docker Compose 재시작 (sudo 권한 부여)
             sudo docker compose down --remove-orphans
             sudo docker compose up -d --build
