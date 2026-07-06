@@ -60,7 +60,10 @@ public class SecurityConfig {
                 "http://localhost:80",
                 "http://localhost",
                 "https://*.railway.app",
-                "https://*.up.railway.app"
+                "https://*.up.railway.app",
+                "https://*.trycloudflare.com",
+                "http://161.33.187.224:3000",
+                "http://161.33.187.224"
         ));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
         config.setAllowedHeaders(List.of("*"));
