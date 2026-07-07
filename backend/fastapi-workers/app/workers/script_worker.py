@@ -86,7 +86,7 @@ class ScriptWorker:
     def generate(self, keyword: str, category: str, target_minutes: int,
                  market_data: Optional[dict] = None, job_id: int = 0) -> dict:
         category_label = CATEGORY_LABELS.get(category, "주식시장")
-        target_chars = target_minutes * 300  # 한국어 분당 300자 기준
+        target_chars = target_minutes * 470  # 한국어 TTS 실제 독해 속도 고려 (분당 470자 기준)
 
         logger.info(f"스크립트 생성 v3: job_id={job_id}, keyword={keyword}, "
                     f"category={category}, target={target_minutes}분")
