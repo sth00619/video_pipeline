@@ -89,22 +89,21 @@ class TtsWorker:
                 f'-t {estimated:.3f} -c:a libmp3lame -b:a 128k '
                 f'-y "{mp3_path}" -loglevel error'
             )
-
-        # 1.5x 오디오 가속 적용 (atempo 필터)
+        # 1.35x 오디오 가속 적용 (atempo 필터)
         if os.path.exists(mp3_path):
-            logger.info("음성 배속(1.5x) 적용 시작...")
+            logger.info("음성 배속(1.35x) 적용 시작...")
             temp_mp3 = mp3_path + ".speedup.mp3"
-            # atempo=1.5 필터로 오디오 속도 높임
-            ret = os.system(f'ffmpeg -i "{mp3_path}" -filter:a "atempo=1.5" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error')
+            # atempo=1.35 필터로 오디오 속도 높임
+            ret = os.system(f'ffmpeg -i "{mp3_path}" -filter:a "atempo=1.35" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error')
             if ret == 0 and os.path.exists(temp_mp3):
                 os.replace(temp_mp3, mp3_path)
-                logger.info("음성 배속(1.5x) 적용 성공")
+                logger.info("음성 배속(1.35x) 적용 성공")
             else:
                 logger.error(f"음성 배속 적용 실패 (exit code: {ret})")
 
         # 실제 MP3 길이 측정
         actual_duration = self._probe_duration(mp3_path) or len(script) / 5.0
-        logger.info(f"음성 길이 (1.5x 배속 후): {actual_duration:.1f}초")
+        logger.info(f"음성 길이 (1.35x 배속 후): {actual_duration:.1f}초")
 
         # 3. 자막 타임스탬프 추출 (Forced Alignment → Whisper → 글자수 비례)
         chunks = []
@@ -342,17 +341,16 @@ class TtsWorker:
             return []
 
         logger.info(f"Forced Alignment 단어 {len(words)}개 추출 완료")
-
         # 단어 타임스탬프를 원본 텍스트 청크에 매핑
         total_orig_chars = max(sum(len(c.replace(' ', '')) for c in text_chunks), 1)
         total_fa_chars = max(sum(len(w.get('text', '').replace(' ', '')) for w in words), 1)
 
         chunks = []
-        cursor = 0.0
         cum_orig_chars = 0
         w_idx = 0
         cum_fa_chars = 0
         num_words = len(words)
+        prev_end = 0.0
 
         for idx, chunk_text in enumerate(text_chunks):
             chunk_char_len = len(chunk_text.replace(' ', ''))
@@ -360,24 +358,35 @@ class TtsWorker:
             target_ratio = cum_orig_chars / total_orig_chars
             target_fa_chars = target_ratio * total_fa_chars
 
-            end_time = cursor
+            start_w_idx = w_idx
             while w_idx < num_words and cum_fa_chars < target_fa_chars:
                 w_text = words[w_idx].get('text', '')
                 cum_fa_chars += len(w_text.replace(' ', ''))
-                end_time = words[w_idx].get('end', end_time)
                 w_idx += 1
 
-            if idx == len(text_chunks) - 1 and num_words > 0:
-                end_time = words[-1].get('end', end_time)
+            if w_idx > start_w_idx:
+                chunk_start = words[start_w_idx].get('start', prev_end)
+                chunk_end = words[w_idx - 1].get('end', prev_end + 0.5)
+            else:
+                chunk_start = prev_end
+                chunk_end = prev_end + 0.5
 
-            duration = round(max(end_time - cursor, 0.1), 3)
+            if chunk_start < prev_end:
+                chunk_start = prev_end
+            if chunk_end <= chunk_start:
+                chunk_end = chunk_start + 0.5
+
+            if idx == len(text_chunks) - 1 and num_words > 0:
+                chunk_end = max(chunk_end, words[-1].get('end', chunk_end))
+
+            duration = round(chunk_end - chunk_start, 3)
             chunks.append({
                 "index": idx + 1,
                 "text": chunk_text,
-                "start": round(cursor, 3),
+                "start": round(chunk_start, 3),
                 "duration": duration,
             })
-            cursor = round(cursor + duration, 3)
+            prev_end = chunk_start + duration
 
         logger.info(f"Forced Alignment 정밀 매핑 완료: {len(text_chunks)}개 청크")
         return chunks
@@ -458,17 +467,16 @@ class TtsWorker:
 
         if not whisper_words:
             return []
-
         # 원본 스크립트와 Whisper STT 간의 글자수 누적 비율 매핑
         total_orig_chars = max(sum(len(c.replace(" ", "")) for c in text_chunks), 1)
         total_whisper_chars = max(sum(len(w["word"].replace(" ", "")) for w in whisper_words), 1)
 
         chunks = []
-        cursor = 0.0
         cum_orig_chars = 0
         w_idx = 0
         cum_whisper_chars = 0
         num_whisper = len(whisper_words)
+        prev_end = 0.0
 
         for idx, chunk_text in enumerate(text_chunks):
             chunk_char_len = len(chunk_text.replace(" ", ""))
@@ -476,23 +484,34 @@ class TtsWorker:
             target_ratio = cum_orig_chars / total_orig_chars
             target_whisper_chars = target_ratio * total_whisper_chars
 
-            end_time = cursor
+            start_w_idx = w_idx
             while w_idx < num_whisper and cum_whisper_chars < target_whisper_chars:
                 cum_whisper_chars += len(whisper_words[w_idx]["word"].replace(" ", ""))
-                end_time = whisper_words[w_idx]["end"]
                 w_idx += 1
 
-            if idx == len(text_chunks) - 1 and num_whisper > 0:
-                end_time = whisper_words[-1]["end"]
+            if w_idx > start_w_idx:
+                chunk_start = whisper_words[start_w_idx]["start"]
+                chunk_end = whisper_words[w_idx - 1]["end"]
+            else:
+                chunk_start = prev_end
+                chunk_end = prev_end + 0.5
 
-            duration = round(max(end_time - cursor, 0.1), 3)
+            if chunk_start < prev_end:
+                chunk_start = prev_end
+            if chunk_end <= chunk_start:
+                chunk_end = chunk_start + 0.5
+
+            if idx == len(text_chunks) - 1 and num_whisper > 0:
+                chunk_end = max(chunk_end, whisper_words[-1]["end"])
+
+            duration = round(chunk_end - chunk_start, 3)
             chunks.append({
                 "index": idx + 1,
                 "text": chunk_text,
-                "start": round(cursor, 3),
+                "start": round(chunk_start, 3),
                 "duration": duration,
             })
-            cursor = round(cursor + duration, 3)
+            prev_end = chunk_start + duration
 
         logger.info(f"Whisper 정밀 매핑 완료: 원본 {len(text_chunks)}개 청크에 타임스탬프 부여")
         return chunks

@@ -42,8 +42,8 @@ public class ScriptService {
 
         int targetMinutes = job.getLongformTargetMinutes() != null
                 ? job.getLongformTargetMinutes() : 20;
-        // 1.5배속 가속을 고려하여 스크립트 분량을 1.5배 늘려서 생성
-        int llmTargetMinutes = (int) Math.round(targetMinutes * 1.5);
+        // 1.35배속 가속을 고려하여 스크립트 분량을 1.35배 늘려서 생성
+        int llmTargetMinutes = (int) Math.round(targetMinutes * 1.35);
         String categoryName = job.getCategory() != null ? job.getCategory().name() : "CUSTOM";
 
         log.info("스크립트 생성: jobId={}, keyword={}, target={}분 (LLM 타겟: {}분), category={}",
@@ -163,6 +163,24 @@ public class ScriptService {
                 secMap.put("section", sectionKey);
                 
                 sections.add(secMap);
+            }
+            
+            // 6개 섹션이고 명시적인 매핑이 안 된 경우, 순서대로 6개 영역 매핑 부여
+            if (sections.size() == 6) {
+                boolean allDefault = true;
+                for (Map<String, Object> sec : sections) {
+                    String secKey = (String) sec.get("section");
+                    if (secKey != null && !secKey.equals("background")) {
+                        allDefault = false;
+                        break;
+                    }
+                }
+                if (allDefault) {
+                    String[] defaultKeys = {"intro", "background", "data", "scenario", "action", "conclusion"};
+                    for (int i = 0; i < 6; i++) {
+                        sections.get(i).put("section", defaultKeys[i]);
+                    }
+                }
             }
         } catch (Exception parseEx) {
             log.warn("최종 스크립트 섹션 파싱 실패, 이전 에셋 복원 폴백: {}", parseEx.getMessage());

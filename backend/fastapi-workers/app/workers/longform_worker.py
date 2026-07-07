@@ -172,6 +172,7 @@ class LongformWorker:
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
                     f'{vf_filter}'
                     f'{vcodec} '
+                    f'-map 0:v -map 1:a '
                     f'-c:a aac -b:a 192k -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
@@ -192,6 +193,7 @@ class LongformWorker:
             if audio_exists:
                 os.system(
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
+                    f'-map 0:v -map 1:a '
                     f'-c:v copy -c:a aac -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
@@ -245,11 +247,9 @@ PlayResX: 1920
 PlayResY: 1080
 WrapStyle: 0
 ScaledBorderAndShadow: yes
-
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Main,{font_name},80,&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,0,0,2,40,40,80,1
-
+Style: Main,{font_name},72,&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,0,0,2,40,40,80,1
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
@@ -276,8 +276,7 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 
             start_sec = chunk.get("start", 0.0)
             dur = chunk.get("duration", 3.0)
-            # 자막 표시 시간 = 청크 실제 duration의 95% (자연스럽게 사라짐)
-            end_sec = start_sec + dur * 0.95
+            end_sec = start_sec + dur
 
             # 순수 흐자색 텍스트만 사용 (강조색 없음)
             display = self._trim_to_limit(text)
@@ -291,18 +290,9 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             f.write("\n".join(lines))
 
         logger.info(f"ASS 자막 생성: {len(chunks)}개 항목")
-
     @staticmethod
     def _trim_to_limit(text: str) -> str:
-        """18자 제한 (폰트 80px 기준 화면 여유)"""
-        LIMIT = 18
-        if len(text) <= LIMIT:
-            return text
-        trimmed = text[:LIMIT]
-        last_space = trimmed.rfind(' ')
-        if last_space > 10:
-            return trimmed[:last_space]
-        return trimmed
+        return text
 
     @staticmethod
     def _highlight_stock_numbers(text: str) -> str:
