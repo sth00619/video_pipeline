@@ -6,6 +6,12 @@ from app.providers.base import ImageProvider, VideoProvider, TTSProvider, Genera
 class MockImageProvider(ImageProvider):
     """Mock 이미지 — 검정 PNG 생성 (FFmpeg 사용)"""
 
+    def generate_image(self, prompt: str, output_path: str, **kwargs) -> str:
+        width = kwargs.get("width", 1920)
+        height = kwargs.get("height", 1080)
+        os.system(f'ffmpeg -f lavfi -i color=c=black:s={width}x{height}:d=1 -frames:v 1 "{output_path}" -y -loglevel quiet')
+        return output_path
+
     def generate(self, prompt: str, width: int = 1920, height: int = 1080) -> GeneratedAsset:
         path = tempfile.mktemp(suffix=".png")
         os.system(f'ffmpeg -f lavfi -i color=c=black:s={width}x{height}:d=1 -frames:v 1 {path} -y -loglevel quiet')

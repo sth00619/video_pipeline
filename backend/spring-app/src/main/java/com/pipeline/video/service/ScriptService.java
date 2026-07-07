@@ -33,8 +33,8 @@ public class ScriptService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.SCRIPT_PENDING) {
-            throw new IllegalStateException("스크립트 생성은 SCRIPT_PENDING 에서만 가능. 현재: " + job.getStatus());
+        if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING) {
+            throw new IllegalStateException("키워드 확정 전에는 스크립트를 생성할 수 없습니다. 현재: " + job.getStatus());
         }
         if (job.getKeyword() == null || job.getKeyword().isBlank()) {
             throw new IllegalStateException("키워드가 선택되지 않음.");
@@ -92,8 +92,8 @@ public class ScriptService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.SCRIPT_PENDING) {
-            throw new IllegalStateException("스크립트 확정은 SCRIPT_PENDING 에서만 가능. 현재: " + job.getStatus());
+        if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING) {
+            throw new IllegalStateException("키워드 확정 전에는 스크립트를 확정할 수 없습니다. 현재: " + job.getStatus());
         }
         if (finalScript == null || finalScript.isBlank()) {
             throw new IllegalStateException("최종 스크립트가 비어있습니다.");
@@ -118,6 +118,10 @@ public class ScriptService {
 
         try {
             String[] parts = finalScript.split("(?m)^##\\s*");
+            if (parts.length <= 1) {
+                // ## 헤더가 없는 경우 문단(빈 줄) 기준으로 분리하여 단일 씬이 되는 것을 방지
+                parts = finalScript.split("(?m)^\\s*\\n+");
+            }
             for (String part : parts) {
                 part = part.trim();
                 if (part.isEmpty()) continue;
@@ -190,7 +194,11 @@ public class ScriptService {
                 .build();
         assetRepository.save(finalAsset);
 
-        gateService.approve(jobId, GateName.SCRIPT, username, "스크립트 확정");
+        if (job.getStatus() == JobStatus.SCRIPT_PENDING) {
+            gateService.approve(jobId, GateName.SCRIPT, username, "스크립트 확정");
+        } else {
+            log.info("스크립트 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
+        }
         log.info("스크립트 확정: jobId={}, length={}자, sections={}개", jobId, finalScript.length(), sections.size());
     }
 

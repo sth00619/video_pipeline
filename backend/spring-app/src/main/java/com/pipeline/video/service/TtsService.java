@@ -40,8 +40,8 @@ public class TtsService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.TTS_PENDING) {
-            throw new IllegalStateException("TTS 생성은 TTS_PENDING 에서만 가능. 현재: " + job.getStatus());
+        if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING || job.getStatus() == JobStatus.SCRIPT_PENDING) {
+            throw new IllegalStateException("스크립트 확정 전에는 TTS를 생성할 수 없습니다. 현재: " + job.getStatus());
         }
 
         // 최종 스크립트 조회 (가장 최근 SCRIPT Asset)
@@ -83,12 +83,15 @@ public class TtsService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.TTS_PENDING) {
-            throw new IllegalStateException("TTS 확정은 TTS_PENDING 에서만 가능. 현재: " + job.getStatus());
+        if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING || job.getStatus() == JobStatus.SCRIPT_PENDING) {
+            throw new IllegalStateException("스크립트 확정 전에는 TTS를 확정할 수 없습니다. 현재: " + job.getStatus());
         }
 
-        // 게이트 통과 → IMAGES_PENDING
-        gateService.approve(jobId, GateName.TTS, username, "TTS 확정");
+        if (job.getStatus() == JobStatus.TTS_PENDING) {
+            gateService.approve(jobId, GateName.TTS, username, "TTS 확정");
+        } else {
+            log.info("TTS 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
+        }
         log.info("TTS 확정 완료: jobId={}", jobId);
     }
 

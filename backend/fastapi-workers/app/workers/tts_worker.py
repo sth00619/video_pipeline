@@ -62,14 +62,24 @@ class TtsWorker:
         # 1. 주식 용어 전처리
         preprocessed = self._preprocess_for_tts(script)
 
-        # 2. gTTS 음성 생성
-        used_gtts = False
+        # 2. 음성 생성 (ElevenLabs -> gTTS -> 무음 폴백)
+        used_tts = False
+        tts_engine = "silent"
         try:
-            used_gtts = self._generate_gtts(preprocessed, mp3_path)
+            if os.getenv("ELEVENLABS_API_KEY"):
+                logger.info("ELEVENLABS_API_KEY 감지 → ElevenLabs AI 성우 생성 시도")
+                used_tts = self._generate_elevenlabs(preprocessed, mp3_path, voice_id)
+                if used_tts:
+                    tts_engine = "elevenlabs"
+            
+            if not used_tts:
+                used_tts = self._generate_gtts(preprocessed, mp3_path)
+                if used_tts:
+                    tts_engine = "gtts"
         except Exception as e:
-            logger.error(f"gTTS 실패: {e}")
+            logger.error(f"TTS 생성 실패: {e}")
 
-        if not used_gtts or not os.path.exists(mp3_path):
+        if not used_tts or not os.path.exists(mp3_path):
             logger.warning("gTTS 실패 → 무음 폴백")
             # 분당 300자 기준 추정
             estimated = len(script) / 5.0
@@ -98,15 +108,16 @@ class TtsWorker:
             logger.warning("글자 수 비례 타임스탬프로 폴백")
             chunks = self._fallback_timing(script, actual_duration)
 
-        logger.info(f"TTS v5 완료: {actual_duration:.1f}초, chunks={len(chunks)}, gtts={used_gtts}")
+        logger.info(f"TTS v5 완료: {actual_duration:.1f}초, chunks={len(chunks)}, engine={tts_engine}")
 
         return {
             "job_id": job_id,
             "audio_path": mp3_path,
-            "voice_id": "gtts_whisper_ko" if used_gtts else "silent",
+            "voice_id": tts_engine if used_tts else "silent",
             "total_duration": round(actual_duration, 2),
             "chunks": chunks,
-            "used_gtts": used_gtts,
+            "used_gtts": used_tts and (tts_engine == "gtts"),
+            "used_elevenlabs": (tts_engine == "elevenlabs"),
         }
 
     # ============================
@@ -163,6 +174,98 @@ class TtsWorker:
             os.remove(list_file)
 
         return os.path.exists(output_path)
+
+    def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str) -> bool:
+        """
+        ElevenLabs 공식 API를 통한 한국어 AI 성우 음성 생성.
+        ELEVENLABS_API_KEY가 설정되어 있을 때 호출됨.
+        """
+        import requests
+        import tempfile as tf
+        api_key = os.getenv("ELEVENLABS_API_KEY")
+        if not api_key:
+            return False
+        
+        # voice_id가 없거나 기본값이면 한국어 발음이 자연스러운 기본 voice_id 사용 (George Multilingual)
+        if not voice_id or voice_id in ["gtts_ko", "default", "silent", "gtts_whisper_ko"]:
+            voice_id = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+            
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        headers = {
+            "xi-api-key": api_key,
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg"
+        }
+        
+        # 20분 영상 등 대본이 매우 길 경우 2000자 단위로 분할하여 요청 후 concat
+        MAX_CHARS = 2000
+        if len(text) <= MAX_CHARS:
+            payload = {
+                "text": text,
+                "model_id": "eleven_multilingual_v2",
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.75,
+                    "style": 0.0,
+                    "use_speaker_boost": True
+                }
+            }
+            resp = requests.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                with open(output_path, "wb") as f:
+                    f.write(resp.content)
+                logger.info("ElevenLabs 음성 생성 성공 (단일 요청)")
+                return True
+            else:
+                logger.warning(f"ElevenLabs API 실패: {resp.status_code} {resp.text}")
+                return False
+        else:
+            parts = []
+            current = ""
+            for sent in re.split(r'(?<=[.!?])\s+', text):
+                if len(current) + len(sent) <= MAX_CHARS:
+                    current = (current + " " + sent).strip()
+                else:
+                    if current:
+                        parts.append(current)
+                    current = sent
+            if current:
+                parts.append(current)
+                
+            tmp_files = []
+            for idx, part in enumerate(parts):
+                tmp = tf.mktemp(suffix=f"_el_{idx}.mp3")
+                payload = {
+                    "text": part,
+                    "model_id": "eleven_multilingual_v2",
+                    "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
+                }
+                resp = requests.post(url, json=payload, headers=headers, timeout=60)
+                if resp.status_code == 200:
+                    with open(tmp, "wb") as f:
+                        f.write(resp.content)
+                    tmp_files.append(tmp)
+                else:
+                    logger.warning(f"ElevenLabs 부분 생성 실패: {resp.status_code}")
+                    for t in tmp_files:
+                        if os.path.exists(t): os.remove(t)
+                    return False
+                    
+            list_file = tf.mktemp(suffix=".txt")
+            with open(list_file, "w", encoding="utf-8") as f:
+                for t in tmp_files:
+                    f.write(f"file '{t}'\n")
+            
+            os.system(
+                f'ffmpeg -f concat -safe 0 -i "{list_file}" '
+                f'-c:a copy -y "{output_path}" -loglevel error'
+            )
+            for t in tmp_files:
+                if os.path.exists(t): os.remove(t)
+            if os.path.exists(list_file): os.remove(list_file)
+            
+            logger.info(f"ElevenLabs 분할 음성 생성 및 병합 성공 ({len(parts)}개 조각)")
+            return os.path.exists(output_path)
 
     # ============================
     # faster-whisper 역방향 STT → 타임스탬프
@@ -286,6 +389,7 @@ class TtsWorker:
     @staticmethod
     def _preprocess_for_tts(text: str) -> str:
         """주식/경제 용어를 gTTS가 자연스럽게 읽도록 전처리"""
+        text = re.sub(r'^##\s*.+$', '', text, flags=re.MULTILINE).strip()
         text = re.sub(r'([+-]?\d+\.?\d*)%', r'\1퍼센트', text)
         text = re.sub(r'\+(\d)', r'플러스 \1', text)
         text = re.sub(r'(?<!\d)-(\d)', r'마이너스 \1', text)

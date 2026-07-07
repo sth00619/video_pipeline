@@ -314,7 +314,7 @@ verified_facts의 구체적인 수치와 지표를 자연스러운 구어체로 
         )
 
         sections = _parse_sections(full_text)
-        clean_text = re.sub(r'^##\s*.+$', '', full_text, flags=re.MULTILINE).strip()
+        clean_text = full_text.strip()
         clean_text = re.sub(r'\n{3,}', '\n\n', clean_text)
 
         return clean_text, sections

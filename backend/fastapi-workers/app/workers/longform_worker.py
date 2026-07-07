@@ -47,7 +47,18 @@ class LongformWorker:
 
         output_path = str(job_dir / "final.mp4")
 
-        # 1. 씬별 클립 생성
+        # 1. 씬별 재생 시간(duration) 동적 분배 (비디오 길이 = 오디오 길이 일치화)
+        if total_duration > 0 and len(scenes) > 0:
+            total_chars = sum(len(scene.get("prompt", "") or scene.get("text", "") or "") for scene in scenes)
+            for scene in scenes:
+                if scene.get("duration") is None or float(scene.get("duration", 0)) <= 0:
+                    char_len = len(scene.get("prompt", "") or scene.get("text", "") or "")
+                    if total_chars > 0:
+                        scene["duration"] = round((char_len / total_chars) * total_duration, 3)
+                    else:
+                        scene["duration"] = round(total_duration / len(scenes), 3)
+
+        # 2. 씬별 클립 생성
         clip_list_path = str(temp_dir / "clips.txt")
         clip_paths = []
 

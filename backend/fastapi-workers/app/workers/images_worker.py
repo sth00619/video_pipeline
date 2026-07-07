@@ -159,7 +159,8 @@ class ImagesWorker:
             circle = plt.Circle((0.5, 0.55), r/10, color=COLOR_ACCENT_CYAN, alpha=alpha, transform=ax.transAxes)
             ax.add_patch(circle)
 
-        title = (text[:24] + "…") if len(text) > 24 else text
+        # 핵심 키워드만 추출 (첫 문장, 최대 20자)
+        title = self._extract_title(text, max_chars=20)
         ax.text(0.5, 0.55, title, fontsize=52, color=COLOR_TEXT, ha="center", va="center",
                 weight="bold", transform=ax.transAxes)
         ax.text(0.5, 0.35, "📈 주식 시장 분석", fontsize=24, color=COLOR_ACCENT_GOLD,
@@ -171,18 +172,10 @@ class ImagesWorker:
     # ── 시장 배경: 지수 추이 라인 차트 ──
     def _render_line_chart(self, text, img_path, plt):
         import numpy as np
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(19.2, 10.8), dpi=100,
-                                        gridspec_kw={"width_ratios": [1, 2]})
+        fig, ax2 = plt.subplots(figsize=(19.2, 10.8), dpi=100)
         fig.patch.set_facecolor(COLOR_BG)
 
-        # 왼쪽: 섹션 텍스트
-        ax1.set_facecolor(COLOR_BG)
-        ax1.axis("off")
-        wrapped = self._wrap_text(text, 16)
-        ax1.text(0.05, 0.5, wrapped, fontsize=26, color=COLOR_TEXT, va="center", ha="left",
-                  weight="bold", transform=ax1.transAxes)
-
-        # 오른쪽: 시뮬레이션 라인 차트 (실제 데이터 아님, 시각적 표현용)
+        # 차트 전체 화면 — 텍스트는 상단에 짧게만 표시
         ax2.set_facecolor(COLOR_BG2)
         days = np.arange(30)
         base = 2600
@@ -190,8 +183,11 @@ class ImagesWorker:
         color = COLOR_ACCENT_GREEN if trend[-1] > trend[0] else COLOR_ACCENT_RED
         ax2.plot(days, trend, color=color, linewidth=3)
         ax2.fill_between(days, trend, trend.min() - 20, color=color, alpha=0.15)
-        ax2.set_title("지수 추이 (예시)", color=COLOR_TEXT, fontsize=18, pad=15)
-        ax2.tick_params(colors=COLOR_TEXT, labelsize=12)
+
+        # 상단에 씬 키워드만 짧게 (최대 20자)
+        short_title = self._extract_title(text, max_chars=20)
+        ax2.set_title(short_title, color=COLOR_TEXT, fontsize=28, pad=20, weight="bold")
+        ax2.tick_params(colors=COLOR_TEXT, labelsize=14)
         ax2.grid(color=COLOR_GRID, alpha=0.3)
         for spine in ax2.spines.values():
             spine.set_color(COLOR_GRID)
@@ -203,18 +199,11 @@ class ImagesWorker:
     # ── 핵심 데이터: 캔들스틱 스타일 차트 ──
     def _render_candlestick(self, text, img_path, plt):
         import numpy as np
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(19.2, 10.8), dpi=100,
-                                        gridspec_kw={"width_ratios": [1, 2]})
+        fig, ax2 = plt.subplots(figsize=(19.2, 10.8), dpi=100)
         fig.patch.set_facecolor(COLOR_BG)
 
-        ax1.set_facecolor(COLOR_BG)
-        ax1.axis("off")
-        wrapped = self._wrap_text(text, 16)
-        ax1.text(0.05, 0.5, wrapped, fontsize=26, color=COLOR_TEXT, va="center", ha="left",
-                  weight="bold", transform=ax1.transAxes)
-
         ax2.set_facecolor(COLOR_BG2)
-        n = 15
+        n = 20
         opens = np.cumsum(np.random.randn(n) * 5) + 2600
         closes = opens + np.random.randn(n) * 15
         highs = np.maximum(opens, closes) + np.abs(np.random.randn(n) * 5)
@@ -222,13 +211,15 @@ class ImagesWorker:
 
         for i in range(n):
             color = COLOR_ACCENT_GREEN if closes[i] >= opens[i] else COLOR_ACCENT_RED
-            ax2.plot([i, i], [lows[i], highs[i]], color=color, linewidth=1)
+            ax2.plot([i, i], [lows[i], highs[i]], color=color, linewidth=1.5)
             ax2.add_patch(plt.Rectangle(
-                (i - 0.3, min(opens[i], closes[i])), 0.6, abs(closes[i] - opens[i]),
+                (i - 0.35, min(opens[i], closes[i])), 0.7, abs(closes[i] - opens[i]),
                 color=color
             ))
-        ax2.set_title("일별 캔들 차트 (예시)", color=COLOR_TEXT, fontsize=18, pad=15)
-        ax2.tick_params(colors=COLOR_TEXT, labelsize=12)
+
+        short_title = self._extract_title(text, max_chars=20)
+        ax2.set_title(short_title, color=COLOR_TEXT, fontsize=28, pad=20, weight="bold")
+        ax2.tick_params(colors=COLOR_TEXT, labelsize=14)
         ax2.grid(color=COLOR_GRID, alpha=0.3)
         for spine in ax2.spines.values():
             spine.set_color(COLOR_GRID)
@@ -245,20 +236,21 @@ class ImagesWorker:
         ax.axis("off")
         ax.set_xlim(0, 10); ax.set_ylim(0, 10)
 
-        wrapped = self._wrap_text(text, 20)
-        ax.text(5, 9, wrapped, fontsize=22, color=COLOR_TEXT, ha="center", weight="bold")
+        # 상단에 짧은 제목만
+        short_title = self._extract_title(text, max_chars=22)
+        ax.text(5, 9.2, short_title, fontsize=26, color=COLOR_TEXT, ha="center", weight="bold")
 
         # 상승 시나리오 박스
-        ax.add_patch(plt.Rectangle((0.5, 1), 4, 6, facecolor=COLOR_ACCENT_GREEN, alpha=0.15,
+        ax.add_patch(plt.Rectangle((0.5, 1), 4, 6.5, facecolor=COLOR_ACCENT_GREEN, alpha=0.15,
                                      edgecolor=COLOR_ACCENT_GREEN, linewidth=2))
-        ax.text(2.5, 6, "▲ 상승 시나리오", fontsize=24, color=COLOR_ACCENT_GREEN, ha="center", weight="bold")
-        ax.text(2.5, 4, "외국인 순매수 지속\n거래량 증가\n저항선 돌파", fontsize=16, color=COLOR_TEXT, ha="center")
+        ax.text(2.5, 6.5, "▲ 상승 시나리오", fontsize=24, color=COLOR_ACCENT_GREEN, ha="center", weight="bold")
+        ax.text(2.5, 4, "외국인 순매수 지속\n거래량 증가\n저항선 돌파", fontsize=18, color=COLOR_TEXT, ha="center")
 
         # 하락 시나리오 박스
-        ax.add_patch(plt.Rectangle((5.5, 1), 4, 6, facecolor=COLOR_ACCENT_RED, alpha=0.15,
+        ax.add_patch(plt.Rectangle((5.5, 1), 4, 6.5, facecolor=COLOR_ACCENT_RED, alpha=0.15,
                                      edgecolor=COLOR_ACCENT_RED, linewidth=2))
-        ax.text(7.5, 6, "▼ 하락 시나리오", fontsize=24, color=COLOR_ACCENT_RED, ha="center", weight="bold")
-        ax.text(7.5, 4, "기관 매도 전환\n거래량 감소\n지지선 이탈", fontsize=16, color=COLOR_TEXT, ha="center")
+        ax.text(7.5, 6.5, "▼ 하락 시나리오", fontsize=24, color=COLOR_ACCENT_RED, ha="center", weight="bold")
+        ax.text(7.5, 4, "기관 매도 전환\n거래량 감소\n지지선 이탈", fontsize=18, color=COLOR_TEXT, ha="center")
 
         plt.savefig(img_path, facecolor=COLOR_BG, bbox_inches="tight")
         plt.close(fig)
@@ -271,15 +263,15 @@ class ImagesWorker:
         ax.axis("off")
         ax.set_xlim(0, 10); ax.set_ylim(0, 10)
 
-        wrapped = self._wrap_text(text, 20)
-        ax.text(5, 9, wrapped, fontsize=22, color=COLOR_TEXT, ha="center", weight="bold")
+        short_title = self._extract_title(text, max_chars=22)
+        ax.text(5, 9.2, short_title, fontsize=28, color=COLOR_ACCENT_GOLD, ha="center", weight="bold")
 
         items = ["거래량 변화 확인", "외국인·기관 매매 동향", "주요 지지·저항선", "글로벌 지수 연동성"]
         for i, item in enumerate(items):
             y = 6.5 - i * 1.5
-            ax.add_patch(plt.Circle((1.2, y), 0.25, facecolor=COLOR_ACCENT_CYAN))
-            ax.text(1.2, y, "✓", fontsize=18, color=COLOR_BG, ha="center", va="center", weight="bold")
-            ax.text(2, y, item, fontsize=20, color=COLOR_TEXT, va="center")
+            ax.add_patch(plt.Circle((1.5, y), 0.3, facecolor=COLOR_ACCENT_CYAN))
+            ax.text(1.5, y, "✓", fontsize=20, color=COLOR_BG, ha="center", va="center", weight="bold")
+            ax.text(2.5, y, item, fontsize=22, color=COLOR_TEXT, va="center")
 
         plt.savefig(img_path, facecolor=COLOR_BG, bbox_inches="tight")
         plt.close(fig)
@@ -292,10 +284,13 @@ class ImagesWorker:
         ax.axis("off")
         ax.set_xlim(0, 10); ax.set_ylim(0, 10)
 
-        ax.text(5, 9, "오늘의 핵심 정리", fontsize=32, color=COLOR_ACCENT_GOLD, ha="center", weight="bold")
+        ax.text(5, 9.2, "오늘의 핵심 정리", fontsize=36, color=COLOR_ACCENT_GOLD, ha="center", weight="bold")
 
-        wrapped = self._wrap_text(text, 24)
-        ax.text(5, 4.5, wrapped, fontsize=20, color=COLOR_TEXT, ha="center", va="center")
+        # 핵심 포인트 3개 (텍스트 전체 대신 요약 포인트 고정)
+        points = ["✅ 시장 핵심 데이터 확인", "✅ 상승·하락 시나리오 분석", "✅ 다음 영상도 구독하세요!"]
+        for i, pt in enumerate(points):
+            y = 6.0 - i * 1.8
+            ax.text(5, y, pt, fontsize=26, color=COLOR_TEXT, ha="center", va="center", weight="bold")
 
         plt.savefig(img_path, facecolor=COLOR_BG, bbox_inches="tight")
         plt.close(fig)
@@ -311,6 +306,19 @@ class ImagesWorker:
                 transform=ax.transAxes)
         plt.savefig(img_path, facecolor=COLOR_BG, bbox_inches="tight")
         plt.close(fig)
+
+    @staticmethod
+    def _extract_title(text: str, max_chars: int = 20) -> str:
+        """텍스트에서 첫 문장(또는 첫 max_chars자)만 추출하여 제목으로 사용"""
+        import re
+        if not text:
+            return ""
+        # 첫 문장 추출 (마침표, 요, 다, 죠 등으로 종결)
+        first_sent = re.split(r'(?<=[다요죠네.!?])\s', text.strip())[0]
+        first_sent = first_sent.strip()
+        if len(first_sent) <= max_chars:
+            return first_sent
+        return first_sent[:max_chars] + "…"
 
     @staticmethod
     def _wrap_text(text: str, width: int) -> str:

@@ -43,8 +43,8 @@ public class ImagesService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.IMAGES_PENDING) {
-            throw new IllegalStateException("이미지 생성은 IMAGES_PENDING 에서만 가능. 현재: " + job.getStatus());
+        if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING || job.getStatus() == JobStatus.SCRIPT_PENDING || job.getStatus() == JobStatus.TTS_PENDING) {
+            throw new IllegalStateException("TTS 확정 전에는 이미지를 생성할 수 없습니다. 현재: " + job.getStatus());
         }
 
         // TTS chunks 로드
@@ -103,11 +103,15 @@ public class ImagesService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.IMAGES_PENDING) {
-            throw new IllegalStateException("이미지 확정은 IMAGES_PENDING 에서만 가능. 현재: " + job.getStatus());
+        if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING || job.getStatus() == JobStatus.SCRIPT_PENDING || job.getStatus() == JobStatus.TTS_PENDING) {
+            throw new IllegalStateException("TTS 확정 전에는 이미지를 확정할 수 없습니다. 현재: " + job.getStatus());
         }
 
-        gateService.approve(jobId, GateName.IMAGES, username, "이미지/GIF 확정");
+        if (job.getStatus() == JobStatus.IMAGES_PENDING) {
+            gateService.approve(jobId, GateName.IMAGES, username, "이미지/GIF 확정");
+        } else {
+            log.info("이미지 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
+        }
         log.info("이미지 확정 완료: jobId={}", jobId);
     }
 

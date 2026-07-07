@@ -52,8 +52,8 @@ public class LongformService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.ASSEMBLING) {
-            throw new IllegalStateException("롱폼 조립은 ASSEMBLING 에서만 가능. 현재: " + job.getStatus());
+        if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING || job.getStatus() == JobStatus.SCRIPT_PENDING || job.getStatus() == JobStatus.TTS_PENDING || job.getStatus() == JobStatus.IMAGES_PENDING) {
+            throw new IllegalStateException("이미지 확정 전에는 롱폼을 조립할 수 없습니다. 현재: " + job.getStatus());
         }
 
         // TTS Asset 로드 (audio_path + chunks)
@@ -110,12 +110,15 @@ public class LongformService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.PREVIEW_PENDING) {
-            throw new IllegalStateException("롱폼 확정은 PREVIEW_PENDING 에서만 가능. 현재: " + job.getStatus());
+        if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING || job.getStatus() == JobStatus.SCRIPT_PENDING || job.getStatus() == JobStatus.TTS_PENDING || job.getStatus() == JobStatus.IMAGES_PENDING || job.getStatus() == JobStatus.ASSEMBLING) {
+            throw new IllegalStateException("롱폼 조립 완료 전에는 확정할 수 없습니다. 현재: " + job.getStatus());
         }
 
-        // PREVIEW 게이트 통과
-        gateService.approve(jobId, GateName.PREVIEW, username, "롱폼 미리보기 확정");
+        if (job.getStatus() == JobStatus.PREVIEW_PENDING) {
+            gateService.approve(jobId, GateName.PREVIEW, username, "롱폼 미리보기 확정");
+        } else {
+            log.info("롱폼 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
+        }
 
         // 게이트 통과 후: makeShorts=true → SHORTS_SEGMENTS_PENDING
         //                 makeShorts=false → READY (PREVIEW 다음이 SHORTS_SEGMENTS_PENDING)
