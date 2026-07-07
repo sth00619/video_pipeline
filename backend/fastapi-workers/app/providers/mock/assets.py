@@ -21,8 +21,8 @@ class MockImageProvider(ImageProvider):
 class MockVideoProvider(VideoProvider):
     """Mock 비디오 — 검정 MP4 생성 (FFmpeg 사용)"""
 
-    def generate(self, prompt: str, duration: int = 5) -> GeneratedAsset:
-        path = tempfile.mktemp(suffix=".mp4")
+    def generate(self, prompt: str, duration: int = 5, **kwargs) -> GeneratedAsset:
+        path = kwargs.get("output_path") or tempfile.mktemp(suffix=".mp4")
         os.system(
             f'ffmpeg -f lavfi -i color=c=black:s=1920x1080:d={duration} '
             f'-f lavfi -i anullsrc=r=44100:cl=stereo '

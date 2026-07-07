@@ -205,6 +205,20 @@ public class FastApiClient {
         }
     }
 
+    // Phase 2+ — BGM 생성
+    public void generateBgm(Long jobId, String category, int durationSeconds) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            bodyMap.put("category", category != null ? category : "CUSTOM");
+            bodyMap.put("duration_seconds", durationSeconds);
+            postJson(fastApiUrl + "/workers/bgm/generate", bodyMap);
+        } catch (Exception e) {
+            log.error("BGM 생성 오류 (무시하고 계속 진행): {}", e.getMessage());
+            // BGM 실패가 전체 파이프라인을 멈추게 하지 않음
+        }
+    }
+
     // ============================
     // 공통 POST helper — UTF-8 charset 명시
     // ============================

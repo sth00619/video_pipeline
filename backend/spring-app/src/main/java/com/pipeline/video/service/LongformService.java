@@ -72,6 +72,16 @@ public class LongformService {
         String gifsJson = safeJson(gifAssets.stream()
                 .map(Asset::getMetaJson).toList());
 
+        // BGM 생성 (FastAPI 호출 - 실패해도 메인 파이프라인 진행)
+        try {
+            com.fasterxml.jackson.databind.JsonNode ttsNode = objectMapper.readTree(ttsMetaJson);
+            int durationSeconds = ttsNode.path("total_duration").asInt(60);
+            String category = job.getCategory() != null ? job.getCategory().name() : "CUSTOM";
+            fastApiClient.generateBgm(jobId, category, durationSeconds);
+        } catch (Exception e) {
+            log.error("BGM 생성 준비 오류: {}", e.getMessage());
+        }
+
         // FastAPI 호출
         LongformGenerateResponse result = fastApiClient.generateLongform(
                 jobId, ttsMetaJson, scenesJson, gifsJson);
@@ -339,6 +349,15 @@ public class LongformService {
                 .map(Asset::getMetaJson).toList());
         String gifsJson = safeJson(gifAssets.stream()
                 .map(Asset::getMetaJson).toList());
+
+        // BGM 생성 (재조립 시에도 BGM 재성성)
+        try {
+            int durationSeconds = ttsResult.getTotalDuration() != null ? ttsResult.getTotalDuration().intValue() : 60;
+            String category = job.getCategory() != null ? job.getCategory().name() : "CUSTOM";
+            fastApiClient.generateBgm(jobId, category, durationSeconds);
+        } catch (Exception e) {
+            log.error("재조립 시 BGM 생성 오류: {}", e.getMessage());
+        }
 
         LongformGenerateResponse result = fastApiClient.generateLongform(
                 jobId, safeJson(ttsResult), scenesJson, gifsJson);

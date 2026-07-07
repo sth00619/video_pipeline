@@ -13,6 +13,10 @@ import time
 import logging
 import requests
 import tempfile
+import base64
+import hashlib
+import hmac
+import json
 from pathlib import Path
 
 from app.providers.base import VideoProvider, GeneratedAsset
@@ -26,31 +30,139 @@ class KlingProvider(VideoProvider):
     """
 
     def __init__(self):
-        self.api_url = "https://api.klingai.com/v1/videos/text2video"
+        self.base_url = "https://api-singapore.klingai.com"
+        self.resolved_token = None
+
+    def _generate_jwt(self, access_key: str, secret_key: str) -> str:
+        """
+        Kling Access Key와 Secret Key를 사용하여 HS256 JWT 인증 토큰을 생성한다.
+        (외부 라이브러리 의존성 없이 Python 내장 라이브러리 사용)
+        """
+        # Header
+        header = {"alg": "HS256", "typ": "JWT"}
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode('utf-8')).decode('utf-8').rstrip('=')
+        
+        # Payload
+        now = int(time.time())
+        payload = {
+            "iss": access_key,
+            "exp": now + 1800,  # 30분 유효
+            "nbf": now - 5      # 5초 전부터 유효
+        }
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode('utf-8')).decode('utf-8').rstrip('=')
+        
+        # Signature
+        signature_input = f"{header_b64}.{payload_b64}".encode('utf-8')
+        signature = hmac.new(
+            secret_key.encode('utf-8'),
+            signature_input,
+            hashlib.sha256
+        ).digest()
+        signature_b64 = base64.urlsafe_b64encode(signature).decode('utf-8').rstrip('=')
+        
+        return f"{header_b64}.{payload_b64}.{signature_b64}"
+
+    def _request_kling_with_fallback(self, method: str, endpoint_path: str, payload: dict, api_key: str) -> requests.Response:
+        """
+        Kling API 요청 시 글로벌/중국 도메인 및 JWT/Bearer 인증 방식을 교차 시도하는 하이브리드 폴백 메커니즘.
+        """
+        # 4가지 퍼뮤테이션 정의: (base_url, use_jwt)
+        permutations = [
+            ("https://api-singapore.klingai.com", True),
+            ("https://api.klingai.com", True),
+            ("https://api-singapore.klingai.com", False),
+            ("https://api.klingai.com", False),
+        ]
+        
+        last_resp = None
+        for base_url, use_jwt in permutations:
+            # 토큰 결정
+            if use_jwt:
+                if not api_key or "_" not in api_key:
+                    continue  # JWT 발급 불가
+                try:
+                    ak, sk = api_key.split("_", 1)
+                    token = self._generate_jwt(ak, sk)
+                except Exception as e:
+                    logger.warning(f"JWT 토큰 생성 실패 (도메인 {base_url} 시도 중): {e}")
+                    continue
+            else:
+                token = api_key
+            
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+            
+            url = f"{base_url}{endpoint_path}"
+            logger.info(f"Kling API 요청 시도: url={url}, use_jwt={use_jwt}")
+            
+            try:
+                if method.upper() == "POST":
+                    resp = requests.post(url, json=payload, headers=headers, timeout=30)
+                else:
+                    resp = requests.get(url, headers=headers, timeout=30)
+                
+                # 성공 응답 판별 (HTTP 200 이고 Kling 내부 응답 코드 code == 0 이거나 정상 결과인 경우)
+                if resp.status_code == 200:
+                    resp_json = resp.json()
+                    code = resp_json.get("code")
+                    if code == 0 or code is None:
+                        # 성공 시 이 base_url과 token 유형을 이 인스턴스에 고정하여 다음 폴링 시 재사용하도록 함
+                        self.base_url = base_url
+                        self.resolved_token = token
+                        logger.info(f"Kling API 요청 성공: url={url}, use_jwt={use_jwt}")
+                        return resp
+                    else:
+                        logger.warning(f"Kling API 응답 코드 오류 ({code}): {resp_json.get('message')}")
+                else:
+                    logger.warning(f"Kling API HTTP 오류 ({resp.status_code}): {resp.text}")
+                
+                last_resp = resp
+            except Exception as e:
+                logger.warning(f"Kling API 요청 예외 ({url}): {e}")
+                
+        # 모든 시도가 실패한 경우 마지막 응답 반환
+        if last_resp is not None:
+            return last_resp
+        raise ValueError("모든 Kling API 인증 및 도메인 조합 시도가 실패했습니다.")
 
     def generate(self, prompt: str, duration: int = 5, **kwargs) -> GeneratedAsset:
         """
         텍스트 프롬프트 또는 이미지를 기반으로 5~8초 길이의 비디오 클립 생성.
+        image_url이 제공되면 image-to-video를 우선 시도.
         """
         output_path = kwargs.get("output_path")
         if not output_path:
             output_path = tempfile.mktemp(suffix=".mp4")
-            
+
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Kling 비디오 클립 생성 요청: duration={duration}s, prompt_len={len(prompt)}")
+        image_url = kwargs.get("image_url")
 
-        # 1. 공식 Kling 3.0 API 시도
+        logger.info(f"Kling 비디오 클립 생성 요청: duration={duration}s, prompt_len={len(prompt)}, image_url={'있음' if image_url else '없음'}")
+
         api_key = os.getenv("KLING_API_KEY") or os.getenv("KLING_ACCESS_KEY")
+
+        # 1. image_url이 있으면 image-to-video API 우선 시도
+        if image_url and api_key:
+            try:
+                if self._generate_kling_image2video(image_url, prompt, output_path, duration, api_key):
+                    logger.info(f"Kling image-to-video API 비디오 생성 성공: {output_path}")
+                    return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
+            except Exception as e:
+                logger.warning(f"Kling image-to-video API 호출 실패, text2video 폴백 시도: {e}")
+
+        # 2. 공식 Kling 3.0 text-to-video API 시도
         if api_key:
             try:
                 if self._generate_kling_api(prompt, output_path, duration, api_key):
-                    logger.info(f"공식 Kling 3.0 API 비디오 생성 성공: {output_path}")
+                    logger.info(f"공식 Kling 3.0 text2video API 비디오 생성 성공: {output_path}")
                     return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
             except Exception as e:
-                logger.warning(f"Kling API 호출 실패, FFmpeg 모션 폴백: {e}")
+                logger.warning(f"Kling text2video API 호출 실패, FFmpeg 모션 폴백: {e}")
 
-        # 2. FFmpeg 줌인 모션 폴백
+        # 3. FFmpeg 줌인 모션 폴백
         image_path = kwargs.get("image_path")
         self._generate_ffmpeg_fallback(output_path, duration, image_path)
         return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
@@ -59,29 +171,31 @@ class KlingProvider(VideoProvider):
         """
         Kling AI v1/videos/text2video API 호출 (비동기 폴링).
         """
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
         payload = {
             "model_name": "kling-v3",
             "prompt": prompt,
+            "negative_prompt": "blurry, distorted, cartoonish, text artifacts, low quality, watermark",
             "duration": str(duration),
-            "aspect_ratio": "16:9"
+            "aspect_ratio": "16:9",
+            "mode": "pro"
         }
-        
+
         # 1. 생성 요청 (Task 생성)
-        resp = requests.post(self.api_url, json=payload, headers=headers, timeout=30)
-        if resp.status_code != 200:
-            logger.warning(f"Kling API 요청 실패: {resp.status_code} {resp.text}")
+        resp = self._request_kling_with_fallback("POST", "/v1/videos/text2video", payload, api_key)
+        if resp.status_code != 200 or resp.json().get("code") != 0:
+            logger.warning(f"Kling text2video API 요청 실패: {resp.status_code} {resp.text}")
             return False
-            
+
         task_id = resp.json().get("data", {}).get("task_id")
         if not task_id:
             return False
-            
+
         # 2. 상태 폴링 (최대 120초 대기)
-        poll_url = f"https://api.klingai.com/v1/videos/text2video/{task_id}"
+        poll_url = f"{self.base_url}/v1/videos/text2video/{task_id}"
+        headers = {
+            "Authorization": f"Bearer {self.resolved_token}",
+            "Content-Type": "application/json"
+        }
         for _ in range(24):
             time.sleep(5)
             poll_resp = requests.get(poll_url, headers=headers, timeout=30)
@@ -96,8 +210,62 @@ class KlingProvider(VideoProvider):
                             f.write(video_bytes)
                         return True
                 elif status == "failed":
-                    logger.warning(f"Kling 생성 Task 실패: {data}")
+                    logger.warning(f"Kling text2video 생성 Task 실패: {data}")
                     return False
+        return False
+
+    def _generate_kling_image2video(self, image_url: str, prompt: str, output_path: str, duration: int, api_key: str) -> bool:
+        """
+        Kling AI v1/videos/image2video API 호출 (비동기 폴링).
+        이미지 URL을 기반으로 고품질 AI 모션 비디오를 생성.
+        """
+        payload = {
+            "model_name": "kling-v3",
+            "image": image_url,
+            "prompt": prompt,
+            "negative_prompt": "blurry, distorted, cartoonish, text artifacts, low quality, watermark",
+            "duration": "5",
+            "aspect_ratio": "16:9",
+            "mode": "pro"
+        }
+
+        # 1. image2video 생성 요청 (Task 생성)
+        logger.info(f"Kling image2video API 요청: image_url={image_url[:80]}...")
+        resp = self._request_kling_with_fallback("POST", "/v1/videos/image2video", payload, api_key)
+        if resp.status_code != 200 or resp.json().get("code") != 0:
+            logger.warning(f"Kling image2video API 요청 실패: {resp.status_code} {resp.text}")
+            return False
+
+        task_id = resp.json().get("data", {}).get("task_id")
+        if not task_id:
+            logger.warning("Kling image2video 응답에서 task_id를 찾을 수 없음")
+            return False
+
+        # 2. 상태 폴링 (최대 120초 대기)
+        poll_url = f"{self.base_url}/v1/videos/text2video/{task_id}"
+        headers = {
+            "Authorization": f"Bearer {self.resolved_token}",
+            "Content-Type": "application/json"
+        }
+        logger.info(f"Kling image2video 폴링 시작: task_id={task_id}")
+        for _ in range(24):
+            time.sleep(5)
+            poll_resp = requests.get(poll_url, headers=headers, timeout=30)
+            if poll_resp.status_code == 200:
+                data = poll_resp.json().get("data", {})
+                status = data.get("task_status")
+                if status == "succeed":
+                    video_url = data.get("task_result", {}).get("videos", [{}])[0].get("url")
+                    if video_url:
+                        logger.info(f"Kling image2video 생성 완료, 다운로드 중: {video_url[:80]}...")
+                        video_bytes = requests.get(video_url, timeout=60).content
+                        with open(output_path, "wb") as f:
+                            f.write(video_bytes)
+                        return True
+                elif status == "failed":
+                    logger.warning(f"Kling image2video 생성 Task 실패: {data}")
+                    return False
+        logger.warning("Kling image2video 폴링 타임아웃 (120초 초과)")
         return False
 
     def _generate_ffmpeg_fallback(self, output_path: str, duration: int, image_path: str = None):

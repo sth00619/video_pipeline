@@ -270,6 +270,48 @@ export default function JobDetail() {
         </div>
       )}
 
+      {job.outputPath && (
+        <div className="bg-navy-800 rounded-xl border border-accent-green p-5 space-y-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="text-accent-green" size={20}/>
+              <div>
+                <div className="font-semibold text-sm">
+                  {isDone ? '영상 생성 완료' : '영상 조립 완료 (미리보기)'}
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">{job.longformTargetMinutes}분 · 1920×1080</div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {['PREVIEW_PENDING', 'READY'].includes(job.status) && (
+                <button
+                  onClick={() => rebuildLongformMut.mutate()}
+                  disabled={rebuildLongformMut.isPending}
+                  className="flex items-center gap-1 bg-accent-gold text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
+                >
+                  {rebuildLongformMut.isPending ? <Loader size={12} className="animate-spin"/> : <Zap size={12}/>}
+                  동영상 재조립
+                </button>
+              )}
+              <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
+                className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 transition" download>
+                <Download size={12}/>MP4 다운로드
+              </a>
+            </div>
+          </div>
+          
+          {/* 비디오 플레이어 */}
+          <div className="aspect-video bg-navy-950 rounded-lg overflow-hidden border border-navy-700">
+            <video 
+              key={imageSalt}
+              controls 
+              className="w-full h-full"
+              src={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-3">
           {PIPELINE_STEPS.map((step, idx) => {
@@ -771,47 +813,6 @@ export default function JobDetail() {
             )
           })}
 
-          {job.outputPath && (
-            <div className="bg-navy-800 rounded-xl border border-accent-green p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="text-accent-green" size={20}/>
-                  <div>
-                    <div className="font-semibold text-sm">
-                      {isDone ? '영상 생성 완료' : '영상 조립 완료 (미리보기)'}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-0.5">{job.longformTargetMinutes}분 · 1920×1080</div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {['PREVIEW_PENDING', 'READY'].includes(job.status) && (
-                    <button
-                      onClick={() => rebuildLongformMut.mutate()}
-                      disabled={rebuildLongformMut.isPending}
-                      className="flex items-center gap-1 bg-accent-gold text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
-                    >
-                      {rebuildLongformMut.isPending ? <Loader size={12} className="animate-spin"/> : <Zap size={12}/>}
-                      동영상 재조립
-                    </button>
-                  )}
-                  <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
-                    className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 transition" download>
-                    <Download size={12}/>MP4 다운로드
-                  </a>
-                </div>
-              </div>
-              
-              {/* 비디오 플레이어 */}
-              <div className="aspect-video bg-navy-950 rounded-lg overflow-hidden border border-navy-700">
-                <video 
-                  key={imageSalt}
-                  controls 
-                  className="w-full h-full"
-                  src={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 오른쪽 패널 */}

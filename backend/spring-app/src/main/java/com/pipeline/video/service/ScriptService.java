@@ -42,10 +42,12 @@ public class ScriptService {
 
         int targetMinutes = job.getLongformTargetMinutes() != null
                 ? job.getLongformTargetMinutes() : 20;
+        // 1.5배속 가속을 고려하여 스크립트 분량을 1.5배 늘려서 생성
+        int llmTargetMinutes = (int) Math.round(targetMinutes * 1.5);
         String categoryName = job.getCategory() != null ? job.getCategory().name() : "CUSTOM";
 
-        log.info("스크립트 생성: jobId={}, keyword={}, target={}분, category={}",
-                jobId, job.getKeyword(), targetMinutes, categoryName);
+        log.info("스크립트 생성: jobId={}, keyword={}, target={}분 (LLM 타겟: {}분), category={}",
+                jobId, job.getKeyword(), targetMinutes, llmTargetMinutes, categoryName);
 
         String marketSnapshotJson = null;
         try {
@@ -66,10 +68,10 @@ public class ScriptService {
         }
 
         ScriptGenerateResponse result = fastApiClient.generateScript(
-                jobId, job.getKeyword(), targetMinutes, categoryName, marketSnapshotJson);
+                jobId, job.getKeyword(), llmTargetMinutes, categoryName, marketSnapshotJson);
 
         costService.record(jobId, "CLAUDE_LLM", BigDecimal.ZERO, "USD",
-                String.format("스크립트 %d분 %d자", targetMinutes,
+                String.format("스크립트 %d분 (실제 %d분) %d자", targetMinutes, llmTargetMinutes,
                         result.getCharCount() != null ? result.getCharCount() : 0));
 
         Asset asset = Asset.builder()

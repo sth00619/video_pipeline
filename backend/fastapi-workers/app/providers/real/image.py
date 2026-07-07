@@ -95,30 +95,56 @@ class NanaBananaProvider(ImageProvider):
 
     def _generate_gemini_api(self, prompt: str, output_path: str, api_key: str) -> bool:
         """
-        Google AI Studio / Vertex AI 공식 Imagen 3 / Gemini 3 Pro Image API 호출.
+        Google AI Studio 공식 gemini-2.5-flash-image API 호출 (429 Rate Limit 대응 재시도 탑재).
         """
         import requests
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={api_key}"
+        import time
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key={api_key}"
         payload = {
-            "instances": [{"prompt": prompt}],
-            "parameters": {
-                "sampleCount": 1,
-                "aspectRatio": "16:9",
-                "personGeneration": "ALLOW_ADULT"
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "responseModalities": ["IMAGE"]
             }
         }
         headers = {"Content-Type": "application/json"}
         
-        resp = requests.post(url, json=payload, headers=headers, timeout=60)
-        if resp.status_code == 200:
-            data = resp.json()
-            predictions = data.get("predictions", [])
-            if predictions and "bytesBase64Encoded" in predictions[0]:
-                img_bytes = base64.b64decode(predictions[0]["bytesBase64Encoded"])
-                with open(output_path, "wb") as f:
-                    f.write(img_bytes)
-                return True
-        logger.warning(f"Gemini API 응답 에러: {resp.status_code} {resp.text}")
+        # Free Tier Rate Limit (2 RPM) 대응: 최대 5회 재시도 (매번 35초 대기)
+        MAX_ATTEMPTS = 5
+        for attempt in range(MAX_ATTEMPTS):
+            resp = requests.post(url, json=payload, headers=headers, timeout=60)
+            if resp.status_code == 200:
+                data = resp.json()
+                try:
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            inline_data = parts[0].get("inlineData", {})
+                            if inline_data and "data" in inline_data:
+                                img_bytes = base64.b64decode(inline_data["data"])
+                                with open(output_path, "wb") as f:
+                                    f.write(img_bytes)
+                                return True
+                except Exception as e:
+                    logger.error(f"Gemini API 응답 파싱 에러: {e}")
+                    return False
+            elif resp.status_code == 429:
+                wait_time = 35
+                logger.warning(f"Gemini API 할당량 초과(429) 감지. {wait_time}초 후 재시도합니다. (시도 {attempt + 1}/{MAX_ATTEMPTS})")
+                time.sleep(wait_time)
+            else:
+                logger.warning(f"Gemini API HTTP 에러 ({resp.status_code}): {resp.text}")
+                return False
+                
+        logger.error(f"Gemini API 재시도 횟수 초과로 이미지 생성 실패: {prompt[:40]}...")
         return False
 
     def _generate_pollinations(self, prompt: str, output_path: str) -> str:

@@ -14,7 +14,7 @@ def get_transcript_provider() -> TranscriptProvider:
 
 
 def get_llm_provider() -> LLMProvider:
-    if APP_MODE == "prod":
+    if APP_MODE in ["prod", "production"]:
         from app.providers.real.llm import ClaudeProvider
         return ClaudeProvider()
     return MockLLMProvider()
@@ -32,14 +32,14 @@ def get_image_provider() -> ImageProvider:
 
 
 def get_video_provider() -> VideoProvider:
-    if APP_MODE == "prod":
+    if APP_MODE in ["prod", "production"]:
         from app.providers.real.video import KlingProvider
         return KlingProvider()
     return MockVideoProvider()
 
 
 def get_tts_provider() -> TTSProvider:
-    if APP_MODE == "prod":
+    if APP_MODE in ["prod", "production"]:
         from app.providers.real.tts import ElevenLabsProvider
         return ElevenLabsProvider()
     return MockTTSProvider()
@@ -50,7 +50,7 @@ def get_trending_video_analyzer() -> TrendingVideoAnalyzer:
     Phase 1 (Mock): 시뮬레이션 데이터
     Phase 2 (Real): YouTube Data API v3 통합 예정
     """
-    if APP_MODE == "prod":
+    if APP_MODE in ["prod", "production"]:
         from app.providers.real.trending import YouTubeTrendingAnalyzer
         return YouTubeTrendingAnalyzer()
     return MockTrendingVideoAnalyzer()

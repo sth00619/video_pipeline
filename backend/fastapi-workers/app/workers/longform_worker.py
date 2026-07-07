@@ -58,6 +58,15 @@ class LongformWorker:
                     else:
                         scene["duration"] = round(total_duration / len(scenes), 3)
 
+        # Kling 비디오 프로바이더 로드 (하이브리드 모드)
+        video_provider = None
+        try:
+            from app.providers.factory import get_video_provider
+            video_provider = get_video_provider()
+            logger.info("하이브리드 Kling 비디오 프로바이더 로드 성공")
+        except Exception as e:
+            logger.warning(f"Kling 비디오 프로바이더 로드 실패 (FFmpeg 폴백 사용): {e}")
+
         # 2. 씬별 클립 생성
         clip_list_path = str(temp_dir / "clips.txt")
         clip_paths = []
@@ -73,6 +82,22 @@ class LongformWorker:
                 "data": "0f3460", "scenario": "1b1464",
                 "action": "0d3b2e", "conclusion": "1a1a2e",
             }.get(section, "0d1b2a")
+
+            # 인트로 및 결론 씬은 Kling AI 비디오 생성 시도 (하이브리드 전략)
+            if video_provider and (i == 0 or i == len(scenes) - 1):
+                try:
+                    logger.info(f"씬 {i} Kling AI 모션 영상 생성 시작 (section={section})")
+                    prompt = scene.get("prompt", "") or scene.get("text", "") or "professional financial chart animation"
+                    video_provider.generate(
+                        prompt=prompt,
+                        duration=int(duration),
+                        output_path=clip_path,
+                        image_path=img_path
+                    )
+                    clip_paths.append(clip_path)
+                    continue
+                except Exception as e:
+                    logger.warning(f"씬 {i} Kling AI 생성 실패, FFmpeg 폴백: {e}")
 
             if not os.path.exists(img_path):
                 cmd = (
@@ -116,24 +141,38 @@ class LongformWorker:
         ass_path = str(temp_dir / "subtitles.ass")
         self._generate_ass(chunks, ass_path)
 
-        # 4. 음성 + 자막 합성
+        # 4. 음성 + BGM + 자막 합성
         font_available = os.path.exists(NANUM_BOLD) or os.path.exists(NANUM_REGULAR)
         ass_exists = os.path.exists(ass_path) and os.path.getsize(ass_path) > 200
         audio_exists = os.path.exists(audio_path) and os.path.getsize(audio_path) > 0
 
+        # BGM 파일 탐색 (bgm_worker가 생성한 파일)
+        bgm_path = f"/app/data/jobs/{job_id}/bgm.mp3"
+        bgm_exists = os.path.exists(bgm_path) and os.path.getsize(bgm_path) > 0
+
         if audio_exists:
-            if font_available and ass_exists:
+            vf_filter = f'-vf "ass=\'{ass_path}\'" ' if (font_available and ass_exists) else ''
+            vcodec = '-c:v libx264 -preset fast -pix_fmt yuv420p' if vf_filter else '-c:v copy'
+
+            if bgm_exists:
+                # 3-트랙 믹싱: 나레이션(100%) + BGM(12%, ≈-18dB)
                 merge_cmd = (
-                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
-                    f'-vf "ass=\'{ass_path}\'" '
-                    f'-c:v libx264 -preset fast -pix_fmt yuv420p '
+                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" -i "{bgm_path}" '
+                    f'-filter_complex "[1:a]volume=1.0[narr];[2:a]volume=0.12,aloop=loop=-1:size=2e+09[bgm];'
+                    f'[narr][bgm]amix=inputs=2:duration=first:dropout_transition=3[mixed]" '
+                    f'{vf_filter}'
+                    f'{vcodec} '
+                    f'-map 0:v -map "[mixed]" '
                     f'-c:a aac -b:a 192k -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
+                logger.info("BGM 믹싱 적용: 나레이션 + BGM(-18dB)")
             else:
                 merge_cmd = (
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
-                    f'-c:v copy -c:a aac -b:a 192k -shortest '
+                    f'{vf_filter}'
+                    f'{vcodec} '
+                    f'-c:a aac -b:a 192k -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
         else:
@@ -149,7 +188,7 @@ class LongformWorker:
 
         ret = os.system(merge_cmd)
         if ret != 0:
-            logger.error("자막 합성 실패, 폴백")
+            logger.error("자막/BGM 합성 실패, 폴백")
             if audio_exists:
                 os.system(
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '

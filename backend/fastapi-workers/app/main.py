@@ -13,6 +13,9 @@ from app.workers.script_worker import ScriptWorker
 from app.workers.tts_worker import TtsWorker
 from app.workers.images_worker import ImagesWorker
 from app.workers.longform_worker import LongformWorker
+from app.workers.sfx_worker import SfxWorker
+from app.workers.bgm_worker import BgmWorker
+from app.workers.pronunciation_manager import PronunciationManager
 from app.config import APP_MODE
 
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +32,8 @@ script_worker = None
 tts_worker = None
 images_worker = None
 longform_worker = None
+sfx_worker = None
+bgm_worker = None
 
 
 def get_shorts_worker():
@@ -66,6 +71,28 @@ def get_longform_worker():
     if longform_worker is None:
         longform_worker = LongformWorker()
     return longform_worker
+
+def get_sfx_worker():
+    global sfx_worker
+    if sfx_worker is None:
+        sfx_worker = SfxWorker()
+    return sfx_worker
+
+def get_bgm_worker():
+    global bgm_worker
+    if bgm_worker is None:
+        bgm_worker = BgmWorker()
+    return bgm_worker
+
+
+@app.on_event("startup")
+async def startup_event():
+    """서버 시작 시 발음 사전 초기화"""
+    try:
+        result = PronunciationManager.get_instance().initialize()
+        logger.info(f"발음 사전 초기화: {result}")
+    except Exception as e:
+        logger.warning(f"발음 사전 초기화 실패 (TTS는 정상 작동): {e}")
 
 
 @app.get("/health")
@@ -282,3 +309,55 @@ async def transcribe(file: UploadFile = File(...)):
         return {"segments": [{"text": s.text, "start": s.start, "end": s.end, "words": s.words} for s in segments]}
     finally:
         if os.path.exists(tmp): os.remove(tmp)
+
+
+# ============================
+# Phase 2+ — 효과음 / BGM / 발음 사전
+# ============================
+class SfxRequest(BaseModel):
+    job_id: int
+    sections: list = []
+
+class BgmRequest(BaseModel):
+    job_id: int
+    category: str = "CUSTOM"
+    duration_seconds: int = 60
+
+
+@app.post("/workers/sfx/generate")
+def sfx_generate(req: SfxRequest):
+    """효과음 자동 생성 (ElevenLabs Sound Effects API)"""
+    try:
+        worker = get_sfx_worker()
+        result = worker.generate(job_id=req.job_id, sections=req.sections)
+        return result
+    except Exception as e:
+        logger.error(f"SFX 생성 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"효과음 생성 실패: {e}")
+
+
+@app.post("/workers/bgm/generate")
+def bgm_generate(req: BgmRequest):
+    """BGM 자동 생성 (ElevenLabs Music Generation API)"""
+    try:
+        worker = get_bgm_worker()
+        result = worker.generate(
+            job_id=req.job_id,
+            category=req.category,
+            duration_seconds=req.duration_seconds
+        )
+        return result
+    except Exception as e:
+        logger.error(f"BGM 생성 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"BGM 생성 실패: {e}")
+
+
+@app.post("/workers/pronunciation/init")
+def pronunciation_init():
+    """발음 사전 초기화/확인"""
+    try:
+        result = PronunciationManager.get_instance().initialize()
+        return result
+    except Exception as e:
+        logger.error(f"발음 사전 초기화 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"발음 사전 초기화 실패: {e}")
