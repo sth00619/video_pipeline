@@ -95,7 +95,7 @@ class TtsWorker:
 
         # 3. faster-whisper로 역방향 STT → 정확한 타임스탬프 추출
         chunks = []
-        if used_gtts:
+        if used_tts:
             try:
                 chunks = self._extract_timestamps_with_whisper(mp3_path, script)
                 logger.info(f"Whisper 타임스탬프 추출: {len(chunks)}개 세그먼트")
