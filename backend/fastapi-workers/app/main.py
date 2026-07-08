@@ -220,6 +220,8 @@ class ImagesGenerateRequest(BaseModel):
     tts_meta: str      # TTS 결과 JSON 문자열
     script_meta: str   # 스크립트 결과 JSON 문자열
     job_id: Optional[int] = 0
+    character_image_path: Optional[str] = None
+    character_style_prompt: Optional[str] = None
 
 @app.post("/workers/images/generate")
 async def images_generate(request: ImagesGenerateRequest):
@@ -228,6 +230,8 @@ async def images_generate(request: ImagesGenerateRequest):
             tts_meta_json=request.tts_meta,
             script_meta_json=request.script_meta,
             job_id=request.job_id or 0,
+            character_image_path=request.character_image_path,
+            character_style_prompt=request.character_style_prompt
         )
     except Exception as e:
         logger.exception("이미지 생성 실패")
@@ -275,18 +279,42 @@ class SingleImageGenerateRequest(BaseModel):
     text: str
     section: str
     job_id: int
+    character_image_path: Optional[str] = None
+    character_style_prompt: Optional[str] = None
 
 @app.post("/workers/images/generate-single")
 async def generate_single_image(request: SingleImageGenerateRequest):
     try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        
         job_dir = DATA_DIR / "jobs" / str(request.job_id) / "images"
         job_dir.mkdir(parents=True, exist_ok=True)
         img_path = str(job_dir / f"scene_{request.index:03d}.png")
         
+        # AI 이미지 생성 시도 (일러스트 모드)
+        ai_provider = None
+        try:
+            from app.providers.factory import get_image_provider
+            ai_provider = get_image_provider()
+        except Exception:
+            pass
+
+        if ai_provider:
+            try:
+                ai_provider.generate_image(
+                    prompt=request.text,
+                    output_path=img_path,
+                    section=request.section,
+                    keyword=request.text[:30],
+                    character_image_path=request.character_image_path,
+                    character_style_prompt=request.character_style_prompt
+                )
+                return {"status": "ok", "image_path": img_path}
+            except Exception as e:
+                logger.warning(f"단일 AI 이미지 생성 실패, Matplotlib 폴백: {e}")
+
+        # Matplotlib 차트 폴백
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
         images_worker = get_images_worker()
         images_worker._render_section(request.section, request.text, img_path, plt)
         return {"status": "ok", "image_path": img_path}

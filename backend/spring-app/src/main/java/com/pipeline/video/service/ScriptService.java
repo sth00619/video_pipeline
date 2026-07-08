@@ -83,7 +83,7 @@ public class ScriptService {
 
         if (autonomyService.isAuto(job)) {
             log.info("AUTO 모드 — 스크립트 자동 확정");
-            confirm(jobId, result.getScript(), "AUTO");
+            confirm(jobId, result.getScript(), result.getSections(), "AUTO");
         }
 
         return result;
@@ -91,6 +91,11 @@ public class ScriptService {
 
     @Transactional
     public void confirm(Long jobId, String finalScript, String username) {
+        confirm(jobId, finalScript, null, username);
+    }
+
+    @Transactional
+    public void confirm(Long jobId, String finalScript, List<Map<String, Object>> inputSections, String username) {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
@@ -118,72 +123,85 @@ public class ScriptService {
             log.warn("이전 스크립트 에셋 메타데이터 파싱 실패: {}", e.getMessage());
         }
 
-        try {
-            String[] parts = finalScript.split("(?m)^##\\s*");
-            if (parts.length <= 1) {
-                // ## 헤더가 없는 경우 문단(빈 줄) 기준으로 분리하여 단일 씬이 되는 것을 방지
-                parts = finalScript.split("(?m)^\\s*\\n+");
-            }
-            for (String part : parts) {
-                part = part.trim();
-                if (part.isEmpty()) continue;
-                
-                int firstNewline = part.indexOf('\n');
-                String title;
-                String content;
-                if (firstNewline != -1) {
-                    title = part.substring(0, firstNewline).trim();
-                    content = part.substring(firstNewline + 1).trim();
-                } else {
-                    title = "섹션";
-                    content = part;
+        if (inputSections != null && !inputSections.isEmpty()) {
+            sections = inputSections;
+        } else {
+            try {
+                String[] parts = finalScript.split("(?m)^##\\s*");
+                if (parts.length <= 1) {
+                    parts = finalScript.split("(?m)^\\s*\\n+");
                 }
-                
-                Map<String, Object> secMap = new java.util.HashMap<>();
-                secMap.put("title", title);
-                secMap.put("text", content);
-                secMap.put("content", content);
-                secMap.put("char_count", content.length());
-                
-                // section key도 매핑 (intro, background 등)
-                String sectionKey = "background";
-                if (title.contains("인트로") || title.toLowerCase().contains("intro")) {
-                    sectionKey = "intro";
-                } else if (title.contains("배경") || title.toLowerCase().contains("background")) {
-                    sectionKey = "background";
-                } else if (title.contains("데이터") || title.toLowerCase().contains("data")) {
-                    sectionKey = "data";
-                } else if (title.contains("시나리오") || title.toLowerCase().contains("scenario")) {
-                    sectionKey = "scenario";
-                } else if (title.contains("가이드") || title.toLowerCase().contains("action") || title.toLowerCase().contains("guide")) {
-                    sectionKey = "action";
-                } else if (title.contains("결론") || title.toLowerCase().contains("conclusion")) {
-                    sectionKey = "conclusion";
-                }
-                secMap.put("section", sectionKey);
-                
-                sections.add(secMap);
-            }
-            
-            // 6개 섹션이고 명시적인 매핑이 안 된 경우, 순서대로 6개 영역 매핑 부여
-            if (sections.size() == 6) {
-                boolean allDefault = true;
-                for (Map<String, Object> sec : sections) {
-                    String secKey = (String) sec.get("section");
-                    if (secKey != null && !secKey.equals("background")) {
-                        allDefault = false;
-                        break;
+                for (String part : parts) {
+                    part = part.trim();
+                    if (part.isEmpty()) continue;
+                    
+                    int firstNewline = part.indexOf('\n');
+                    String title;
+                    String rawContent;
+                    if (firstNewline != -1) {
+                        title = part.substring(0, firstNewline).trim();
+                        rawContent = part.substring(firstNewline + 1).trim();
+                    } else {
+                        title = "섹션";
+                        rawContent = part;
                     }
-                }
-                if (allDefault) {
-                    String[] defaultKeys = {"intro", "background", "data", "scenario", "action", "conclusion"};
-                    for (int i = 0; i < 6; i++) {
-                        sections.get(i).put("section", defaultKeys[i]);
+                    
+                    // [대사]와 [비주얼] 분리 파싱
+                    String narration = "";
+                    String prompt = "";
+                    
+                    int daesaIdx = rawContent.indexOf("[대사]");
+                    int visualIdx = rawContent.indexOf("[비주얼]");
+                    
+                    if (daesaIdx != -1) {
+                        if (visualIdx != -1 && visualIdx > daesaIdx) {
+                            narration = rawContent.substring(daesaIdx + 4, visualIdx).trim();
+                        } else {
+                            narration = rawContent.substring(daesaIdx + 4).trim();
+                        }
+                    } else {
+                        if (visualIdx != -1) {
+                            narration = rawContent.substring(0, visualIdx).trim();
+                        } else {
+                            narration = rawContent;
+                        }
                     }
+                    
+                    if (visualIdx != -1) {
+                        prompt = rawContent.substring(visualIdx + 5).trim();
+                    } else {
+                        prompt = "A cute green banknote cartoon character with glasses and a headset, showing an expression matching '" + title + "', professional 2D vector style";
+                    }
+                    
+                    Map<String, Object> secMap = new java.util.HashMap<>();
+                    secMap.put("title", title);
+                    secMap.put("text", narration);
+                    secMap.put("content", narration);
+                    secMap.put("prompt", prompt);
+                    secMap.put("char_count", narration.length());
+                    
+                    // section key 매핑
+                    String sectionKey = "background";
+                    if (title.contains("인트로") || title.toLowerCase().contains("intro")) {
+                        sectionKey = "intro";
+                    } else if (title.contains("배경") || title.toLowerCase().contains("background")) {
+                        sectionKey = "background";
+                    } else if (title.contains("데이터") || title.toLowerCase().contains("data")) {
+                        sectionKey = "data";
+                    } else if (title.contains("시나리오") || title.toLowerCase().contains("scenario")) {
+                        sectionKey = "scenario";
+                    } else if (title.contains("가이드") || title.toLowerCase().contains("action") || title.toLowerCase().contains("guide")) {
+                        sectionKey = "action";
+                    } else if (title.contains("결론") || title.toLowerCase().contains("conclusion")) {
+                        sectionKey = "conclusion";
+                    }
+                    secMap.put("section", sectionKey);
+                    
+                    sections.add(secMap);
                 }
+            } catch (Exception parseEx) {
+                log.warn("최종 스크립트 섹션 파싱 실패, 이전 에셋 복원 폴백: {}", parseEx.getMessage());
             }
-        } catch (Exception parseEx) {
-            log.warn("최종 스크립트 섹션 파싱 실패, 이전 에셋 복원 폴백: {}", parseEx.getMessage());
         }
 
         if (sections.isEmpty()) {
@@ -201,13 +219,25 @@ public class ScriptService {
             }
         }
 
+        // 스크립트 UI 노출용 마크다운 형식 재구성
+        String scriptToSave = finalScript;
+        if (!sections.isEmpty() && (finalScript == null || !finalScript.contains("##"))) {
+            StringBuilder sb = new StringBuilder();
+            for (Map<String, Object> sec : sections) {
+                sb.append("## ").append(sec.get("title")).append("\n");
+                sb.append("[대사]\n").append(sec.get("content") != null ? sec.get("content") : sec.get("text")).append("\n");
+                sb.append("[비주얼]\n").append(sec.get("prompt")).append("\n\n");
+            }
+            scriptToSave = sb.toString().trim();
+        }
+
         Asset finalAsset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.SCRIPT)
                 .metaJson(safeJson(Map.of(
-                        "script", finalScript,
+                        "script", scriptToSave,
                         "final", true,
-                        "char_count", finalScript.length(),
+                        "char_count", scriptToSave.length(),
                         "sections", sections,
                         "verified_facts", verifiedFacts
                 )))
@@ -219,7 +249,7 @@ public class ScriptService {
         } else {
             log.info("스크립트 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
         }
-        log.info("스크립트 확정: jobId={}, length={}자, sections={}개", jobId, finalScript.length(), sections.size());
+        log.info("스크립트 확정: jobId={}, length={}자, sections={}개", jobId, scriptToSave.length(), sections.size());
     }
 
     private String safeJson(Object obj) {

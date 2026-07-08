@@ -6,6 +6,7 @@ import com.pipeline.video.domain.*;
 import com.pipeline.video.dto.TtsGenerateResponse;
 import com.pipeline.video.repository.AssetRepository;
 import com.pipeline.video.repository.VideoJobRepository;
+import com.pipeline.video.repository.ChannelProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class TtsService {
 
     private final VideoJobRepository jobRepository;
     private final AssetRepository assetRepository;
+    private final ChannelProfileRepository channelProfileRepository;
     private final FastApiClient fastApiClient;
     private final GateService gateService;
     private final AutonomyService autonomyService;
@@ -50,11 +52,21 @@ public class TtsService {
             throw new IllegalStateException("최종 스크립트가 없습니다. 스크립트 확정을 먼저 진행하세요.");
         }
 
+        // 채널 프로필 로드 (커스텀 ElevenLabs 목소리가 설정되어 있는지 확인)
+        String finalVoiceId = voiceId;
+        if (job.getChannelId() != null) {
+            ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
+            if (profile != null && profile.getVoiceId() != null && !profile.getVoiceId().isBlank()) {
+                finalVoiceId = profile.getVoiceId();
+                log.info("채널 목소리 로드 완료: channelId={}, voiceId={}", job.getChannelId(), finalVoiceId);
+            }
+        }
+
         log.info("TTS 생성 시작: jobId={}, scriptLength={}자, voice={}, autonomy={}",
-                jobId, script.length(), voiceId, job.getAutonomy());
+                jobId, script.length(), finalVoiceId, job.getAutonomy());
 
         // FastAPI 호출
-        TtsGenerateResponse result = fastApiClient.generateTts(jobId, script, voiceId);
+        TtsGenerateResponse result = fastApiClient.generateTts(jobId, script, finalVoiceId);
 
         // 비용 기록 (Mock $0, 실제 ElevenLabs는 $0.30/1K characters 기준)
         costService.record(jobId, "ELEVENLABS_TTS", BigDecimal.ZERO, "USD",

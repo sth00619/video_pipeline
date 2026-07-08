@@ -59,6 +59,9 @@ public class VideoJob {
 
     private String createdBy;
 
+    @Column(name = "channel_id", length = 50)
+    private String channelId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

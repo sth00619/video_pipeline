@@ -235,6 +235,17 @@ public class LongformService {
         String newScript = fullScriptBuilder.toString();
 
         // 3. SCRIPT 에셋 업데이트 (마지막 스크립트 상태 갱신)
+        List<Map<String, Object>> newSections = new ArrayList<>();
+        for (SceneImageDto scene : scenes) {
+            Map<String, Object> sec = new HashMap<>();
+            sec.put("title", "Scene " + scene.getIndex());
+            String pText = scene.getPrompt() != null ? scene.getPrompt() : "";
+            sec.put("text", pText);
+            sec.put("content", pText);
+            sec.put("char_count", pText.length());
+            sec.put("section", scene.getSection() != null ? scene.getSection() : "scene_" + scene.getIndex());
+            newSections.add(sec);
+        }
         Asset finalScriptAsset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.SCRIPT)
@@ -242,7 +253,7 @@ public class LongformService {
                         "script", newScript,
                         "final", true,
                         "char_count", newScript.length(),
-                        "sections", List.of(),
+                        "sections", newSections,
                         "verified_facts", List.of()
                 )))
                 .build();

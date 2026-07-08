@@ -25,6 +25,7 @@ public class JobResponse {
     private String sourceVideoPath;
     private String outputPath;
     private String policyJson;
+    private String channelId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -47,6 +48,7 @@ public class JobResponse {
         r.setSourceVideoPath(job.getSourceVideoPath());
         r.setOutputPath(job.getOutputPath());
         r.setPolicyJson(job.getPolicyJson());
+        r.setChannelId(job.getChannelId());
         r.setCreatedAt(job.getCreatedAt());
         r.setUpdatedAt(job.getUpdatedAt());
         return r;

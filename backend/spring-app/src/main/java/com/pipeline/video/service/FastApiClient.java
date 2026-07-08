@@ -160,12 +160,14 @@ public class FastApiClient {
     }
 
     // Phase 3-4 — 이미지
-    public ImagesGenerateResponse generateImages(Long jobId, String ttsMetaJson, String scriptMetaJson) {
+    public ImagesGenerateResponse generateImages(Long jobId, String ttsMetaJson, String scriptMetaJson, String characterImagePath, String characterStylePrompt) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
             bodyMap.put("tts_meta", ttsMetaJson);
             bodyMap.put("script_meta", scriptMetaJson);
+            bodyMap.put("character_image_path", characterImagePath);
+            bodyMap.put("character_style_prompt", characterStylePrompt);
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/images/generate", bodyMap),
                     ImagesGenerateResponse.class);
@@ -175,13 +177,15 @@ public class FastApiClient {
     }
 
     // Phase 3-4B — 단일 이미지 재생성
-    public void generateSingleImage(Long jobId, int index, String text, String section) {
+    public void generateSingleImage(Long jobId, int index, String text, String section, String characterImagePath, String characterStylePrompt) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
             bodyMap.put("index", index);
             bodyMap.put("text", text);
             bodyMap.put("section", section);
+            bodyMap.put("character_image_path", characterImagePath);
+            bodyMap.put("character_style_prompt", characterStylePrompt);
             postJson(fastApiUrl + "/workers/images/generate-single", bodyMap);
         } catch (Exception e) {
             throw new RuntimeException("단일 이미지 생성 오류: " + e.getMessage(), e);

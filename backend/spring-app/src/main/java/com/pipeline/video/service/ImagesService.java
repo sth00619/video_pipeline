@@ -8,6 +8,7 @@ import com.pipeline.video.dto.ImagesGenerateResponse;
 import com.pipeline.video.dto.SceneImageDto;
 import com.pipeline.video.repository.AssetRepository;
 import com.pipeline.video.repository.VideoJobRepository;
+import com.pipeline.video.repository.ChannelProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ public class ImagesService {
 
     private final VideoJobRepository jobRepository;
     private final AssetRepository assetRepository;
+    private final ChannelProfileRepository channelProfileRepository;
     private final FastApiClient fastApiClient;
     private final GateService gateService;
     private final AutonomyService autonomyService;
@@ -52,10 +54,24 @@ public class ImagesService {
         // 스크립트 로드
         String scriptMetaJson = loadAssetMeta(jobId, AssetType.SCRIPT);
 
+        // 채널 프로필 로드 (캐릭터 일관성 파라미터 추출)
+        String characterImagePath = null;
+        String characterStylePrompt = null;
+        if (job.getChannelId() != null) {
+            ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
+            if (profile != null) {
+                characterImagePath = profile.getCharacterImagePath();
+                characterStylePrompt = profile.getCharacterStylePrompt();
+                log.info("채널 캐릭터 프로필 로드 완료: channelId={}, characterImagePath={}",
+                        job.getChannelId(), characterImagePath);
+            }
+        }
+
         log.info("이미지 생성 시작: jobId={}, autonomy={}", jobId, job.getAutonomy());
 
         // FastAPI 호출
-        ImagesGenerateResponse result = fastApiClient.generateImages(jobId, ttsMetaJson, scriptMetaJson);
+        ImagesGenerateResponse result = fastApiClient.generateImages(
+                jobId, ttsMetaJson, scriptMetaJson, characterImagePath, characterStylePrompt);
 
         // 비용 기록 (Mock $0, 실제 Nano Banana Pro $0.03~0.05/장)
         BigDecimal imgCost = BigDecimal.ZERO;
@@ -145,8 +161,21 @@ public class ImagesService {
         target.setMetaJson(safeJson(sceneDto));
         assetRepository.save(target);
 
-        // 3. FastAPI에 단일 이미지 재생성 요청
-        fastApiClient.generateSingleImage(jobId, index, text, sceneDto.getSection());
+        // 3. 채널 프로필 로드
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        String characterImagePath = null;
+        String characterStylePrompt = null;
+        if (job.getChannelId() != null) {
+            ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
+            if (profile != null) {
+                characterImagePath = profile.getCharacterImagePath();
+                characterStylePrompt = profile.getCharacterStylePrompt();
+            }
+        }
+
+        // 4. FastAPI에 단일 이미지 재생성 요청
+        fastApiClient.generateSingleImage(jobId, index, text, sceneDto.getSection(), characterImagePath, characterStylePrompt);
         log.info("씬 이미지 재생성 요청 완료: jobId={}, index={}, section={}", jobId, index, sceneDto.getSection());
     }
 

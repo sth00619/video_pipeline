@@ -43,6 +43,7 @@ public class JobService {
                 .budgetCap(request.getBudgetCap())
                 .costAccumulated(BigDecimal.ZERO)
                 .policyJson(request.getPolicyJson())
+                .channelId(request.getChannelId())
                 .createdBy(username)
                 .build();
 

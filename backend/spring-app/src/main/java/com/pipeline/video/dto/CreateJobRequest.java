@@ -21,4 +21,5 @@ public class CreateJobRequest {
     private Integer longformTargetMinutes = 20;       // 15/20/30 등 유동적
     private BigDecimal budgetCap;
     private String policyJson;
+    private String channelId;
 }

@@ -24,30 +24,17 @@ from app.providers.base import ImageProvider
 
 logger = logging.getLogger(__name__)
 
-# 캐릭터 일관성 유지 프롬프트 (경제사냥꾼 스타일 돈 사냥꾼 마스코트)
-CHARACTER_STYLE = os.getenv(
-    "NANO_BANANA_CHARACTER_STYLE",
-    "featuring a cute cartoon money-hunter mascot character wearing a graduation cap and holding gold coins, "
-    "consistent anime character design across all scenes, expressive facial emotion, "
+# 캐릭터 일관성 유지 프롬프트 (의인화된 금색 코인 마스코트 캐릭터)
+CHARACTER_STYLE = (
+    "featuring a cute gold coin mascot character, chibi cartoon style, round shiny gold coin with face, arms and legs, "
+    "wearing small navy business suit with gold tie, "
 )
 
 # 금융 테마 프롬프트 스타일 수식어
 FINANCE_STYLE = (
-    CHARACTER_STYLE +
-    "professional financial infographic, dark navy blue background (#0d1b2a), "
-    "neon cyan and gold accents, modern anime illustration style, "
-    "stock market data visualization, premium quality, "
-    "cinematic lighting, 8k resolution, clean minimalist layout"
+    "professional financial news studio background, dark navy blue background (#0d1b2a), "
+    "3D render, smooth shading, anime cartoon style, high-quality, cinematic lighting"
 )
-
-# 섹션별 영문 프롬프트 템플릿
-SECTION_PROMPTS = {
-    "intro": "epic title card for stock market analysis video, {keyword}, " + FINANCE_STYLE,
-    "action": "investor strategy checklist infographic, {keyword}, key investment points, " + FINANCE_STYLE,
-    "conclusion": "summary conclusion card for financial analysis, {keyword}, key takeaways, " + FINANCE_STYLE,
-}
-
-DEFAULT_PROMPT = "abstract financial data visualization, {keyword}, " + FINANCE_STYLE
 
 
 class NanaBananaProvider(ImageProvider):
@@ -68,14 +55,31 @@ class NanaBananaProvider(ImageProvider):
         """
         프롬프트를 기반으로 AI 이미지를 생성하여 output_path에 저장.
         """
-        section = kwargs.get("section", "default")
-        keyword = kwargs.get("keyword", "stock market KOSPI")
+        # 캐릭터 스타일 프롬프트 결정
+        char_style = kwargs.get("character_style_prompt")
+        if char_style == "none" or char_style == "disable":
+            char_prompt = ""
+        elif char_style:
+            char_prompt = char_style
+        else:
+            char_prompt = CHARACTER_STYLE
 
-        # 섹션별 영문 프롬프트 구성
-        template = SECTION_PROMPTS.get(section, DEFAULT_PROMPT)
-        english_prompt = template.format(keyword=keyword)
+        # 만약 프롬프트가 한글이거나 너무 짧다면 키워드/섹션을 기반으로 구성
+        is_english = all(ord(c) < 128 for c in prompt.replace(" ", "").replace(",", "").replace(".", ""))
+        
+        if not is_english or len(prompt) < 30:
+            section = kwargs.get("section", "default")
+            keyword = kwargs.get("keyword", "stock market KOSPI")
+            base_prompt = f"A scene representing {keyword} and {section}. " + char_prompt + FINANCE_STYLE
+        else:
+            base_prompt = prompt
+            # 만약 스타일 관련 키워드가 부족하다면 추가 주입
+            if char_prompt and "banknote" not in base_prompt.lower() and "coin" not in base_prompt.lower():
+                base_prompt = char_prompt + base_prompt
+            if "vector" not in base_prompt.lower() and "cartoon" not in base_prompt.lower():
+                base_prompt = base_prompt + ", " + FINANCE_STYLE
 
-        logger.info(f"NanaBanana 이미지 생성 요청: section={section}, prompt_len={len(english_prompt)}")
+        logger.info(f"NanaBanana 이미지 생성 요청: prompt_len={len(base_prompt)}")
 
         # 디렉토리 생성
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -84,30 +88,44 @@ class NanaBananaProvider(ImageProvider):
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if api_key:
             try:
-                if self._generate_gemini_api(english_prompt, output_path, api_key):
+                character_image_path = kwargs.get("character_image_path")
+                if self._generate_gemini_api(base_prompt, output_path, api_key, character_image_path):
                     logger.info(f"공식 Gemini API (Nano Banana Pro) 이미지 생성 성공: {output_path}")
                     return output_path
             except Exception as e:
                 logger.warning(f"공식 Gemini API 호출 실패, 무료 프록시로 폴백: {e}")
 
         # 2. 무료 pollinations.ai 프록시 폴백
-        return self._generate_pollinations(english_prompt, output_path)
+        return self._generate_pollinations(base_prompt, output_path)
 
-    def _generate_gemini_api(self, prompt: str, output_path: str, api_key: str) -> bool:
+    def _generate_gemini_api(self, prompt: str, output_path: str, api_key: str, character_image_path: str = None) -> bool:
         """
-        Google AI Studio 공식 gemini-2.5-flash-image API 호출 (429 Rate Limit 대응 재시도 탑재).
+        Google AI Studio 공식 gemini-3.1-flash-image API 호출 (429 Rate Limit 대응 재시도 탑재).
         """
         import requests
         import time
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key={api_key}"
+        
+        parts = [{"text": prompt}]
+        if character_image_path and os.path.exists(character_image_path):
+            try:
+                with open(character_image_path, "rb") as f:
+                    img_b64 = base64.b64encode(f.read()).decode()
+                mime = "image/png" if character_image_path.lower().endswith(".png") else "image/jpeg"
+                parts.insert(0, {
+                    "inlineData": {
+                        "mimeType": mime,
+                        "data": img_b64
+                    }
+                })
+                logger.info(f"Gemini API 요청에 캐릭터 레퍼런스 이미지 추가 완료: {character_image_path}")
+            except Exception as e:
+                logger.warning(f"캐릭터 레퍼런스 이미지 로드/인코딩 실패: {e}")
+
         payload = {
             "contents": [
                 {
-                    "parts": [
-                        {
-                            "text": prompt
-                        }
-                    ]
+                    "parts": parts
                 }
             ],
             "generationConfig": {

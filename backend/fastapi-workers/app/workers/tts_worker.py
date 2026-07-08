@@ -59,8 +59,32 @@ class TtsWorker:
         job_dir.mkdir(parents=True, exist_ok=True)
         mp3_path = str(job_dir / "full.mp3")
 
-        # 1. 마크다운 헤더만 제거 (발음 사전이 금융 용어 처리를 대체하므로 원문 유지)
-        clean_script = re.sub(r'^##\s*.+$', '', script, flags=re.MULTILINE).strip()
+        # 1. 마크다운 헤더, [대사]/[비주얼] 태그 및 영어 비주얼 설명 제거하여 깨끗한 낭독용 스크립트 추출
+        clean_script = ""
+        if "##" in script or "[대사]" in script:
+            parts = re.split(r'(?m)^##\s*', script)
+            for part in parts:
+                part = part.strip()
+                if not part:
+                    continue
+                # [대사]와 [비주얼] 사이의 텍스트만 추출
+                daesa_match = re.search(r'\[대사\]\s*(.*?)\s*(?:\[비주얼\]|$)', part, re.DOTALL)
+                if daesa_match:
+                    clean_script += daesa_match.group(1).strip() + " "
+                else:
+                    # [대사] 태그가 없으면 [비주얼] 태그 이전의 텍스트 추출
+                    no_visual = re.sub(r'\[비주얼\].*$', '', part, flags=re.DOTALL).strip()
+                    # 첫 줄(씬 제목) 제거
+                    lines = no_visual.split('\n')
+                    if len(lines) > 1:
+                        clean_script += " ".join(lines[1:]).strip() + " "
+                    else:
+                        clean_script += no_visual + " "
+            clean_script = clean_script.strip()
+        else:
+            clean_script = script.strip()
+
+        preprocessed = self._preprocess_for_tts(clean_script)
 
         # 2. 음성 생성 (ElevenLabs v3 → gTTS → 무음 폴백)
         used_tts = False
@@ -68,13 +92,12 @@ class TtsWorker:
         try:
             if os.getenv("ELEVENLABS_API_KEY"):
                 logger.info("ELEVENLABS_API_KEY 감지 → ElevenLabs v3 AI 성우 + 발음 사전 적용")
-                used_tts = self._generate_elevenlabs(clean_script, mp3_path, voice_id)
+                used_tts = self._generate_elevenlabs(preprocessed, mp3_path, voice_id)
                 if used_tts:
                     tts_engine = "elevenlabs"
             
             if not used_tts:
-                # gTTS 폴백 시에는 기존 전처리 적용 (발음 사전 미지원)
-                preprocessed = self._preprocess_for_tts(script)
+                # gTTS 폴백 시에는 clean_script 전처리 적용 (발음 사전 미지원)
                 used_tts = self._generate_gtts(preprocessed, mp3_path)
                 if used_tts:
                     tts_engine = "gtts"
@@ -83,7 +106,7 @@ class TtsWorker:
 
         if not used_tts or not os.path.exists(mp3_path):
             logger.warning("TTS 실패 → 무음 폴백")
-            estimated = len(script) / 5.0
+            estimated = len(clean_script) / 5.0
             os.system(
                 f'ffmpeg -f lavfi -i "anullsrc=r=44100:cl=stereo" '
                 f'-t {estimated:.3f} -c:a libmp3lame -b:a 128k '
@@ -102,7 +125,7 @@ class TtsWorker:
                 logger.error(f"음성 배속 적용 실패 (exit code: {ret})")
 
         # 실제 MP3 길이 측정
-        actual_duration = self._probe_duration(mp3_path) or len(script) / 5.0
+        actual_duration = self._probe_duration(mp3_path) or len(clean_script) / 5.0
         logger.info(f"음성 길이 (1.35x 배속 후): {actual_duration:.1f}초")
 
         # 3. 자막 타임스탬프 추출 (Forced Alignment → Whisper → 글자수 비례)
@@ -111,7 +134,7 @@ class TtsWorker:
             # 3a. ElevenLabs Forced Alignment 시도 (가장 정확)
             if tts_engine == "elevenlabs":
                 try:
-                    chunks = self._extract_timestamps_with_forced_alignment(mp3_path, script)
+                    chunks = self._extract_timestamps_with_forced_alignment(mp3_path, clean_script)
                     logger.info(f"Forced Alignment 타임스탬프 추출: {len(chunks)}개 세그먼트")
                 except Exception as e:
                     logger.warning(f"Forced Alignment 실패, Whisper 폴백: {e}")
@@ -120,7 +143,7 @@ class TtsWorker:
             # 3b. Whisper 폴백 (Forced Alignment 실패 또는 gTTS 엔진일 때)
             if not chunks:
                 try:
-                    chunks = self._extract_timestamps_with_whisper(mp3_path, script)
+                    chunks = self._extract_timestamps_with_whisper(mp3_path, clean_script)
                     logger.info(f"Whisper 타임스탬프 추출: {len(chunks)}개 세그먼트")
                 except Exception as e:
                     logger.error(f"Whisper 타임스탬프 추출 실패: {e}")
@@ -129,7 +152,7 @@ class TtsWorker:
         # 4. 모든 타임스탬프 추출 실패 시 글자 수 비례 폴백
         if not chunks:
             logger.warning("글자 수 비례 타임스탬프로 폴백")
-            chunks = self._fallback_timing(script, actual_duration)
+            chunks = self._fallback_timing(clean_script, actual_duration)
 
         logger.info(f"TTS v6 완료: {actual_duration:.1f}초, chunks={len(chunks)}, engine={tts_engine}")
 
@@ -318,15 +341,16 @@ class TtsWorker:
         if not text_chunks:
             return []
 
-        # Forced Alignment API 호출
+        # Forced Alignment API 호출 (음성 발음에 맞추어 전처리된 텍스트로 정합)
         clean_text = re.sub(r'^##\s*.+$', '', original_script, flags=re.MULTILINE).strip()
+        preprocessed_alignment_text = self._preprocess_for_tts(clean_text)
         
         with open(mp3_path, "rb") as audio_file:
             resp = requests.post(
                 "https://api.elevenlabs.io/v1/forced-alignment",
                 headers={"xi-api-key": api_key},
                 files={"file": ("audio.mp3", audio_file, "audio/mpeg")},
-                data={"text": clean_text},
+                data={"text": preprocessed_alignment_text},
                 timeout=120,
             )
 
@@ -551,13 +575,57 @@ class TtsWorker:
     # ============================
     @staticmethod
     def _preprocess_for_tts(text: str) -> str:
-        """주식/경제 용어를 gTTS가 자연스럽게 읽도록 전처리"""
+        """주식/경제 용어를 gTTS/ElevenLabs가 자연스럽게 읽도록 전처리"""
         text = re.sub(r'^##\s*.+$', '', text, flags=re.MULTILINE).strip()
         text = re.sub(r'([+-]?\d+\.?\d*)%', r'\1퍼센트', text)
         text = re.sub(r'\+(\d)', r'플러스 \1', text)
         text = re.sub(r'(?<!\d)-(\d)', r'마이너스 \1', text)
         text = re.sub(r'(\d+)pt\b', r'\1포인트', text)
         text = re.sub(r'(\d{1,3}),(\d{3})', r'\1\2', text)
+
+        # 숫자 -> 한글 한글화 함수
+        def num_to_kor(num_str: str) -> str:
+            if not num_str:
+                return ""
+            if num_str == "0":
+                return "영"
+            if re.match(r'^0+$', num_str):
+                return "영" * len(num_str)
+            val = int(num_str)
+            if val >= 10000:
+                # 5자리 이상 대형 숫자는 한 자씩 읽기
+                return "".join(["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"][int(d)] for d in num_str)
+            units = ["", "십", "백", "천"]
+            nums = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+            res = ""
+            length = len(num_str)
+            for i, digit in enumerate(num_str):
+                d_val = int(digit)
+                if d_val != 0:
+                    digit_name = nums[d_val]
+                    if d_val == 1 and (length - 1 - i) > 0:
+                        digit_name = ""
+                    res += digit_name + units[length - 1 - i]
+            return res
+
+        # 소수점 변환 (소수부 각 자릿수 개별 읽기: e.g. 6.56 -> 육 점 오육, 1.125 -> 일 점 일이오)
+        def repl_decimal(match):
+            int_part = match.group(1)
+            dec_part = match.group(2)
+            int_kor = num_to_kor(int_part)
+            digit_names = ["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+            dec_kor = "".join(digit_names[int(d)] for d in dec_part)
+            # 사용자의 요청에 따라 강한 발음인 '쩜' 대신 자연스러운 '점'을 사용하고, 앞뒤 공백을 주어 자연스러운 호흡 유도
+            return f"{int_kor} 점 {dec_kor}"
+
+        text = re.sub(r'(\d+)\.(\d+)', repl_decimal, text)
+
+        def repl_num(match):
+            return num_to_kor(match.group(0))
+
+        # 독립된 숫자들을 모두 한글로 변환 (예: 7246 -> 칠천이백사십육)
+        text = re.sub(r'\b\d+\b', repl_num, text)
+
         text = re.sub(r'\bFOMC\b', '에프오엠씨', text)
         text = re.sub(r'\bRSI\b', '알에스아이', text)
         text = re.sub(r'\bMACD\b', '맥디', text)

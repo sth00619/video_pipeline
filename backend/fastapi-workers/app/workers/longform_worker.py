@@ -49,10 +49,10 @@ class LongformWorker:
 
         # 1. 씬별 재생 시간(duration) 동적 분배 (비디오 길이 = 오디오 길이 일치화)
         if total_duration > 0 and len(scenes) > 0:
-            total_chars = sum(len(scene.get("prompt", "") or scene.get("text", "") or "") for scene in scenes)
+            total_chars = sum(len(scene.get("content", "") or scene.get("text", "") or "") for scene in scenes)
             for scene in scenes:
                 if scene.get("duration") is None or float(scene.get("duration", 0)) <= 0:
-                    char_len = len(scene.get("prompt", "") or scene.get("text", "") or "")
+                    char_len = len(scene.get("content", "") or scene.get("text", "") or "")
                     if total_chars > 0:
                         scene["duration"] = round((char_len / total_chars) * total_duration, 3)
                     else:

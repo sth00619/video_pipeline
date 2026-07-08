@@ -37,7 +37,8 @@ FONT_PATH = "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
 class ImagesWorker:
 
     def generate(self, scenes_meta: list = None, job_id: int = 0,
-                 tts_meta_json: str = None, script_meta_json: str = None) -> dict:
+                 tts_meta_json: str = None, script_meta_json: str = None,
+                 character_image_path: str = None, character_style_prompt: str = None) -> dict:
         # scenes_meta가 주어지지 않은 경우 script_meta_json에서 복원
         if not scenes_meta and script_meta_json:
             try:
@@ -45,7 +46,19 @@ class ImagesWorker:
                 script_data = json.loads(script_meta_json)
                 if isinstance(script_data, str):
                     script_data = json.loads(script_data)
-                scenes_meta = script_data.get("sections", [])
+                scenes_meta = script_data.get("sections") or script_data.get("scenes") or []
+                if not scenes_meta and script_data.get("script"):
+                    import re
+                    raw_script = script_data.get("script", "").strip()
+                    parts = [p.strip() for p in re.split(r'(?m)^##\s*|\n{2,}', raw_script) if p.strip()]
+                    for idx, part in enumerate(parts):
+                        scenes_meta.append({
+                            "title": f"Scene {idx + 1}",
+                            "content": part,
+                            "text": part,
+                            "prompt": f"A cute green banknote cartoon character with glasses and a headset, showing an expression matching Scene {idx + 1}, clean 2D vector style",
+                            "section": f"scene_{idx}"
+                        })
                 logger.info(f"script_meta_json에서 {len(scenes_meta)}개 씬 복원 성공")
             except Exception as e:
                 logger.error(f"script_meta_json에서 씬 목록 추출 실패: {e}")
@@ -54,76 +67,65 @@ class ImagesWorker:
         if not scenes_meta:
             scenes_meta = []
 
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        import matplotlib.font_manager as fm
-
-        if os.path.exists(FONT_PATH):
-            fm.fontManager.addfont(FONT_PATH)
-            plt.rcParams["font.family"] = fm.FontProperties(fname=FONT_PATH).get_name()
-        plt.rcParams["axes.unicode_minus"] = False
-
-        # AI 이미지 프로바이더 로드 (하이브리드 모드)
+        # AI 이미지 프로바이더 로드 (모든 씬에 일러스트 적용)
         ai_provider = None
-        AI_SECTIONS = {"intro", "action", "conclusion"}
         try:
             from app.providers.factory import get_image_provider
             ai_provider = get_image_provider()
-            logger.info("하이브리드 모드 활성화: AI 이미지 + Matplotlib 차트")
+            logger.info("일러스트 전용 모드 활성화: 모든 씬에 AI 캐릭터 일러스트 생성")
         except Exception as e:
-            logger.warning(f"AI 이미지 프로바이더 로드 실패, 전체 Matplotlib: {e}")
+            logger.warning(f"AI 이미지 프로바이더 로드 실패: {e}")
 
         job_dir = Path(f"/app/data/jobs/{job_id}/images")
         job_dir.mkdir(parents=True, exist_ok=True)
 
         generated = []
         for i, scene in enumerate(scenes_meta):
-            section = scene.get("section", "background")
-            text = scene.get("text", "")
+            section = scene.get("section", f"scene_{i}")
+            narration = scene.get("content") or scene.get("text") or ""
+            visual_prompt = scene.get("prompt") or narration or scene.get("title") or ""
             img_path = str(job_dir / f"scene_{i:03d}.png")
 
-            # 하이브리드 분기: AI 일러스트 vs Matplotlib 차트
-            if ai_provider and section in AI_SECTIONS:
+            # AI 이미지 생성
+            if ai_provider:
                 try:
                     ai_provider.generate_image(
-                        prompt=text,
+                        prompt=visual_prompt,
                         output_path=img_path,
                         section=section,
-                        keyword=text[:30]
+                        keyword=visual_prompt[:30],
+                        character_image_path=character_image_path,
+                        character_style_prompt=character_style_prompt
                     )
                     generated.append({
                         "index": i,
                         "section": section,
                         "image_path": img_path,
                         "generation_method": "nana_banana_ai",
-                        "prompt": text,
+                        "prompt": visual_prompt,
                     })
-                    logger.info(f"씬 {i} AI 이미지 생성 완료 (section={section})")
+                    logger.info(f"씬 {i} AI 이미지 생성 완료 (prompt={visual_prompt[:50]}...)")
                     continue
                 except Exception as e:
-                    logger.warning(f"씬 {i} AI 이미지 실패, Matplotlib 폴백: {e}")
+                    logger.warning(f"씬 {i} AI 이미지 실패, 폴백 Solid 배경 생성: {e}")
 
-            # Matplotlib 차트 렌더링 (기존 로직)
+            # 로컬 폴백 (Matplotlib 고체 단색 배경 렌더링)
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
             try:
-                self._render_section(section, text, img_path, plt)
+                self._render_fallback(narration, img_path, plt)
                 generated.append({
                     "index": i,
                     "section": section,
                     "image_path": img_path,
-                    "generation_method": "matplotlib_chart",
-                    "prompt": text,
+                    "generation_method": "fallback_solid",
+                    "prompt": narration,
                 })
             except Exception as e:
-                logger.error(f"씬 {i} 이미지 생성 실패: {e}, 폴백 사용")
-                self._render_fallback(text, img_path, plt)
-                generated.append({
-                    "index": i, "section": section,
-                    "image_path": img_path, "generation_method": "fallback_solid",
-                    "prompt": text,
-                })
+                logger.error(f"씬 {i} 로컬 폴백 최종 실패: {e}")
 
-        logger.info(f"이미지 생성 완료: {len(generated)}개 (하이브리드 모드)")
+        logger.info(f"이미지 생성 완료: {len(generated)}개")
         return {
             "job_id": job_id,
             "scenes": generated,
