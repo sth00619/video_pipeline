@@ -17,6 +17,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 KLING_API_KEY = os.getenv("KLING_API_KEY", "")
 GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY", "")
+FAL_KEY = os.getenv("FAL_KEY", "")
 
 # ─── 신규: 시장 데이터 / 뉴스 API Keys ─────────────────
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")       # 미국 주식 뉴스·시세

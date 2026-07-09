@@ -283,6 +283,34 @@ public class FastApiClient {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> generateYoutubeMetadata(String scriptText, boolean isShorts) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("script_text", scriptText);
+            bodyMap.put("is_shorts", isShorts);
+            String responseBody = postJson(fastApiUrl + "/workers/youtube/metadata", bodyMap);
+            return objectMapper.readValue(responseBody, Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("유튜브 메타데이터 생성 오류: " + e.getMessage(), e);
+        }
+    }
+
+    public void generateThumbnailImage(Long jobId, String title, String format, String outputPath, String characterImagePath, String characterStylePrompt) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            bodyMap.put("title", title);
+            bodyMap.put("format", format);
+            bodyMap.put("output_path", outputPath);
+            bodyMap.put("character_image_path", characterImagePath);
+            bodyMap.put("character_style_prompt", characterStylePrompt);
+            postJson(fastApiUrl + "/workers/youtube/thumbnail", bodyMap);
+        } catch (Exception e) {
+            throw new RuntimeException("유튜브 썸네일 생성 오류: " + e.getMessage(), e);
+        }
+    }
+
     // ============================
     // 공통 POST helper — UTF-8 charset 명시
     // ============================

@@ -5,7 +5,7 @@ import {
   ChevronLeft, Download, CheckCircle, Loader,
   ThumbsUp, ThumbsDown, Zap, Star, AlertCircle,
   FileText, Image as ImageIcon, Music, ChevronDown, ChevronUp,
-  Clock, Edit, Save, Printer
+  Clock, Edit, Save, Printer, Scissors, Copy, ExternalLink, Youtube
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import { jobsApi } from '../api/jobs'
@@ -86,6 +86,7 @@ export default function JobDetail() {
   const [editingSceneIndex, setEditingSceneIndex] = useState(null)
   const [editingSceneText, setEditingSceneText] = useState('')
   const [imageSalt, setImageSalt] = useState(0)
+  const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
 
   const { data: job, isLoading } = useQuery({
     queryKey: ['job', id], queryFn: () => jobsApi.get(id), refetchInterval: 3000,
@@ -125,6 +126,16 @@ export default function JobDetail() {
   const { data: ttsAssets = [] } = useQuery({
     queryKey: ['assets', id, 'TTS_AUDIO'], queryFn: () => jobsApi.assets(id, 'TTS_AUDIO'), enabled: !!job,
   })
+  const { data: youtubeMetadataAssets = [] } = useQuery({
+    queryKey: ['assets', id, 'YOUTUBE_METADATA'], queryFn: () => jobsApi.assets(id, 'YOUTUBE_METADATA'), enabled: !!job,
+  })
+
+  const youtubePackage = useMemo(() => {
+    if (!youtubeMetadataAssets.length) return null
+    try {
+      return JSON.parse(youtubeMetadataAssets[youtubeMetadataAssets.length - 1].metaJson || '{}')
+    } catch { return null }
+  }, [youtubeMetadataAssets])
 
   const kwCandidates = useMemo(() => {
     for (let i = kwAssets.length - 1; i >= 0; i--) {
@@ -198,6 +209,18 @@ export default function JobDetail() {
     }
   })
 
+  const splitSceneMut = useMutation({
+    mutationFn: ({ index, part1, part2 }) => jobsApi.splitScene(id, index, part1, part2),
+    onSuccess: () => {
+      qc.invalidateQueries(['assets', id, 'SCENE_IMAGE'])
+      setEditingSceneIndex(null)
+      alert("씬 분할이 성공적으로 반영되었습니다. 수정 사항을 최종 동영상 파일에 완전히 적용하려면 우측 상단의 '동영상 재조립' 버튼을 꼭 클릭해 주세요.");
+    },
+    onError: (err) => {
+      alert('씬 분할 실패: ' + (err.response?.data?.message || err.message))
+    }
+  })
+
   const rebuildLongformMut = useMutation({
     mutationFn: () => jobsApi.rebuildLongform(id),
     onSuccess: () => {
@@ -208,6 +231,18 @@ export default function JobDetail() {
     },
     onError: (err) => {
       alert('동영상 재조립 실패: ' + (err.response?.data?.message || err.message))
+    }
+  })
+
+  const publishMut = useMutation({
+    mutationFn: () => jobsApi.publish(id),
+    onSuccess: () => {
+      qc.invalidateQueries(['job', id])
+      qc.invalidateQueries(['assets', id])
+      alert("유튜브 업로드가 완료되었습니다!");
+    },
+    onError: (err) => {
+      alert('유튜브 업로드 실패: ' + (err.response?.data?.message || err.message))
     }
   })
 
@@ -316,6 +351,232 @@ export default function JobDetail() {
               className="w-full h-full"
               src={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
             />
+          </div>
+        </div>
+      )}
+
+      {/* YouTube 메타데이터 및 업로드 게이트 패키지 */}
+      {['READY', 'PUBLISHED'].includes(job.status) && (
+        <div className="bg-navy-800 rounded-xl border border-accent-cyan p-5 space-y-4 mb-6">
+          <div className="flex items-center justify-between border-b border-navy-700 pb-3">
+            <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5">
+              <Youtube size={16}/> YouTube 업로드 및 수동 발행 지원 킷
+            </h3>
+            {job.status === 'PUBLISHED' ? (
+              <span className="text-[11px] bg-accent-green/10 text-accent-green font-bold px-2 py-0.5 rounded border border-accent-green/20">
+                업로드 완료
+              </span>
+            ) : (
+              <span className="text-[11px] bg-accent-gold/10 text-accent-gold font-bold px-2 py-0.5 rounded border border-accent-gold/20">
+                업로드 대기 중 ({job.autonomy} 모드)
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* 썸네일 다운로드 */}
+            <div className="bg-navy-900/60 p-3 rounded-lg border border-navy-700 flex flex-col justify-between">
+              <div>
+                <h4 className="text-xs font-semibold text-gray-300 mb-2">AI 자동 생성 썸네일</h4>
+                <div className="aspect-video bg-navy-950 rounded border border-navy-700 overflow-hidden relative">
+                  <img
+                    src={`/api/jobs/${id}/thumbnail/longform?t=${imageSalt}`}
+                    alt="YouTube Thumbnail"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=400&q=80";
+                    }}
+                  />
+                </div>
+              </div>
+              <a
+                href={`/api/jobs/${id}/thumbnail/longform`}
+                target="_blank"
+                rel="noreferrer"
+                download
+                className="mt-3 w-full bg-navy-700 border border-navy-600 text-center text-xs text-accent-cyan py-1.5 rounded hover:bg-navy-600 transition flex items-center justify-center gap-1"
+              >
+                <Download size={12}/> 썸네일 다운로드
+              </a>
+            </div>
+
+            {/* 유튜브 메타데이터 복사 패널 */}
+            <div className="md:col-span-2 space-y-3">
+              {youtubePackage?.longform ? (
+                <>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-gray-400">추천 제목 (3안)</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(youtubePackage.longform.titles?.join('\n') || '');
+                          alert('추천 제목 3안이 복사되었습니다.');
+                        }}
+                        className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                      >
+                        <Copy size={10}/> 전체 복사
+                      </button>
+                    </div>
+                    <div className="bg-navy-950 p-2 rounded border border-navy-700 space-y-1.5 mt-1">
+                      {youtubePackage.longform.titles?.map((t, idx) => (
+                        <div key={idx} className="flex items-start gap-1.5 text-xs text-gray-300">
+                          <span className="text-accent-cyan font-bold">안{idx+1}.</span>
+                          <span className="flex-1 select-all">{t}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-gray-400">더보기 상세 설명글 (Description)</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(youtubePackage.longform.description || '');
+                          alert('더보기 글이 복사되었습니다.');
+                        }}
+                        className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                      >
+                        <Copy size={10}/> 복사
+                      </button>
+                    </div>
+                    <textarea
+                      readOnly
+                      value={youtubePackage.longform.description || ''}
+                      className="w-full bg-navy-950 border border-navy-700 rounded p-2 text-xs text-gray-300 mt-1 h-20 focus:outline-none resize-none font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-gray-400 font-mono">태그 / 해시태그</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(youtubePackage.longform.tags?.join(', ') || '');
+                          alert('해시태그가 복사되었습니다.');
+                        }}
+                        className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                      >
+                        <Copy size={10}/> 복사
+                      </button>
+                    </div>
+                    <div className="bg-navy-950 p-2 rounded border border-navy-700 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
+                      {youtubePackage.longform.tags?.map((tag, idx) => (
+                        <span key={idx} className="bg-navy-800 px-1.5 py-0.5 rounded border border-navy-700">#{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-gray-400 h-full flex items-center justify-center">
+                  <Loader size={12} className="animate-spin mr-1"/> 유튜브 메타데이터 생성 중...
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 게이트 및 업로드 버튼 */}
+          <div className="border-t border-navy-700 pt-3 flex items-center justify-between">
+            <div>
+              {job.youtubeUrl && (
+                <a
+                  href={job.youtubeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-accent-cyan hover:underline flex items-center gap-1"
+                >
+                  <ExternalLink size={12}/> YouTube 업로드 동영상 링크 열기
+                </a>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              {job.status === 'READY' && (
+                <button
+                  onClick={() => {
+                    if (job.autonomy === 'GUIDED') {
+                      setIsGuidedConfirmOpen(true);
+                    } else {
+                      if (confirm("유튜브 채널로 즉시 업로드(시뮬레이션)하시겠습니까?")) {
+                        publishMut.mutate();
+                      }
+                    }
+                  }}
+                  disabled={publishMut.isPending}
+                  className="flex items-center gap-1.5 bg-red-600 text-white font-semibold text-xs px-4 py-2 rounded-lg hover:bg-red-500 disabled:opacity-50 transition"
+                >
+                  {publishMut.isPending ? <Loader size={12} className="animate-spin"/> : <Youtube size={12}/>}
+                  {job.autonomy === 'GUIDED' ? '업로드 검토 및 발행' : '즉시 YouTube 업로드'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GUIDED 모드 유튜브 업로드 검토 팝업 */}
+      {isGuidedConfirmOpen && (
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+          <div className="bg-navy-900 border border-navy-700 rounded-xl p-5 max-w-xl w-full space-y-4">
+            <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5 border-b border-navy-800 pb-2">
+              <Youtube size={16}/> YouTube 업로드 검토 (GUIDED 게이트)
+            </h3>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-gray-400">제목 선택</label>
+                <div className="space-y-1.5 mt-1">
+                  {youtubePackage?.longform?.titles?.map((t, idx) => (
+                    <label key={idx} className="flex items-start gap-2 bg-navy-950 p-2 rounded border border-navy-800 hover:border-navy-700 cursor-pointer text-xs text-gray-300">
+                      <input
+                        type="radio"
+                        name="selected_title"
+                        defaultChecked={idx === 0}
+                        className="mt-0.5 accent-accent-cyan"
+                      />
+                      <span>{t}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400">더보기 상세 설명글</label>
+                <textarea
+                  readOnly
+                  value={youtubePackage?.longform?.description || ''}
+                  className="w-full bg-navy-950 border border-navy-800 rounded p-2 text-xs text-gray-300 mt-1 h-24 focus:outline-none resize-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400">추천 해시태그</label>
+                <div className="bg-navy-950 p-2 rounded border border-navy-800 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
+                  {youtubePackage?.longform?.tags?.map((tag, idx) => (
+                    <span key={idx} className="bg-navy-900 px-1.5 py-0.5 rounded border border-navy-800">#{tag}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-navy-800 pt-3">
+              <button
+                onClick={() => setIsGuidedConfirmOpen(false)}
+                className="bg-navy-700 hover:bg-navy-600 text-xs px-3 py-1.5 rounded text-gray-400 transition"
+              >
+                닫기
+              </button>
+              <button
+                onClick={() => {
+                  setIsGuidedConfirmOpen(false);
+                  publishMut.mutate();
+                }}
+                className="bg-red-600 hover:bg-red-500 text-xs px-4 py-1.5 rounded text-white font-semibold transition"
+              >
+                검토 승인 및 업로드
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -759,6 +1020,7 @@ export default function JobDetail() {
                                 <div className="mt-2">
                                   {isEditingThis ? (
                                     <textarea
+                                      id={`scene-edit-${img.index}`}
                                       value={editingSceneText}
                                       onChange={e => setEditingSceneText(e.target.value)}
                                       className="w-full bg-navy-700 border border-navy-600 rounded p-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
@@ -776,8 +1038,35 @@ export default function JobDetail() {
                                 {isEditingThis ? (
                                   <>
                                     <button
+                                      onClick={() => {
+                                        const ta = document.getElementById(`scene-edit-${img.index}`);
+                                        if (!ta) return;
+                                        const pos = ta.selectionStart;
+                                        const val = ta.value;
+                                        if (pos <= 0 || pos >= val.length) {
+                                          alert("텍스트 입력창에서 분할할 커서 위치를 클릭한 뒤 눌러주세요.");
+                                          return;
+                                        }
+                                        const p1 = val.substring(0, pos).trim();
+                                        const p2 = val.substring(pos).trim();
+                                        if (!p1 || !p2) {
+                                          alert("커서 앞뒤로 텍스트가 존재해야 분할이 가능합니다.");
+                                          return;
+                                        }
+                                        if (confirm("이 위치에서 씬을 두 개로 분할하시겠습니까?")) {
+                                          splitSceneMut.mutate({ index: img.index, part1: p1, part2: p2 });
+                                        }
+                                      }}
+                                      disabled={isRegeneratingThis || splitSceneMut.isPending}
+                                      className="flex items-center gap-1 bg-red-500 text-white text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                                      title="커서가 있는 위치를 기준으로 씬을 2개로 분할합니다."
+                                    >
+                                      {splitSceneMut.isPending ? <Loader size={10} className="animate-spin"/> : <Scissors size={10}/>}
+                                      씬 분할
+                                    </button>
+                                    <button
                                       onClick={() => setEditingSceneIndex(null)}
-                                      disabled={isRegeneratingThis}
+                                      disabled={isRegeneratingThis || splitSceneMut.isPending}
                                       className="bg-navy-700 text-gray-400 hover:text-white text-[10px] px-2.5 py-1.5 rounded transition"
                                     >
                                       취소
@@ -789,7 +1078,7 @@ export default function JobDetail() {
                                         section: img.section,
                                         mode: 'image'
                                       })}
-                                      disabled={isRegeneratingThis}
+                                      disabled={isRegeneratingThis || splitSceneMut.isPending}
                                       className="flex items-center gap-1 bg-accent-cyan text-navy-950 text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
                                       title="대사를 유지한 채 캐릭터 이미지만 다시 생성합니다."
                                     >

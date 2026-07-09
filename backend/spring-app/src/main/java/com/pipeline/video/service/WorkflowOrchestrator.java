@@ -27,18 +27,21 @@ public class WorkflowOrchestrator {
     private final TtsService ttsService;
     private final ImagesService imagesService;
     private final LongformService longformService;
+    private final JobService jobService;
 
     public WorkflowOrchestrator(
             VideoJobRepository jobRepository,
             @Lazy ScriptService scriptService,
             @Lazy TtsService ttsService,
             @Lazy ImagesService imagesService,
-            @Lazy LongformService longformService) {
+            @Lazy LongformService longformService,
+            @Lazy JobService jobService) {
         this.jobRepository = jobRepository;
         this.scriptService = scriptService;
         this.ttsService = ttsService;
         this.imagesService = imagesService;
         this.longformService = longformService;
+        this.jobService = jobService;
     }
 
     /**
@@ -77,6 +80,10 @@ public class WorkflowOrchestrator {
                 case ASSEMBLING -> {
                     log.info(">>> 롱폼 조립 자동 시작: jobId={}", jobId);
                     longformService.generate(jobId, "AUTO");
+                }
+                case READY -> {
+                    log.info(">>> YouTube 자동 업로드 시작: jobId={}", jobId);
+                    jobService.publishVideo(jobId);
                 }
                 default -> log.info("WorkflowOrchestrator: {} 단계 자동 실행 대상 아님", newStatus);
             }

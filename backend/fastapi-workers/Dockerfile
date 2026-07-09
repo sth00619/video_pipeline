@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+# CPU 전용 PyTorch 설치로 CUDA 패키지 다운로드 스킵 (빌드 시간 단축 및 용량 최적화)
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .

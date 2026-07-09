@@ -37,11 +37,14 @@ export const jobsApi = {
   confirmImages: (id) => apiClient.post(`/jobs/${id}/images/confirm`, {}).then(r => r.data),
   updateSceneImage: (id, index, text, section = 'default', mode = 'both') =>
     apiClient.post(`/jobs/${id}/images/scenes/${index}`, { text, section, mode }).then(r => r.data),
+  splitScene: (id, index, part1, part2) =>
+    apiClient.post(`/jobs/${id}/images/scenes/${index}/split`, { part1, part2 }).then(r => r.data),
 
   // 롱폼
   generateLongform: (id) => apiClient.post(`/jobs/${id}/longform/generate`).then(r => r.data),
   confirmLongform: (id) => apiClient.post(`/jobs/${id}/longform/confirm`, {}).then(r => r.data),
   rebuildLongform: (id) => apiClient.post(`/jobs/${id}/longform/rebuild`, {}).then(r => r.data),
+  publish: (id) => apiClient.post(`/jobs/${id}/publish`).then(r => r.data),
 
   // 게이트
   approvals: (id) => apiClient.get(`/jobs/${id}/approvals`).then(r => r.data),

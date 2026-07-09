@@ -143,8 +143,19 @@ class KlingProvider(VideoProvider):
         logger.info(f"Kling 비디오 클립 생성 요청: duration={duration}s, prompt_len={len(prompt)}, image_url={'있음' if image_url else '없음'}")
 
         api_key = os.getenv("KLING_API_KEY") or os.getenv("KLING_ACCESS_KEY")
+        fal_key = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
 
-        # 1. image_url이 있으면 image-to-video API 우선 시도
+        # 1. Fal.ai 연동이 있으면 최우선 실행 (image-to-video 및 text-to-video 모두 지원)
+        if fal_key:
+            try:
+                if self._generate_fal_api(prompt, output_path, duration, fal_key, image_url):
+                    logger.info(f"Fal.ai Kling 비디오 생성 성공: {output_path}")
+                    return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
+            except Exception as e:
+                logger.warning(f"Fal.ai Kling 비디오 생성 실패, 공식 API 폴백 시도: {e}")
+
+        # 2. 공식 Kling API
+        # 2-1. image_url이 있으면 image-to-video API 우선 시도
         if image_url and api_key:
             try:
                 if self._generate_kling_image2video(image_url, prompt, output_path, duration, api_key):
@@ -153,7 +164,7 @@ class KlingProvider(VideoProvider):
             except Exception as e:
                 logger.warning(f"Kling image-to-video API 호출 실패, text2video 폴백 시도: {e}")
 
-        # 2. 공식 Kling 3.0 text-to-video API 시도
+        # 2-2. 공식 Kling 3.0 text-to-video API 시도
         if api_key:
             try:
                 if self._generate_kling_api(prompt, output_path, duration, api_key):
@@ -166,6 +177,77 @@ class KlingProvider(VideoProvider):
         image_path = kwargs.get("image_path")
         self._generate_ffmpeg_fallback(output_path, duration, image_path)
         return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
+
+    def _generate_fal_api(self, prompt: str, output_path: str, duration: int, fal_key: str, image_url: str = None) -> bool:
+        """
+        Fal.ai HTTP Queue API를 통해 Kling 비디오 클립 생성 (비동기 폴링).
+        """
+        model_id = "fal-ai/kling-video/v3/standard/image-to-video" if image_url else "fal-ai/kling-video/v3/pro/text-to-video"
+        
+        headers = {
+            "Authorization": f"Key {fal_key}",
+            "Content-Type": "application/json"
+        }
+        submit_url = f"https://queue.fal.run/{model_id}"
+        payload = {
+            "prompt": prompt,
+            "duration": str(duration),
+            "aspect_ratio": "16:9"
+        }
+        if image_url:
+            payload["start_image_url"] = image_url
+            
+        logger.info(f"Fal.ai {model_id} 생성 요청 제출 시작: prompt_len={len(prompt)}")
+        try:
+            resp = requests.post(submit_url, json=payload, headers=headers, timeout=30)
+            if resp.status_code != 200:
+                logger.warning(f"Fal.ai 제출 실패 ({resp.status_code}): {resp.text}")
+                return False
+                
+            resp_json = resp.json()
+            request_id = resp_json.get("request_id")
+            if not request_id:
+                logger.warning(f"Fal.ai 응답에서 request_id 못찾음: {resp_json}")
+                return False
+                
+            logger.info(f"Fal.ai 요청 성공: request_id={request_id}. 폴링을 시작합니다.")
+            
+            status_url = f"https://queue.fal.run/{model_id}/requests/{request_id}/status"
+            result_url = f"https://queue.fal.run/{model_id}/requests/{request_id}"
+            
+            # 최대 180초 폴링
+            for i in range(36):
+                time.sleep(5)
+                status_resp = requests.get(status_url, headers=headers, timeout=30)
+                if status_resp.status_code != 200:
+                    logger.warning(f"Fal.ai 상태 조회 실패 ({status_resp.status_code}), 계속 시도...")
+                    continue
+                    
+                status_data = status_resp.json()
+                status = status_data.get("status")
+                logger.info(f"Fal.ai 폴링 [{i+1}/36] 상태: {status}")
+                
+                if status == "COMPLETED":
+                    res_resp = requests.get(result_url, headers=headers, timeout=30)
+                    if res_resp.status_code == 200:
+                        res_data = res_resp.json()
+                        video_url = res_data.get("video", {}).get("url")
+                        if video_url:
+                            logger.info(f"Fal.ai 비디오 생성 완료: {video_url}. 다운로드 중...")
+                            video_bytes = requests.get(video_url, timeout=60).content
+                            with open(output_path, "wb") as f:
+                                f.write(video_bytes)
+                            return True
+                    logger.warning(f"Fal.ai 결과 조회 실패 ({res_resp.status_code})")
+                    return False
+                elif status in ("FAILED", "CANCELLED"):
+                    logger.error(f"Fal.ai 생성 실패 상태: {status_data}")
+                    return False
+            logger.warning("Fal.ai 폴링 시간 초과 (180초)")
+            return False
+        except Exception as e:
+            logger.error(f"Fal.ai API 예외 발생: {e}")
+            return False
 
     def _generate_kling_api(self, prompt: str, output_path: str, duration: int, api_key: str) -> bool:
         """

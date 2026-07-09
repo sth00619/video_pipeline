@@ -1,24 +1,30 @@
 package com.pipeline.video.service;
 
-import com.pipeline.video.domain.Category;
-import com.pipeline.video.domain.JobStatus;
-import com.pipeline.video.domain.VideoJob;
-import com.pipeline.video.dto.CreateJobRequest;
-import com.pipeline.video.dto.JobResponse;
-import com.pipeline.video.repository.VideoJobRepository;
+import com.pipeline.video.domain.*;
+import com.pipeline.video.dto.*;
+import com.pipeline.video.repository.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class JobService {
 
     private final VideoJobRepository jobRepository;
+    private final AssetRepository assetRepository;
+    private final ChannelProfileRepository channelProfileRepository;
+    private final FastApiClient fastApiClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
     public JobResponse createJob(CreateJobRequest request, String username) {
@@ -64,5 +70,139 @@ public class JobService {
     public List<JobResponse> getAllJobs() {
         return jobRepository.findAll()
                 .stream().map(JobResponse::from).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public JobResponse publishVideo(Long jobId) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+
+        Optional<Asset> existingMeta = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.YOUTUBE_METADATA);
+        if (existingMeta.isEmpty()) {
+            generateYoutubePackage(jobId);
+        }
+
+        String mockYoutubeUrl = "https://youtu.be/mock_youtube_video_" + jobId + "_" + System.currentTimeMillis();
+        job.setYoutubeUrl(mockYoutubeUrl);
+        job.setStatus(JobStatus.PUBLISHED);
+        jobRepository.save(job);
+        
+        log.info("유튜브 영상 퍼블리시 완료: jobId={}, url={}", jobId, mockYoutubeUrl);
+        return JobResponse.from(job);
+    }
+
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public void generateYoutubePackage(Long jobId) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        
+        log.info("유튜브 패키지(메타데이터, 썸네일) 생성 시작: jobId={}", jobId);
+        
+        Optional<Asset> scriptAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
+        if (scriptAssetOpt.isEmpty()) {
+            log.warn("대본 에셋이 없어 유튜브 패키지 생성을 건너뜁니다. jobId={}", jobId);
+            return;
+        }
+        
+        String scriptText = "";
+        try {
+            ScriptGenerateResponse scriptDto = objectMapper.readValue(scriptAssetOpt.get().getMetaJson(), ScriptGenerateResponse.class);
+            scriptText = scriptDto.getScript();
+        } catch (Exception e) {
+            scriptText = scriptAssetOpt.get().getMetaJson();
+        }
+        
+        Map<String, Object> longformMeta = null;
+        Map<String, Object> shortsMeta = null;
+        try {
+            longformMeta = fastApiClient.generateYoutubeMetadata(scriptText, false);
+        } catch (Exception e) {
+            log.error("롱폼 유튜브 메타데이터 생성 실패: {}", e.getMessage());
+        }
+        
+        if (job.isMakeShorts()) {
+            String shortsScriptText = scriptText;
+            Optional<Asset> shortsScenarioOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SHORTS_SCENARIO);
+            if (shortsScenarioOpt.isPresent()) {
+                shortsScriptText = shortsScenarioOpt.get().getMetaJson();
+            }
+            try {
+                shortsMeta = fastApiClient.generateYoutubeMetadata(shortsScriptText, true);
+            } catch (Exception e) {
+                log.error("쇼츠 유튜브 메타데이터 생성 실패: {}", e.getMessage());
+            }
+        }
+        
+        Map<String, Object> youtubePackage = new java.util.HashMap<>();
+        youtubePackage.put("longform", longformMeta);
+        youtubePackage.put("shorts", shortsMeta);
+        
+        Asset metadataAsset = Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.YOUTUBE_METADATA)
+                .metaJson(safeJson(youtubePackage))
+                .build();
+        assetRepository.save(metadataAsset);
+        
+        String characterImagePath = null;
+        String characterStylePrompt = null;
+        if (job.getChannelId() != null) {
+            ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
+            if (profile != null) {
+                characterImagePath = profile.getCharacterImagePath();
+                characterStylePrompt = profile.getCharacterStylePrompt();
+            }
+        }
+        
+        String longformTitle = job.getTitle();
+        if (longformMeta != null && longformMeta.containsKey("titles")) {
+            List<String> titles = (List<String>) longformMeta.get("titles");
+            if (titles != null && !titles.isEmpty()) longformTitle = titles.get(0);
+        }
+        
+        String longformThumbPath = "/app/data/jobs/" + jobId + "/longform_thumbnail.png";
+        String shortsThumbPath = "/app/data/jobs/" + jobId + "/shorts_thumbnail.png";
+        
+        try {
+            fastApiClient.generateThumbnailImage(jobId, longformTitle, "longform", longformThumbPath, characterImagePath, characterStylePrompt);
+        } catch (Exception e) {
+            log.error("롱폼 썸네일 생성 실패: {}", e.getMessage());
+        }
+        
+        if (job.isMakeShorts()) {
+            String shortsTitle = longformTitle;
+            if (shortsMeta != null && shortsMeta.containsKey("titles")) {
+                List<String> sTitles = (List<String>) shortsMeta.get("titles");
+                if (sTitles != null && !sTitles.isEmpty()) shortsTitle = sTitles.get(0);
+            }
+            try {
+                fastApiClient.generateThumbnailImage(jobId, shortsTitle, "shorts", shortsThumbPath, characterImagePath, characterStylePrompt);
+            } catch (Exception e) {
+                log.error("쇼츠 썸네일 생성 실패: {}", e.getMessage());
+            }
+        }
+        
+        Map<String, String> thumbPaths = new java.util.HashMap<>();
+        thumbPaths.put("longform_path", "/api/jobs/" + jobId + "/thumbnail/longform");
+        thumbPaths.put("shorts_path", "/api/jobs/" + jobId + "/thumbnail/shorts");
+        
+        Asset thumbnailAsset = Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.THUMBNAIL_IMAGE)
+                .localPath(longformThumbPath)
+                .metaJson(safeJson(thumbPaths))
+                .build();
+        assetRepository.save(thumbnailAsset);
+        
+        log.info("유튜브 패키지 생성 완료: jobId={}", jobId);
+    }
+
+    private String safeJson(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        } catch (Exception e) {
+            return "{}";
+        }
     }
 }

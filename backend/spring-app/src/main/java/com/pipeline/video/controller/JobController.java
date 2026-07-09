@@ -8,6 +8,7 @@ import com.pipeline.video.repository.AssetRepository;
 import com.pipeline.video.service.JobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -62,5 +63,46 @@ public class JobController {
             }
         }
         return ResponseEntity.ok(assetRepository.findByJobIdOrderByCreatedAtAsc(id));
+    }
+
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<JobResponse> publishJob(
+            @PathVariable Long id,
+            @AuthenticationPrincipal String username) {
+        return ResponseEntity.ok(jobService.publishVideo(id));
+    }
+
+    @GetMapping("/{id}/thumbnail/longform")
+    public ResponseEntity<org.springframework.core.io.Resource> getLongformThumbnail(@PathVariable Long id) {
+        try {
+            String path = "/app/data/jobs/" + id + "/longform_thumbnail.png";
+            java.io.File file = new java.io.File(path);
+            if (!file.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+            org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(file.toURI());
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/{id}/thumbnail/shorts")
+    public ResponseEntity<org.springframework.core.io.Resource> getShortsThumbnail(@PathVariable Long id) {
+        try {
+            String path = "/app/data/jobs/" + id + "/shorts_thumbnail.png";
+            java.io.File file = new java.io.File(path);
+            if (!file.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+            org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(file.toURI());
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

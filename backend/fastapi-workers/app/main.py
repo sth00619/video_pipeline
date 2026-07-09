@@ -432,6 +432,112 @@ def bgm_generate(req: BgmRequest):
         raise HTTPException(status_code=500, detail=f"BGM 생성 실패: {e}")
 
 
+class YoutubeMetadataRequest(BaseModel):
+    script_text: str
+    is_shorts: bool = False
+
+
+@app.post("/workers/youtube/metadata")
+async def generate_youtube_metadata(request: YoutubeMetadataRequest):
+    """유튜브 업로드용 메타데이터(제목 3안, 설명글, 태그) 자동 생성"""
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        logger.warning("ANTHROPIC_API_KEY 미설정 — Mock 유튜브 메타데이터 폴백")
+        return {
+            "titles": [
+                f"[Mock] {'쇼츠 - ' if request.is_shorts else ''}주식 트렌드 긴급 분석",
+                f"[Mock] {'쇼츠 - ' if request.is_shorts else ''}시장 변동성과 향후 전망",
+                f"[Mock] {'쇼츠 - ' if request.is_shorts else ''}반도체 및 주요 테마 요약"
+            ],
+            "description": f"[Mock 설명글]\n오늘의 주요 시장 이슈 브리핑입니다.\n\n#주식 #재테크 #금융 {'#Shorts' if request.is_shorts else ''}",
+            "tags": ["주식", "투자", "경제", "재테크", "뉴스"]
+        }
+
+    try:
+        from anthropic import Anthropic
+        client = Anthropic(api_key=api_key)
+        
+        prompt = f"""You are a YouTube SEO and financial content expert. Based on the video script below, please generate optimized metadata:
+        
+        <script>
+        {request.script_text}
+        </script>
+        
+        Please produce:
+        1. 3 Title candidates (catchy, click-through-rate optimized, high impact)
+        2. 1 Video description (with summary, brief breakdown, and hashtags/tags)
+        3. A list of 5-8 search tags/keywords
+        
+        Format your response EXACTLY as a valid JSON object matching this structure:
+        {{
+          "titles": ["Title 1", "Title 2", "Title 3"],
+          "description": "Video description...",
+          "tags": ["tag1", "tag2", "tag3"]
+        }}
+        
+        Only return the raw JSON object. Do not include markdown formatting or backticks around it."""
+
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        content_text = response.content[0].text.strip()
+        
+        # Clean potential markdown wrapping
+        if content_text.startswith("```json"):
+            content_text = content_text[7:]
+        if content_text.endswith("```"):
+            content_text = content_text[:-3]
+        content_text = content_text.strip()
+        
+        import json
+        metadata = json.loads(content_text)
+        return metadata
+    except Exception as e:
+        logger.error(f"유튜브 메타데이터 생성 오류: {e}")
+        raise HTTPException(status_code=500, detail=f"유튜브 메타데이터 생성 오류: {e}")
+
+
+class ThumbnailRequest(BaseModel):
+    job_id: int
+    title: str
+    format: str # "longform" | "shorts"
+    output_path: str
+    character_image_path: Optional[str] = None
+    character_style_prompt: Optional[str] = None
+
+
+@app.post("/workers/youtube/thumbnail")
+def generate_thumbnail(req: ThumbnailRequest):
+    """유튜브 업로드용 AI 썸네일 생성"""
+    try:
+        from app.providers.factory import get_image_provider
+        provider = get_image_provider()
+        
+        theme_style = (
+            "bold finance poster style, vibrant stock market charts, "
+            "neon blue and gold accents, high contrast, professional digital art, 8k, cinematic lighting"
+        )
+        prompt = f"YouTube Video Thumbnail: {req.title}. {theme_style}"
+        
+        width = 1920 if req.format == "longform" else 1080
+        height = 1080 if req.format == "shorts" else 1920
+        
+        provider.width = width
+        provider.height = height
+        provider.generate_image(
+            prompt=prompt,
+            output_path=req.output_path,
+            section="intro",
+            keyword=req.title[:30]
+        )
+        return {"status": "ok", "output_path": req.output_path}
+    except Exception as e:
+        logger.error(f"썸네일 생성 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"썸네일 생성 실패: {e}")
+
+
 @app.post("/workers/pronunciation/init")
 def pronunciation_init():
     """발음 사전 초기화/확인"""

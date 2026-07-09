@@ -128,7 +128,7 @@ class TtsWorker:
         actual_duration = self._probe_duration(mp3_path) or len(clean_script) / 5.0
         logger.info(f"음성 길이 (1.35x 배속 후): {actual_duration:.1f}초")
 
-        # 3. 자막 타임스탬프 추출 (Forced Alignment → Whisper → 글자수 비례)
+        # 3. 자막 타임스탬프 추출 (Forced Alignment → stable-ts → Whisper → 글자수 비례)
         chunks = []
         if used_tts:
             # 3a. ElevenLabs Forced Alignment 시도 (가장 정확)
@@ -137,10 +137,19 @@ class TtsWorker:
                     chunks = self._extract_timestamps_with_forced_alignment(mp3_path, clean_script)
                     logger.info(f"Forced Alignment 타임스탬프 추출: {len(chunks)}개 세그먼트")
                 except Exception as e:
-                    logger.warning(f"Forced Alignment 실패, Whisper 폴백: {e}")
+                    logger.warning(f"Forced Alignment 실패, stable-ts 폴백: {e}")
                     chunks = []
 
-            # 3b. Whisper 폴백 (Forced Alignment 실패 또는 gTTS 엔진일 때)
+            # 3b. stable-ts 폴백 (ElevenLabs Forced Alignment 실패 또는 gTTS 엔진)
+            if not chunks:
+                try:
+                    chunks = self._extract_timestamps_with_stable_ts(mp3_path, clean_script)
+                    logger.info(f"stable-ts 타임스탬프 추출: {len(chunks)}개 세그먼트")
+                except Exception as e:
+                    logger.warning(f"stable-ts 타임스탬프 추출 실패, Whisper 폴백: {e}")
+                    chunks = []
+
+            # 3c. faster-whisper 폴백 (stable-ts 실패 시)
             if not chunks:
                 try:
                     chunks = self._extract_timestamps_with_whisper(mp3_path, clean_script)
@@ -252,11 +261,11 @@ class TtsWorker:
         def _build_payload(chunk_text: str) -> dict:
             payload = {
                 "text": chunk_text,
-                "model_id": "eleven_multilingual_v2",
+                "model_id": "eleven_v3",
                 "voice_settings": {
-                    "stability": 0.5,
-                    "similarity_boost": 0.75,
-                    "style": 0.0,
+                    "stability": 0.42,
+                    "similarity_boost": 0.82,
+                    "style": 0.20,
                     "use_speaker_boost": True
                 }
             }
@@ -457,8 +466,110 @@ class TtsWorker:
         return text_chunks
 
     # ============================
+    # stable-ts (cross-attention 기반) → 정밀 자막 싱크
+    # ============================
+    def _extract_timestamps_with_stable_ts(self, mp3_path: str, original_script: str) -> list[dict]:
+        """
+        stable-ts 라이브러리 (stable_whisper)를 사용하여 cross-attention 기반
+        단어 단위 정밀 타임스탬프를 추출합니다.
+
+        faster-whisper 역방향 STT보다 더 정확한 이유:
+        - DTW(Dynamic Time Warping) + cross-attention 가중치로 단어 경계 감지
+        - vad=True로 무음 구간 스킵 → 타임스탬프 드리프트 방지
+        - 한국어 구절 단위 자동 재결합 (regroup=True)
+        """
+        try:
+            import stable_whisper
+        except ImportError:
+            raise ImportError("stable-ts가 설치되지 않았습니다. pip install 'stable-ts[fw]'")
+
+        logger.info("stable-ts (cross-attention) 타임스탬프 추출 시작...")
+        model = stable_whisper.load_faster_whisper(
+            "base",
+            device="cpu",
+            compute_type="int8"
+        )
+        result = model.transcribe_stable(
+            mp3_path,
+            language="ko",
+            vad=True,       # 무음 구간 자동 스킵 → 드리프트 방지
+            regroup=True,   # 자연스러운 한국어 구절 단위 재결합
+        )
+
+        # 단어 단위 타임스탬프 수집
+        stable_words = []
+        for segment in result.segments:
+            if hasattr(segment, "words") and segment.words:
+                for word in segment.words:
+                    stable_words.append({
+                        "word": word.word.strip(),
+                        "start": round(word.start, 3),
+                        "end": round(word.end, 3),
+                    })
+
+        if not stable_words:
+            logger.warning("stable-ts 단어 추출 결과 없음")
+            return []
+
+        logger.info(f"stable-ts 단어 {len(stable_words)}개 추출 완료")
+
+        # 기존 Whisper 매핑 로직 재사용 (원본 스크립트 → 타임스탬프 매핑)
+        text_chunks = self._split_script_into_chunks(original_script, max_chars=22)
+        if not text_chunks:
+            return []
+
+        total_orig_chars = max(sum(len(c.replace(" ", "")) for c in text_chunks), 1)
+        total_stable_chars = max(sum(len(w["word"].replace(" ", "")) for w in stable_words), 1)
+
+        chunks = []
+        cum_orig_chars = 0
+        w_idx = 0
+        cum_stable_chars = 0
+        num_stable = len(stable_words)
+        prev_end = 0.0
+
+        for idx, chunk_text in enumerate(text_chunks):
+            chunk_char_len = len(chunk_text.replace(" ", ""))
+            cum_orig_chars += chunk_char_len
+            target_ratio = cum_orig_chars / total_orig_chars
+            target_stable_chars = target_ratio * total_stable_chars
+
+            start_w_idx = w_idx
+            while w_idx < num_stable and cum_stable_chars < target_stable_chars:
+                cum_stable_chars += len(stable_words[w_idx]["word"].replace(" ", ""))
+                w_idx += 1
+
+            if w_idx > start_w_idx:
+                chunk_start = stable_words[start_w_idx]["start"]
+                chunk_end = stable_words[w_idx - 1]["end"]
+            else:
+                chunk_start = prev_end
+                chunk_end = prev_end + 0.5
+
+            if chunk_start < prev_end:
+                chunk_start = prev_end
+            if chunk_end <= chunk_start:
+                chunk_end = chunk_start + 0.5
+
+            if idx == len(text_chunks) - 1 and num_stable > 0:
+                chunk_end = max(chunk_end, stable_words[-1]["end"])
+
+            duration = round(chunk_end - chunk_start, 3)
+            chunks.append({
+                "index": idx + 1,
+                "text": chunk_text,
+                "start": round(chunk_start, 3),
+                "duration": duration,
+            })
+            prev_end = chunk_start + duration
+
+        logger.info(f"stable-ts 정밀 매핑 완료: {len(text_chunks)}개 청크")
+        return chunks
+
+    # ============================
     # faster-whisper 역방향 STT → 원본 텍스트 매핑
     # ============================
+
     def _extract_timestamps_with_whisper(self, mp3_path: str, original_script: str) -> list[dict]:
         """
         핵심: gTTS/ElevenLabs로 생성된 MP3를 faster-whisper로 분석하여 시간 곡선을 구한 뒤,

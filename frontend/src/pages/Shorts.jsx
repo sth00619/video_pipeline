@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Upload, Scissors, Download, Loader, X, Plus, Trash2,
-  Play, Pause, SkipBack, SkipForward, Clock, FileText, Sparkles, Tag, ArrowRight, Video
+  Play, Pause, SkipBack, SkipForward, Clock, FileText, Sparkles, Tag, ArrowRight, Video,
+  Youtube, Copy, ExternalLink, CheckCircle
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import apiClient from '../api/client'
@@ -90,6 +91,10 @@ export default function Shorts() {
   const [downloadingIdx, setDownloadingIdx] = useState(null)
   const [dragging, setDragging] = useState(null)
   const [drag, setDrag] = useState(false)
+  const [youtubePackage, setYoutubePackage] = useState(null)
+  const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [imageSalt, setImageSalt] = useState(0)
 
   // 1. 롱폼 연동 모드 데이터 로드
   useEffect(() => {
@@ -127,15 +132,23 @@ export default function Shorts() {
         try {
           const scenarioRes = await apiClient.get(`/jobs/${id}/assets?type=SHORTS_SCENARIO`)
           if (scenarioRes.data && scenarioRes.data.length > 0) {
-            // 가장 최신 에셋을 사용 (마지막 인덱스)
             const latestScenario = scenarioRes.data[scenarioRes.data.length - 1]
             if (latestScenario.metaJson) {
               setAiScenarios(JSON.parse(latestScenario.metaJson))
             }
           }
-        } catch (err) {
-          // 시나리오 에셋이 없으면 무시 (기존처럼 버튼 눌러서 추출 가능)
-        }
+        } catch (err) {}
+
+        // 유튜브 메타데이터 가져오기
+        try {
+          const youtubeMetaRes = await apiClient.get(`/jobs/${id}/assets?type=YOUTUBE_METADATA`)
+          if (youtubeMetaRes.data && youtubeMetaRes.data.length > 0) {
+            const latest = youtubeMetaRes.data[youtubeMetaRes.data.length - 1]
+            if (latest.metaJson) {
+              setYoutubePackage(JSON.parse(latest.metaJson))
+            }
+          }
+        } catch (err) {}
       } catch (e) {
         alert('롱폼 프로젝트 로드 실패: ' + e.message)
       } finally {
@@ -323,6 +336,20 @@ export default function Shorts() {
       alert('생성 실패: ' + (e.response?.data?.message || e.message))
     } finally {
       setCutting(false)
+    }
+  }
+
+  const handlePublish = async () => {
+    setPublishing(true)
+    try {
+      await apiClient.post(`/jobs/${id}/publish`)
+      const jobRes = await apiClient.get(`/jobs/${id}`)
+      setJob(jobRes.data)
+      alert('유튜브 업로드가 완료되었습니다!')
+    } catch (e) {
+      alert('유튜브 업로드 실패: ' + e.message)
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -868,6 +895,232 @@ export default function Shorts() {
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* YouTube 메타데이터 및 업로드 게이트 패키지 (쇼츠용) */}
+            {clips.length > 0 && job && (
+              <div className="bg-navy-800 rounded-xl border border-accent-cyan p-5 space-y-4 mt-6">
+                <div className="flex items-center justify-between border-b border-navy-700 pb-3">
+                  <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5">
+                    <Youtube size={16}/> YouTube Shorts 업로드 및 수동 발행 지원 킷
+                  </h3>
+                  {job.status === 'PUBLISHED' ? (
+                    <span className="text-[11px] bg-accent-green/10 text-accent-green font-bold px-2 py-0.5 rounded border border-accent-green/20">
+                      업로드 완료
+                    </span>
+                  ) : (
+                    <span className="text-[11px] bg-accent-gold/10 text-accent-gold font-bold px-2 py-0.5 rounded border border-accent-gold/20">
+                      업로드 대기 중 ({job.autonomy} 모드)
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* 썸네일 다운로드 */}
+                  <div className="bg-navy-900/60 p-3 rounded-lg border border-navy-700 flex flex-col justify-between">
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-300 mb-2">AI 자동 생성 썸네일 (9:16)</h4>
+                      <div className="aspect-[9/16] w-24 mx-auto bg-navy-950 rounded border border-navy-700 overflow-hidden relative">
+                        <img
+                          src={`/api/jobs/${id}/thumbnail/shorts?t=${imageSalt}`}
+                          alt="YouTube Shorts Thumbnail"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=400&q=80";
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <a
+                      href={`/api/jobs/${id}/thumbnail/shorts`}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                      className="mt-3 w-full bg-navy-700 border border-navy-600 text-center text-xs text-accent-cyan py-1.5 rounded hover:bg-navy-600 transition flex items-center justify-center gap-1"
+                    >
+                      <Download size={12}/> 썸네일 다운로드
+                    </a>
+                  </div>
+
+                  {/* 유튜브 메타데이터 복사 패널 */}
+                  <div className="md:col-span-2 space-y-3">
+                    {youtubePackage?.shorts ? (
+                      <>
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-gray-400">추천 제목 (3안)</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(youtubePackage.shorts.titles?.join('\n') || '');
+                                alert('추천 제목 3안이 복사되었습니다.');
+                              }}
+                              className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                            >
+                              <Copy size={10}/> 전체 복사
+                            </button>
+                          </div>
+                          <div className="bg-navy-950 p-2 rounded border border-navy-700 space-y-1.5 mt-1">
+                            {youtubePackage.shorts.titles?.map((t, idx) => (
+                              <div key={idx} className="flex items-start gap-1.5 text-xs text-gray-300">
+                                <span className="text-accent-cyan font-bold">안{idx+1}.</span>
+                                <span className="flex-1 select-all">{t}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-gray-400">더보기 상세 설명글 (Description)</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(youtubePackage.shorts.description || '');
+                                alert('더보기 글이 복사되었습니다.');
+                              }}
+                              className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                            >
+                              <Copy size={10}/> 복사
+                            </button>
+                          </div>
+                          <textarea
+                            readOnly
+                            value={youtubePackage.shorts.description || ''}
+                            className="w-full bg-navy-950 border border-navy-700 rounded p-2 text-xs text-gray-300 mt-1 h-20 focus:outline-none resize-none font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-gray-400 font-mono">태그 / 해시태그</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(youtubePackage.shorts.tags?.join(', ') || '');
+                                alert('해시태그가 복사되었습니다.');
+                              }}
+                              className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                            >
+                              <Copy size={10}/> 복사
+                            </button>
+                          </div>
+                          <div className="bg-navy-950 p-2 rounded border border-navy-700 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
+                            {youtubePackage.shorts.tags?.map((tag, idx) => (
+                              <span key={idx} className="bg-navy-800 px-1.5 py-0.5 rounded border border-navy-700">#{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-xs text-gray-400 h-full flex items-center justify-center">
+                        <Loader size={12} className="animate-spin mr-1"/> 유튜브 메타데이터 생성 중...
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 게이트 및 업로드 버튼 */}
+                <div className="border-t border-navy-700 pt-3 flex items-center justify-between">
+                  <div>
+                    {job.youtubeUrl && (
+                      <a
+                        href={job.youtubeUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-accent-cyan hover:underline flex items-center gap-1"
+                      >
+                        <ExternalLink size={12}/> YouTube 업로드 동영상 링크 열기
+                      </a>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    {job.status !== 'PUBLISHED' && (
+                      <button
+                        onClick={() => {
+                          if (job.autonomy === 'GUIDED') {
+                            setIsGuidedConfirmOpen(true);
+                          } else {
+                            if (confirm("유튜브 채널로 쇼츠를 업로드(시뮬레이션)하시겠습니까?")) {
+                              handlePublish();
+                            }
+                          }
+                        }}
+                        disabled={publishing}
+                        className="flex items-center gap-1.5 bg-red-600 text-white font-semibold text-xs px-4 py-2 rounded-lg hover:bg-red-500 disabled:opacity-50 transition"
+                      >
+                        {publishing ? <Loader size={12} className="animate-spin"/> : <Youtube size={12}/>}
+                        {job.autonomy === 'GUIDED' ? '쇼츠 업로드 검토 및 발행' : '즉시 Shorts 업로드'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* GUIDED 모드 유튜브 Shorts 업로드 검토 팝업 */}
+            {isGuidedConfirmOpen && (
+              <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+                <div className="bg-navy-900 border border-navy-700 rounded-xl p-5 max-w-xl w-full space-y-4">
+                  <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5 border-b border-navy-800 pb-2">
+                    <Youtube size={16}/> YouTube Shorts 업로드 검토 (GUIDED 게이트)
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-gray-400">쇼츠 제목 선택</label>
+                      <div className="space-y-1.5 mt-1">
+                        {youtubePackage?.shorts?.titles?.map((t, idx) => (
+                          <label key={idx} className="flex items-start gap-2 bg-navy-950 p-2 rounded border border-navy-800 hover:border-navy-700 cursor-pointer text-xs text-gray-300">
+                            <input
+                              type="radio"
+                              name="selected_shorts_title"
+                              defaultChecked={idx === 0}
+                              className="mt-0.5 accent-accent-cyan"
+                            />
+                            <span>{t}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-400">설명글</label>
+                      <textarea
+                        readOnly
+                        value={youtubePackage?.shorts?.description || ''}
+                        className="w-full bg-navy-950 border border-navy-800 rounded p-2 text-xs text-gray-300 mt-1 h-24 focus:outline-none resize-none font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-400">추천 해시태그</label>
+                      <div className="bg-navy-950 p-2 rounded border border-navy-800 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
+                        {youtubePackage?.shorts?.tags?.map((tag, idx) => (
+                          <span key={idx} className="bg-navy-900 px-1.5 py-0.5 rounded border border-navy-800">#{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 border-t border-navy-800 pt-3">
+                    <button
+                      onClick={() => setIsGuidedConfirmOpen(false)}
+                      className="bg-navy-700 hover:bg-navy-600 text-xs px-3 py-1.5 rounded text-gray-400 transition"
+                    >
+                      닫기
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsGuidedConfirmOpen(false);
+                        handlePublish();
+                      }}
+                      className="bg-red-600 hover:bg-red-500 text-xs px-4 py-1.5 rounded text-white font-semibold transition"
+                    >
+                      검토 승인 및 업로드
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

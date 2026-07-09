@@ -185,6 +185,83 @@ public class ImagesService {
         }
     }
 
+    @Transactional
+    public void splitScene(Long jobId, int index, String part1, String part2) {
+        List<Asset> assets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+        
+        java.util.List<Asset> sortedAssets = new java.util.ArrayList<>(assets);
+        sortedAssets.sort((a, b) -> {
+            try {
+                SceneImageDto dtoA = objectMapper.readValue(a.getMetaJson(), SceneImageDto.class);
+                SceneImageDto dtoB = objectMapper.readValue(b.getMetaJson(), SceneImageDto.class);
+                return Integer.compare(dtoA.getIndex(), dtoB.getIndex());
+            } catch (Exception e) {
+                return 0;
+            }
+        });
+        
+        Asset targetAsset = null;
+        SceneImageDto targetDto = null;
+        for (Asset asset : sortedAssets) {
+            try {
+                SceneImageDto dto = objectMapper.readValue(asset.getMetaJson(), SceneImageDto.class);
+                if (dto.getIndex() == index) {
+                    targetAsset = asset;
+                    targetDto = dto;
+                    break;
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        
+        if (targetAsset == null) {
+            throw new IllegalArgumentException("Cannot find scene to split: index=" + index);
+        }
+        
+        // Shift indices of all assets with index > targetIndex by 1
+        for (Asset asset : sortedAssets) {
+            try {
+                SceneImageDto dto = objectMapper.readValue(asset.getMetaJson(), SceneImageDto.class);
+                if (dto.getIndex() > index) {
+                    dto.setIndex(dto.getIndex() + 1);
+                    asset.setMetaJson(objectMapper.writeValueAsString(dto));
+                    assetRepository.save(asset);
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        
+        // Update target asset (part 1)
+        targetDto.setPrompt(part1);
+        double origDuration = targetDto.getDuration() != null ? targetDto.getDuration() : 10.0;
+        double origStart = targetDto.getStart() != null ? targetDto.getStart() : 0.0;
+        
+        targetDto.setDuration(origDuration / 2.0);
+        targetAsset.setMetaJson(safeJson(targetDto));
+        assetRepository.save(targetAsset);
+        
+        // Create new asset (part 2) at index + 1
+        SceneImageDto newDto = new SceneImageDto();
+        newDto.setIndex(index + 1);
+        newDto.setPrompt(part2);
+        newDto.setSection(targetDto.getSection());
+        newDto.setImagePath(targetDto.getImagePath()); // Copy image path to maintain character profile
+        newDto.setDuration(origDuration / 2.0);
+        newDto.setStart(origStart + (origDuration / 2.0));
+        
+        Asset newAsset = Asset.builder()
+            .jobId(jobId)
+            .assetType(AssetType.SCENE_IMAGE)
+            .localPath(targetAsset.getLocalPath())
+            .metaJson(safeJson(newDto))
+            .build();
+            
+        assetRepository.save(newAsset);
+        log.info("씬 분할 완료: jobId={}, index={} → {} & {}", jobId, index, index, index + 1);
+    }
+
     // ============================
     // helpers
     // ============================

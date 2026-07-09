@@ -51,4 +51,16 @@ public class ImagesController {
         imagesService.updateScene(jobId, index, text, section, mode);
         return ResponseEntity.ok(Map.of("status", "OK"));
     }
+
+    @PostMapping("/scenes/{index}/split")
+    public ResponseEntity<Map<String, String>> splitScene(
+            @PathVariable Long jobId,
+            @PathVariable int index,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal String username) {
+        String part1 = body.get("part1");
+        String part2 = body.get("part2");
+        imagesService.splitScene(jobId, index, part1, part2);
+        return ResponseEntity.ok(Map.of("status", "OK"));
+    }
 }

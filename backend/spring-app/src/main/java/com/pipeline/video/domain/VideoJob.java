@@ -57,6 +57,9 @@ public class VideoJob {
     private String sourceVideoPath;
     private String outputPath;
 
+    @Column(length = 255)
+    private String youtubeUrl;
+
     private String createdBy;
 
     @Column(name = "channel_id", length = 50)

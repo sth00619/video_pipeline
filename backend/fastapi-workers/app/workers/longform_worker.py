@@ -1,13 +1,12 @@
 """
-Phase 3-5 v5 — 롱폼 조립 (경제사냥꾼 스타일 자막)
+Phase 3-5 v6 — 롱폼 조립 (초반 AI 움짤 + 나머지 zoompan)
 
-자막 스타일 개선:
-  - 굵은 흰색 텍스트 + 검정 박스 배경 (Image 2 참조)
-  - 폰트 크기 72px (이전 52px → 큰 폰트)
-  - BorderStyle=3 (불투명 박스) → 가독성 최우선
-  - 최대 20자 1줄
-
-청크별 gTTS 덕분에 타임스탬프 정확도 대폭 향상
+구조 개선:
+  - 초반 30~60초만 Fal.ai Kling image-to-video AI 움짤 생성 (목표 분량별 자동 계산)
+  - 나머지 씬은 FFmpeg zoompan 필터로 정적 이미지에 줌인 생동감 부여
+  - 자막 수치/퍼센트 노란색 강조 활성화
+  - 목표 분량별 초반 AI 움짤 길이:
+    5분 → 앞 30초 / 10분 → 앞 45초 / 15분 → 앞 60초 / 20분 → 앞 60초
 """
 import json
 import os
@@ -58,6 +57,9 @@ class LongformWorker:
                     else:
                         scene["duration"] = round(total_duration / len(scenes), 3)
 
+        # 목표 분량별 초반 AI 움짤 씬 수 계산
+        target_minutes = kwargs.get("target_minutes", 10) if hasattr(self, "assemble") else 10
+
         # Kling 비디오 프로바이더 로드 (하이브리드 모드)
         video_provider = None
         try:
@@ -67,11 +69,16 @@ class LongformWorker:
         except Exception as e:
             logger.warning(f"Kling 비디오 프로바이더 로드 실패 (FFmpeg 폴백 사용): {e}")
 
-        # 2. 씬별 클립 생성
+        # 초반 AI 움짤 대상 씬 수 계산
+        intro_kling_count = _get_intro_kling_count(total_duration, len(scenes))
+        logger.info(f"초반 Kling AI 움짤 대상: {intro_kling_count}씬 (전체 {len(scenes)}씬 중)")
+
+        # 씬별 클립 생성
         clip_list_path = str(temp_dir / "clips.txt")
         clip_paths = []
 
         for i, scene in enumerate(scenes):
+
             img_path = scene.get("image_path", "")
             raw_dur = scene.get("duration")
             duration = float(raw_dur) if raw_dur is not None else 15.0
@@ -83,43 +90,31 @@ class LongformWorker:
                 "action": "0d3b2e", "conclusion": "1a1a2e",
             }.get(section, "0d1b2a")
 
-            # 인트로 및 결론 씬은 Kling AI 비디오 생성 시도 (하이브리드 전략)
-            if video_provider and (i == 0 or i == len(scenes) - 1):
+            # 초반 씬만 Kling AI 움짤, 나머지는 zoompan 효과
+            if video_provider and i < intro_kling_count:
                 try:
-                    logger.info(f"씬 {i} Kling AI 모션 영상 생성 시작 (section={section})")
-                    prompt = scene.get("prompt", "") or scene.get("text", "") or "professional financial chart animation"
+                    logger.info(f"씬 {i} Kling AI 움짤 생성 (초반 {intro_kling_count}씬)")
+                    prompt = scene.get("prompt", "") or scene.get("text", "") or "professional financial chart animation cinematic"
                     video_provider.generate(
                         prompt=prompt,
-                        duration=int(duration),
+                        duration=min(int(duration), 5),
                         output_path=clip_path,
-                        image_path=img_path
+                        image_path=img_path,
+                        image_url=None
                     )
-                    clip_paths.append(clip_path)
-                    continue
+                    if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
+                        clip_paths.append(clip_path)
+                        logger.info(f"씬 {i} Kling AI 움짤 완성")
+                        continue
                 except Exception as e:
-                    logger.warning(f"씬 {i} Kling AI 생성 실패, FFmpeg 폴백: {e}")
+                    logger.warning(f"씬 {i} Kling AI 생성 실패, zoompan 폴백: {e}")
 
-            if not os.path.exists(img_path):
-                cmd = (
-                    f'ffmpeg -f lavfi -i "color=c={bg_color}:s=1920x1080:r=30" '
-                    f'-t {duration:.3f} -c:v libx264 -pix_fmt yuv420p '
-                    f'-y "{clip_path}" -loglevel error'
-                )
+            # 나머지 씬: FFmpeg zoompan 효과
+            if os.path.exists(img_path):
+                _ffmpeg_zoompan(img_path, clip_path, duration, bg_color)
             else:
-                cmd = (
-                    f'ffmpeg -framerate 1 -loop 1 -i "{img_path}" '
-                    f'-t {duration:.3f} '
-                    f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
-                    f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},'
-                    f'setsar=1,fps=30" '
-                    f'-c:v libx264 -preset fast -pix_fmt yuv420p '
-                    f'-y "{clip_path}" -loglevel error'
-                )
-
-            ret = os.system(cmd)
-            if ret != 0:
                 os.system(
-                    f'ffmpeg -f lavfi -i "color=c=1a1a2e:s=1920x1080:r=30" '
+                    f'ffmpeg -f lavfi -i "color=c={bg_color}:s=1920x1080:r=30" '
                     f'-t {duration:.3f} -c:v libx264 -pix_fmt yuv420p '
                     f'-y "{clip_path}" -loglevel error'
                 )
@@ -249,7 +244,7 @@ WrapStyle: 0
 ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Main,{font_name},72,&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,0,0,2,40,40,80,1
+Style: Main,{font_name},76,&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,0,0,2,40,40,80,1
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
@@ -278,8 +273,8 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             dur = chunk.get("duration", 3.0)
             end_sec = start_sec + dur
 
-            # 순수 흐자색 텍스트만 사용 (강조색 없음)
-            display = self._trim_to_limit(text)
+            # 수치/퍼센트/포인트 노란색 강조 활성화
+            display = self._trim_to_limit(self._highlight_stock_numbers(text))
 
             start_str = to_ass_time(start_sec)
             end_str = to_ass_time(end_sec)
@@ -296,8 +291,84 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 
     @staticmethod
     def _highlight_stock_numbers(text: str) -> str:
-        """주식 수치 노란색 강조"""
-        text = re.sub(r'([+-]?\d+\.?\d*퍼센트)', r'{\\c&H00FFFF&}\1{\\c&HFFFFFF&}', text)
-        text = re.sub(r'(\d+포인트)', r'{\\c&H00FFFF&}\1{\\c&HFFFFFF&}', text)
-        text = re.sub(r'(\d+(?:억|만|천)?(?:원|달러))', r'{\\c&H00FFFF&}\1{\\c&HFFFFFF&}', text)
+        """주식 수치 노란색 강조 (ASS 인라인 태그)"""
+        text = re.sub(r'([+-]?\d+\.?\d*퍼센트)', r'{\c&H00FFFF&}\1{\c&HFFFFFF&}', text)
+        text = re.sub(r'(\d+포인트)', r'{\c&H00FFFF&}\1{\c&HFFFFFF&}', text)
+        text = re.sub(r'(\d+(?:억|만|천)?(?:원|달러))', r'{\c&H00FFFF&}\1{\c&HFFFFFF&}', text)
         return text
+
+
+# ──────────────────────────────────────────────────────────
+# 모듈 수준 헬퍼 함수
+# ──────────────────────────────────────────────────────────
+
+# 목표 분량별 초반 AI 움짤 길이 (초 단위)
+_INTRO_KLING_SECONDS = {
+    5: 30,
+    10: 45,
+    15: 60,
+    20: 60,
+}
+
+
+def _get_intro_kling_count(total_duration: float, total_scenes: int) -> int:
+    """
+    영상 총 길이 기반으로 초반 AI 움짤(Kling) 대상 씬 수를 계산합니다.
+    - 5분 이하 → 앞 30초
+    - 10분 이하 → 앞 45초
+    - 15분 이하 → 앞 60초
+    - 20분 초과 → 앞 60초
+    """
+    if total_scenes <= 0 or total_duration <= 0:
+        return 3  # 기본 3씬
+
+    target_minutes = total_duration / 60.0
+    if target_minutes <= 5:
+        intro_secs = 30
+    elif target_minutes <= 10:
+        intro_secs = 45
+    elif target_minutes <= 15:
+        intro_secs = 60
+    else:
+        intro_secs = 60
+
+    secs_per_scene = total_duration / total_scenes
+    count = max(2, int(intro_secs / secs_per_scene))
+    logger.info(f"intro_kling_count 계산: total={total_duration:.0f}s, scenes={total_scenes}, "
+                f"secs_per_scene={secs_per_scene:.1f}s, intro_secs={intro_secs}s → {count}씬")
+    return count
+
+
+def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a"):
+    """
+    정적 이미지에 FFmpeg zoompan 필터로 은은한 줌인 효과를 적용하여 생동감을 부여합니다.
+    - 이미지 스케일을 2000x1125로 올린 후 zoompan으로 중심에서 천천히 줌인
+    - 줌 배율: 1.0 → 1.06 (6% 줌인, 너무 과하지 않게)
+    """
+    frames = int(duration * 30)  # 30fps 기준 프레임 수
+    zoom_speed = 0.0008  # 줌 속도 (값이 작을수록 느리게 줌인)
+    max_zoom = 1.06
+
+    cmd = (
+        f'ffmpeg -loop 1 -i "{img_path}" '
+        f'-filter_complex '
+        f'"[0:v]scale=2000:1125,'
+        f'zoompan=z=\'min(zoom+{zoom_speed},{max_zoom})\''
+        f':x=\'iw/2-(iw/zoom/2)\''
+        f':y=\'ih/2-(ih/zoom/2)\''
+        f':d={frames}:s=1920x1080:fps=30,'
+        f'setsar=1[v]" '
+        f'-map "[v]" -t {duration:.3f} '
+        f'-c:v libx264 -preset fast -pix_fmt yuv420p '
+        f'-y "{clip_path}" -loglevel error'
+    )
+    ret = os.system(cmd)
+    if ret != 0:
+        logger.warning(f"zoompan 실패, 단순 정적 이미지로 폴백: {img_path}")
+        os.system(
+            f'ffmpeg -loop 1 -i "{img_path}" '
+            f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
+            f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,fps=30" '
+            f'-t {duration:.3f} -c:v libx264 -preset fast -pix_fmt yuv420p '
+            f'-y "{clip_path}" -loglevel error'
+        )
