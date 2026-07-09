@@ -42,6 +42,9 @@ export default function App() {
           <Route path="/shorts" element={
             <ProtectedRoute><Shorts /></ProtectedRoute>
           } />
+          <Route path="/jobs/:id/shorts" element={
+            <ProtectedRoute><Shorts /></ProtectedRoute>
+          } />
           <Route path="/admin" element={
             <ProtectedRoute adminOnly><Admin /></ProtectedRoute>
           } />

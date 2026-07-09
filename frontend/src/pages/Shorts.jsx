@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   Upload, Scissors, Download, Loader, X, Plus, Trash2,
-  Play, Pause, SkipBack, SkipForward, Clock
+  Play, Pause, SkipBack, SkipForward, Clock, FileText, Sparkles, Tag, ArrowRight, Video
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import apiClient from '../api/client'
 import { authStore } from '../store/auth'
-import { useShortsStore } from '../store/shortsStore'
 
 const SEG_LABELS = ['핵심 분석','시나리오 분석','실행 가이드','결론 요약','데이터 정리']
 const COLORS = ['text-accent-cyan','text-accent-gold','text-accent-green','text-purple-400','text-pink-400']
@@ -17,12 +17,13 @@ function fmt(s) {
   const m = Math.floor(s / 60), sec = Math.floor(s % 60)
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
+
 function parseSec(str = '') {
   const p = String(str).split(':')
   return p.length === 2 ? parseFloat(p[0]) * 60 + parseFloat(p[1] || 0) : parseFloat(str) || 0
 }
 
-// JWT 포함 다운로드 — path 유효성 체크 + 에러 처리
+// JWT 포함 다운로드
 async function downloadFile(path, filename) {
   if (!path || path === 'undefined' || path === 'null') {
     alert('파일 경로가 없습니다. 쇼츠 생성이 완료되지 않았을 수 있습니다.')
@@ -52,65 +53,109 @@ async function downloadFile(path, filename) {
 }
 
 export default function Shorts() {
-  const fileRef = useRef(null), videoRef = useRef(null), tlRef = useRef(null)
+  const { id } = useParams() // Longform Job ID (있으면 연동 모드)
+  const navigate = useNavigate()
+  const token = authStore.getToken()
+
+  const fileRef = useRef(null)
+  const videoRef = useRef(null)
+  const tlRef = useRef(null)
+
+  // 로컬 비디오 업로드 모드 상태
+  const [file, setFile] = useState(null)
+  const [fileUrl, setFileUrl] = useState(null)
   
-  const [storeState, setStoreState] = useShortsStore()
-  const {
-    file, fileUrl, shortsCount, clipDur, mode, analyzing, cutting,
-    autoSegments, autoClips, guidedSegments, guidedClips, manualSegments, manualClips,
-    jobId, totalDur, curTime, playing, activeSeg, phase, downloadingIdx
-  } = storeState
+  // 롱폼 연동 모드 전용 상태
+  const [job, setJob] = useState(null)
+  const [scenes, setScenes] = useState([])
+  const [loadingJob, setLoadingJob] = useState(false)
+  const [aiScenarios, setAiScenarios] = useState(null)
+  const [extractingAi, setExtractingAi] = useState(false)
+  const [selectedKeywords, setSelectedKeywords] = useState([])
+  const [aiActiveTab, setAiActiveTab] = useState('scenario') // 'scenario' | 'keyword'
 
-  const setFile = (val) => setStoreState(prev => ({ file: typeof val === 'function' ? val(prev.file) : val }))
-  const setFileUrl = (val) => setStoreState(prev => ({ fileUrl: typeof val === 'function' ? val(prev.fileUrl) : val }))
-  const setShortsCount = (val) => setStoreState(prev => ({ shortsCount: typeof val === 'function' ? val(prev.shortsCount) : val }))
-  const setClipDur = (val) => setStoreState(prev => ({ clipDur: typeof val === 'function' ? val(prev.clipDur) : val }))
-  const setMode = (val) => setStoreState(prev => ({ mode: typeof val === 'function' ? val(prev.mode) : val }))
-  const setAnalyzing = (val) => setStoreState(prev => ({ analyzing: typeof val === 'function' ? val(prev.analyzing) : val }))
-  const setCutting = (val) => setStoreState(prev => ({ cutting: typeof val === 'function' ? val(prev.cutting) : val }))
-  const setJobId = (val) => setStoreState(prev => ({ jobId: typeof val === 'function' ? val(prev.jobId) : val }))
-  const setTotalDur = (val) => setStoreState(prev => ({ totalDur: typeof val === 'function' ? val(prev.totalDur) : val }))
-  const setCurTime = (val) => setStoreState(prev => ({ curTime: typeof val === 'function' ? val(prev.curTime) : val }))
-  const setPlaying = (val) => setStoreState(prev => ({ playing: typeof val === 'function' ? val(prev.playing) : val }))
-  const setActiveSeg = (val) => setStoreState(prev => ({ activeSeg: typeof val === 'function' ? val(prev.activeSeg) : val }))
-  const setPhase = (val) => setStoreState(prev => ({ phase: typeof val === 'function' ? val(prev.phase) : val }))
-  const setDownloadingIdx = (val) => setStoreState(prev => ({ downloadingIdx: typeof val === 'function' ? val(prev.downloadingIdx) : val }))
-
-  const setAutoSegments = (val) => setStoreState(prev => ({ autoSegments: typeof val === 'function' ? val(prev.autoSegments) : val }))
-  const setAutoClips = (val) => setStoreState(prev => ({ autoClips: typeof val === 'function' ? val(prev.autoClips) : val }))
-  const setGuidedSegments = (val) => setStoreState(prev => ({ guidedSegments: typeof val === 'function' ? val(prev.guidedSegments) : val }))
-  const setGuidedClips = (val) => setStoreState(prev => ({ guidedClips: typeof val === 'function' ? val(prev.guidedClips) : val }))
-  const setManualSegments = (val) => setStoreState(prev => ({ manualSegments: typeof val === 'function' ? val(prev.manualSegments) : val }))
-  const setManualClips = (val) => setStoreState(prev => ({ manualClips: typeof val === 'function' ? val(prev.manualClips) : val }))
-
-  const segments = mode === 'AUTO' ? autoSegments : mode === 'GUIDED' ? guidedSegments : manualSegments
-  const setSegments = (val) => {
-    if (mode === 'AUTO') setAutoSegments(val)
-    else if (mode === 'GUIDED') setGuidedSegments(val)
-    else setManualSegments(val)
-  }
-  const clips = mode === 'AUTO' ? autoClips : mode === 'GUIDED' ? guidedClips : manualClips
-  const setClips = (val) => {
-    if (mode === 'AUTO') setAutoClips(val)
-    else if (mode === 'GUIDED') setGuidedClips(val)
-    else setManualClips(val)
-  }
-
-  const [drag, setDrag] = useState(false)
+  // 공통 상태
+  const [shortsCount, setShortsCount] = useState(3)
+  const [clipDur, setClipDur] = useState(60)
+  const [mode, setMode] = useState(id ? 'GUIDED' : 'MANUAL') // 기본 모드
+  const [analyzing, setAnalyzing] = useState(false)
+  const [cutting, setCutting] = useState(false)
+  const [segments, setSegments] = useState([])
+  const [clips, setClips] = useState([])
+  
+  const [totalDur, setTotalDur] = useState(0)
+  const [curTime, setCurTime] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [activeSeg, setActiveSeg] = useState(null)
+  const [downloadingIdx, setDownloadingIdx] = useState(null)
   const [dragging, setDragging] = useState(null)
+  const [drag, setDrag] = useState(false)
 
+  // 1. 롱폼 연동 모드 데이터 로드
+  useEffect(() => {
+    if (!id) return
+    
+    const loadLongformData = async () => {
+      setLoadingJob(true)
+      try {
+        // Job 상세 정보 가져오기
+        const jobRes = await apiClient.get(`/jobs/${id}`)
+        setJob(jobRes.data)
+        
+        // 롱폼 비디오가 존재하는 경우 프리뷰 URL 매핑
+        if (jobRes.data.outputPath) {
+          setFileUrl(`/api/files/download?path=${encodeURIComponent(jobRes.data.outputPath)}&token=${token}`)
+        }
+
+        // 씬 목록 가져오기
+        const assetRes = await apiClient.get(`/jobs/${id}/assets?type=SCENE_IMAGE`)
+        const sortedScenes = (assetRes.data || []).map(asset => {
+          try {
+            return JSON.parse(asset.metaJson)
+          } catch(e) {
+            return null
+          }
+        }).filter(Boolean).sort((a, b) => a.index - b.index)
+        
+        setScenes(sortedScenes)
+        
+        // 총 씬 지속 시간의 합을 동적 분량으로 설정
+        const sumDur = sortedScenes.reduce((acc, s) => acc + (s.duration || 0), 0)
+        setTotalDur(sumDur || 300)
+
+        // 자동 생성된 쇼츠 시나리오가 있는지 확인 및 자동 로드
+        try {
+          const scenarioRes = await apiClient.get(`/jobs/${id}/assets?type=SHORTS_SCENARIO`)
+          if (scenarioRes.data && scenarioRes.data.length > 0) {
+            // 가장 최신 에셋을 사용 (마지막 인덱스)
+            const latestScenario = scenarioRes.data[scenarioRes.data.length - 1]
+            if (latestScenario.metaJson) {
+              setAiScenarios(JSON.parse(latestScenario.metaJson))
+            }
+          }
+        } catch (err) {
+          // 시나리오 에셋이 없으면 무시 (기존처럼 버튼 눌러서 추출 가능)
+        }
+      } catch (e) {
+        alert('롱폼 프로젝트 로드 실패: ' + e.message)
+      } finally {
+        setLoadingJob(false)
+      }
+    }
+
+    loadLongformData()
+  }, [id, token])
+
+  // 업로드 파일 핸들러 (로컬 모드)
   const handleFile = (f) => {
     if (!f || !f.type.startsWith('video/')) return
     if (fileUrl) URL.revokeObjectURL(fileUrl)
-    setFile(f); setFileUrl(URL.createObjectURL(f))
-    setAutoSegments([])
-    setAutoClips([])
-    setGuidedSegments([])
-    setGuidedClips([])
-    setManualSegments([])
-    setManualClips([])
-    setJobId(null)
-    setActiveSeg(null); setPhase('upload')
+    setFile(f)
+    setFileUrl(URL.createObjectURL(f))
+    setSegments([])
+    setClips([])
+    setAiScenarios(null)
+    setActiveSeg(null)
   }
 
   const handleMeta = () => { if (videoRef.current) setTotalDur(videoRef.current.duration) }
@@ -122,130 +167,254 @@ export default function Shorts() {
     setPlaying(!playing)
   }
 
-  const createJob = async () => {
-    const res = await apiClient.post('/jobs', {
-      title: `쇼츠: ${file?.name || '영상'}`,
-      autonomy: mode, makeShorts: true,
-      shortsCount, longformTargetMinutes: 20, budgetCap: 100,
-    })
-    const id = res.data.id; setJobId(id); return id
+  // ── AI 기승전결 시나리오 및 추천 키워드 추출 (Claude 4.6 호출) ──
+  const handleExtractAiScenarios = async () => {
+    const targetId = id || (job && job.id);
+    if (!targetId) {
+      alert('로컬 비디오의 경우 먼저 비디오 바로 아래에 있는 [업로드 영상 자동 분석 시작] 버튼을 눌러 스크립트를 추출해주세요.');
+      return;
+    }
+    setExtractingAi(true)
+    setSelectedKeywords([])
+    try {
+      // 롱폼 씬 데이터가 없다면, 직접 업로드한 씬(segments)을 전송
+      if (scenes.length > 0) {
+        const res = await apiClient.post(`/jobs/${targetId}/shorts/extract-scenarios`)
+        setAiScenarios(res.data)
+      } else {
+        // scenes가 없다면, segments 데이터를 기반으로 임시 씬 객체 생성하여 백엔드로 전달
+        alert('로컬 비디오는 현재 씬 자동 매핑을 지원하지 않습니다. 롱폼 연동 모드를 사용해주세요.')
+      }
+    } catch (e) {
+      alert('AI 추천 추출 실패: ' + (e.response?.data?.message || e.message))
+    } finally {
+      setExtractingAi(false)
+    }
   }
 
-  // ── AUTO/GUIDED: Whisper 분석 ──
-  const handleAnalyze = async () => {
-    if (!file) return
-    setAnalyzing(true); setClips([])
+  // ── 특정 키워드 클릭 시 다중 선택 및 매칭 씬 결합 ──
+  const toggleKeyword = (kw) => {
+    let newSelected;
+    if (selectedKeywords.find(k => k.word === kw.word)) {
+      newSelected = selectedKeywords.filter(k => k.word !== kw.word);
+    } else {
+      newSelected = [...selectedKeywords, kw];
+    }
+    setSelectedKeywords(newSelected);
+
+    if (newSelected.length === 0) {
+      setSegments([]);
+      return;
+    }
+
+    const indices = new Set();
+    newSelected.forEach(k => {
+      if (k.matching_scene_indices) {
+        k.matching_scene_indices.forEach(idx => indices.add(Number(idx)));
+      }
+    });
+
+    const matchingScenes = scenes.filter(s => indices.has(Number(s.index))).sort((a, b) => Number(a.index) - Number(b.index));
+    if (!matchingScenes.length) {
+      setSegments([]);
+      return;
+    }
+
+    const newSegs = matchingScenes.map((s, idx) => ({
+      index: idx + 1,
+      label: s.title || `Scene ${s.index}`,
+      text: s.prompt || s.text || '',
+      start: s.start,
+      end: s.start + s.duration
+    }))
+    
+    setSegments(newSegs)
+    setActiveSeg(0)
+    seek(matchingScenes[0].start)
+  }
+
+  // ── AI 시나리오 클릭 시 해당 씬 리스트 적용 ──
+  const handleApplyScenario = (scenario) => {
+    const indices = scenario.selected_scene_indices || scenario.scene_indices || [];
+    const matchingScenes = scenes.filter(s => indices.map(Number).includes(Number(s.index)))
+    if (!matchingScenes.length) {
+      alert('해당 시나리오의 씬 정보를 찾을 수 없습니다. (매칭된 인덱스 없음)')
+      return
+    }
+
+    const newSegs = matchingScenes.map((s, idx) => ({
+      index: idx + 1,
+      label: s.title || `Scene ${s.index}`,
+      text: s.prompt || s.text || '',
+      start: s.start,
+      end: s.start + s.duration
+    }))
+
+    setSegments(newSegs)
+    setActiveSeg(0)
+    seek(matchingScenes[0].start)
+    setSelectedKeywords([])
+    
+    // 시나리오 적용과 동시에 자동으로 단일 쇼츠 생성(Merge) 요청
+    handleCutShorts(true, newSegs)
+  }
+
+  // ── 드래그 앤 드롭 대본 추가 ──
+  const handleDragStart = (e, scene) => {
+    e.dataTransfer.setData("application/json", JSON.stringify(scene))
+  }
+
+  const handleDropOnTimeline = (e) => {
+    e.preventDefault()
     try {
-      const jid = await createJob()
-      const fd = new FormData(); fd.append('file', file)
-      const res = await apiClient.post(
+      const dataStr = e.dataTransfer.getData("application/json")
+      if (!dataStr) return
+      const scene = JSON.parse(dataStr)
+      
+      // 이미 타임라인에 있는지 확인
+      if (segments.some(s => s.text === (scene.prompt || scene.text))) {
+        return
+      }
+
+      const newSeg = {
+        index: segments.length + 1,
+        label: scene.title || `Scene ${scene.index}`,
+        text: scene.prompt || scene.text || '',
+        start: scene.start,
+        end: scene.start + scene.duration
+      }
+      setSegments([...segments, newSeg])
+      setActiveSeg(segments.length)
+      seek(scene.start)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  // ── 쇼츠 비디오 컷팅/병합 요청 ──
+  const handleCutShorts = async (isMerge = false, overrideSegments = null) => {
+    const targetSegments = overrideSegments || segments;
+    if (targetSegments.length === 0) {
+      alert('구간을 선택하거나 드래그하여 타임라인을 채워주세요.')
+      return
+    }
+
+    // 시간 정보 유효성 검증
+    const invalidSegments = targetSegments.filter(s => s.start === null || s.start === undefined || isNaN(s.start));
+    if (invalidSegments.length > 0) {
+      alert('⚠️ 씬의 시간 정보(타임스탬프)가 존재하지 않는 예전 버전의 프로젝트입니다.\n\n해결 방법: 상단의 [에디터] 탭으로 이동하신 후 우측 상단의 [수정 반영 및 재조립] 버튼을 한 번 눌러주세요. 영상이 재조립되면서 시간 정보가 정상적으로 매핑됩니다.');
+      return;
+    }
+
+    setCutting(true)
+    try {
+      const endpoint = isMerge ? `/jobs/${id}/shorts/confirm-merge` : `/jobs/${id}/shorts/confirm`
+      const res = await apiClient.post(endpoint, {
+        segments: targetSegments.map(s => ({
+          index: s.index,
+          text: s.label || s.text || `쇼츠 ${s.index}`,
+          start: s.start,
+          end: s.end
+        }))
+      })
+      setClips(Array.isArray(res.data) ? res.data : [res.data])
+      alert(isMerge ? '선택한 구간들이 하나의 쇼츠로 병합 완료되었습니다.' : '개별 쇼츠 영상이 생성되었습니다.')
+    } catch (e) {
+      alert('생성 실패: ' + (e.response?.data?.message || e.message))
+    } finally {
+      setCutting(false)
+    }
+  }
+
+  // ── 로컬 비디오 업로드 모드: 분석 및 컷팅 ──
+  const handleLocalAnalyze = async () => {
+    if (!file) return
+    setAnalyzing(true)
+    setClips([])
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await apiClient.post('/jobs', {
+        title: `쇼츠: ${file.name}`,
+        autonomy: 'GUIDED',
+        makeShorts: true,
+        shortsCount,
+        longformTargetMinutes: 20
+      })
+      const jid = res.data.id
+      
+      const resAnalyze = await apiClient.post(
         `/jobs/${jid}/shorts/analyze?shortsCount=${shortsCount}`,
         fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 1800000 }
       )
-      const d = res.data
-      const dur = d.total_duration || totalDur || 300
+      const d = resAnalyze.data
       const adj = (d.suggested_segments || []).map((s, i) => ({
         ...s, index: i + 1,
         label: SEG_LABELS[i % SEG_LABELS.length],
-        end: parseFloat(Math.min(s.start + clipDur, dur).toFixed(2)),
+        color: COLORS[i % COLORS.length],
+        end: s.end || parseFloat(Math.min(s.start + clipDur, totalDur || 300).toFixed(2))
       }))
-      setSegments(adj); setActiveSeg(0); setPhase('analyzed')
-      if (mode === 'AUTO') await executeCut(jid, adj)
+      
+      const generatedScenes = adj.map(s => ({
+        index: s.index,
+        title: s.label,
+        text: s.text,
+        start: s.start,
+        duration: s.end - s.start
+      }))
+      
+      setSegments(adj)
+      setScenes(generatedScenes)
+      setJob({ id: jid, outputPath: null })
+      setActiveSeg(0)
     } catch (e) {
-      alert('분석 실패: ' + (e.response?.data?.detail || e.response?.data?.message || e.message))
-    } finally { setAnalyzing(false) }
+      alert('분석 실패: ' + (e.response?.data?.message || e.message))
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
-  // ── MANUAL: 직접 구간 → 쇼츠 생성 ──
-  const handleManualCut = async () => {
-    if (!file) { alert('영상을 먼저 업로드하세요.'); return }
-    if (segments.length === 0) { alert('구간을 먼저 추가하세요.'); return }
+  const handleLocalCut = async () => {
+    if (segments.length === 0) return
     setCutting(true)
     try {
-      const jid = jobId || await createJob()
-      const valid = segments.filter(s => s.end - s.start >= 5)
-      if (!valid.length) { alert('유효한 구간 없음 (최소 5초 필요)'); return }
-
       const fd = new FormData()
       fd.append('file', file)
-      fd.append('segments', JSON.stringify(valid.map((s, i) => ({
-        index: i + 1, label: s.label || `구간 ${i + 1}`,
-        start: s.start, end: s.end,
-      }))))
-
-      const res = await apiClient.post(`/jobs/${jid}/shorts/cut-direct`, fd, {
+      fd.append('segments', JSON.stringify(segments))
+      // Mock Job ID 로 임시 생성
+      const resJob = await apiClient.post('/jobs', {
+        title: `수동 쇼츠: ${file.name}`,
+        autonomy: 'MANUAL',
+        makeShorts: true
+      })
+      const res = await apiClient.post(`/jobs/${resJob.data.id}/shorts/cut-direct`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' }, timeout: 1800000
       })
-      setClips(Array.isArray(res.data) ? res.data : [])
-      setPhase('cut')
+      setClips(res.data)
     } catch (e) {
-      alert('쇼츠 생성 실패: ' + (e.response?.data?.message || e.message))
-    } finally { setCutting(false) }
+      alert('컷팅 실패: ' + e.message)
+    } finally {
+      setCutting(false)
+    }
   }
 
-  const executeCut = async (jid, segs) => {
-    setCutting(true)
-    try {
-      const valid = segs.filter(s => s.end - s.start >= 5)
-      if (!valid.length) { alert('유효한 구간 없음'); return }
-      const res = await apiClient.post(`/jobs/${jid || jobId}/shorts/confirm`, {
-        segments: valid.map((s, i) => ({
-          index: i + 1, text: s.label || s.text || `구간 ${i + 1}`,
-          start: s.start, end: s.end,
-        }))
-      })
-      setClips(Array.isArray(res.data) ? res.data : [])
-      setPhase('cut')
-    } catch (e) {
-      alert('쇼츠 생성 실패: ' + (e.response?.data?.message || e.message))
-    } finally { setCutting(false) }
-  }
-
-  const handleGuidedCut = () => executeCut(jobId, segments)
-
-  const updClip = (i, field, value) => {
-    setClips(cls => cls.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
-  }
-
-  const handleRegenerate = async () => {
-    if (!jobId) { alert('작업 ID가 없습니다.'); return }
-    setCutting(true)
-    try {
-      const res = await apiClient.post(`/jobs/${jobId}/shorts/confirm`, {
-        segments: clips.map((c) => ({
-          index: c.index,
-          text: c.text || c.label || `쇼츠 ${c.index}`,
-          start: c.start,
-          end: c.end,
-        }))
-      })
-      setClips(Array.isArray(res.data) ? res.data : [])
-      alert('쇼츠 영상이 성공적으로 재생성되었습니다.')
-    } catch (e) {
-      alert('재생성 실패: ' + (e.response?.data?.message || e.message))
-    } finally { setCutting(false) }
-  }
-
-  // ── 구간 관리 ──
-  const addSeg = () => {
-    const last = segments[segments.length - 1]
-    const start = last ? Math.min(last.end + 2, Math.max(0, (totalDur || 300) - clipDur)) : 0
-    const end = Math.min(start + clipDur, totalDur || start + clipDur)
-    setSegments([...segments, {
-      index: segments.length + 1, text: '',
-      label: SEG_LABELS[segments.length % SEG_LABELS.length],
-      start: parseFloat(start.toFixed(2)), end: parseFloat(end.toFixed(2)),
-    }])
-    setActiveSeg(segments.length)
-  }
-
+  // ── 구간 수정/삭제 ──
   const removeSeg = (i) => {
     setSegments(segments.filter((_, idx) => idx !== i).map((s, idx) => ({ ...s, index: idx + 1 })))
     if (activeSeg === i) setActiveSeg(null)
   }
   const updSeg = (i, f, v) => setSegments(segs => segs.map((s, idx) => idx === i ? { ...s, [f]: v } : s))
-  const setStartHere = (i) => updSeg(i, 'start', parseFloat(curTime.toFixed(2)))
-  const setEndHere = (i) => updSeg(i, 'end', parseFloat(curTime.toFixed(2)))
+  const addSeg = () => {
+    const last = segments[segments.length - 1]
+    const start = last ? Math.min(last.end + 2, Math.max(0, totalDur - clipDur)) : 0
+    const end = Math.min(start + clipDur, totalDur)
+    setSegments([...segments, {
+      index: segments.length + 1, text: '',
+      label: `구간 ${segments.length + 1}`,
+      start: parseFloat(start.toFixed(2)), end: parseFloat(end.toFixed(2))
+    }])
+    setActiveSeg(segments.length)
+  }
 
   // ── 타임라인 드래그 ──
   const getT = useCallback((cx) => {
@@ -283,318 +452,427 @@ export default function Shorts() {
 
   const pct = (t) => totalDur ? `${(t / totalDur) * 100}%` : '0%'
 
+  const targetJobId = id || (job && job.id);
+
   return (
     <Layout>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">쇼츠 생성</h1>
-        <p className="text-gray-400 text-sm mt-1">주식 영상 핵심 구간 추출 · AUTO / GUIDED / MANUAL</p>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Video className="text-accent-cyan" size={24} />
+            {targetJobId ? (id ? `롱폼 연동 쇼츠 에디터 (Job #${id})` : `업로드 분석 쇼츠 에디터 (Job #${targetJobId})`) : '쇼츠 수동 제작기'}
+          </h1>
+          <p className="text-gray-400 text-sm mt-1">
+            {targetJobId ? '추출된 대사를 확인하며 마음에 드는 부분을 합쳐 쇼츠를 생성하세요.' : '비디오 파일을 직접 업로드해 잘라냅니다.'}
+          </p>
+        </div>
+        {id && (
+          <button onClick={() => navigate(`/jobs/${id}`)} className="text-xs border border-navy-600 bg-navy-800 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition">
+            ← 롱폼 상세로 돌아가기
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-5 gap-4 mb-4">
-        {/* 왼쪽: 플레이어 */}
-        <div className="col-span-3">
-          <div className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
-            {fileUrl ? (
-              <>
-                <video ref={videoRef} src={fileUrl} className="w-full aspect-video bg-black"
-                  onLoadedMetadata={handleMeta} onTimeUpdate={handleTimeUpdate}
-                  onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
-                <div className="flex items-center gap-3 px-4 py-3 border-t border-navy-700">
-                  <button onClick={() => seek(curTime - 10)} className="text-gray-400 hover:text-white"><SkipBack size={16} /></button>
-                  <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center bg-accent-cyan text-navy-950 rounded-full hover:opacity-90">
-                    {playing ? <Pause size={14} /> : <Play size={14} />}
-                  </button>
-                  <button onClick={() => seek(curTime + 10)} className="text-gray-400 hover:text-white"><SkipForward size={16} /></button>
-                  <span className="text-xs text-gray-400 tabular-nums">{fmt(curTime)} / {fmt(totalDur)}</span>
-                  {activeSeg !== null && segments[activeSeg] && (
-                    <div className="ml-auto flex gap-2">
-                      <button onClick={() => setStartHere(activeSeg)}
-                        className="text-xs bg-navy-700 text-accent-cyan px-2 py-1 rounded-lg hover:bg-navy-600">
-                        ← 시작 지점
-                      </button>
-                      <button onClick={() => setEndHere(activeSeg)}
-                        className="text-xs bg-navy-700 text-accent-cyan px-2 py-1 rounded-lg hover:bg-navy-600">
-                        끝 지점 →
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div onDragOver={e => { e.preventDefault(); setDrag(true) }}
-                onDragLeave={() => setDrag(false)}
-                onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
-                onClick={() => fileRef.current?.click()}
-                className={`aspect-video flex flex-col items-center justify-center cursor-pointer transition ${drag ? 'bg-accent-cyan/5' : 'hover:bg-navy-700/30'}`}>
-                <input ref={fileRef} type="file" accept="video/*" className="hidden"
-                  onChange={e => handleFile(e.target.files[0])} />
-                <Upload className="text-gray-500 mb-3" size={36} />
-                <p className="text-gray-400 text-sm">주식 영상 드래그 또는 클릭</p>
-                <p className="text-xs text-gray-600 mt-1">mp4 · mov · avi</p>
-              </div>
-            )}
-          </div>
+      {loadingJob ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader size={36} className="animate-spin text-accent-cyan" />
+          <span className="text-xs text-gray-500">롱폼 프로젝트 및 씬 구조 로드 중...</span>
         </div>
-
-        {/* 오른쪽: 설정 + 구간 */}
-        <div className="col-span-2 flex flex-col gap-3">
-          <div className="bg-navy-800 rounded-xl border border-navy-700 p-4">
-            {file && (
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-navy-700">
-                <div>
-                  <div className="text-xs font-medium truncate max-w-[150px]">{file.name}</div>
-                  <div className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(1)}MB{totalDur ? ` · ${fmt(totalDur)}` : ''}</div>
-                </div>
-                <button onClick={() => { setFile(null); if (fileUrl) URL.revokeObjectURL(fileUrl); setFileUrl(null) }}
-                  className="text-gray-500 hover:text-accent-red"><X size={14} /></button>
+      ) : (
+        <div className="grid grid-cols-5 gap-6">
+          
+          {/* ==================== 좌측 패널 (대본 씬 리스트) ==================== */}
+          <div className="col-span-2 bg-navy-800 rounded-xl border border-navy-700 p-4 flex flex-col max-h-[680px]">
+              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-navy-700">
+                <FileText size={16} className="text-accent-cyan" />
+                <h3 className="font-semibold text-sm text-white">{id ? '롱폼 전체 대본' : '추출된 영상 대본'} (드래그 가능)</h3>
               </div>
-            )}
-
-            {/* 모드 선택 */}
-            <div className="mb-3">
-              <label className="block text-xs text-gray-400 mb-1.5">자동화 모드</label>
-              <div className="flex gap-1">
-                {[
-                  { m: 'AUTO', label: '자동', desc: 'AI 분석 후 즉시 생성' },
-                  { m: 'GUIDED', label: '반자동', desc: '분석 후 편집 가능' },
-                  { m: 'MANUAL', label: '수동', desc: '직접 구간 지정' },
-                ].map(({ m, label, desc }) => (
-                  <button key={m} onClick={() => { setMode(m) }}
-                    title={desc}
-                    className={`flex-1 py-1.5 rounded text-xs font-semibold transition ${mode === m
-                        ? m === 'AUTO' ? 'bg-accent-green text-navy-950'
-                          : m === 'GUIDED' ? 'bg-accent-cyan text-navy-950'
-                          : 'bg-accent-gold text-navy-950'
-                        : 'bg-navy-700 text-gray-400 hover:bg-navy-600'}`}>{label}</button>
-                ))}
-              </div>
-              <p className="text-xs text-gray-600 mt-1">
-                {mode === 'AUTO' ? 'AI가 주식 핵심 구간을 자동으로 분석·생성합니다'
-                  : mode === 'GUIDED' ? 'AI 분석 후 구간을 직접 편집할 수 있습니다'
-                  : '영상을 보면서 원하는 구간을 직접 지정합니다'}
+              <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">
+                * 씬 대사 블록을 마우스로 잡고 우측 타임라인으로 끌어다 놓으면 해당 구간이 추가됩니다.<br />
+                * 카드를 클릭하면 해당 구간으로 비디오 재생이 이동합니다.
               </p>
+              
+              <div className="space-y-2.5 overflow-y-auto flex-1 pr-1.5">
+                {scenes.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 opacity-50 text-center">
+                    <span className="text-xs text-gray-400">비디오를 업로드하고 분석을 진행하면<br/>여기에 스크립트가 추출됩니다.</span>
+                  </div>
+                ) : scenes.map((scene) => {
+                  const isHighlighted = selectedKeywords.some(k => k.matching_scene_indices?.includes(scene.index));
+                  return (
+                    <div
+                      key={scene.index}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, scene)}
+                      onClick={() => seek(scene.start)}
+                      className={`p-3 rounded-lg border text-left cursor-pointer transition select-none ${
+                        isHighlighted 
+                          ? 'border-accent-cyan bg-accent-cyan/10 shadow-lg shadow-accent-cyan/5' 
+                          : 'border-navy-700 bg-navy-900/50 hover:border-navy-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-accent-gold">Scene #{scene.index}</span>
+                        <span className="text-[10px] text-gray-500 tabular-nums">
+                          {fmt(scene.start)} ~ {fmt(scene.start + scene.duration)} ({scene.duration?.toFixed(1)}초)
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-200 leading-relaxed font-medium">
+                        {scene.prompt || scene.text || '(대사 없음)'}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* AUTO/GUIDED 설정 */}
-            {mode !== 'MANUAL' && (
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">구간 수</label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map(n => (
-                      <button key={n} onClick={() => setShortsCount(n)}
-                        className={`flex-1 py-1 rounded text-xs font-medium transition ${shortsCount === n ? 'bg-accent-cyan text-navy-950' : 'bg-navy-700 text-gray-400 hover:bg-navy-600'}`}>{n}</button>
-                    ))}
+          {/* ==================== 우측 패널 (플레이어 & 타임라인 & AI 기능) ==================== */}
+          <div className="col-span-3 space-y-4">
+            
+            {/* 비디오 플레이어 */}
+            <div className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
+              {fileUrl ? (
+                <>
+                  <video ref={videoRef} src={fileUrl} className="w-full aspect-video bg-black"
+                    onLoadedMetadata={handleMeta} onTimeUpdate={handleTimeUpdate}
+                    onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
+                  <div className="flex items-center gap-3 px-4 py-3 border-t border-navy-700">
+                    <button onClick={() => seek(curTime - 10)} className="text-gray-400 hover:text-white"><SkipBack size={16} /></button>
+                    <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center bg-accent-cyan text-navy-950 rounded-full hover:opacity-90">
+                      {playing ? <Pause size={14} /> : <Play size={14} />}
+                    </button>
+                    <button onClick={() => seek(curTime + 10)} className="text-gray-400 hover:text-white"><SkipForward size={16} /></button>
+                    <span className="text-xs text-gray-400 tabular-nums">{fmt(curTime)} / {fmt(totalDur)}</span>
+                    
+                    {activeSeg !== null && segments[activeSeg] && (
+                      <div className="ml-auto flex gap-2">
+                        <button onClick={() => updSeg(activeSeg, 'start', parseFloat(curTime.toFixed(2)))}
+                          className="text-[10px] bg-navy-700 text-accent-cyan px-2 py-1 rounded hover:bg-navy-600">
+                          ← 시작 설정
+                        </button>
+                        <button onClick={() => updSeg(activeSeg, 'end', parseFloat(curTime.toFixed(2)))}
+                          className="text-[10px] bg-navy-700 text-accent-cyan px-2 py-1 rounded hover:bg-navy-600">
+                          끝 설정 →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div onDragOver={e => { e.preventDefault(); setDrag(true) }}
+                  onDragLeave={() => setDrag(false)}
+                  onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
+                  onClick={() => fileRef.current?.click()}
+                  className="aspect-video flex flex-col items-center justify-center cursor-pointer hover:bg-navy-700/30 transition">
+                  <input ref={fileRef} type="file" accept="video/*" className="hidden"
+                    onChange={e => handleFile(e.target.files[0])} />
+                  <Upload className="text-gray-500 mb-3" size={36} />
+                  <p className="text-gray-400 text-sm">로컬 영상 업로드하기</p>
+                </div>
+              )}
+            </div>
+
+            {/* 업로드 모드 분석 컨트롤 (비디오 하단에 바로 배치하여 가시성 확보) */}
+            {!id && fileUrl && !job && (
+              <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 shadow-lg shadow-accent-cyan/10 ring-1 ring-accent-cyan/20">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5">
+                      <Sparkles size={16} /> 스크립트 자동 추출 및 분석
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-1">
+                      비디오를 분석하여 대사(스크립트)를 추출하고 좌측 패널에 생성합니다.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-400">쇼츠 갯수:</label>
+                      <input type="number" value={shortsCount} onChange={e => setShortsCount(Number(e.target.value))}
+                        className="w-16 bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-white text-center" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-400">쇼츠 분량(초):</label>
+                      <input type="number" value={clipDur} onChange={e => setClipDur(Number(e.target.value))}
+                        className="w-16 bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-white text-center" />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">기본 길이</label>
-                  <select value={clipDur} onChange={e => setClipDur(Number(e.target.value))}
-                    className="w-full bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-white focus:outline-none">
-                    <option value={30}>30초</option>
-                    <option value={45}>45초</option>
-                    <option value={60}>60초</option>
-                    <option value={90}>90초</option>
-                  </select>
-                </div>
+                <button onClick={handleLocalAnalyze} disabled={analyzing || !file}
+                  className="w-full flex items-center justify-center gap-2 bg-accent-cyan text-navy-950 font-bold py-2.5 rounded-lg hover:opacity-90 transition shadow-md shadow-accent-cyan/20">
+                  {analyzing ? <Loader size={16} className="animate-spin" /> : <Scissors size={16} />}
+                  {analyzing ? '비디오를 클라우드에 업로드하고 분석하는 중입니다 (1~2분 소요)...' : '업로드 영상 자동 분석 시작'}
+                </button>
               </div>
             )}
 
-            {/* 액션 버튼 */}
-            {mode !== 'MANUAL' ? (
-              <button onClick={handleAnalyze} disabled={!file || analyzing}
-                className="w-full flex items-center justify-center gap-2 bg-accent-cyan text-navy-950 font-semibold rounded-lg py-2 text-sm hover:opacity-90 disabled:opacity-50 transition">
-                {analyzing ? <Loader size={14} className="animate-spin" /> : <Scissors size={14} />}
-                {analyzing ? 'AI 분석 중...' : 'AI 구간 분석 시작'}
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <button onClick={addSeg}
-                  className="w-full flex items-center justify-center gap-2 bg-accent-gold text-navy-950 font-semibold rounded-lg py-2 text-sm hover:opacity-90 transition">
-                  <Plus size={14} />구간 직접 추가
-                </button>
-                {segments.length > 0 && (
-                  <button onClick={handleManualCut} disabled={cutting}
-                    className="w-full flex items-center justify-center gap-2 bg-accent-green text-navy-950 font-semibold rounded-lg py-2 text-sm hover:opacity-90 disabled:opacity-50 transition">
-                    {cutting ? <Loader size={14} className="animate-spin" /> : <Scissors size={14} />}
-                    {cutting ? '쇼츠 생성 중...' : '쇼츠 생성'}
+            {/* AI 기승전결 추천 & 키워드 보드 */}
+            <div className="bg-navy-800 rounded-xl border border-navy-700 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-accent-gold" />
+                    AI 스토리 분석 및 추천 (Claude 4.6)
+                  </h4>
+                  <button
+                    onClick={handleExtractAiScenarios}
+                    disabled={extractingAi}
+                    className="flex items-center gap-1 bg-accent-gold text-navy-950 text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
+                  >
+                    {extractingAi ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                    {aiScenarios ? '시나리오 재추천' : '스토리 분석하기'}
                   </button>
+                </div>
+
+                {extractingAi && (
+                  <div className="flex items-center justify-center py-6 gap-2 text-xs text-gray-500">
+                    <Loader size={14} className="animate-spin text-accent-gold" />
+                    <span>Claude 4.6 모델이 대본 구조를 정밀 분석하여 10~20초 분량 씬 단위로 최적의 기승전결 시나리오를 구성하고 있습니다...</span>
+                  </div>
+                )}
+
+                {aiScenarios && !extractingAi && (
+                  <div className="space-y-4">
+                    <div className="flex gap-6 border-b border-navy-700">
+                      <button onClick={() => setAiActiveTab('scenario')} className={`text-sm font-bold pb-2 border-b-2 transition ${aiActiveTab === 'scenario' ? 'text-accent-gold border-accent-gold' : 'text-gray-400 border-transparent hover:text-white'}`}>
+                        🎬 기승전결 시나리오 추천
+                      </button>
+                      <button onClick={() => setAiActiveTab('keyword')} className={`text-sm font-bold pb-2 border-b-2 transition ${aiActiveTab === 'keyword' ? 'text-accent-gold border-accent-gold' : 'text-gray-400 border-transparent hover:text-white'}`}>
+                        🏷️ 연관 키워드 추천
+                      </button>
+                    </div>
+
+                    {aiActiveTab === 'keyword' && (
+                      <div className="animate-fade-in">
+                        <span className="text-xs text-gray-400 block mb-2 flex items-center gap-1">
+                          <Tag size={11} />추천 키워드 (여러 개 선택 시 <strong>하나라도 포함(OR)</strong>된 구간이 합쳐집니다):
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {aiScenarios.keywords?.map((kw, i) => (
+                            <button
+                              key={i}
+                              onClick={() => toggleKeyword(kw)}
+                              className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                                selectedKeywords.some(k => k.word === kw.word)
+                                  ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold shadow-md'
+                                  : 'bg-navy-900 border-navy-700 text-gray-300 hover:border-accent-cyan hover:text-accent-cyan'
+                              }`}
+                              title={kw.description}
+                            >
+                              #{kw.word}
+                            </button>
+                          ))}
+                        </div>
+                        {selectedKeywords.length > 0 && (
+                          <div className="mt-4 flex flex-col items-start justify-between bg-accent-cyan/10 border border-accent-cyan/20 p-3 rounded-lg">
+                            <span className="text-xs text-accent-cyan font-medium mb-3">
+                              ✓ 다중 선택된 <strong>{selectedKeywords.map(k => '#' + k.word).join(', ')}</strong>에 매칭되는 <strong>{segments.length}</strong>개 구간이 타임라인에 구성되었습니다.
+                            </span>
+                            <button
+                              onClick={() => handleCutShorts(true)}
+                              disabled={cutting}
+                              className="bg-accent-cyan text-navy-950 text-xs font-bold px-4 py-2 rounded shadow hover:opacity-90 transition w-full text-center"
+                            >
+                              이 구간 모두 합쳐서 단일 쇼츠 즉시 생성
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {aiActiveTab === 'scenario' && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 animate-fade-in">
+                        {Object.entries(aiScenarios.scenarios || {}).map(([key, sc]) => {
+                          if (key === 'keywords') return null;
+                          return (
+                            <div key={key} className="bg-navy-900 border border-navy-600 rounded-lg p-4 flex flex-col justify-between hover:border-accent-gold transition shadow-sm hover:shadow-md">
+                              <div>
+                                <h5 className="font-bold text-white text-sm mb-2">{sc.title}</h5>
+                                <p className="text-[11px] text-gray-400 leading-relaxed mb-4">{sc.description}</p>
+                              </div>
+                              <button
+                                onClick={() => handleApplyScenario(sc)}
+                                className="w-full bg-navy-800 border border-navy-700 text-gray-300 text-xs py-2.5 rounded font-medium hover:text-white hover:bg-navy-700 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
+                              >
+                                이 시나리오 즉시 제작하기 <ArrowRight size={12} />
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+            {/* 타임라인 드롭존 및 편집 */}
+            {totalDur > 0 && (
+              <div className="bg-navy-800 rounded-xl border border-navy-700 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-semibold text-gray-400">쇼츠 타임라인 구간 편집</h3>
+                  <div className="flex gap-2">
+                    <button onClick={addSeg} className="flex items-center gap-1 text-[10px] bg-navy-700 text-gray-300 px-2 py-1 rounded hover:bg-navy-600">
+                      <Plus size={11} />수동 추가
+                    </button>
+                    {segments.length > 0 && (
+                      <button onClick={() => setSegments([])} className="text-[10px] bg-navy-700 text-accent-red px-2 py-1 rounded hover:bg-navy-600">
+                        초기화
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 타임라인 블록 영역 */}
+                <div
+                  ref={tlRef}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleDropOnTimeline}
+                  className="relative h-14 bg-navy-900 border-2 border-dashed border-navy-700 rounded-lg select-none cursor-pointer flex items-center justify-center mb-4"
+                  onClick={e => { if (!dragging) seek(getT(e.clientX)) }}
+                >
+                  {segments.length === 0 && (
+                    <span className="text-xs text-gray-600 pointer-events-none">
+                      {id ? '좌측 대본 카드를 여기에 끌어다 놓아 씬을 배치하세요.' : '재생 바를 이동시켜 구간을 추가하세요.'}
+                    </span>
+                  )}
+                  {Array.from({ length: Math.floor(totalDur / 30) + 1 }).map((_, i) => {
+                    const t = i * 30
+                    return (
+                      <div key={i} className="absolute top-0 h-full pointer-events-none" style={{ left: pct(t) }}>
+                        <div className="w-px h-2 bg-navy-800" />
+                        <span style={{ fontSize: 8, marginLeft: 2 }} className="text-gray-700">{fmt(t)}</span>
+                      </div>
+                    )
+                  })}
+                  {segments.map((seg, i) => {
+                    const l = (seg.start / totalDur) * 100
+                    const w = Math.max(((seg.end - seg.start) / totalDur) * 100, 0.5)
+                    return (
+                      <div key={i}
+                        className={`absolute top-2.5 h-9 rounded border flex items-center justify-center transition ${BG_COLORS[i % BG_COLORS.length]} ${activeSeg === i ? 'opacity-100 ring-2 ring-white/20' : 'opacity-70'}`}
+                        style={{ left: `${l}%`, width: `${w}%` }}
+                        onClick={e => { e.stopPropagation(); setActiveSeg(i); seek(seg.start) }}>
+                        <div className="absolute left-0 top-0 w-1.5 h-full cursor-w-resize hover:bg-white/20 rounded-l"
+                          onMouseDown={e => onTlDown(e, i, 'start')} />
+                        <span className="text-[10px] font-bold text-navy-950 pointer-events-none truncate max-w-[80%]">#{seg.index}</span>
+                        <div className="absolute right-0 top-0 w-1.5 h-full cursor-e-resize hover:bg-white/20 rounded-r"
+                          onMouseDown={e => onTlDown(e, i, 'end')} />
+                      </div>
+                    )
+                  })}
+                  <div className="absolute top-0 h-full w-px bg-accent-red pointer-events-none z-10" style={{ left: pct(curTime) }}>
+                    <div className="w-2 h-2 bg-accent-red rounded-full -ml-1 -mt-0.5" />
+                  </div>
+                </div>
+
+                {/* 구간 리스트 카드들 */}
+                {segments.length > 0 && (
+                  <div className="space-y-2 overflow-y-auto max-h-52 mb-4">
+                    {segments.map((seg, i) => (
+                      <div
+                        key={i}
+                        onClick={() => { setActiveSeg(i); seek(seg.start) }}
+                        className={`p-2.5 rounded-lg border cursor-pointer transition flex items-center justify-between ${
+                          activeSeg === i ? 'border-accent-cyan bg-accent-cyan/5' : 'border-navy-700 bg-navy-900/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs font-bold ${COLORS[i % COLORS.length]}`}>#{i + 1}</span>
+                          <div>
+                            <input
+                              value={seg.label || ''}
+                              onChange={e => { e.stopPropagation(); updSeg(i, 'label', e.target.value) }}
+                              onClick={e => e.stopPropagation()}
+                              className="bg-transparent text-xs font-semibold text-white focus:outline-none"
+                              placeholder={`구간 ${i+1}`}
+                            />
+                            <div className="text-[10px] text-gray-500 flex items-center gap-1.5 mt-0.5">
+                              <Clock size={9} />
+                              <span>{fmt(seg.start)} ~ {fmt(seg.end)}</span>
+                              <span className="text-gray-600">({(seg.end - seg.start).toFixed(0)}초)</span>
+                            </div>
+                          </div>
+                        </div>
+                        <button onClick={e => { e.stopPropagation(); removeSeg(i) }} className="text-gray-600 hover:text-accent-red">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 최종 컷팅 및 병합 액션 버튼 */}
+                {segments.length > 0 && (
+                  <div className="flex gap-3 pt-2">
+                    {id ? (
+                      <>
+                        <button
+                          onClick={() => handleCutShorts(true)}
+                          disabled={cutting}
+                          className="flex-1 flex items-center justify-center gap-2 bg-accent-green text-navy-950 font-bold rounded-lg py-2.5 text-xs hover:opacity-90 disabled:opacity-50 transition"
+                        >
+                          {cutting ? <Loader size={14} className="animate-spin" /> : <Scissors size={14} />}
+                          선택된 구간 전부 합쳐서 단일 쇼츠 비디오 생성
+                        </button>
+                        <button
+                          onClick={() => handleCutShorts(false)}
+                          disabled={cutting}
+                          className="flex-1 flex items-center justify-center gap-2 bg-navy-700 text-white border border-navy-600 font-bold rounded-lg py-2.5 text-xs hover:bg-navy-600 disabled:opacity-50 transition"
+                        >
+                          각 구간별 개별 쇼츠 클립으로 생성
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleLocalCut}
+                        disabled={cutting}
+                        className="w-full flex items-center justify-center gap-2 bg-accent-green text-navy-950 font-bold rounded-lg py-2.5 text-xs hover:opacity-90 disabled:opacity-50 transition"
+                      >
+                        {cutting ? <Loader size={14} className="animate-spin" /> : <Scissors size={14} />}
+                        로컬 컷팅 시작
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
-          </div>
 
-          {/* 구간 목록 */}
-          {segments.length > 0 && (
-            <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold">구간 목록 ({segments.length})</h3>
-                <div className="flex gap-2">
-                  <button onClick={addSeg}
-                    className="flex items-center gap-1 text-xs bg-navy-700 text-gray-300 px-2 py-1 rounded hover:bg-navy-600">
-                    <Plus size={11} />추가
-                  </button>
-                  {mode === 'GUIDED' && phase === 'analyzed' && (
-                    <button onClick={handleGuidedCut} disabled={cutting}
-                      className="flex items-center gap-1 text-xs bg-accent-green text-navy-950 font-semibold px-3 py-1 rounded hover:opacity-90 disabled:opacity-50">
-                      {cutting ? <Loader size={11} className="animate-spin" /> : <Scissors size={11} />}
-                      쇼츠 생성
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-1.5 overflow-y-auto max-h-52">
-                {segments.map((seg, i) => (
-                  <div key={i} onClick={() => { setActiveSeg(i); seek(seg.start) }}
-                    className={`rounded-lg border cursor-pointer transition ${activeSeg === i ? 'border-accent-cyan bg-accent-cyan/5' : 'border-navy-700 hover:border-navy-600'}`}>
-                    <div className="flex items-center justify-between px-3 py-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`text-xs font-bold flex-shrink-0 ${COLORS[i % COLORS.length]}`}>#{i + 1}</span>
-                        <div className="min-w-0">
-                          <input value={seg.label || ''}
-                            onChange={e => { e.stopPropagation(); updSeg(i, 'label', e.target.value) }}
-                            onClick={e => e.stopPropagation()}
-                            className="bg-transparent text-xs font-medium w-24 focus:outline-none truncate"
-                            placeholder={`구간 ${i + 1}`} />
-                          <div className="text-xs text-gray-500 flex items-center gap-1">
-                            <Clock size={9} />
-                            <span contentEditable suppressContentEditableWarning
-                              onBlur={e => updSeg(i, 'start', parseSec(e.target.innerText))}
-                              className="focus:outline-none focus:text-accent-cyan cursor-text"
-                            >{fmt(seg.start)}</span>
-                            <span>→</span>
-                            <span contentEditable suppressContentEditableWarning
-                              onBlur={e => updSeg(i, 'end', parseSec(e.target.innerText))}
-                              className="focus:outline-none focus:text-accent-cyan cursor-text"
-                            >{fmt(seg.end)}</span>
-                            <span className="text-gray-600">{(seg.end - seg.start).toFixed(0)}s</span>
-                          </div>
+            {/* 쇼츠 산출물 표시 및 다운로드 */}
+            {clips.length > 0 && (
+              <div className="bg-navy-800 rounded-xl border border-accent-green p-5">
+                <h3 className="font-semibold text-sm text-accent-green mb-3 flex items-center gap-2">
+                  <CheckCircle size={16} /> 쇼츠 비디오 렌더링 완료 (9:16 포맷)
+                </h3>
+                <div className="space-y-2">
+                  {clips.map((clip, i) => (
+                    <div key={i} className="flex items-center justify-between bg-navy-700/50 rounded-lg px-4 py-3 border border-navy-600">
+                      <div>
+                        <div className="text-sm font-semibold text-white truncate max-w-xs">
+                          #{clip.index} {clip.text || '합성 쇼츠'}
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                          <Clock size={9} />
+                          <span>{clip.duration?.toFixed(1)}초 분량</span>
+                          {clip.file_size_mb && <span className="ml-2 text-gray-600">{clip.file_size_mb}MB</span>}
                         </div>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); removeSeg(i) }}
-                        className="text-gray-600 hover:text-accent-red flex-shrink-0 ml-1"><Trash2 size={13} /></button>
+                      <button
+                        onClick={async () => {
+                          setDownloadingIdx(i)
+                          await downloadFile(clip.output_path, `short_${clip.index}.mp4`)
+                          setDownloadingIdx(null)
+                        }}
+                        disabled={downloadingIdx === i}
+                        className="flex items-center gap-1.5 bg-accent-green text-navy-950 text-xs font-semibold py-1.5 px-3 rounded-lg hover:opacity-90 transition disabled:opacity-50"
+                      >
+                        {downloadingIdx === i ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
+                        다운로드
+                      </button>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* MANUAL 가이드 */}
-          {mode === 'MANUAL' && segments.length === 0 && (
-            <div className="bg-navy-800 rounded-xl border border-accent-gold/30 p-4">
-              <p className="text-xs font-semibold text-accent-gold mb-2">수동 구간 설정 방법</p>
-              <ol className="text-xs text-gray-400 space-y-1">
-                <li>① [구간 직접 추가] 버튼 클릭</li>
-                <li>② 영상 재생 → 원하는 지점에서 [← 시작 지점] 클릭</li>
-                <li>③ 끝 지점에서 [끝 지점 →] 클릭</li>
-                <li>④ 타임라인 핸들 드래그로 미세 조정</li>
-                <li>⑤ [쇼츠 생성] 클릭</li>
-              </ol>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 타임라인 */}
-      {totalDur > 0 && (
-        <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-gray-400">타임라인 — 구간 드래그 편집</h3>
-            <span className="text-xs text-gray-500">{fmt(totalDur)}</span>
+            )}
+            
           </div>
-          <div ref={tlRef}
-            className="relative h-12 bg-navy-700 rounded-lg select-none cursor-pointer"
-            onClick={e => { if (!dragging) seek(getT(e.clientX)) }}>
-            {Array.from({ length: Math.floor(totalDur / 30) + 1 }).map((_, i) => {
-              const t = i * 30
-              return (
-                <div key={i} className="absolute top-0 h-full pointer-events-none" style={{ left: pct(t) }}>
-                  <div className="w-px h-2 bg-navy-600" />
-                  <span style={{ fontSize: 9, marginLeft: 2 }} className="text-gray-600">{fmt(t)}</span>
-                </div>
-              )
-            })}
-            {segments.map((seg, i) => {
-              const l = (seg.start / totalDur) * 100
-              const w = Math.max(((seg.end - seg.start) / totalDur) * 100, 0.3)
-              return (
-                <div key={i}
-                  className={`absolute top-2 h-8 rounded border-2 flex items-center justify-center transition ${BG_COLORS[i % BG_COLORS.length]} ${activeSeg === i ? 'opacity-100 ring-2 ring-white/20' : 'opacity-60'}`}
-                  style={{ left: `${l}%`, width: `${w}%` }}
-                  onClick={e => { e.stopPropagation(); setActiveSeg(i); seek(seg.start) }}>
-                  <div className="absolute left-0 top-0 w-2 h-full cursor-w-resize hover:bg-white/20 rounded-l"
-                    onMouseDown={e => onTlDown(e, i, 'start')} />
-                  <span className="text-xs font-bold text-navy-950 pointer-events-none">#{i + 1}</span>
-                  <div className="absolute right-0 top-0 w-2 h-full cursor-e-resize hover:bg-white/20 rounded-r"
-                    onMouseDown={e => onTlDown(e, i, 'end')} />
-                </div>
-              )
-            })}
-            <div className="absolute top-0 h-full w-0.5 bg-accent-red pointer-events-none z-10" style={{ left: pct(curTime) }}>
-              <div className="w-2 h-2 bg-accent-red rounded-full -ml-0.5 -mt-0.5" />
-            </div>
-          </div>
-          <p className="text-xs text-gray-600 mt-1 text-center">
-            블록 클릭: 구간 선택 · 핸들 드래그: 시작/끝 조정 · 타임라인 클릭: 재생 이동
-          </p>
-        </div>
-      )}
-
-      {/* 결과 */}
-      {clips.length > 0 && (
-        <div className="bg-navy-800 rounded-xl border border-accent-green p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-sm text-accent-green">
-              ✓ 쇼츠 {clips.length}개 생성 완료 (9:16 세로 비율)
-            </h3>
-            <button onClick={handleRegenerate} disabled={cutting}
-              className="flex items-center gap-1.5 bg-accent-gold text-navy-950 text-xs font-semibold py-1.5 px-3 rounded-lg hover:opacity-90 transition disabled:opacity-50">
-              {cutting ? <Loader size={12} className="animate-spin" /> : <Scissors size={12} />}
-              구간 적용 및 재생성
-            </button>
-          </div>
-          <div className="space-y-2">
-            {clips.map((clip, i) => (
-              <div key={i} className="flex items-center justify-between bg-navy-700/50 rounded-lg px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className={`text-xs font-bold ${COLORS[i % COLORS.length]}`}>#{clip.index}</span>
-                  <div>
-                    <input value={clip.text || clip.label || ''}
-                      onChange={e => updClip(i, 'text', e.target.value)}
-                      className="bg-transparent text-sm font-semibold w-48 focus:outline-none focus:text-accent-cyan truncate"
-                      placeholder={`쇼츠 ${clip.index}`} />
-                    <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
-                      <Clock size={9} />
-                      <span contentEditable suppressContentEditableWarning
-                        onBlur={e => updClip(i, 'start', parseSec(e.target.innerText))}
-                        className="focus:outline-none focus:text-accent-cyan cursor-text font-medium"
-                      >{fmt(clip.start)}</span>
-                      <span>→</span>
-                      <span contentEditable suppressContentEditableWarning
-                        onBlur={e => updClip(i, 'end', parseSec(e.target.innerText))}
-                        className="focus:outline-none focus:text-accent-cyan cursor-text font-medium"
-                      >{fmt(clip.end)}</span>
-                      <span className="text-gray-600 font-medium">{(clip.end - clip.start).toFixed(0)}s</span>
-                      {clip.file_size_mb && <span className="ml-2 text-gray-600">{clip.file_size_mb}MB</span>}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={async () => {
-                    setDownloadingIdx(i)
-                    await downloadFile(clip.output_path, `short_${clip.index}.mp4`)
-                    setDownloadingIdx(null)
-                  }}
-                  disabled={downloadingIdx === i}
-                  className="flex items-center gap-1.5 bg-accent-green text-navy-950 text-xs font-semibold py-1.5 px-3 rounded-lg hover:opacity-90 transition disabled:opacity-50">
-                  {downloadingIdx === i ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
-                  MP4
-                </button>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-gray-500 mt-3">9:16 세로 비율 (유튜브 쇼츠 포맷 · 재생성 시 변경 사항이 즉시 영상에 인코딩되어 반영됩니다)</p>
         </div>
       )}
     </Layout>

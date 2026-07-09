@@ -132,7 +132,7 @@ public class ImagesService {
     }
 
     @Transactional
-    public void updateScene(Long jobId, int index, String text, String section) {
+    public void updateScene(Long jobId, int index, String text, String section, String mode) {
         // 1. SCENE_IMAGE 타입의 에셋 전체 조회
         List<Asset> assets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
         Asset target = null;
@@ -153,30 +153,36 @@ public class ImagesService {
             throw new IllegalArgumentException("해당 씬 이미지를 찾을 수 없습니다: index=" + index);
         }
 
-        // 2. prompt 변경
-        sceneDto.setPrompt(text);
+        // 2. prompt 변경: mode가 "image"가 아닌 경우에만 텍스트를 업데이트함
+        if (mode == null || !mode.equalsIgnoreCase("image")) {
+            sceneDto.setPrompt(text);
+        }
         if (section != null && !section.isBlank()) {
             sceneDto.setSection(section);
         }
         target.setMetaJson(safeJson(sceneDto));
         assetRepository.save(target);
 
-        // 3. 채널 프로필 로드
-        VideoJob job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
-        String characterImagePath = null;
-        String characterStylePrompt = null;
-        if (job.getChannelId() != null) {
-            ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
-            if (profile != null) {
-                characterImagePath = profile.getCharacterImagePath();
-                characterStylePrompt = profile.getCharacterStylePrompt();
+        // 3. 이미지 재생성: mode가 "text"가 아닌 경우에만 FastAPI 호출
+        if (mode == null || !mode.equalsIgnoreCase("text")) {
+            VideoJob job = jobRepository.findById(jobId)
+                    .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+            String characterImagePath = null;
+            String characterStylePrompt = null;
+            if (job.getChannelId() != null) {
+                ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
+                if (profile != null) {
+                    characterImagePath = profile.getCharacterImagePath();
+                    characterStylePrompt = profile.getCharacterStylePrompt();
+                }
             }
-        }
 
-        // 4. FastAPI에 단일 이미지 재생성 요청
-        fastApiClient.generateSingleImage(jobId, index, text, sceneDto.getSection(), characterImagePath, characterStylePrompt);
-        log.info("씬 이미지 재생성 요청 완료: jobId={}, index={}, section={}", jobId, index, sceneDto.getSection());
+            // 이미지 재생성은 sceneDto의 (업데이트되었거나 기존의) prompt를 기준으로 호출
+            fastApiClient.generateSingleImage(jobId, index, sceneDto.getPrompt(), sceneDto.getSection(), characterImagePath, characterStylePrompt);
+            log.info("씬 이미지 재생성 요청 완료: jobId={}, index={}, section={}, mode={}", jobId, index, sceneDto.getSection(), mode);
+        } else {
+            log.info("씬 텍스트 수정 완료 (이미지 유지): jobId={}, index={}", jobId, index);
+        }
     }
 
     // ============================

@@ -18,6 +18,10 @@ export const jobsApi = {
   confirmKeyword: (id, keyword) =>
     apiClient.post(`/jobs/${id}/keyword/confirm`, { selectedKeyword: keyword }).then(r => r.data),
 
+  // 트렌딩
+  trendingYoutube: (keyword) =>
+    apiClient.get(`/trending/youtube`, { params: { keyword } }).then(r => r.data),
+
   // 스크립트
   generateScript: (id) => apiClient.post(`/jobs/${id}/script/generate`).then(r => r.data),
   confirmScript: (id, script) =>
@@ -31,8 +35,8 @@ export const jobsApi = {
   // 이미지
   generateImages: (id) => apiClient.post(`/jobs/${id}/images/generate`).then(r => r.data),
   confirmImages: (id) => apiClient.post(`/jobs/${id}/images/confirm`, {}).then(r => r.data),
-  updateSceneImage: (id, index, text, section = 'default') =>
-    apiClient.post(`/jobs/${id}/images/scenes/${index}`, { text, section }).then(r => r.data),
+  updateSceneImage: (id, index, text, section = 'default', mode = 'both') =>
+    apiClient.post(`/jobs/${id}/images/scenes/${index}`, { text, section, mode }).then(r => r.data),
 
   // 롱폼
   generateLongform: (id) => apiClient.post(`/jobs/${id}/longform/generate`).then(r => r.data),

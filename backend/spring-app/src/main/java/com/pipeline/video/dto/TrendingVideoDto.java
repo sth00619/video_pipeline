@@ -1,0 +1,25 @@
+package com.pipeline.video.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+public class TrendingVideoDto {
+    private String title;
+    private String channelTitle;
+    private String videoId;
+    private Long views;
+    private Long subscribers;
+    private Long channelAvgViews;
+    private String publishedAt;
+    private Double hoursSincePublish;
+}

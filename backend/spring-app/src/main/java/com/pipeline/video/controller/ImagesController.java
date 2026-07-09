@@ -47,7 +47,8 @@ public class ImagesController {
             @AuthenticationPrincipal String username) {
         String text = body.get("text");
         String section = body.get("section");
-        imagesService.updateScene(jobId, index, text, section);
+        String mode = body.get("mode"); // "image" | "text" | "both"
+        imagesService.updateScene(jobId, index, text, section, mode);
         return ResponseEntity.ok(Map.of("status", "OK"));
     }
 }

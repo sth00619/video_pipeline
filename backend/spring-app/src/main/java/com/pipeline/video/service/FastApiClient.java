@@ -99,6 +99,43 @@ public class FastApiClient {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> extractShortsScenarios(Long jobId, List<Map<String, Object>> scenes) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            bodyMap.put("scenes", scenes);
+            String responseBody = postJson(fastApiUrl + "/workers/shorts/extract-scenarios", bodyMap);
+            return objectMapper.readValue(responseBody, Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("FastAPI extract scenarios 오류: " + e.getMessage(), e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public ShortClipInfo cutMergeShorts(Long jobId, String sourceVideoPath, List<Map<String, Object>> segments, String outputPath) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("source_video_path", sourceVideoPath);
+            bodyMap.put("segments", segments);
+            bodyMap.put("job_id", jobId);
+            bodyMap.put("output_path", outputPath);
+            String responseBody = postJson(fastApiUrl + "/workers/shorts/cut-merge", bodyMap);
+            Map<String, Object> response = objectMapper.readValue(responseBody, Map.class);
+            Map<String, Object> clipMap = (Map<String, Object>) response.get("clip");
+            
+            ShortClipInfo info = new ShortClipInfo();
+            info.setIndex((Integer) clipMap.get("index"));
+            info.setText((String) clipMap.get("text"));
+            info.setStart(((Number) clipMap.get("start")).doubleValue());
+            info.setEnd(((Number) clipMap.get("end")).doubleValue());
+            info.setOutputPath((String) clipMap.get("output_path"));
+            return info;
+        } catch (Exception e) {
+            throw new RuntimeException("FastAPI cut-merge 오류: " + e.getMessage(), e);
+        }
+    }
+
     // Phase 3-1 — 키워드
     public KeywordSearchResponse searchKeywords(String seed, int limit, String category,
                                                 int outperformerCount, Long jobId) {
@@ -220,6 +257,29 @@ public class FastApiClient {
         } catch (Exception e) {
             log.error("BGM 생성 오류 (무시하고 계속 진행): {}", e.getMessage());
             // BGM 실패가 전체 파이프라인을 멈추게 하지 않음
+        }
+    }
+
+    public List<TrendingVideoDto> getTrendingVideos(String keyword, int limit) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("keyword", keyword);
+            bodyMap.put("limit", limit);
+            
+            String responseBody = postJson(fastApiUrl + "/workers/trending/youtube", bodyMap);
+            Map<String, Object> response = objectMapper.readValue(responseBody, Map.class);
+            List<Map<String, Object>> videosMap = (List<Map<String, Object>>) response.get("videos");
+            
+            List<TrendingVideoDto> videos = new ArrayList<>();
+            if (videosMap != null) {
+                for (Map<String, Object> map : videosMap) {
+                    TrendingVideoDto dto = objectMapper.convertValue(map, TrendingVideoDto.class);
+                    videos.add(dto);
+                }
+            }
+            return videos;
+        } catch (Exception e) {
+            throw new RuntimeException("트렌딩 비디오 검색 오류: " + e.getMessage(), e);
         }
     }
 

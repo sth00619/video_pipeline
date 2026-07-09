@@ -106,6 +106,36 @@ public class LongformService {
         job.setStatus(JobStatus.PREVIEW_PENDING);
         jobRepository.save(job);
 
+        // 7. 쇼츠 시나리오 자동 추출
+        try {
+            log.info("자동 쇼츠 시나리오 추출 시작: jobId={}", jobId);
+            
+            // 최신 업데이트된 sceneAsset을 가져옵니다.
+            List<Asset> latestSceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+            List<Map<String, Object>> parsedScenes = latestSceneAssets.stream()
+                .map(a -> {
+                    try {
+                        return (Map<String, Object>) objectMapper.readValue(a.getMetaJson(), Map.class);
+                    } catch(Exception e) {
+                        return null;
+                    }
+                }).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toList());
+
+            if (!parsedScenes.isEmpty()) {
+                Object scenarios = fastApiClient.extractShortsScenarios(jobId, parsedScenes);
+                
+                Asset scenarioAsset = Asset.builder()
+                        .jobId(jobId)
+                        .assetType(AssetType.SHORTS_SCENARIO)
+                        .metaJson(objectMapper.writeValueAsString(scenarios))
+                        .build();
+                assetRepository.save(scenarioAsset);
+                log.info("자동 쇼츠 시나리오 추출 완료 및 저장 성공: jobId={}", jobId);
+            }
+        } catch(Exception e) {
+            log.error("쇼츠 시나리오 자동 추출 실패: {}", e.getMessage());
+        }
+
         // AUTO 모드: 자동 confirm
         if (autonomyService.isAuto(job)) {
             log.info("AUTO 모드 — 롱폼 미리보기 자동 확정");
@@ -391,6 +421,38 @@ public class LongformService {
                         result.getDurationSeconds(), result.getSceneCount()));
 
         log.info("롱폼 동영상 재조립 완료: jobId={}, path={}", jobId, result.getVideoPath());
+
+        // 8. 쇼츠 시나리오 자동 추출 (수정 반영 시)
+        try {
+            log.info("수정 반영(재조립): 자동 쇼츠 시나리오 추출 시작: jobId={}", jobId);
+            List<Map<String, Object>> parsedScenes = updatedSceneAssets.stream()
+                .map(a -> {
+                    try {
+                        return (Map<String, Object>) objectMapper.readValue(a.getMetaJson(), Map.class);
+                    } catch(Exception e) {
+                        return null;
+                    }
+                }).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toList());
+
+            if (!parsedScenes.isEmpty()) {
+                Object scenarios = fastApiClient.extractShortsScenarios(jobId, parsedScenes);
+                
+                // 기존 시나리오 삭제 후 새로 추가 (중복 방지)
+                assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SHORTS_SCENARIO)
+                    .ifPresent(a -> assetRepository.delete(a));
+                
+                Asset scenarioAsset = Asset.builder()
+                        .jobId(jobId)
+                        .assetType(AssetType.SHORTS_SCENARIO)
+                        .metaJson(objectMapper.writeValueAsString(scenarios))
+                        .build();
+                assetRepository.save(scenarioAsset);
+                log.info("수정 반영(재조립): 쇼츠 시나리오 자동 추출 완료 및 저장 성공: jobId={}", jobId);
+            }
+        } catch(Exception e) {
+            log.error("수정 반영(재조립): 쇼츠 시나리오 자동 추출 실패: {}", e.getMessage());
+        }
+
         return result;
     }
 }

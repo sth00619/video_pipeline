@@ -7,6 +7,8 @@ import {
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import { jobsApi } from '../api/jobs'
+import StockMindMap from '../components/dashboard/StockMindMap'
+import TrendingSidebar from '../components/dashboard/TrendingSidebar'
 
 const STATUS_COLOR = {
   READY: 'text-accent-green',
@@ -33,7 +35,18 @@ const STATUS_LABEL = {
   FAILED: '오류',
 }
 
-const CATEGORY_LIST = ['ALL', 'KOSPI', 'KOSDAQ', 'US_STOCKS', 'INDIVIDUAL_STOCK', 'GLOBAL_MACRO', 'CRYPTO', 'CUSTOM']
+const CATEGORY_LIST = ['ALL', 'KOSPI', 'KOSDAQ', 'US_STOCKS', 'INDIVIDUAL_STOCK', 'ASSOCIATED_STOCKS', 'GLOBAL_MACRO', 'CRYPTO', 'CUSTOM']
+const CATEGORY_LABEL = {
+  ALL: '전체',
+  KOSPI: 'KOSPI',
+  KOSDAQ: 'KOSDAQ',
+  US_STOCKS: '미국 주식',
+  INDIVIDUAL_STOCK: '개별 종목',
+  ASSOCIATED_STOCKS: '연관 종목군',
+  GLOBAL_MACRO: '글로벌 거시',
+  CRYPTO: '암호화폐',
+  CUSTOM: '직접 입력 (CUSTOM)'
+}
 const MODE_LIST = ['ALL', 'AUTO', 'GUIDED', 'MANUAL']
 const STATUS_LIST = [
   'ALL', 'DRAFT', 'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING', 'IMAGES_PENDING', 
@@ -56,6 +69,25 @@ export default function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState('ALL')
   const [selectedMode, setSelectedMode] = useState('ALL')
   const [selectedStatus, setSelectedStatus] = useState('ALL')
+
+  const [selectedTrendingKeyword, setSelectedTrendingKeyword] = useState('주식')
+  const [selectedMindmapKeywords, setSelectedMindmapKeywords] = useState([])
+
+  const handleSelectKeyword = (kw) => {
+    let nextKeywords;
+    if (selectedMindmapKeywords.includes(kw)) {
+      nextKeywords = selectedMindmapKeywords.filter(k => k !== kw);
+    } else {
+      nextKeywords = [...selectedMindmapKeywords, kw];
+    }
+    setSelectedMindmapKeywords(nextKeywords);
+    setQuickTitle(nextKeywords.join(', '));
+    if (nextKeywords.length > 0) {
+      setSelectedTrendingKeyword(nextKeywords[nextKeywords.length - 1]);
+    } else {
+      setSelectedTrendingKeyword('주식');
+    }
+  }
 
   const { data: jobs = [], refetch } = useQuery({
     queryKey: ['jobs'],
@@ -131,14 +163,18 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">대시보드</h1>
         <p className="text-gray-400 text-sm mt-1">AI 주식 영상 자동화 플랫폼</p>
       </div>
 
-      {/* 통계 카드 */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <StatCard
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* 좌측 메인 영역 (ColSpan: 3) */}
+        <div className="lg:col-span-3 space-y-6">
+          
+          {/* 통계 카드 */}
+          <div className="grid grid-cols-3 gap-4">
+            <StatCard
           icon={<Clock className="text-accent-cyan" />}
           label="진행 중"
           value={inProgress.length}
@@ -152,17 +188,23 @@ export default function Dashboard() {
           active={filter === 'COMPLETED'}
           onClick={() => handleFilterChange(filter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
         />
-        <StatCard
-          icon={<AlertCircle className="text-accent-red" />}
-          label="오류"
-          value={failed.length}
-          active={filter === 'FAILED'}
-          onClick={() => handleFilterChange(filter === 'FAILED' ? 'ALL' : 'FAILED')}
-        />
-      </div>
+          <StatCard
+            icon={<AlertCircle className="text-accent-red" />}
+            label="오류"
+            value={failed.length}
+            active={filter === 'FAILED'}
+            onClick={() => handleFilterChange(filter === 'FAILED' ? 'ALL' : 'FAILED')}
+          />
+        </div>
 
-      {/* 빠른 영상 시작 */}
-      <div className="bg-navy-800 rounded-xl p-6 mb-8 border border-navy-700">
+        {/* 마인드맵 (NEW) */}
+        <StockMindMap 
+          selectedKeywords={selectedMindmapKeywords}
+          onSelectKeyword={handleSelectKeyword} 
+        />
+
+        {/* 빠른 영상 시작 */}
+        <div className="bg-navy-800 rounded-xl p-6 border border-navy-700">
         <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Zap className="text-accent-gold" size={20} />
@@ -174,13 +216,9 @@ export default function Dashboard() {
               onChange={e => setCategory(e.target.value)}
               className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1 text-xs text-accent-cyan font-semibold focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
             >
-              <option value="KOSPI">KOSPI</option>
-              <option value="KOSDAQ">KOSDAQ</option>
-              <option value="US_STOCKS">미국 주식</option>
-              <option value="INDIVIDUAL_STOCK">개별 종목</option>
-              <option value="GLOBAL_MACRO">글로벌 거시</option>
-              <option value="CRYPTO">암호화폐</option>
-              <option value="CUSTOM">직접 입력 (CUSTOM)</option>
+              {CATEGORY_LIST.filter(c => c !== 'ALL').map(cat => (
+                <option key={cat} value={cat}>{CATEGORY_LABEL[cat]}</option>
+              ))}
             </select>
 
             <select
@@ -227,12 +265,12 @@ export default function Dashboard() {
           {autonomy === 'AUTO' && '키워드 탐색 → 스크립트 → 음성 → 이미지 → 영상 조립까지 완전 자동으로 가동됩니다.'}
           {autonomy === 'GUIDED' && '단계마다 생성 결과를 검토하고 수동 승인/수정하며 진행하는 모드입니다.'}
           {autonomy === 'MANUAL' && '직접 키워드를 작성하거나 영상 조립 구간을 정의하는 모드입니다.'}
-        </p>
-      </div>
+          </p>
+        </div>
 
-      {/* 정밀 검색 필터 */}
-      <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 mb-6">
-        <div className="flex items-center gap-2 mb-3">
+        {/* 정밀 검색 필터 */}
+        <div className="bg-navy-800 rounded-xl border border-navy-700 p-4">
+          <div className="flex items-center gap-2 mb-3">
           <Filter size={16} className="text-accent-cyan" />
           <span className="text-sm font-semibold">정밀 검색 및 필터</span>
         </div>
@@ -260,7 +298,7 @@ export default function Dashboard() {
             >
               <option value="ALL">카테고리: 전체</option>
               {CATEGORY_LIST.filter(c => c !== 'ALL').map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat}>{CATEGORY_LABEL[cat]}</option>
               ))}
             </select>
           </div>
@@ -357,7 +395,7 @@ export default function Dashboard() {
                         {job.title}
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">
-                        {job.category} · {job.longformTargetMinutes}분 · {job.autonomy}
+                        {CATEGORY_LABEL[job.category] || job.category} · {job.longformTargetMinutes}분 · {job.autonomy}
                       </div>
                     </div>
                   </div>
@@ -410,8 +448,15 @@ export default function Dashboard() {
             )}
           </>
         )}
+        </div>
       </div>
-    </Layout>
+
+      {/* 우측 사이드바 영역 (ColSpan: 1) */}
+      <div className="lg:col-span-1">
+        <TrendingSidebar keyword={selectedTrendingKeyword} />
+      </div>
+    </div>
+  </Layout>
   )
 }
 

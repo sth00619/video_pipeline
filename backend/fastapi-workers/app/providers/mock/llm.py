@@ -109,6 +109,34 @@ class MockLLMProvider(LLMProvider):
                 {"text": "마지막 강조 포인트입니다.", "reason": "결론 및 CTA"}
             ])
 
+        if "extract-scenarios" in s or "extract-scenarios" in u or "shorts" in s or "shorts" in u:
+            return json.dumps({
+                "scenarios": {
+                    "performance": {
+                        "title": "실적 중심 분석 쇼츠",
+                        "description": "2분기 반도체 부문 영업이익이 급등한 호재 데이터를 집중 분석하는 고밀도 쇼츠입니다.",
+                        "selected_scene_indices": [1, 2]
+                    },
+                    "risk": {
+                        "title": "시장 리스크 경고 쇼츠",
+                        "description": "외국인 투자자의 대형주 대량 매도 흐름과 주가 하락 가능성을 밀착 경고하는 리스크 관리용 쇼츠입니다.",
+                        "selected_scene_indices": [3, 4]
+                    },
+                    "upside": {
+                        "title": "반등 모멘텀 기회 쇼츠",
+                        "description": "최근 60일 이동평균선 지지 및 신규 HBM 공급 기대감에 따른 하반기 반등 타이밍을 진단하는 쇼츠입니다.",
+                        "selected_scene_indices": [5, 6]
+                    }
+                },
+                "keywords": [
+                    {"word": "삼성전자", "description": "대본 내에서 삼성전자 동향을 다루는 구간", "matching_scene_indices": [1, 2, 5]},
+                    {"word": "영업이익", "description": "실적 및 이익 컨센서스 언급 구간", "matching_scene_indices": [1, 3]},
+                    {"word": "외국인", "description": "수급 및 투자주체별 거래 패턴 구간", "matching_scene_indices": [2, 4]},
+                    {"word": "지지선", "description": "기술적 분석 및 매수 가격 기준점", "matching_scene_indices": [5, 6]},
+                    {"word": "리스크", "description": "투자 시 주의해야 할 변동성 위험 요인", "matching_scene_indices": [3, 4]}
+                ]
+            })
+
         if "synopsis" in s or "시놉시스" in u:
             keyword = self._extract_keyword(user_prompt)
             return (

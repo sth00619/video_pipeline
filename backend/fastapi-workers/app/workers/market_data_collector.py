@@ -45,15 +45,131 @@ FRED_SERIES = {
 }
 
 
+# 연관 종목군 고정 매핑
+ASSOCIATED_STOCKS_MAP = {
+    "삼성전자": [
+        {"name": "SK하이닉스", "symbol": "000660", "market": "KR"},
+        {"name": "한미반도체", "symbol": "042700", "market": "KR"},
+        {"name": "이수페타시스", "symbol": "007660", "market": "KR"},
+        {"name": "원익IPS", "symbol": "240810", "market": "KR"}
+    ],
+    "SK하이닉스": [
+        {"name": "삼성전자", "symbol": "005930", "market": "KR"},
+        {"name": "한미반도체", "symbol": "042700", "market": "KR"},
+        {"name": "이수페타시스", "symbol": "007660", "market": "KR"},
+        {"name": "HPSP", "symbol": "403020", "market": "KR"}
+    ],
+    "엔비디아": [
+        {"name": "AMD", "symbol": "AMD", "market": "US"},
+        {"name": "TSMC", "symbol": "TSM", "market": "US"},
+        {"name": "ASML", "symbol": "ASML", "market": "US"},
+        {"name": "인텔", "symbol": "INTC", "market": "US"}
+    ],
+    "테슬라": [
+        {"name": "LG에너지솔루션", "symbol": "373220", "market": "KR"},
+        {"name": "삼성SDI", "symbol": "006400", "market": "KR"},
+        {"name": "에코프로비엠", "symbol": "247540", "market": "KR"},
+        {"name": "엘앤에프", "symbol": "066970", "market": "KR"}
+    ],
+    "애플": [
+        {"name": "LG이노텍", "symbol": "011070", "market": "KR"},
+        {"name": "비에이치", "symbol": "090460", "market": "KR"},
+        {"name": "구글", "symbol": "GOOGL", "market": "US"},
+        {"name": "마이크로소프트", "symbol": "MSFT", "market": "US"}
+    ]
+}
+
+
+def get_associated_stocks(keyword: str) -> list[dict]:
+    # 1. 키워드 정제
+    cleaned = keyword.replace("전망", "").replace("주가", "").replace("분석", "").strip()
+    
+    # 2. 맵 매칭 확인
+    for key, stocks in ASSOCIATED_STOCKS_MAP.items():
+        if key in cleaned or cleaned in key:
+            return stocks
+            
+    # 3. Fallback: KRX listing에서 유사 업종(Sector) 검색
+    try:
+        import FinanceDataReader as fdr
+        df = fdr.StockListing("KRX")
+        if df is not None and not df.empty:
+            match = df[df["Name"].str.contains(cleaned, case=False, na=False)]
+            if not match.empty:
+                sector = match.iloc[0].get("Sector")
+                if sector:
+                    same_sector = df[(df["Sector"] == sector) & (df["Name"] != cleaned)].head(4)
+                    return [
+                        {"name": row["Name"], "symbol": row["Code"], "market": "KR"}
+                        for _, row in same_sector.iterrows()
+                    ]
+    except Exception as e:
+        logger.warning(f"Associated stocks fallback extraction failed: {e}")
+        
+    return [
+        {"name": "삼성전자", "symbol": "005930", "market": "KR"},
+        {"name": "SK하이닉스", "symbol": "000660", "market": "KR"},
+        {"name": "현대차", "symbol": "005380", "market": "KR"},
+        {"name": "원익IPS", "symbol": "240810", "market": "KR"}
+    ]
+
+
 class MarketDataCollector:
     """
     카테고리별 실시간 시장 데이터 수집기.
     수집 실패 시 None/빈 dict으로 graceful fallback.
     """
 
+    def collect_associated_stocks_data(self, keyword: str) -> dict:
+        associated_list = get_associated_stocks(keyword)
+        results = []
+        
+        import FinanceDataReader as fdr
+        import yfinance as yf
+        
+        for stock in associated_list:
+            name = stock["name"]
+            symbol = stock["symbol"]
+            market = stock["market"]
+            
+            close_val = 0.0
+            change_pct = 0.0
+            
+            try:
+                if market == "KR":
+                    df = fdr.DataReader(symbol)
+                    if df is not None and not df.empty:
+                        latest = df.iloc[-1]
+                        prev = df.iloc[-2] if len(df) > 1 else latest
+                        close_val = float(latest["Close"])
+                        change_pct = float((latest["Close"] - prev["Close"]) / prev["Close"] * 100)
+                else:
+                    ticker = yf.Ticker(symbol)
+                    hist = ticker.history(period="5d")
+                    if not hist.empty:
+                        latest = hist.iloc[-1]
+                        prev = hist.iloc[-2] if len(hist) > 1 else latest
+                        close_val = float(latest["Close"])
+                        change_pct = float((latest["Close"] - prev["Close"]) / prev["Close"] * 100)
+            except Exception as e:
+                logger.warning(f"Failed to fetch market data for associated stock {name} ({symbol}): {e}")
+                
+            results.append({
+                "name": name,
+                "symbol": symbol,
+                "market": market,
+                "close": round(close_val, 2),
+                "change_pct": round(change_pct, 2)
+            })
+            
+        return {
+            "main_keyword": keyword,
+            "associated_stocks": results
+        }
+
     def collect_for_category(self, category: str, keyword: str) -> dict:
         """카테고리에 따라 한국/미국/양쪽 데이터 자동 수집"""
-        kr_categories = {"KOSPI", "KOSDAQ", "INDIVIDUAL_STOCK"}
+        kr_categories = {"KOSPI", "KOSDAQ", "INDIVIDUAL_STOCK", "ASSOCIATED_STOCKS"}
         us_categories = {"US_STOCKS"}
 
         result = {
@@ -62,6 +178,7 @@ class MarketDataCollector:
             "collected_at": datetime.now().isoformat(),
             "kr": None,
             "us": None,
+            "associated_data": None
         }
 
         if category in kr_categories:
@@ -71,6 +188,9 @@ class MarketDataCollector:
         else:  # GLOBAL_MACRO, CRYPTO, CUSTOM
             result["kr"] = self.collect_kr(keyword, category)
             result["us"] = self.collect_us(keyword)
+
+        if category == "ASSOCIATED_STOCKS":
+            result["associated_data"] = self.collect_associated_stocks_data(keyword)
 
         return result
 

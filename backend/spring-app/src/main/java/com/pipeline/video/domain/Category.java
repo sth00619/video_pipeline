@@ -7,5 +7,6 @@ public enum Category {
     INDIVIDUAL_STOCK,
     GLOBAL_MACRO,
     CRYPTO,
+    ASSOCIATED_STOCKS,
     CUSTOM
 }

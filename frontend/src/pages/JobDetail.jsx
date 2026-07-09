@@ -39,11 +39,11 @@ const STEP_PROGRESS_INFO = {
   },
   images: {
     est: '약 40초 ~ 50초 소요',
-    desc: '각 시나리오 씬별 경제 뉴스와 수치 데이터의 흐름에 맞춰 직관적인 주식 차트, 차트 그래프, 다이어그램을 Matplotlib 라이브러리를 통해 시각화하고 그립니다.',
+    desc: '각 시나리오 씬별 주식/경제 분석 흐름에 맞춰, 일관성 있는 금색 코인 마스코트 캐릭터와 직관적인 설명적 배경이 어우러진 고품질 AI 일러스트 이미지를 Google Gemini API를 통해 생성합니다.',
   },
   longform: {
     est: '약 1분 ~ 2분 소요',
-    desc: '최종 생성된 스크립트 대본, TTS 오디오 타임라인, Matplotlib 차트 이미지를 시간 동기화하여 고화질 MP4 동영상 파일로 합치고 인코딩합니다.',
+    desc: '최종 생성된 스크립트 대본, TTS 오디오 타임라인, 생성된 AI 일러스트와 씬 전환 영상을 시간 동기화하여 자막과 함께 고화질 MP4 동영상 파일로 합치고 인코딩합니다.',
   },
 }
 
@@ -185,15 +185,16 @@ export default function JobDetail() {
   })
 
   const regenImageMut = useMutation({
-    mutationFn: ({ index, text, section }) => jobsApi.updateSceneImage(id, index, text, section),
-    onSuccess: () => {
+    mutationFn: ({ index, text, section, mode }) => jobsApi.updateSceneImage(id, index, text, section, mode),
+    onSuccess: (data, variables) => {
       qc.invalidateQueries(['assets', id, 'SCENE_IMAGE'])
       setEditingSceneIndex(null)
       setImageSalt(prev => prev + 1)
-      alert('이미지가 재생성되었습니다.')
+      const modeStr = variables.mode === 'image' ? '이미지만' : variables.mode === 'text' ? '텍스트만' : '텍스트와 이미지 모두';
+      alert(`${modeStr} 수정이 성공적으로 반영되었습니다. 자막/음성을 비디오 파일에 완전히 적용하려면 우측 상단의 '동영상 재조립' 버튼을 꼭 클릭해 주세요.`);
     },
     onError: (err) => {
-      alert('이미지 재생성 실패: ' + (err.response?.data?.message || err.message))
+      alert('수정 실패: ' + (err.response?.data?.message || err.message))
     }
   })
 
@@ -292,6 +293,13 @@ export default function JobDetail() {
                   {rebuildLongformMut.isPending ? <Loader size={12} className="animate-spin"/> : <Zap size={12}/>}
                   동영상 재조립
                 </button>
+              )}
+              {['PREVIEW_PENDING', 'READY'].includes(job.status) && (
+                <a href={`/jobs/${id}/shorts`}
+                  className="flex items-center gap-1 bg-accent-cyan text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 transition"
+                >
+                  쇼츠 제작하기
+                </a>
               )}
               <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
                 className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 transition" download>
@@ -705,7 +713,7 @@ export default function JobDetail() {
                       <div className="flex items-center gap-2">
                         <ImageIcon size={13} className="text-accent-cyan"/>
                         <span className="text-xs text-gray-400">
-                          {sortedImageList.length}개 씬 이미지 (matplotlib 차트 기반)
+                          {sortedImageList.length}개 씬 이미지 (AI 일러스트 기반)
                         </span>
                       </div>
                       {['IMAGES_PENDING', 'PREVIEW_PENDING', 'READY'].includes(job.status) && (
@@ -770,21 +778,51 @@ export default function JobDetail() {
                                     <button
                                       onClick={() => setEditingSceneIndex(null)}
                                       disabled={isRegeneratingThis}
-                                      className="bg-navy-700 text-gray-400 hover:text-white text-[10px] px-2.5 py-1 rounded transition"
+                                      className="bg-navy-700 text-gray-400 hover:text-white text-[10px] px-2.5 py-1.5 rounded transition"
                                     >
                                       취소
                                     </button>
                                     <button
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
-                                        text: editingSceneText,
-                                        section: img.section
+                                        text: img.prompt || '',
+                                        section: img.section,
+                                        mode: 'image'
                                       })}
                                       disabled={isRegeneratingThis}
-                                      className="flex items-center gap-1 bg-accent-gold text-navy-950 text-[10px] font-semibold px-2.5 py-1 rounded hover:opacity-90 transition"
+                                      className="flex items-center gap-1 bg-accent-cyan text-navy-950 text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                                      title="대사를 유지한 채 캐릭터 이미지만 다시 생성합니다."
                                     >
                                       {isRegeneratingThis ? <Loader size={10} className="animate-spin"/> : <Save size={10}/>}
-                                      적용 및 재생성
+                                      이미지만 수정
+                                    </button>
+                                    <button
+                                      onClick={() => regenImageMut.mutate({
+                                        index: img.index,
+                                        text: editingSceneText,
+                                        section: img.section,
+                                        mode: 'text'
+                                      })}
+                                      disabled={isRegeneratingThis}
+                                      className="flex items-center gap-1 bg-accent-gold text-navy-950 text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                                      title="이미지는 유지하고 자막/대사 텍스트만 업데이트합니다. (동영상 재조립 시 음성도 자동 반영됩니다.)"
+                                    >
+                                      {isRegeneratingThis ? <Loader size={10} className="animate-spin"/> : <Save size={10}/>}
+                                      텍스트만 수정
+                                    </button>
+                                    <button
+                                      onClick={() => regenImageMut.mutate({
+                                        index: img.index,
+                                        text: editingSceneText,
+                                        section: img.section,
+                                        mode: 'both'
+                                      })}
+                                      disabled={isRegeneratingThis}
+                                      className="flex items-center gap-1 bg-accent-green text-navy-950 text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                                      title="대사 텍스트를 수정하고 이미지도 새로 생성합니다."
+                                    >
+                                      {isRegeneratingThis ? <Loader size={10} className="animate-spin"/> : <Save size={10}/>}
+                                      텍스트+이미지 수정
                                     </button>
                                   </>
                                 ) : (

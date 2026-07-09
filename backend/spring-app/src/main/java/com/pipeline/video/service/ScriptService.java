@@ -170,7 +170,7 @@ public class ScriptService {
                     if (visualIdx != -1) {
                         prompt = rawContent.substring(visualIdx + 5).trim();
                     } else {
-                        prompt = "A cute green banknote cartoon character with glasses and a headset, showing an expression matching '" + title + "', professional 2D vector style";
+                        prompt = "A cute gold coin mascot character, chibi cartoon style, round shiny gold coin with face, arms and legs, wearing small navy business suit with gold tie, showing an expression matching '" + title + "', professional financial news studio background, dark navy blue background (#0d1b2a), 3D render, smooth shading, anime cartoon style";
                     }
                     
                     Map<String, Object> secMap = new java.util.HashMap<>();

@@ -131,6 +131,43 @@ async def analyze_shorts(file: UploadFile = File(...), shorts_count: int = Query
         raise HTTPException(500, f"분석 실패: {str(e)}")
     return {"job_id": job_id, "source_video_path": str(source_path), "transcript": analysis["transcript"], "words": analysis["words"], "suggested_segments": analysis["suggested_segments"]}
 
+class ShortsScene(BaseModel):
+    index: int
+    text: str
+    start: float
+    duration: float
+
+class ShortsExtractScenariosRequest(BaseModel):
+    job_id: int
+    scenes: List[ShortsScene]
+
+class ShortsCutMergeRequest(BaseModel):
+    source_video_path: str
+    segments: List[ShortsSegment]
+    job_id: Optional[int] = 0
+    output_path: str
+
+@app.post("/workers/shorts/extract-scenarios")
+async def extract_scenarios(request: ShortsExtractScenariosRequest):
+    try:
+        scenes_list = [s.dict() for s in request.scenes]
+        analysis = get_shorts_worker().extract_scenarios(scenes_list, job_id=request.job_id)
+        return analysis
+    except Exception as e:
+        raise HTTPException(500, f"시나리오 추출 실패: {str(e)}")
+
+@app.post("/workers/shorts/cut-merge")
+async def cut_merge_shorts(request: ShortsCutMergeRequest):
+    source = Path(request.source_video_path)
+    if not source.exists():
+        raise HTTPException(404, f"원본 영상 없음: {source}")
+    try:
+        segments_list = [s.dict() for s in request.segments]
+        clip = get_shorts_worker().cut_and_merge(str(source), segments_list, request.output_path)
+        return {"job_id": request.job_id, "clip": clip}
+    except Exception as e:
+        raise HTTPException(500, f"병합 자르기 실패: {str(e)}")
+
 @app.post("/workers/shorts/cut")
 async def cut_shorts(request: ShortsCutRequest):
     source = Path(request.source_video_path)
@@ -166,6 +203,21 @@ async def keyword_search(request: KeywordSearchRequest):
         return get_keyword_worker().search(category=request.category, seed=request.seed, limit=request.limit, outperformer_count=request.outperformer_count, job_id=request.job_id or 0)
     except Exception as e:
         raise HTTPException(500, f"키워드 탐색 실패: {str(e)}")
+
+
+class TrendingRequest(BaseModel):
+    keyword: str
+    limit: int = 10
+
+@app.post("/workers/trending/youtube")
+async def trending_youtube(request: TrendingRequest):
+    try:
+        from app.providers.factory import get_trending_video_analyzer
+        analyzer = get_trending_video_analyzer()
+        videos = analyzer.collect(category="", seed=request.keyword, limit=request.limit)
+        return {"videos": [v.__dict__ for v in videos]}
+    except Exception as e:
+        raise HTTPException(500, f"트렌딩 비디오 검색 실패: {str(e)}")
 
 
 # ============================

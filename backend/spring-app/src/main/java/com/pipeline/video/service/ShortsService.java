@@ -109,8 +109,14 @@ public class ShortsService {
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
         String sourcePath = job.getSourceVideoPath();
+        if (sourcePath == null || sourcePath.isBlank()) {
+            Optional<Asset> lfAsset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.LONGFORM_VIDEO);
+            if (lfAsset.isPresent()) {
+                sourcePath = lfAsset.get().getLocalPath();
+            }
+        }
         if (sourcePath == null || sourcePath.isBlank())
-            throw new IllegalStateException("원본 영상 경로 없음. 먼저 분석을 실행하세요.");
+            throw new IllegalStateException("원본 영상 또는 롱폼 영상 경로가 없습니다.");
 
         log.info("쇼츠 확정: jobId={}, segments={}개",
                 jobId, request.getSegments().size());
@@ -122,6 +128,80 @@ public class ShortsService {
         jobRepository.save(job);
 
         log.info("쇼츠 확정 완료: {}개", clips.size());
+        return clips;
+    }
+
+    @Transactional
+    public Map<String, Object> extractScenarios(Long jobId, List<Map<String, Object>> customScenes, String username) {
+        List<Map<String, Object>> scenes = new ArrayList<>();
+        
+        if (customScenes != null && !customScenes.isEmpty()) {
+            scenes.addAll(customScenes);
+        } else {
+            List<Asset> sceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+            if (sceneAssets.isEmpty()) {
+                throw new IllegalStateException("씬 이미지 에셋이 존재하지 않으며 업로드된 씬 정보도 없습니다.");
+            }
+
+            for (Asset asset : sceneAssets) {
+                try {
+                    Map<String, Object> meta = objectMapper.readValue(asset.getMetaJson(), new TypeReference<>() {});
+                    Map<String, Object> scene = new HashMap<>();
+                scene.put("index", meta.get("index"));
+                String text = meta.get("prompt") != null ? meta.get("prompt").toString() : "";
+                scene.put("text", text);
+                scene.put("start", meta.get("start") != null ? ((Number) meta.get("start")).doubleValue() : 0.0);
+                scene.put("duration", meta.get("duration") != null ? ((Number) meta.get("duration")).doubleValue() : 15.0);
+                scenes.add(scene);
+            } catch (Exception e) {
+                log.warn("씬 파싱 실패: {}", e.getMessage());
+            }
+        }
+        }
+
+        return fastApiClient.extractShortsScenarios(jobId, scenes);
+    }
+
+    @Transactional
+    public List<ShortClipInfo> confirmMerge(Long jobId, ShortsConfirmRequest request, String username) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+
+        String sourcePath = job.getSourceVideoPath();
+        if (sourcePath == null || sourcePath.isBlank()) {
+            Optional<Asset> lfAsset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.LONGFORM_VIDEO);
+            if (lfAsset.isPresent()) {
+                sourcePath = lfAsset.get().getLocalPath();
+            }
+        }
+        if (sourcePath == null || sourcePath.isBlank()) {
+            throw new IllegalStateException("원본 영상 또는 롱폼 영상이 존재하지 않습니다.");
+        }
+
+        log.info("쇼츠 병합 확정: jobId={}, segments={}개", jobId, request.getSegments().size());
+
+        String outputDir = "/app/data/jobs/" + jobId + "/shorts";
+        new File(outputDir).mkdirs();
+        String outputPath = outputDir + "/short_merged_" + System.currentTimeMillis() + ".mp4";
+
+        List<Map<String, Object>> segmentMaps = new ArrayList<>();
+        for (var s : request.getSegments()) {
+            Map<String, Object> seg = new HashMap<>();
+            seg.put("index", s.getIndex());
+            seg.put("text", s.getText() != null ? s.getText() : "");
+            seg.put("start", s.getStart());
+            seg.put("end", s.getEnd());
+            segmentMaps.add(seg);
+        }
+
+        ShortClipInfo clip = fastApiClient.cutMergeShorts(jobId, sourcePath, segmentMaps, outputPath);
+        List<ShortClipInfo> clips = List.of(clip);
+        saveClips(jobId, clips);
+
+        job.setStatus(JobStatus.READY);
+        jobRepository.save(job);
+
+        log.info("쇼츠 병합 확정 완료");
         return clips;
     }
 

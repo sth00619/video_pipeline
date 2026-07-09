@@ -56,4 +56,31 @@ public class ShortsController {
             @AuthenticationPrincipal String username) {
         return ResponseEntity.ok(shortsService.confirm(jobId, request, username));
     }
+
+    /**
+     * 롱폼 연동: 씬 기반 시나리오 및 추천 키워드 추출 (Claude 4.6)
+     */
+    @PostMapping("/extract-scenarios")
+    public ResponseEntity<java.util.Map<String, Object>> extractScenarios(
+            @PathVariable Long jobId,
+            @RequestBody(required = false) java.util.Map<String, Object> body,
+            @AuthenticationPrincipal String username) {
+        
+        List<java.util.Map<String, Object>> customScenes = null;
+        if (body != null && body.containsKey("scenes")) {
+            customScenes = (List<java.util.Map<String, Object>>) body.get("scenes");
+        }
+        return ResponseEntity.ok(shortsService.extractScenarios(jobId, customScenes, username));
+    }
+
+    /**
+     * 롱폼 연동: 선택된 비연속 씬 구간들을 단일 쇼츠 비디오 파일로 잘라서 병합 생성
+     */
+    @PostMapping("/confirm-merge")
+    public ResponseEntity<List<ShortClipInfo>> confirmMerge(
+            @PathVariable Long jobId,
+            @RequestBody ShortsConfirmRequest request,
+            @AuthenticationPrincipal String username) {
+        return ResponseEntity.ok(shortsService.confirmMerge(jobId, request, username));
+    }
 }

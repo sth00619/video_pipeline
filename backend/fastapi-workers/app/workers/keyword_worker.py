@@ -27,7 +27,7 @@ from app.workers.news_keyword_extractor import NewsKeywordExtractor
 
 logger = logging.getLogger(__name__)
 
-KR_CATEGORIES = {"KOSPI", "KOSDAQ", "INDIVIDUAL_STOCK"}
+KR_CATEGORIES = {"KOSPI", "KOSDAQ", "INDIVIDUAL_STOCK", "ASSOCIATED_STOCKS"}
 US_CATEGORIES = {"US_STOCKS"}
 
 CATEGORY_LABELS = {
@@ -35,6 +35,7 @@ CATEGORY_LABELS = {
     "KOSDAQ": "코스닥",
     "US_STOCKS": "미국 주식(나스닥/S&P500)",
     "INDIVIDUAL_STOCK": "개별 종목",
+    "ASSOCIATED_STOCKS": "연관 종목군",
     "GLOBAL_MACRO": "글로벌 매크로 경제",
     "CRYPTO": "암호화폐",
     "CUSTOM": "주식시장 전반",
@@ -351,5 +352,11 @@ def _build_market_summary(market_data: dict) -> str:
             lines.append(f"연준 기준금리: {macro['fed_rate']:.2f}%")
         if macro.get("cpi"):
             lines.append(f"미국 CPI: {macro['cpi']:.1f}")
+
+    assoc = market_data.get("associated_data")
+    if assoc:
+        lines.append(f"\n[연관 종목군 시세현황] (기준 주식: {assoc.get('main_keyword')})")
+        for stock in assoc.get("associated_stocks", []):
+            lines.append(f" - {stock['name']} ({stock['symbol']}): {stock['close']:,.2f} ({stock['change_pct']:+.2f}%)")
 
     return "\n".join(lines) if lines else "시장 데이터 수집 중..."

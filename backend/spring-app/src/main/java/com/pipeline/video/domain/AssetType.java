@@ -9,5 +9,6 @@ public enum AssetType {
     LONGFORM_VIDEO,
     SHORT_CLIP,
     SOURCE_VIDEO,
-    TRANSCRIPT
+    TRANSCRIPT,
+    SHORTS_SCENARIO
 }
