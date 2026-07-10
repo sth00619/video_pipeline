@@ -42,8 +42,8 @@ public class ScriptService {
 
         int targetMinutes = job.getLongformTargetMinutes() != null
                 ? job.getLongformTargetMinutes() : 20;
-        // 1.35배속 가속을 고려하여 스크립트 분량을 1.35배 늘려서 생성
-        int llmTargetMinutes = (int) Math.round(targetMinutes * 1.35);
+        // 1.25배속 가속을 고려하여 스크립트 분량을 1.25배 늘려서 생성
+        int llmTargetMinutes = (int) Math.round(targetMinutes * 1.25);
         String categoryName = job.getCategory() != null ? job.getCategory().name() : "CUSTOM";
 
         log.info("스크립트 생성: jobId={}, keyword={}, target={}분 (LLM 타겟: {}분), category={}",
@@ -219,14 +219,14 @@ public class ScriptService {
             }
         }
 
-        // 스크립트 UI 노출용 마크다운 형식 재구성
+        // 스크립트 UI 노출용 마크다운 형식 재구성 (작업자에게는 깨끗한 한국어 대사만 제공)
         String scriptToSave = finalScript;
         if (!sections.isEmpty() && (finalScript == null || !finalScript.contains("##"))) {
             StringBuilder sb = new StringBuilder();
             for (Map<String, Object> sec : sections) {
                 sb.append("## ").append(sec.get("title")).append("\n");
-                sb.append("[대사]\n").append(sec.get("content") != null ? sec.get("content") : sec.get("text")).append("\n");
-                sb.append("[비주얼]\n").append(sec.get("prompt")).append("\n\n");
+                String content = sec.get("content") != null ? sec.get("content").toString() : (sec.get("text") != null ? sec.get("text").toString() : "");
+                sb.append(content).append("\n\n");
             }
             scriptToSave = sb.toString().trim();
         }

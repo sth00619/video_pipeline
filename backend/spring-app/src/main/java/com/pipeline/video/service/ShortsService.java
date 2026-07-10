@@ -148,7 +148,7 @@ public class ShortsService {
                     Map<String, Object> meta = objectMapper.readValue(asset.getMetaJson(), new TypeReference<>() {});
                     Map<String, Object> scene = new HashMap<>();
                 scene.put("index", meta.get("index"));
-                String text = meta.get("prompt") != null ? meta.get("prompt").toString() : "";
+                String text = meta.get("text") != null ? meta.get("text").toString() : (meta.get("prompt") != null ? meta.get("prompt").toString() : "");
                 scene.put("text", text);
                 scene.put("start", meta.get("start") != null ? ((Number) meta.get("start")).doubleValue() : 0.0);
                 scene.put("duration", meta.get("duration") != null ? ((Number) meta.get("duration")).doubleValue() : 15.0);

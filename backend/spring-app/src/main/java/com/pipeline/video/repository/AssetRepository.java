@@ -14,4 +14,5 @@ public interface AssetRepository extends JpaRepository<Asset, Long> {
 
     // 가장 최근 Asset (script 최종본 조회용)
     Optional<Asset> findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(Long jobId, AssetType assetType);
+    void deleteByJobId(Long jobId);
 }

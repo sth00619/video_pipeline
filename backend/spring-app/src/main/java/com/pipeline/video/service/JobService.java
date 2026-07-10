@@ -23,6 +23,8 @@ public class JobService {
     private final VideoJobRepository jobRepository;
     private final AssetRepository assetRepository;
     private final ChannelProfileRepository channelProfileRepository;
+    private final CostLedgerRepository costLedgerRepository;
+    private final ApprovalRepository approvalRepository;
     private final FastApiClient fastApiClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -196,6 +198,48 @@ public class JobService {
         assetRepository.save(thumbnailAsset);
         
         log.info("유튜브 패키지 생성 완료: jobId={}", jobId);
+    }
+
+    @Transactional
+    public JobResponse stopJob(Long jobId, String username) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+
+        if (job.getStatus() == JobStatus.READY || job.getStatus() == JobStatus.PUBLISHED || job.getStatus() == JobStatus.FAILED) {
+            log.info("Job {} is already in terminal state {}, skip stop request.", jobId, job.getStatus());
+            return JobResponse.from(job);
+        }
+
+        log.info("Job {} 중지 요청 (by {}). 현재 상태: {}", jobId, username, job.getStatus());
+        job.setStatus(JobStatus.FAILED);
+        VideoJob savedJob = jobRepository.save(job);
+
+        // FastAPI 워커에 중지 명령 전송
+        fastApiClient.stopJob(jobId);
+
+        return JobResponse.from(savedJob);
+    }
+
+    @Transactional
+    public void deleteJob(Long jobId, String username) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+
+        if (job.getStatus() != JobStatus.DRAFT && job.getStatus() != JobStatus.READY && job.getStatus() != JobStatus.FAILED) {
+            throw new IllegalStateException("진행 중인 작업(현재 상태: " + job.getStatus() + ")은 삭제할 수 없습니다. 먼저 중지해 주세요.");
+        }
+
+        log.info("Job {} 삭제 시작 (by {})", jobId, username);
+
+        assetRepository.deleteByJobId(jobId);
+        costLedgerRepository.deleteByJobId(jobId);
+        approvalRepository.deleteByJobId(jobId);
+        jobRepository.delete(job);
+
+        // FastAPI 워커에 리소스 삭제 통지
+        fastApiClient.deleteJob(jobId);
+
+        log.info("Job {} 삭제 완료", jobId);
     }
 
     private String safeJson(Object obj) {

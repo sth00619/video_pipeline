@@ -9,4 +9,5 @@ import java.util.List;
 public interface ApprovalRepository extends JpaRepository<Approval, Long> {
     List<Approval> findByJobIdOrderByCreatedAtAsc(Long jobId);
     List<Approval> findByJobIdAndGate(Long jobId, GateName gate);
+    void deleteByJobId(Long jobId);
 }

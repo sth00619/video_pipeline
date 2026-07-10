@@ -236,7 +236,7 @@ export default function Shorts() {
     const newSegs = matchingScenes.map((s, idx) => ({
       index: idx + 1,
       label: s.title || `Scene ${s.index}`,
-      text: s.prompt || s.text || '',
+      text: s.text || s.prompt || '',
       start: s.start,
       end: s.start + s.duration
     }))
@@ -258,7 +258,7 @@ export default function Shorts() {
     const newSegs = matchingScenes.map((s, idx) => ({
       index: idx + 1,
       label: s.title || `Scene ${s.index}`,
-      text: s.prompt || s.text || '',
+      text: s.text || s.prompt || '',
       start: s.start,
       end: s.start + s.duration
     }))
@@ -285,14 +285,14 @@ export default function Shorts() {
       const scene = JSON.parse(dataStr)
       
       // 이미 타임라인에 있는지 확인
-      if (segments.some(s => s.text === (scene.prompt || scene.text))) {
+      if (segments.some(s => s.text === (scene.text || scene.prompt))) {
         return
       }
 
       const newSeg = {
         index: segments.length + 1,
         label: scene.title || `Scene ${scene.index}`,
-        text: scene.prompt || scene.text || '',
+        text: scene.text || scene.prompt || '',
         start: scene.start,
         end: scene.start + scene.duration
       }
@@ -545,7 +545,7 @@ export default function Shorts() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-200 leading-relaxed font-medium">
-                        {scene.prompt || scene.text || '(대사 없음)'}
+                        {scene.text || scene.prompt || '(대사 없음)'}
                       </p>
                     </div>
                   );

@@ -18,6 +18,7 @@ import os
 import logging
 import random
 from pathlib import Path
+from app.utils.process_manager import is_job_stopped
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,11 @@ class ImagesWorker:
                             "title": f"Scene {idx + 1}",
                             "content": part,
                             "text": part,
-                            "prompt": f"A cute green banknote cartoon character with glasses and a headset, showing an expression matching Scene {idx + 1}, clean 2D vector style",
+                            "prompt": (
+                                f"A cute gold coin mascot character, chibi cartoon style, round shiny gold coin with face, arms and legs, "
+                                f"wearing small navy business suit with gold tie, showing a neutral, calm and professional analyst pose, "
+                                f"generic plain smooth surface with no currency symbol. professional financial news studio background, dark navy blue background (#0d1b2a), glowing data screen, 3D render, smooth shading, anime cartoon style"
+                            ),
                             "section": f"scene_{idx}"
                         })
                 logger.info(f"script_meta_json에서 {len(scenes_meta)}개 씬 복원 성공")
@@ -81,6 +86,8 @@ class ImagesWorker:
 
         generated = []
         for i, scene in enumerate(scenes_meta):
+            if is_job_stopped(job_id):
+                raise RuntimeError(f"Job {job_id} stopped by user.")
             section = scene.get("section", f"scene_{i}")
             narration = scene.get("content") or scene.get("text") or ""
             visual_prompt = scene.get("prompt") or narration or scene.get("title") or ""
@@ -103,6 +110,7 @@ class ImagesWorker:
                         "image_path": img_path,
                         "generation_method": "nana_banana_ai",
                         "prompt": visual_prompt,
+                        "text": narration,
                     })
                     logger.info(f"씬 {i} AI 이미지 생성 완료 (prompt={visual_prompt[:50]}...)")
                     continue
@@ -121,6 +129,7 @@ class ImagesWorker:
                     "image_path": img_path,
                     "generation_method": "fallback_solid",
                     "prompt": narration,
+                    "text": narration,
                 })
             except Exception as e:
                 logger.error(f"씬 {i} 로컬 폴백 최종 실패: {e}")

@@ -12,9 +12,24 @@ import json
 import os
 import re
 import logging
+import subprocess
 from pathlib import Path
+from app.utils.process_manager import register_process, unregister_process, is_job_stopped
 
 logger = logging.getLogger(__name__)
+
+def _run_subprocess(cmd: str, job_id: int) -> int:
+    """FFmpeg 등의 명령어를 subprocess.Popen으로 실행하고 중지 트래킹 등록"""
+    if is_job_stopped(job_id):
+        raise RuntimeError(f"Job {job_id} is stopped. Aborting execution.")
+    logger.info(f"Running tracked subprocess: {cmd}")
+    p = subprocess.Popen(cmd, shell=True)
+    register_process(job_id, p)
+    try:
+        ret = p.wait()
+        return ret
+    finally:
+        unregister_process(job_id, p)
 
 NANUM_BOLD = "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
 NANUM_REGULAR = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
@@ -50,15 +65,11 @@ class LongformWorker:
         if total_duration > 0 and len(scenes) > 0:
             total_chars = sum(len(scene.get("content", "") or scene.get("text", "") or "") for scene in scenes)
             for scene in scenes:
-                if scene.get("duration") is None or float(scene.get("duration", 0)) <= 0:
-                    char_len = len(scene.get("content", "") or scene.get("text", "") or "")
-                    if total_chars > 0:
-                        scene["duration"] = round((char_len / total_chars) * total_duration, 3)
-                    else:
-                        scene["duration"] = round(total_duration / len(scenes), 3)
-
-        # 목표 분량별 초반 AI 움짤 씬 수 계산
-        target_minutes = kwargs.get("target_minutes", 10) if hasattr(self, "assemble") else 10
+                char_len = len(scene.get("content", "") or scene.get("text", "") or "")
+                if total_chars > 0:
+                    scene["duration"] = round((char_len / total_chars) * total_duration, 3)
+                else:
+                    scene["duration"] = round(total_duration / len(scenes), 3)
 
         # Kling 비디오 프로바이더 로드 (하이브리드 모드)
         video_provider = None
@@ -78,6 +89,8 @@ class LongformWorker:
         clip_paths = []
 
         for i, scene in enumerate(scenes):
+            if is_job_stopped(job_id):
+                raise RuntimeError(f"Job {job_id} stopped by user.")
 
             img_path = scene.get("image_path", "")
             raw_dur = scene.get("duration")
@@ -103,20 +116,41 @@ class LongformWorker:
                         image_url=None
                     )
                     if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
+                        temp_kling = clip_path + ".temp.mp4"
+                        try:
+                            os.rename(clip_path, temp_kling)
+                            std_cmd = (
+                                f'ffmpeg -i "{temp_kling}" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
+                                f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30" '
+                                f'-t {duration:.3f} -c:v libx264 -preset fast -pix_fmt yuv420p -an -y "{clip_path}" -loglevel error'
+                            )
+                            _run_subprocess(std_cmd, job_id)
+                        except Exception as ex:
+                            logger.warning(f"씬 {i} Kling 표준화 중 오류 발생, 원본 사용 시도: {ex}")
+                            if os.path.exists(temp_kling) and not os.path.exists(clip_path):
+                                os.rename(temp_kling, clip_path)
+                        finally:
+                            if os.path.exists(temp_kling):
+                                try:
+                                    os.remove(temp_kling)
+                                except Exception:
+                                    pass
+                        
                         clip_paths.append(clip_path)
-                        logger.info(f"씬 {i} Kling AI 움짤 완성")
+                        logger.info(f"씬 {i} Kling AI 움짤 완성 (표준 규격 변환 완료)")
                         continue
                 except Exception as e:
                     logger.warning(f"씬 {i} Kling AI 생성 실패, zoompan 폴백: {e}")
 
             # 나머지 씬: FFmpeg zoompan 효과
             if os.path.exists(img_path):
-                _ffmpeg_zoompan(img_path, clip_path, duration, bg_color)
+                _ffmpeg_zoompan(img_path, clip_path, duration, bg_color, job_id)
             else:
-                os.system(
+                _run_subprocess(
                     f'ffmpeg -f lavfi -i "color=c={bg_color}:s=1920x1080:r=30" '
                     f'-t {duration:.3f} -c:v libx264 -pix_fmt yuv420p '
-                    f'-y "{clip_path}" -loglevel error'
+                    f'-y "{clip_path}" -loglevel error',
+                    job_id
                 )
             clip_paths.append(clip_path)
 
@@ -126,10 +160,11 @@ class LongformWorker:
                 f.write(f"file '{cp}'\n")
 
         silent_video = str(temp_dir / "silent.mp4")
-        os.system(
+        _run_subprocess(
             f'ffmpeg -f concat -safe 0 -i "{clip_list_path}" '
             f'-c:v libx264 -preset fast -pix_fmt yuv420p '
-            f'-y "{silent_video}" -loglevel error'
+            f'-y "{silent_video}" -loglevel error',
+            job_id
         )
 
         # 3. ASS 자막 생성 (경제사냥꾼 스타일)
@@ -182,18 +217,19 @@ class LongformWorker:
             else:
                 merge_cmd = f'cp "{silent_video}" "{output_path}"'
 
-        ret = os.system(merge_cmd)
+        ret = _run_subprocess(merge_cmd, job_id)
         if ret != 0:
             logger.error("자막/BGM 합성 실패, 폴백")
             if audio_exists:
-                os.system(
+                _run_subprocess(
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
                     f'-map 0:v -map 1:a '
                     f'-c:v copy -c:a aac -shortest '
-                    f'-y "{output_path}" -loglevel error'
+                    f'-y "{output_path}" -loglevel error',
+                    job_id
                 )
             else:
-                os.system(f'cp "{silent_video}" "{output_path}"')
+                _run_subprocess(f'cp "{silent_video}" "{output_path}"', job_id)
 
         if not os.path.exists(output_path):
             raise RuntimeError("롱폼 영상 생성 실패")
@@ -292,9 +328,9 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
     @staticmethod
     def _highlight_stock_numbers(text: str) -> str:
         """주식 수치 노란색 강조 (ASS 인라인 태그)"""
-        text = re.sub(r'([+-]?\d+\.?\d*퍼센트)', r'{\c&H00FFFF&}\1{\c&HFFFFFF&}', text)
-        text = re.sub(r'(\d+포인트)', r'{\c&H00FFFF&}\1{\c&HFFFFFF&}', text)
-        text = re.sub(r'(\d+(?:억|만|천)?(?:원|달러))', r'{\c&H00FFFF&}\1{\c&HFFFFFF&}', text)
+        text = re.sub(r'([+-]?\d+\.?\d*퍼센트)', lambda m: '{\\c&H00FFFF&}' + m.group(1) + '{\\c&HFFFFFF&}', text)
+        text = re.sub(r'(\d+포인트)', lambda m: '{\\c&H00FFFF&}' + m.group(1) + '{\\c&HFFFFFF&}', text)
+        text = re.sub(r'(\d+(?:억|만|천)?(?:원|달러))', lambda m: '{\\c&H00FFFF&}' + m.group(1) + '{\\c&HFFFFFF&}', text)
         return text
 
 
@@ -339,7 +375,7 @@ def _get_intro_kling_count(total_duration: float, total_scenes: int) -> int:
     return count
 
 
-def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a"):
+def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
     """
     정적 이미지에 FFmpeg zoompan 필터로 은은한 줌인 효과를 적용하여 생동감을 부여합니다.
     - 이미지 스케일을 2000x1125로 올린 후 zoompan으로 중심에서 천천히 줌인
@@ -362,13 +398,14 @@ def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: st
         f'-c:v libx264 -preset fast -pix_fmt yuv420p '
         f'-y "{clip_path}" -loglevel error'
     )
-    ret = os.system(cmd)
+    ret = _run_subprocess(cmd, job_id)
     if ret != 0:
         logger.warning(f"zoompan 실패, 단순 정적 이미지로 폴백: {img_path}")
-        os.system(
+        _run_subprocess(
             f'ffmpeg -loop 1 -i "{img_path}" '
             f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
             f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,fps=30" '
             f'-t {duration:.3f} -c:v libx264 -preset fast -pix_fmt yuv420p '
-            f'-y "{clip_path}" -loglevel error'
+            f'-y "{clip_path}" -loglevel error',
+            job_id
         )

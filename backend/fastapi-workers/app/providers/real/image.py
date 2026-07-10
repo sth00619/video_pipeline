@@ -41,6 +41,7 @@ class NanaBananaProvider(ImageProvider):
     """
     Nano Banana Pro (Google Gemini API) 및 pollinations.ai 기반 이미지 생성 프로바이더.
     """
+    _gemini_disabled = False
 
     def __init__(self):
         self.fallback_url = "https://image.pollinations.ai/prompt"
@@ -84,9 +85,19 @@ class NanaBananaProvider(ImageProvider):
         # 디렉토리 생성
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-        # 1. 공식 Gemini API (Nano Banana Pro) 시도
+        # 1. Fal.ai Flux AI (최우선)
+        fal_key = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
+        if fal_key:
+            try:
+                if self._generate_fal_flux(base_prompt, output_path, fal_key):
+                    logger.info(f"Fal.ai Flux 이미지 생성 성공: {output_path}")
+                    return output_path
+            except Exception as e:
+                logger.warning(f"Fal.ai Flux 이미지 생성 실패, Gemini 시도: {e}")
+
+        # 2. 공식 Gemini API (Nano Banana Pro) 시도
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if api_key:
+        if api_key and not self.__class__._gemini_disabled:
             try:
                 character_image_path = kwargs.get("character_image_path")
                 if self._generate_gemini_api(base_prompt, output_path, api_key, character_image_path):
@@ -95,8 +106,83 @@ class NanaBananaProvider(ImageProvider):
             except Exception as e:
                 logger.warning(f"공식 Gemini API 호출 실패, 무료 프록시로 폴백: {e}")
 
-        # 2. 무료 pollinations.ai 프록시 폴백
+        # 3. 무료 pollinations.ai 프록시 폴백
         return self._generate_pollinations(base_prompt, output_path)
+
+    def _generate_fal_flux(self, prompt: str, output_path: str, fal_key: str) -> bool:
+        """
+        Fal.ai HTTP Queue API를 통해 Flux Schnell 이미지 생성.
+        """
+        import requests
+        import time
+        model_id = "fal-ai/flux/schnell"
+        submit_url = f"https://queue.fal.run/{model_id}"
+        headers = {
+            "Authorization": f"Key {fal_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "prompt": prompt,
+            "image_size": "landscape_16_9",
+            "sync_mode": True
+        }
+        
+        logger.info(f"Fal.ai Flux 이미지 생성 요청 시작: prompt_len={len(prompt)}")
+        try:
+            # 동기 모드로 즉시 생성 시도
+            resp = requests.post(submit_url, json=payload, headers=headers, timeout=20)
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                images = resp_json.get("images", [])
+                if images:
+                    img_url = images[0].get("url")
+                    if img_url:
+                        img_bytes = requests.get(img_url, timeout=30).content
+                        with open(output_path, "wb") as f:
+                            f.write(img_bytes)
+                        return True
+            
+            # 비동기 대기 모드로 재시도
+            payload["sync_mode"] = False
+            resp = requests.post(submit_url, json=payload, headers=headers, timeout=30)
+            if resp.status_code != 200:
+                logger.warning(f"Fal.ai Flux 제출 실패 ({resp.status_code}): {resp.text}")
+                return False
+                
+            resp_json = resp.json()
+            request_id = resp_json.get("request_id")
+            if not request_id:
+                return False
+                
+            status_url = resp_json.get("status_url") or f"https://queue.fal.run/{model_id}/requests/{request_id}/status"
+            result_url = resp_json.get("response_url") or f"https://queue.fal.run/{model_id}/requests/{request_id}"
+            
+            for i in range(10):
+                time.sleep(1.5)
+                status_resp = requests.get(status_url, headers=headers, timeout=15)
+                if status_resp.status_code not in (200, 202):
+                    continue
+                status_data = status_resp.json()
+                status = status_data.get("status")
+                if status == "COMPLETED":
+                    res_resp = requests.get(result_url, headers=headers, timeout=15)
+                    if res_resp.status_code == 200:
+                        res_data = res_resp.json()
+                        images = res_data.get("images", [])
+                        if images:
+                            img_url = images[0].get("url")
+                            if img_url:
+                                img_bytes = requests.get(img_url, timeout=30).content
+                                with open(output_path, "wb") as f:
+                                    f.write(img_bytes)
+                                return True
+                    return False
+                elif status in ("FAILED", "CANCELLED"):
+                    return False
+            return False
+        except Exception as e:
+            logger.error(f"Fal.ai Flux API 예외 발생: {e}")
+            return False
 
     def _generate_gemini_api(self, prompt: str, output_path: str, api_key: str, character_image_path: str = None) -> bool:
         """
@@ -163,6 +249,8 @@ class NanaBananaProvider(ImageProvider):
                 return False
                 
         logger.error(f"Gemini API 재시도 횟수 초과로 이미지 생성 실패: {prompt[:40]}...")
+        self.__class__._gemini_disabled = True
+        logger.warning("공식 Gemini API 실패로 인해 서킷 브레이커가 작동합니다. 이후 이미지 생성은 Pollinations로 즉시 폴백합니다.")
         return False
 
     def _generate_pollinations(self, prompt: str, output_path: str) -> str:

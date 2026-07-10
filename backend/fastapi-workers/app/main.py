@@ -547,3 +547,40 @@ def pronunciation_init():
     except Exception as e:
         logger.error(f"발음 사전 초기화 실패: {e}")
         raise HTTPException(status_code=500, detail=f"발음 사전 초기화 실패: {e}")
+
+
+# ============================
+# 작업 제어 및 연쇄 삭제 기능
+# ============================
+import shutil
+
+class StopJobRequest(BaseModel):
+    job_id: int
+
+@app.post("/workers/jobs/{job_id}/stop")
+def stop_worker_job(job_id: int):
+    """작업의 모든 백그라운드 연산을 즉시 중단"""
+    try:
+        from app.utils.process_manager import stop_job_processes
+        stop_job_processes(job_id)
+        return {"status": "ok", "message": f"Job {job_id} stopped"}
+    except Exception as e:
+        logger.error(f"Job {job_id} 중지 오류: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/workers/jobs/{job_id}")
+def delete_worker_job(job_id: int):
+    """작업 미디어 데이터 디렉토리를 물리적으로 삭제"""
+    try:
+        job_dir = DATA_DIR / f"jobs/{job_id}"
+        if job_dir.exists() and job_dir.is_dir():
+            shutil.rmtree(job_dir)
+            logger.info(f"Job {job_id} 미디어 디렉토리 삭제 완료: {job_dir}")
+            return {"status": "ok", "message": f"Job {job_id} directory deleted"}
+        else:
+            logger.info(f"Job {job_id} 미디어 디렉토리가 존재하지 않음: {job_dir}")
+            return {"status": "ok", "message": f"Job {job_id} directory not found"}
+    except Exception as e:
+        logger.error(f"Job {job_id} 디렉토리 삭제 오류: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

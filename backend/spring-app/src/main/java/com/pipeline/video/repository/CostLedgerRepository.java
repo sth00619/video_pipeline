@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface CostLedgerRepository extends JpaRepository<CostLedger, Long> {
     List<CostLedger> findByJobIdOrderByCreatedAtDesc(Long jobId);
+    void deleteByJobId(Long jobId);
 }

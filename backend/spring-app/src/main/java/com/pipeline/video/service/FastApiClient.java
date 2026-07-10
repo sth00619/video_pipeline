@@ -311,6 +311,25 @@ public class FastApiClient {
         }
     }
 
+    public void stopJob(Long jobId) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            postJson(fastApiUrl + "/workers/jobs/" + jobId + "/stop", bodyMap);
+        } catch (Exception e) {
+            log.error("FastAPI 작업 중지 통지 실패: jobId={}, error={}", jobId, e.getMessage());
+        }
+    }
+
+    public void deleteJob(Long jobId) {
+        try {
+            restTemplate.delete(fastApiUrl + "/workers/jobs/" + jobId);
+            log.info("FastAPI 작업 리소스 삭제 통지 성공: jobId={}", jobId);
+        } catch (Exception e) {
+            log.error("FastAPI 작업 리소스 삭제 통지 실패: jobId={}, error={}", jobId, e.getMessage());
+        }
+    }
+
     // ============================
     // 공통 POST helper — UTF-8 charset 명시
     // ============================

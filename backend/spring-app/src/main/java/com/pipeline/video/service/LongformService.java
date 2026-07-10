@@ -213,7 +213,7 @@ public class LongformService {
         }
         scenes.sort(Comparator.comparing(SceneImageDto::getIndex));
 
-        // [하위 호환성 복구] 만약 기존 씬의 prompt가 null인 경우 SCRIPT 에셋의 sections를 기반으로 복구
+        // [하위 호환성 복구] 만약 기존 씬의 text가 null인 경우 SCRIPT 에셋의 sections를 기반으로 복구
         try {
             java.util.Optional<Asset> scriptAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
             if (scriptAssetOpt.isPresent()) {
@@ -223,21 +223,21 @@ public class LongformService {
                 if (sections != null) {
                     for (int i = 0; i < scenes.size(); i++) {
                         SceneImageDto scene = scenes.get(i);
-                        if (scene.getPrompt() == null || scene.getPrompt().isBlank()) {
+                        if (scene.getText() == null || scene.getText().isBlank()) {
                             if (i < sections.size()) {
                                 Map<String, Object> sec = sections.get(i);
                                 String content = (String) sec.get("text");
                                 if (content == null) {
                                     content = (String) sec.get("content");
                                 }
-                                scene.setPrompt(content);
+                                scene.setText(content);
                                 
                                 // DB에도 업데이트
                                 for (Asset a : sceneAssets) {
                                     try {
                                         SceneImageDto dto = objectMapper.readValue(a.getMetaJson(), SceneImageDto.class);
                                         if (dto.getIndex().equals(scene.getIndex())) {
-                                            dto.setPrompt(content);
+                                            dto.setText(content);
                                             a.setMetaJson(safeJson(dto));
                                             assetRepository.save(a);
                                             break;
@@ -250,16 +250,16 @@ public class LongformService {
                 }
             }
         } catch (Exception e) {
-            log.warn("SCRIPT 에셋으로부터 null 프롬프트 복구 실패: {}", e.getMessage());
+            log.warn("SCRIPT 에셋으로부터 null 텍스트 복구 실패: {}", e.getMessage());
         }
 
-        // 2. 각 씬의 prompt를 순서대로 이어붙여 새로운 전체 스크립트 작성
+        // 2. 각 씬의 text(한국어 대사)를 순서대로 이어붙여 새로운 전체 스크립트 작성
         StringBuilder fullScriptBuilder = new StringBuilder();
         for (SceneImageDto scene : scenes) {
             if (fullScriptBuilder.length() > 0) {
                 fullScriptBuilder.append("\n");
             }
-            String pText = scene.getPrompt() != null ? scene.getPrompt() : "";
+            String pText = scene.getText() != null ? scene.getText() : (scene.getPrompt() != null ? scene.getPrompt() : "");
             fullScriptBuilder.append(pText);
         }
         String newScript = fullScriptBuilder.toString();
@@ -269,7 +269,7 @@ public class LongformService {
         for (SceneImageDto scene : scenes) {
             Map<String, Object> sec = new HashMap<>();
             sec.put("title", "Scene " + scene.getIndex());
-            String pText = scene.getPrompt() != null ? scene.getPrompt() : "";
+            String pText = scene.getText() != null ? scene.getText() : (scene.getPrompt() != null ? scene.getPrompt() : "");
             sec.put("text", pText);
             sec.put("content", pText);
             sec.put("char_count", pText.length());
@@ -310,12 +310,12 @@ public class LongformService {
             
             for (int i = 0; i < scenes.size(); i++) {
                 SceneImageDto scene = scenes.get(i);
-                String pText = scene.getPrompt() != null ? scene.getPrompt() : "";
+                String pText = scene.getText() != null ? scene.getText() : (scene.getPrompt() != null ? scene.getPrompt() : "");
                 String cleanPrompt = pText.replaceAll("[\\s\\p{Punct}]+", "");
                 
                 String cleanNextPrompt = "";
                 if (i + 1 < scenes.size()) {
-                    String nextPText = scenes.get(i + 1).getPrompt() != null ? scenes.get(i + 1).getPrompt() : "";
+                    String nextPText = scenes.get(i + 1).getText() != null ? scenes.get(i + 1).getText() : (scenes.get(i + 1).getPrompt() != null ? scenes.get(i + 1).getPrompt() : "");
                     cleanNextPrompt = nextPText.replaceAll("[\\s\\p{Punct}]+", "");
                 }
                 

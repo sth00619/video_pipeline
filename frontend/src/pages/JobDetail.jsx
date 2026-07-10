@@ -234,6 +234,40 @@ export default function JobDetail() {
     }
   })
 
+  const stopMutation = useMutation({
+    mutationFn: () => jobsApi.stop(id),
+    onSuccess: () => {
+      qc.invalidateQueries(['job', id])
+      alert('작업이 중지되었습니다.')
+    },
+    onError: (err) => {
+      alert('작업 중지 실패: ' + (err.response?.data?.message || err.message))
+    }
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => jobsApi.delete(id),
+    onSuccess: () => {
+      alert('작업이 성공적으로 삭제되었습니다.')
+      navigate('/jobs')
+    },
+    onError: (err) => {
+      alert('작업 삭제 실패: ' + (err.response?.data?.message || err.message))
+    }
+  })
+
+  const handleStop = () => {
+    if (window.confirm('정말로 진행 중인 영상 제작 작업을 즉시 중지하시겠습니까?')) {
+      stopMutation.mutate()
+    }
+  }
+
+  const handleDelete = () => {
+    if (window.confirm('정말로 이 작업을 삭제하시겠습니까? 관련 데이터베이스 기록 및 미디어 파일이 완전히 제거됩니다.')) {
+      deleteMutation.mutate()
+    }
+  }
+
   const publishMut = useMutation({
     mutationFn: () => jobsApi.publish(id),
     onSuccess: () => {
@@ -264,6 +298,8 @@ export default function JobDetail() {
   const isGuided = job.autonomy === 'GUIDED'
   const isManual = job.autonomy === 'MANUAL'
   const isDone = ['READY','PUBLISHED'].includes(job.status)
+  const isRunning = !['DRAFT', 'READY', 'PUBLISHED', 'FAILED'].includes(job.status)
+  const isDeletable = ['DRAFT', 'READY', 'FAILED'].includes(job.status)
   const token = authStore.getToken()
 
   return (
@@ -281,7 +317,27 @@ export default function JobDetail() {
             </div>
           </div>
         </div>
-        <StatusBadge status={job.status}/>
+        <div className="flex items-center gap-2">
+          <StatusBadge status={job.status}/>
+          {isRunning && (
+            <button
+              onClick={handleStop}
+              disabled={stopMutation.isPending}
+              className="text-xs bg-red-950/40 text-red-400 border border-red-900/60 hover:bg-red-900/50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition font-semibold"
+            >
+              작업 중지
+            </button>
+          )}
+          {isDeletable && (
+            <button
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="text-xs bg-gray-800/60 text-gray-400 border border-gray-700 hover:bg-gray-700/50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition"
+            >
+              작업 삭제
+            </button>
+          )}
+        </div>
       </div>
 
       {isManual && !isDone && (
@@ -732,7 +788,7 @@ export default function JobDetail() {
                                         <img src="${window.location.origin}/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}" width="240" height="135" style="border: 1px solid #dddddd; display: block;" />
                                       </td>
                                       <td style="vertical-align: top; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; text-align: justify; color: #333333;">
-                                        ${img.prompt || ''}
+                                        ${img.text || img.prompt || ''}
                                       </td>
                                     </tr>
                                   </table>
@@ -794,7 +850,7 @@ export default function JobDetail() {
                                   <div style="flex: 1;">
                                     <div style="font-weight: bold; color: #0d1b2a; font-size: 13px; margin-bottom: 6px;">씬 #${img.index} (${fmt(img.start)} ~ ${fmt(img.start + img.duration)})</div>
                                     <p style="margin-top: 0; margin-bottom: 0; text-align: justify; font-size: 13px; line-height: 1.8;">
-                                      ${img.prompt || ''}
+                                      ${img.text || img.prompt || ''}
                                     </p>
                                   </div>
                                 </div>
@@ -915,7 +971,7 @@ export default function JobDetail() {
                                     </span>
                                   </div>
                                   <p className="text-xs text-gray-300 leading-relaxed text-justify">
-                                    {img.prompt || '(내용 없음)'}
+                                    {img.text || img.prompt || '(내용 없음)'}
                                   </p>
                                 </div>
                               </div>
@@ -1028,7 +1084,7 @@ export default function JobDetail() {
                                     />
                                   ) : (
                                     <p className="text-xs text-gray-300 leading-relaxed text-justify line-clamp-3">
-                                      {img.prompt || '(내용 없음)'}
+                                      {img.text || img.prompt || '(내용 없음)'}
                                     </p>
                                   )}
                                 </div>
@@ -1074,7 +1130,7 @@ export default function JobDetail() {
                                     <button
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
-                                        text: img.prompt || '',
+                                        text: img.text || img.prompt || '',
                                         section: img.section,
                                         mode: 'image'
                                       })}
@@ -1119,7 +1175,7 @@ export default function JobDetail() {
                                     <button
                                       onClick={() => {
                                         setEditingSceneIndex(img.index);
-                                        setEditingSceneText(img.prompt || '');
+                                        setEditingSceneText(img.text || img.prompt || '');
                                       }}
                                       className="flex items-center gap-1 text-[10px] bg-navy-700 text-gray-300 hover:text-white border border-navy-600 px-2 py-1 rounded transition"
                                     >

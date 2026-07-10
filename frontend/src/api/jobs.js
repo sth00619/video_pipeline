@@ -55,4 +55,8 @@ export const jobsApi = {
 
   // 비용
   costs: (id) => apiClient.get(`/jobs/${id}/costs/summary`).then(r => r.data),
+
+  // 작업 제어
+  stop: (id) => apiClient.post(`/jobs/${id}/stop`).then(r => r.data),
+  delete: (id) => apiClient.delete(`/jobs/${id}`).then(r => r.data),
 }

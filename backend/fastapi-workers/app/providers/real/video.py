@@ -212,14 +212,14 @@ class KlingProvider(VideoProvider):
                 
             logger.info(f"Fal.ai 요청 성공: request_id={request_id}. 폴링을 시작합니다.")
             
-            status_url = f"https://queue.fal.run/{model_id}/requests/{request_id}/status"
-            result_url = f"https://queue.fal.run/{model_id}/requests/{request_id}"
+            status_url = resp_json.get("status_url") or f"https://queue.fal.run/{model_id}/requests/{request_id}/status"
+            result_url = resp_json.get("response_url") or f"https://queue.fal.run/{model_id}/requests/{request_id}"
             
             # 최대 180초 폴링
             for i in range(36):
                 time.sleep(5)
                 status_resp = requests.get(status_url, headers=headers, timeout=30)
-                if status_resp.status_code != 200:
+                if status_resp.status_code not in (200, 202):
                     logger.warning(f"Fal.ai 상태 조회 실패 ({status_resp.status_code}), 계속 시도...")
                     continue
                     

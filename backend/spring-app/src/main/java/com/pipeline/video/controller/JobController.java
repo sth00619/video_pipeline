@@ -72,6 +72,21 @@ public class JobController {
         return ResponseEntity.ok(jobService.publishVideo(id));
     }
 
+    @PostMapping("/{id}/stop")
+    public ResponseEntity<JobResponse> stopJob(
+            @PathVariable Long id,
+            @AuthenticationPrincipal String username) {
+        return ResponseEntity.ok(jobService.stopJob(id, username));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteJob(
+            @PathVariable Long id,
+            @AuthenticationPrincipal String username) {
+        jobService.deleteJob(id, username);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/thumbnail/longform")
     public ResponseEntity<org.springframework.core.io.Resource> getLongformThumbnail(@PathVariable Long id) {
         try {

@@ -16,6 +16,9 @@ public class SceneImageDto {
     @JsonProperty("prompt")
     private String prompt;
 
+    @JsonProperty("text")
+    private String text;
+
     @JsonProperty("start")
     private Double start;
 

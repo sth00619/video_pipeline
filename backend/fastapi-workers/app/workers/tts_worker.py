@@ -28,7 +28,9 @@ Phase 3-3 v5 — TTS + faster-whisper 역방향 정렬
 import os
 import re
 import logging
+import subprocess
 from pathlib import Path
+from app.utils.process_manager import is_job_stopped, register_process, unregister_process
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,19 @@ class TtsWorker:
 
     def __init__(self):
         self._whisper_model = None
+
+    def _run_subprocess(self, cmd: str, job_id: int) -> int:
+        """FFmpeg 등의 명령어를 subprocess.Popen으로 실행하고 중지 트래킹 등록"""
+        if is_job_stopped(job_id):
+            raise RuntimeError(f"Job {job_id} is stopped. Aborting execution.")
+        logger.info(f"Running tracked subprocess (TTS): {cmd}")
+        p = subprocess.Popen(cmd, shell=True)
+        register_process(job_id, p)
+        try:
+            ret = p.wait()
+            return ret
+        finally:
+            unregister_process(job_id, p)
 
     def _get_whisper_model(self):
         """faster-whisper 모델 싱글턴 (이미 설치됨)"""
@@ -92,13 +107,13 @@ class TtsWorker:
         try:
             if os.getenv("ELEVENLABS_API_KEY"):
                 logger.info("ELEVENLABS_API_KEY 감지 → ElevenLabs v3 AI 성우 + 발음 사전 적용")
-                used_tts = self._generate_elevenlabs(preprocessed, mp3_path, voice_id)
+                used_tts = self._generate_elevenlabs(preprocessed, mp3_path, voice_id, job_id)
                 if used_tts:
                     tts_engine = "elevenlabs"
             
             if not used_tts:
                 # gTTS 폴백 시에는 clean_script 전처리 적용 (발음 사전 미지원)
-                used_tts = self._generate_gtts(preprocessed, mp3_path)
+                used_tts = self._generate_gtts(preprocessed, mp3_path, job_id)
                 if used_tts:
                     tts_engine = "gtts"
         except Exception as e:
@@ -107,26 +122,27 @@ class TtsWorker:
         if not used_tts or not os.path.exists(mp3_path):
             logger.warning("TTS 실패 → 무음 폴백")
             estimated = len(clean_script) / 5.0
-            os.system(
+            self._run_subprocess(
                 f'ffmpeg -f lavfi -i "anullsrc=r=44100:cl=stereo" '
                 f'-t {estimated:.3f} -c:a libmp3lame -b:a 128k '
-                f'-y "{mp3_path}" -loglevel error'
+                f'-y "{mp3_path}" -loglevel error',
+                job_id
             )
-        # 1.35x 오디오 가속 적용 (atempo 필터)
+        # 1.3x 오디오 가속 적용 (atempo 필터)
         if os.path.exists(mp3_path):
-            logger.info("음성 배속(1.35x) 적용 시작...")
+            logger.info("음성 배속(1.3x) 적용 시작...")
             temp_mp3 = mp3_path + ".speedup.mp3"
-            # atempo=1.35 필터로 오디오 속도 높임
-            ret = os.system(f'ffmpeg -i "{mp3_path}" -filter:a "atempo=1.35" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error')
+            # atempo=1.3 필터로 오디오 속도 높임
+            ret = self._run_subprocess(f'ffmpeg -i "{mp3_path}" -filter:a "atempo=1.3" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error', job_id)
             if ret == 0 and os.path.exists(temp_mp3):
                 os.replace(temp_mp3, mp3_path)
-                logger.info("음성 배속(1.35x) 적용 성공")
+                logger.info("음성 배속(1.3x) 적용 성공")
             else:
                 logger.error(f"음성 배속 적용 실패 (exit code: {ret})")
 
         # 실제 MP3 길이 측정
         actual_duration = self._probe_duration(mp3_path) or len(clean_script) / 5.0
-        logger.info(f"음성 길이 (1.35x 배속 후): {actual_duration:.1f}초")
+        logger.info(f"음성 길이 (1.3x 배속 후): {actual_duration:.1f}초")
 
         # 3. 자막 타임스탬프 추출 (Forced Alignment → stable-ts → Whisper → 글자수 비례)
         chunks = []
@@ -178,12 +194,15 @@ class TtsWorker:
     # ============================
     # gTTS 음성 생성
     # ============================
-    def _generate_gtts(self, text: str, output_path: str) -> bool:
+    def _generate_gtts(self, text: str, output_path: str, job_id: int = 0) -> bool:
         """gTTS로 한국어 음성 생성. 5000자 초과 시 분할 생성 후 concat."""
         from gtts import gTTS
         import tempfile
 
         MAX_CHARS = 4500
+
+        if is_job_stopped(job_id):
+            raise RuntimeError(f"Job {job_id} stopped by user.")
 
         if len(text) <= MAX_CHARS:
             tts = gTTS(text=text, lang='ko', slow=False)
@@ -206,6 +225,8 @@ class TtsWorker:
 
         tmp_files = []
         for part in parts:
+            if is_job_stopped(job_id):
+                raise RuntimeError(f"Job {job_id} stopped by user.")
             tmp = tempfile.mktemp(suffix=".mp3")
             tts = gTTS(text=part, lang='ko', slow=False)
             tts.save(tmp)
@@ -217,9 +238,10 @@ class TtsWorker:
             for t in tmp_files:
                 f.write(f"file '{t}'\n")
 
-        os.system(
+        self._run_subprocess(
             f'ffmpeg -f concat -safe 0 -i "{list_file}" '
-            f'-c:a copy -y "{output_path}" -loglevel error'
+            f'-c:a copy -y "{output_path}" -loglevel error',
+            job_id
         )
 
         for t in tmp_files:
@@ -230,7 +252,7 @@ class TtsWorker:
 
         return os.path.exists(output_path)
 
-    def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str) -> bool:
+    def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str, job_id: int = 0) -> bool:
         """
         ElevenLabs v3 + 발음 사전 기반 한국어 AI 성우 음성 생성.
         원본 스크립트 텍스트를 그대로 전달하고, 발음 사전이 금융 용어 발음을 교정합니다.
@@ -242,6 +264,9 @@ class TtsWorker:
         api_key = os.getenv("ELEVENLABS_API_KEY")
         if not api_key:
             return False
+
+        if is_job_stopped(job_id):
+            raise RuntimeError(f"Job {job_id} stopped by user.")
         
         # voice_id가 없거나 기본값이면 한국어 발음이 자연스러운 기본 voice_id 사용
         if not voice_id or voice_id in ["gtts_ko", "default", "silent", "gtts_whisper_ko"]:
@@ -261,7 +286,7 @@ class TtsWorker:
         def _build_payload(chunk_text: str) -> dict:
             payload = {
                 "text": chunk_text,
-                "model_id": "eleven_v3",
+                "model_id": "eleven_multilingual_v2",
                 "voice_settings": {
                     "stability": 0.42,
                     "similarity_boost": 0.82,
@@ -273,20 +298,31 @@ class TtsWorker:
                 payload["pronunciation_dictionary_locators"] = pron_locators
             return payload
         
-        MAX_CHARS = 2000
+        MAX_CHARS = 800
         if len(text) <= MAX_CHARS:
             payload = _build_payload(text)
-            resp = requests.post(url, json=payload, headers=headers, timeout=60)
-            if resp.status_code == 200:
-                with open(output_path, "wb") as f:
-                    f.write(resp.content)
-                logger.info("ElevenLabs v3 + 발음 사전 음성 생성 성공 (단일 요청)")
+            success = False
+            for retry in range(2):
+                try:
+                    resp = requests.post(url, json=payload, headers=headers, timeout=40)
+                    if resp.status_code == 200:
+                        with open(output_path, "wb") as f:
+                            f.write(resp.content)
+                        logger.info(f"ElevenLabs v3 + 발음 사전 음성 생성 성공 (단일 요청, 시도 {retry+1})")
+                        success = True
+                        break
+                    else:
+                        logger.warning(f"ElevenLabs API 시도 {retry+1} 실패: {resp.status_code}")
+                except Exception as e:
+                    logger.warning(f"ElevenLabs API 시도 {retry+1} 예외: {e}")
+            
+            if success:
                 return True
             else:
-                logger.warning(f"ElevenLabs API 실패: {resp.status_code} {resp.text}")
-                return False
+                logger.warning("ElevenLabs 단일 요청 실패 -> gTTS 단일 폴백 시도")
+                return self._generate_gtts(text, output_path, job_id)
         else:
-            # 2000자 단위 분할 (문장 경계 기준)
+            # 800자 단위 분할 (문장 경계 기준)
             parts = []
             current = ""
             for sent in re.split(r'(?<=[.!?])\s+', text):
@@ -301,34 +337,63 @@ class TtsWorker:
                 
             tmp_files = []
             for idx, part in enumerate(parts):
+                if is_job_stopped(job_id):
+                    raise RuntimeError(f"Job {job_id} stopped by user.")
                 tmp = tf.mktemp(suffix=f"_el_{idx}.mp3")
                 payload = _build_payload(part)
-                resp = requests.post(url, json=payload, headers=headers, timeout=90)
-                if resp.status_code == 200:
-                    with open(tmp, "wb") as f:
-                        f.write(resp.content)
-                    tmp_files.append(tmp)
-                    logger.info(f"ElevenLabs 분할 {idx+1}/{len(parts)} 성공")
-                else:
-                    logger.warning(f"ElevenLabs 부분 생성 실패: {resp.status_code}")
-                    for t in tmp_files:
-                        if os.path.exists(t): os.remove(t)
-                    return False
+                chunk_success = False
+                
+                # 2회 재시도 루프
+                for retry in range(2):
+                    try:
+                        resp = requests.post(url, json=payload, headers=headers, timeout=40)
+                        if resp.status_code == 200:
+                            with open(tmp, "wb") as f:
+                                f.write(resp.content)
+                            tmp_files.append(tmp)
+                            logger.info(f"ElevenLabs 분할 {idx+1}/{len(parts)} 성공 (시도 {retry+1})")
+                            chunk_success = True
+                            break
+                        else:
+                            logger.warning(f"ElevenLabs 분할 {idx+1} 시도 {retry+1} 실패: {resp.status_code}")
+                    except Exception as e:
+                        logger.warning(f"ElevenLabs 분할 {idx+1} 시도 {retry+1} 예외: {e}")
+                
+                # 청크 레벨 폴백: ElevenLabs 실패 시 gTTS로 해당 청크 대체
+                if not chunk_success:
+                    logger.warning(f"ElevenLabs 분할 {idx+1} 최종 실패 -> gTTS 폴백 적용")
+                    try:
+                        from gtts import gTTS
+                        tts = gTTS(text=part, lang='ko', slow=False)
+                        tts.save(tmp)
+                        tmp_files.append(tmp)
+                        logger.info(f"gTTS 분할 {idx+1}/{len(parts)} 성공 (폴백)")
+                    except Exception as ge:
+                        logger.error(f"gTTS 분할 {idx+1} 폴백 실패: {ge} -> 무음 청크 생성")
+                        estimated = len(part) / 5.0
+                        self._run_subprocess(
+                            f'ffmpeg -f lavfi -i "anullsrc=r=44100:cl=stereo" '
+                            f'-t {estimated:.3f} -c:a libmp3lame -b:a 128k '
+                            f'-y "{tmp}" -loglevel error',
+                            job_id
+                        )
+                        tmp_files.append(tmp)
                     
             list_file = tf.mktemp(suffix=".txt")
             with open(list_file, "w", encoding="utf-8") as f:
                 for t in tmp_files:
                     f.write(f"file '{t}'\n")
             
-            os.system(
+            self._run_subprocess(
                 f'ffmpeg -f concat -safe 0 -i "{list_file}" '
-                f'-c:a copy -y "{output_path}" -loglevel error'
+                f'-c:a copy -y "{output_path}" -loglevel error',
+                job_id
             )
             for t in tmp_files:
                 if os.path.exists(t): os.remove(t)
             if os.path.exists(list_file): os.remove(list_file)
             
-            logger.info(f"ElevenLabs v3 분할 음성 생성 및 병합 성공 ({len(parts)}개 조각)")
+            logger.info(f"음성 생성 및 병합 완료 ({len(parts)}개 조각, 하이브리드 모드)")
             return os.path.exists(output_path)
 
     # ============================
@@ -338,6 +403,8 @@ class TtsWorker:
         """
         ElevenLabs Forced Alignment API를 사용하여 단어 단위 정밀 타임스탬프를 추출합니다.
         Whisper 역방향 STT보다 훨씬 정확하며, 원본 텍스트를 그대로 정렬합니다.
+        
+        핵심: TTS에 전달된 preprocessed 텍스트를 FA와 자막 모두에 사용하여 100% 일치 보장.
         """
         import requests
 
@@ -345,21 +412,22 @@ class TtsWorker:
         if not api_key:
             return []
 
-        # 원본 스크립트에서 자막 청크 분할
-        text_chunks = self._split_script_into_chunks(original_script, max_chars=22)
+        # TTS에 실제로 보낸 텍스트와 동일하게 전처리 (스크립트=TTS=자막 통일)
+        clean_text = re.sub(r'^##\s*.+$', '', original_script, flags=re.MULTILINE).strip()
+        preprocessed_text = self._preprocess_for_tts(clean_text)
+
+        # 자막 청크도 preprocessed_text 기반으로 분할 (원본이 아닌 발음 전처리 텍스트)
+        text_chunks = self._split_script_into_chunks(preprocessed_text, max_chars=22)
         if not text_chunks:
             return []
 
-        # Forced Alignment API 호출 (음성 발음에 맞추어 전처리된 텍스트로 정합)
-        clean_text = re.sub(r'^##\s*.+$', '', original_script, flags=re.MULTILINE).strip()
-        preprocessed_alignment_text = self._preprocess_for_tts(clean_text)
-        
+        # Forced Alignment API 호출 (preprocessed_text로 통일)
         with open(mp3_path, "rb") as audio_file:
             resp = requests.post(
                 "https://api.elevenlabs.io/v1/forced-alignment",
                 headers={"xi-api-key": api_key},
                 files={"file": ("audio.mp3", audio_file, "audio/mpeg")},
-                data={"text": preprocessed_alignment_text},
+                data={"text": preprocessed_text},
                 timeout=120,
             )
 
