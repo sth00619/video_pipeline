@@ -183,11 +183,25 @@ public class FastApiClient {
 
     // Phase 3-3 — TTS
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId) {
+        return generateTts(jobId, script, voiceId, null);
+    }
+
+    /**
+     * TTS 생성 (배속 지정 가능).
+     *
+     * ttsSpeed = null이면 FastAPI 워커의 runtime_config 기본값(현재 1.3x)을 그대로 사용.
+     * 태호님 피드백 "1.05배 정도 느려도 괜찮다"에 대응하려면 여기에 1.25 등을 지정하거나,
+     * /pipeline/config API로 전역 기본값을 낮추면 됩니다.
+     */
+    public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId, Double ttsSpeed) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
             bodyMap.put("script", script);
             bodyMap.put("voice_id", voiceId);
+            if (ttsSpeed != null) {
+                bodyMap.put("tts_speed", ttsSpeed);
+            }
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/tts/generate", bodyMap),
                     TtsGenerateResponse.class);

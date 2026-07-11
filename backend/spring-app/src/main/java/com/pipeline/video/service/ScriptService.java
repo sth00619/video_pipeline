@@ -70,9 +70,15 @@ public class ScriptService {
         ScriptGenerateResponse result = fastApiClient.generateScript(
                 jobId, job.getKeyword(), llmTargetMinutes, categoryName, marketSnapshotJson);
 
-        costService.record(jobId, "CLAUDE_LLM", BigDecimal.ZERO, "USD",
-                String.format("스크립트 %d분 (실제 %d분) %d자", targetMinutes, llmTargetMinutes,
-                        result.getCharCount() != null ? result.getCharCount() : 0));
+        // [버그 수정] 기존에는 BigDecimal.ZERO로 하드코딩되어 있어서 스크립트 생성 비용이
+        // 예산 누적에 전혀 반영되지 않았습니다 (JobDetail 비용 게이지가 항상 0으로 표시되던
+        // 원인 중 하나). 이제 3-Round 팩트체크 왕복까지 감안한 근사치를 기록합니다.
+        int outputChars = result.getCharCount() != null ? result.getCharCount() : 0;
+        int inputChars = marketSnapshotJson != null ? marketSnapshotJson.length() : 500;
+        java.math.BigDecimal claudeCost = CostEstimator.claude(inputChars, outputChars, 3);
+        costService.record(jobId, "CLAUDE_LLM", claudeCost, "USD",
+                String.format("스크립트 %d분 (실제 %d분) %d자, 3-Round 팩트체크", targetMinutes, llmTargetMinutes,
+                        outputChars));
 
         Asset asset = Asset.builder()
                 .jobId(jobId)
@@ -170,7 +176,13 @@ public class ScriptService {
                     if (visualIdx != -1) {
                         prompt = rawContent.substring(visualIdx + 5).trim();
                     } else {
-                        prompt = "A cute gold coin mascot character, chibi cartoon style, round shiny gold coin with face, arms and legs, wearing small navy business suit with gold tie, showing an expression matching '" + title + "', professional financial news studio background, dark navy blue background (#0d1b2a), 3D render, smooth shading, anime cartoon style";
+                        // [버그 수정] 여기 하드코딩된 4번째 캐릭터 설명 사본을 제거합니다.
+                        // 파이썬 워커 쪽 script_worker._generate_visual_prompt()가 이미
+                        // 씬 텍스트 기반의 정확한 프롬프트를 만들어주므로, 여기서는 그것에
+                        // 위임하는 게 맞습니다. 스크립트 수정 → 재저장 경로에서만 이 분기가
+                        // 타는데, 그때는 씬 텍스트만 넘겨주고 실제 프롬프트 생성은 이미지
+                        // 재생성 시 FastAPI 쪽에서 다시 만들어집니다.
+                        prompt = "";
                     }
                     
                     Map<String, Object> secMap = new java.util.HashMap<>();

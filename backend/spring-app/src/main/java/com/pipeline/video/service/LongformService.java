@@ -6,6 +6,7 @@ import com.pipeline.video.domain.*;
 import com.pipeline.video.dto.LongformGenerateResponse;
 import com.pipeline.video.repository.AssetRepository;
 import com.pipeline.video.repository.VideoJobRepository;
+import com.pipeline.video.repository.ChannelProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,11 +42,30 @@ public class LongformService {
 
     private final VideoJobRepository jobRepository;
     private final AssetRepository assetRepository;
+    private final ChannelProfileRepository channelProfileRepository;
     private final FastApiClient fastApiClient;
     private final GateService gateService;
     private final AutonomyService autonomyService;
     private final CostService costService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * TtsService.generate()와 동일한 규칙으로 채널 목소리를 조회합니다.
+     * (기존에는 이 로직이 TtsService에만 있고 LongformService.rebuild()에는 없어서,
+     * 씬을 편집하고 재조립할 때마다 채널에서 지정한 목소리가 아니라 기본 목소리로
+     * 되돌아가는 버그가 있었습니다. 초기 생성 때는 채널 목소리로 나오다가,
+     * 씬 하나 고치고 재조립하면 목소리가 바뀌어 버리는 것처럼 느껴졌을 겁니다.)
+     */
+    private String resolveVoiceId(VideoJob job) {
+        String defaultVoiceId = "default_ko";
+        if (job.getChannelId() == null) return defaultVoiceId;
+        ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
+        if (profile != null && profile.getVoiceId() != null && !profile.getVoiceId().isBlank()) {
+            log.info("재조립 시 채널 목소리 로드: channelId={}, voiceId={}", job.getChannelId(), profile.getVoiceId());
+            return profile.getVoiceId();
+        }
+        return defaultVoiceId;
+    }
 
     @Transactional
     public LongformGenerateResponse generate(Long jobId, String username) {
@@ -86,10 +106,22 @@ public class LongformService {
         LongformGenerateResponse result = fastApiClient.generateLongform(
                 jobId, ttsMetaJson, scenesJson, gifsJson);
 
-        // 비용 기록 (Mock $0)
-        costService.record(jobId, "FFMPEG_ASSEMBLE", BigDecimal.ZERO, "USD",
-                String.format("롱폼 조립: %.0f초, %d씬", 
+        // [버그 수정] 기존 $0 하드코딩. 롱폼 조립 자체는 FFmpeg(무료)이지만,
+        // 초반 인트로 몇 씬은 Fal.ai Kling image-to-video로 유료 처리됩니다.
+        // FastAPI 워커의 _get_intro_kling_count() 규칙에 맞춰 대략적으로 계산.
+        double introSeconds;
+        double totalMin = result.getDurationSeconds() / 60.0;
+        if (totalMin <= 5) introSeconds = 30;
+        else if (totalMin <= 10) introSeconds = 45;
+        else introSeconds = 60;
+        // 조립 자체는 무료 (FFmpeg)
+        costService.record(jobId, "FFMPEG_ASSEMBLE", java.math.BigDecimal.ZERO, "USD",
+                String.format("롱폼 조립: %.0f초, %d씬",
                         result.getDurationSeconds(), result.getSceneCount()));
+        // 인트로 Kling 움짤 비용 (Fal.ai 유료)
+        java.math.BigDecimal klingCost = CostEstimator.falKling(introSeconds);
+        costService.record(jobId, "FAL_KLING_INTRO", klingCost, "USD",
+                String.format("인트로 움짤 %.0f초", introSeconds));
 
         // Asset 저장
         Asset asset = Asset.builder()
@@ -289,9 +321,15 @@ public class LongformService {
                 .build();
         assetRepository.save(finalScriptAsset);
 
-        // 4. TTS 재생성 (gTTS + Whisper 호출)
-        log.info("재조립을 위한 TTS 재생성 시작: jobId={}, scriptLength={}자", jobId, newScript.length());
-        TtsGenerateResponse ttsResult = fastApiClient.generateTts(jobId, newScript, "default_ko");
+        // 4. TTS 재생성 — 채널 프로필의 목소리를 사용해서 초기 생성과 톤 일관성 유지
+        // [버그 수정 완료] 기존엔 "default_ko"로 고정되어 있어서, 씬을 편집하고
+        // 재조립할 때마다 채널에서 지정한 ElevenLabs 목소리가 기본 목소리로
+        // 되돌아가 버렸습니다. 이제 TtsService.generate()와 동일한 규칙으로
+        // channelId → ChannelProfile.voiceId를 조회합니다.
+        String finalVoiceId = resolveVoiceId(job);
+        log.info("재조립을 위한 TTS 재생성 시작: jobId={}, scriptLength={}자, voice={}",
+                jobId, newScript.length(), finalVoiceId);
+        TtsGenerateResponse ttsResult = fastApiClient.generateTts(jobId, newScript, finalVoiceId);
         
         // TTS Asset 저장
         Asset ttsAsset = Asset.builder()

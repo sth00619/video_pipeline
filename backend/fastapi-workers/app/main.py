@@ -16,7 +16,8 @@ from app.workers.longform_worker import LongformWorker
 from app.workers.sfx_worker import SfxWorker
 from app.workers.bgm_worker import BgmWorker
 from app.workers.pronunciation_manager import PronunciationManager
-from app.config import APP_MODE
+from app.config import APP_MODE, CLAUDE_MODEL
+from app import runtime_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -97,7 +98,55 @@ async def startup_event():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "mode": APP_MODE}
+    return {"status": "ok", "mode": APP_MODE, "claude_model": CLAUDE_MODEL}
+
+
+# ============================
+# 신규 — 파이프라인 파라미터 실시간 조정 API
+#
+# TTS 속도, ElevenLabs 목소리 설정, BGM 볼륨, 자막 크기, Kling 인트로
+# 길이 등을 여기로 GET/POST하면 코드 수정이나 Docker 재빌드 없이
+# 다음 Job부터 바로 반영됩니다.
+# ============================
+class PipelineConfigUpdate(BaseModel):
+    tts_speed: Optional[float] = None
+    chars_per_minute: Optional[int] = None
+    scene_duration_sec: Optional[float] = None
+    subtitle_max_chars: Optional[int] = None
+    subtitle_font_size: Optional[int] = None
+    elevenlabs_voice_id: Optional[str] = None
+    elevenlabs_stability: Optional[float] = None
+    elevenlabs_similarity_boost: Optional[float] = None
+    elevenlabs_style: Optional[float] = None
+    bgm_volume: Optional[float] = None
+    zoompan_speed: Optional[float] = None
+    zoompan_max_zoom: Optional[float] = None
+    intro_kling_seconds_5min: Optional[int] = None
+    intro_kling_seconds_10min: Optional[int] = None
+    intro_kling_seconds_15min: Optional[int] = None
+    intro_kling_seconds_20min: Optional[int] = None
+
+
+@app.get("/pipeline/config")
+def get_pipeline_config():
+    """현재 적용 중인 파이프라인 파라미터 전체를 반환합니다."""
+    return runtime_config.get()
+
+
+@app.post("/pipeline/config")
+def update_pipeline_config(update: PipelineConfigUpdate):
+    """전달된 파라미터만 즉시 갱신합니다. (다음 Job부터 바로 반영, 재빌드 불필요)"""
+    try:
+        updated = runtime_config.update(**update.dict(exclude_none=True))
+        return {"status": "ok", "config": updated}
+    except (KeyError, ValueError) as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/pipeline/config/reset")
+def reset_pipeline_config():
+    """환경변수 기본값으로 되돌립니다."""
+    return {"status": "ok", "config": runtime_config.reset_to_env_defaults()}
 
 
 # ============================
@@ -251,11 +300,15 @@ class TtsGenerateRequest(BaseModel):
     script: str
     voice_id: str = "default_ko"
     job_id: Optional[int] = 0
+    tts_speed: Optional[float] = None  # 생략 시 runtime_config의 현재 기본값 사용
 
 @app.post("/workers/tts/generate")
 async def tts_generate(request: TtsGenerateRequest):
     try:
-        return get_tts_worker().synthesize(request.script, request.voice_id, request.job_id or 0)
+        return get_tts_worker().synthesize(
+            request.script, request.voice_id, request.job_id or 0,
+            tts_speed=request.tts_speed,
+        )
     except Exception as e:
         raise HTTPException(500, f"TTS 생성 실패: {str(e)}")
 
@@ -478,7 +531,7 @@ async def generate_youtube_metadata(request: YoutubeMetadataRequest):
         Only return the raw JSON object. Do not include markdown formatting or backticks around it."""
 
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=CLAUDE_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}]
         )

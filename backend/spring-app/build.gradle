@@ -3,26 +3,21 @@ plugins {
 	id 'org.springframework.boot' version '3.5.1'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
-
 group = 'com.pipeline'
 version = '0.0.1-SNAPSHOT'
-
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
 	}
 }
-
 configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
 }
-
 repositories {
 	mavenCentral()
 }
-
 dependencies {
 	// Spring Boot 기본
 	implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -30,30 +25,29 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
-
 	// PostgreSQL
 	runtimeOnly 'org.postgresql:postgresql'
-
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
-
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
-
 	// JSON
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
-
 	// Swagger (SpringDoc OpenAPI)
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
-
+	// 신규 — Temporal (Job 오케스트레이션, Phase 0)
+	// 이 의존성 하나로 WorkflowClient 자동 빈 등록 + @WorkflowImpl/@ActivityImpl
+	// 애너테이션 기반 자동 디스커버리가 전부 활성화됩니다 (Worker 수동 등록 불필요).
+	implementation 'io.temporal:temporal-spring-boot-starter:1.32.0'
 	// 테스트
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+	// Temporal 테스트 프레임워크 (워크플로우 단위 테스트용 — 나중 단계에서 사용)
+	testImplementation 'io.temporal:temporal-testing:1.32.0'
 }
-
 tasks.named('test') {
 	useJUnitPlatform()
 }

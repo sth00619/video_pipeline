@@ -30,11 +30,11 @@ import re
 import logging
 import subprocess
 from pathlib import Path
+from typing import List, Dict
 from app.utils.process_manager import is_job_stopped, register_process, unregister_process
+from app import runtime_config
 
 logger = logging.getLogger(__name__)
-
-MAX_SUBTITLE_CHARS = 20  # 자막 1줄 최대 글자수
 
 
 class TtsWorker:
@@ -64,11 +64,17 @@ class TtsWorker:
             logger.info("faster-whisper base 모델 로드 완료")
         return self._whisper_model
 
-    def synthesize(self, script: str, voice_id: str, job_id: int = 0) -> dict:
+    def synthesize(self, script: str, voice_id: str, job_id: int = 0,
+                   tts_speed: float = None) -> dict:
         if not script or not script.strip():
             raise ValueError("스크립트가 비어있습니다.")
 
-        logger.info(f"TTS v6 시작: job_id={job_id}, length={len(script)}자")
+        # 배속을 요청별로 넘기지 않으면 runtime_config의 현재 값 사용
+        # (/pipeline/config API로 재빌드 없이 즉시 조정 가능)
+        speed = tts_speed if tts_speed is not None else runtime_config.value("tts_speed")
+        subtitle_max_chars = runtime_config.value("subtitle_max_chars")
+
+        logger.info(f"TTS v6 시작: job_id={job_id}, length={len(script)}자, speed={speed}")
 
         job_dir = Path(f"/app/data/jobs/{job_id}/tts")
         job_dir.mkdir(parents=True, exist_ok=True)
@@ -128,21 +134,20 @@ class TtsWorker:
                 f'-y "{mp3_path}" -loglevel error',
                 job_id
             )
-        # 1.3x 오디오 가속 적용 (atempo 필터)
+        # 오디오 가속 적용 (atempo 필터) — runtime_config 값 사용
         if os.path.exists(mp3_path):
-            logger.info("음성 배속(1.3x) 적용 시작...")
+            logger.info(f"음성 배속({speed}x) 적용 시작...")
             temp_mp3 = mp3_path + ".speedup.mp3"
-            # atempo=1.3 필터로 오디오 속도 높임
-            ret = self._run_subprocess(f'ffmpeg -i "{mp3_path}" -filter:a "atempo=1.3" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error', job_id)
+            ret = self._run_subprocess(f'ffmpeg -i "{mp3_path}" -filter:a "atempo={speed}" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error', job_id)
             if ret == 0 and os.path.exists(temp_mp3):
                 os.replace(temp_mp3, mp3_path)
-                logger.info("음성 배속(1.3x) 적용 성공")
+                logger.info(f"음성 배속({speed}x) 적용 성공")
             else:
                 logger.error(f"음성 배속 적용 실패 (exit code: {ret})")
 
         # 실제 MP3 길이 측정
         actual_duration = self._probe_duration(mp3_path) or len(clean_script) / 5.0
-        logger.info(f"음성 길이 (1.3x 배속 후): {actual_duration:.1f}초")
+        logger.info(f"음성 길이 ({speed}x 배속 후): {actual_duration:.1f}초")
 
         # 3. 자막 타임스탬프 추출 (Forced Alignment → stable-ts → Whisper → 글자수 비례)
         chunks = []
@@ -150,7 +155,7 @@ class TtsWorker:
             # 3a. ElevenLabs Forced Alignment 시도 (가장 정확)
             if tts_engine == "elevenlabs":
                 try:
-                    chunks = self._extract_timestamps_with_forced_alignment(mp3_path, clean_script)
+                    chunks = self._extract_timestamps_with_forced_alignment(mp3_path, clean_script, subtitle_max_chars)
                     logger.info(f"Forced Alignment 타임스탬프 추출: {len(chunks)}개 세그먼트")
                 except Exception as e:
                     logger.warning(f"Forced Alignment 실패, stable-ts 폴백: {e}")
@@ -159,7 +164,7 @@ class TtsWorker:
             # 3b. stable-ts 폴백 (ElevenLabs Forced Alignment 실패 또는 gTTS 엔진)
             if not chunks:
                 try:
-                    chunks = self._extract_timestamps_with_stable_ts(mp3_path, clean_script)
+                    chunks = self._extract_timestamps_with_stable_ts(mp3_path, clean_script, subtitle_max_chars)
                     logger.info(f"stable-ts 타임스탬프 추출: {len(chunks)}개 세그먼트")
                 except Exception as e:
                     logger.warning(f"stable-ts 타임스탬프 추출 실패, Whisper 폴백: {e}")
@@ -168,7 +173,7 @@ class TtsWorker:
             # 3c. faster-whisper 폴백 (stable-ts 실패 시)
             if not chunks:
                 try:
-                    chunks = self._extract_timestamps_with_whisper(mp3_path, clean_script)
+                    chunks = self._extract_timestamps_with_whisper(mp3_path, clean_script, subtitle_max_chars)
                     logger.info(f"Whisper 타임스탬프 추출: {len(chunks)}개 세그먼트")
                 except Exception as e:
                     logger.error(f"Whisper 타임스탬프 추출 실패: {e}")
@@ -177,7 +182,7 @@ class TtsWorker:
         # 4. 모든 타임스탬프 추출 실패 시 글자 수 비례 폴백
         if not chunks:
             logger.warning("글자 수 비례 타임스탬프로 폴백")
-            chunks = self._fallback_timing(clean_script, actual_duration)
+            chunks = self._fallback_timing(clean_script, actual_duration, subtitle_max_chars)
 
         logger.info(f"TTS v6 완료: {actual_duration:.1f}초, chunks={len(chunks)}, engine={tts_engine}")
 
@@ -288,9 +293,9 @@ class TtsWorker:
                 "text": chunk_text,
                 "model_id": "eleven_multilingual_v2",
                 "voice_settings": {
-                    "stability": 0.42,
-                    "similarity_boost": 0.82,
-                    "style": 0.20,
+                    "stability": runtime_config.value("elevenlabs_stability"),
+                    "similarity_boost": runtime_config.value("elevenlabs_similarity_boost"),
+                    "style": runtime_config.value("elevenlabs_style"),
                     "use_speaker_boost": True
                 }
             }
@@ -399,12 +404,21 @@ class TtsWorker:
     # ============================
     # ElevenLabs Forced Alignment → 정밀 자막 타이밍
     # ============================
-    def _extract_timestamps_with_forced_alignment(self, mp3_path: str, original_script: str) -> list[dict]:
+    def _extract_timestamps_with_forced_alignment(self, mp3_path: str, original_script: str,
+                                                    subtitle_max_chars: int = 22) -> list[dict]:
         """
         ElevenLabs Forced Alignment API를 사용하여 단어 단위 정밀 타임스탬프를 추출합니다.
-        Whisper 역방향 STT보다 훨씬 정확하며, 원본 텍스트를 그대로 정렬합니다.
-        
-        핵심: TTS에 전달된 preprocessed 텍스트를 FA와 자막 모두에 사용하여 100% 일치 보장.
+
+        [버그 수정] 이전 버전은 자막 청크 자체를 preprocessed_text(발음 전처리된
+        텍스트, 예: "이천칠백팔십포인트")로 분할해서 썼습니다. 그러면 실제 음성이
+        읽은 발음대로 화면 자막이 나오게 되어, 대본에 쓴 "2,780포인트" 표기와
+        자막이 달라지는 문제가 있었습니다 ("스크립트=자막 100% 일치" 요구사항에 어긋남).
+
+        수정: 자막에 표시할 텍스트는 원본(가독형) original_script 기준으로 분할하고,
+        Forced Alignment 결과와의 매핑 비율만 "각 청크를 개별 전처리했을 때의
+        글자 수"를 기준으로 계산합니다. 전처리 후 글자 수가 실제 발음 시간과
+        훨씬 비례하기 때문에, 화면 자막은 원본 그대로 유지하면서 타이밍
+        정확도만 개선됩니다.
         """
         import requests
 
@@ -412,16 +426,15 @@ class TtsWorker:
         if not api_key:
             return []
 
-        # TTS에 실제로 보낸 텍스트와 동일하게 전처리 (스크립트=TTS=자막 통일)
-        clean_text = re.sub(r'^##\s*.+$', '', original_script, flags=re.MULTILINE).strip()
-        preprocessed_text = self._preprocess_for_tts(clean_text)
-
-        # 자막 청크도 preprocessed_text 기반으로 분할 (원본이 아닌 발음 전처리 텍스트)
-        text_chunks = self._split_script_into_chunks(preprocessed_text, max_chars=22)
+        # 화면에 보일 자막 청크는 원본(가독형) 텍스트 기준으로 분할
+        text_chunks = self._split_script_into_chunks(original_script, max_chars=subtitle_max_chars)
         if not text_chunks:
             return []
 
-        # Forced Alignment API 호출 (preprocessed_text로 통일)
+        # TTS에 실제로 전달된 것과 동일한 전처리 텍스트로 FA API 호출 (음성=정렬 대상 일치)
+        clean_text = re.sub(r'^##\s*.+$', '', original_script, flags=re.MULTILINE).strip()
+        preprocessed_text = self._preprocess_for_tts(clean_text)
+
         with open(mp3_path, "rb") as audio_file:
             resp = requests.post(
                 "https://api.elevenlabs.io/v1/forced-alignment",
@@ -436,38 +449,65 @@ class TtsWorker:
             return []
 
         alignment = resp.json()
-        words = alignment.get("words", [])
-        if not words:
+        raw_words = alignment.get("words", [])
+        if not raw_words:
             logger.warning("Forced Alignment 결과에 단어가 없음")
             return []
 
-        logger.info(f"Forced Alignment 단어 {len(words)}개 추출 완료")
-        # 단어 타임스탬프를 원본 텍스트 청크에 매핑
-        total_orig_chars = max(sum(len(c.replace(' ', '')) for c in text_chunks), 1)
-        total_fa_chars = max(sum(len(w.get('text', '').replace(' ', '')) for w in words), 1)
+        engine_words = [
+            {"word": w.get("text", ""), "start": w.get("start", 0.0), "end": w.get("end", 0.0)}
+            for w in raw_words
+        ]
+        logger.info(f"Forced Alignment 단어 {len(engine_words)}개 추출 완료")
+
+        chunks = self._map_timestamps_by_preprocessed_length(text_chunks, engine_words)
+        logger.info(f"Forced Alignment 정밀 매핑 완료 (자막=원본, 타이밍=발음전처리 기준): {len(text_chunks)}개 청크")
+        return chunks
+
+    # ============================
+    # 공용 타임스탬프 매핑 (핵심 버그 수정 지점 — FA/stable-ts/whisper 공통 사용)
+    # ============================
+    def _map_timestamps_by_preprocessed_length(self, text_chunks: List[str],
+                                                engine_words: List[Dict]) -> List[dict]:
+        """
+        text_chunks: 자막에 표시할 원본(가독형) 텍스트 청크 목록
+        engine_words: [{"word":str, "start":float, "end":float}, ...]
+
+        기존 버그: 원본 텍스트의 글자 수 비율로 시간을 나누면, 숫자나 영문
+        약어처럼 "표기는 짧지만 실제 발음은 긴" 구간에서 타이밍이 어긋납니다.
+        (예: "FOMC"는 4글자지만 "에프오엠씨"로 5음절 발음됨)
+
+        수정: 각 청크를 개별적으로 _preprocess_for_tts()에 통과시킨 후의 글자
+        수를 비율 계산 기준으로 사용합니다. 전처리 후 글자 수는 실제 발음
+        시간과 훨씬 비례합니다.
+        """
+        preprocessed_lengths = [
+            max(len(self._preprocess_for_tts(c).replace(" ", "")), 1)
+            for c in text_chunks
+        ]
+        total_len = max(sum(preprocessed_lengths), 1)
+        total_engine_chars = max(sum(len(w["word"].replace(" ", "")) for w in engine_words), 1)
+        num_words = len(engine_words)
 
         chunks = []
-        cum_orig_chars = 0
+        cum_len = 0
         w_idx = 0
-        cum_fa_chars = 0
-        num_words = len(words)
+        cum_engine_chars = 0
         prev_end = 0.0
 
         for idx, chunk_text in enumerate(text_chunks):
-            chunk_char_len = len(chunk_text.replace(' ', ''))
-            cum_orig_chars += chunk_char_len
-            target_ratio = cum_orig_chars / total_orig_chars
-            target_fa_chars = target_ratio * total_fa_chars
+            cum_len += preprocessed_lengths[idx]
+            target_ratio = cum_len / total_len
+            target_engine_chars = target_ratio * total_engine_chars
 
             start_w_idx = w_idx
-            while w_idx < num_words and cum_fa_chars < target_fa_chars:
-                w_text = words[w_idx].get('text', '')
-                cum_fa_chars += len(w_text.replace(' ', ''))
+            while w_idx < num_words and cum_engine_chars < target_engine_chars:
+                cum_engine_chars += len(engine_words[w_idx]["word"].replace(" ", ""))
                 w_idx += 1
 
             if w_idx > start_w_idx:
-                chunk_start = words[start_w_idx].get('start', prev_end)
-                chunk_end = words[w_idx - 1].get('end', prev_end + 0.5)
+                chunk_start = engine_words[start_w_idx]["start"]
+                chunk_end = engine_words[w_idx - 1]["end"]
             else:
                 chunk_start = prev_end
                 chunk_end = prev_end + 0.5
@@ -478,7 +518,7 @@ class TtsWorker:
                 chunk_end = chunk_start + 0.5
 
             if idx == len(text_chunks) - 1 and num_words > 0:
-                chunk_end = max(chunk_end, words[-1].get('end', chunk_end))
+                chunk_end = max(chunk_end, engine_words[-1]["end"])
 
             duration = round(chunk_end - chunk_start, 3)
             chunks.append({
@@ -489,7 +529,6 @@ class TtsWorker:
             })
             prev_end = chunk_start + duration
 
-        logger.info(f"Forced Alignment 정밀 매핑 완료: {len(text_chunks)}개 청크")
         return chunks
 
     # ============================
@@ -536,7 +575,8 @@ class TtsWorker:
     # ============================
     # stable-ts (cross-attention 기반) → 정밀 자막 싱크
     # ============================
-    def _extract_timestamps_with_stable_ts(self, mp3_path: str, original_script: str) -> list[dict]:
+    def _extract_timestamps_with_stable_ts(self, mp3_path: str, original_script: str,
+                                             subtitle_max_chars: int = 22) -> list[dict]:
         """
         stable-ts 라이브러리 (stable_whisper)를 사용하여 cross-attention 기반
         단어 단위 정밀 타임스탬프를 추출합니다.
@@ -581,64 +621,22 @@ class TtsWorker:
 
         logger.info(f"stable-ts 단어 {len(stable_words)}개 추출 완료")
 
-        # 기존 Whisper 매핑 로직 재사용 (원본 스크립트 → 타임스탬프 매핑)
-        text_chunks = self._split_script_into_chunks(original_script, max_chars=22)
+        text_chunks = self._split_script_into_chunks(original_script, max_chars=subtitle_max_chars)
         if not text_chunks:
             return []
 
-        total_orig_chars = max(sum(len(c.replace(" ", "")) for c in text_chunks), 1)
-        total_stable_chars = max(sum(len(w["word"].replace(" ", "")) for w in stable_words), 1)
-
-        chunks = []
-        cum_orig_chars = 0
-        w_idx = 0
-        cum_stable_chars = 0
-        num_stable = len(stable_words)
-        prev_end = 0.0
-
-        for idx, chunk_text in enumerate(text_chunks):
-            chunk_char_len = len(chunk_text.replace(" ", ""))
-            cum_orig_chars += chunk_char_len
-            target_ratio = cum_orig_chars / total_orig_chars
-            target_stable_chars = target_ratio * total_stable_chars
-
-            start_w_idx = w_idx
-            while w_idx < num_stable and cum_stable_chars < target_stable_chars:
-                cum_stable_chars += len(stable_words[w_idx]["word"].replace(" ", ""))
-                w_idx += 1
-
-            if w_idx > start_w_idx:
-                chunk_start = stable_words[start_w_idx]["start"]
-                chunk_end = stable_words[w_idx - 1]["end"]
-            else:
-                chunk_start = prev_end
-                chunk_end = prev_end + 0.5
-
-            if chunk_start < prev_end:
-                chunk_start = prev_end
-            if chunk_end <= chunk_start:
-                chunk_end = chunk_start + 0.5
-
-            if idx == len(text_chunks) - 1 and num_stable > 0:
-                chunk_end = max(chunk_end, stable_words[-1]["end"])
-
-            duration = round(chunk_end - chunk_start, 3)
-            chunks.append({
-                "index": idx + 1,
-                "text": chunk_text,
-                "start": round(chunk_start, 3),
-                "duration": duration,
-            })
-            prev_end = chunk_start + duration
-
-        logger.info(f"stable-ts 정밀 매핑 완료: {len(text_chunks)}개 청크")
+        # [버그 수정] 기존에는 원본 글자수 비례로 매핑해서 숫자/약어 구간에서
+        # 드리프트가 발생했습니다. 공용 헬퍼(발음 전처리 길이 기준)로 교체.
+        chunks = self._map_timestamps_by_preprocessed_length(text_chunks, stable_words)
+        logger.info(f"stable-ts 정밀 매핑 완료 (발음전처리 길이 기준): {len(text_chunks)}개 청크")
         return chunks
 
     # ============================
     # faster-whisper 역방향 STT → 원본 텍스트 매핑
     # ============================
 
-    def _extract_timestamps_with_whisper(self, mp3_path: str, original_script: str) -> list[dict]:
+    def _extract_timestamps_with_whisper(self, mp3_path: str, original_script: str,
+                                           subtitle_max_chars: int = 22) -> list[dict]:
         """
         핵심: gTTS/ElevenLabs로 생성된 MP3를 faster-whisper로 분석하여 시간 곡선을 구한 뒤,
         사용자가 작성한 원본 스크립트(100% 일치 텍스트)에 타임스탬프를 정밀 매핑.
@@ -664,76 +662,36 @@ class TtsWorker:
                         "end": round(w.end, 3),
                     })
 
-        text_chunks = self._split_script_into_chunks(original_script, max_chars=22)
-        if not text_chunks:
+        text_chunks = self._split_script_into_chunks(original_script, max_chars=subtitle_max_chars)
+        if not text_chunks or not whisper_words:
             return []
 
-        if not whisper_words:
-            return []
-        # 원본 스크립트와 Whisper STT 간의 글자수 누적 비율 매핑
-        total_orig_chars = max(sum(len(c.replace(" ", "")) for c in text_chunks), 1)
-        total_whisper_chars = max(sum(len(w["word"].replace(" ", "")) for w in whisper_words), 1)
-
-        chunks = []
-        cum_orig_chars = 0
-        w_idx = 0
-        cum_whisper_chars = 0
-        num_whisper = len(whisper_words)
-        prev_end = 0.0
-
-        for idx, chunk_text in enumerate(text_chunks):
-            chunk_char_len = len(chunk_text.replace(" ", ""))
-            cum_orig_chars += chunk_char_len
-            target_ratio = cum_orig_chars / total_orig_chars
-            target_whisper_chars = target_ratio * total_whisper_chars
-
-            start_w_idx = w_idx
-            while w_idx < num_whisper and cum_whisper_chars < target_whisper_chars:
-                cum_whisper_chars += len(whisper_words[w_idx]["word"].replace(" ", ""))
-                w_idx += 1
-
-            if w_idx > start_w_idx:
-                chunk_start = whisper_words[start_w_idx]["start"]
-                chunk_end = whisper_words[w_idx - 1]["end"]
-            else:
-                chunk_start = prev_end
-                chunk_end = prev_end + 0.5
-
-            if chunk_start < prev_end:
-                chunk_start = prev_end
-            if chunk_end <= chunk_start:
-                chunk_end = chunk_start + 0.5
-
-            if idx == len(text_chunks) - 1 and num_whisper > 0:
-                chunk_end = max(chunk_end, whisper_words[-1]["end"])
-
-            duration = round(chunk_end - chunk_start, 3)
-            chunks.append({
-                "index": idx + 1,
-                "text": chunk_text,
-                "start": round(chunk_start, 3),
-                "duration": duration,
-            })
-            prev_end = chunk_start + duration
-
-        logger.info(f"Whisper 정밀 매핑 완료: 원본 {len(text_chunks)}개 청크에 타임스탬프 부여")
+        # [버그 수정] 원본 글자수 비례 매핑 → 공용 헬퍼(발음 전처리 길이 기준)로 교체
+        chunks = self._map_timestamps_by_preprocessed_length(text_chunks, whisper_words)
+        logger.info(f"Whisper 정밀 매핑 완료 (발음전처리 길이 기준): 원본 {len(text_chunks)}개 청크에 타임스탬프 부여")
         return chunks
 
     # ============================
     # 폴백 타이밍 (글자 수 비례)
     # ============================
-    def _fallback_timing(self, script: str, total_duration: float) -> list[dict]:
+    def _fallback_timing(self, script: str, total_duration: float,
+                          subtitle_max_chars: int = 22) -> list[dict]:
         """Whisper 실패 시 글자 수 비례로 타이밍 계산 (단어 잘림 없는 원본 텍스트 분할)"""
-        text_chunks = self._split_script_into_chunks(script, max_chars=22)
+        text_chunks = self._split_script_into_chunks(script, max_chars=subtitle_max_chars)
         if not text_chunks:
             return []
 
-        total_chars = max(sum(len(c.replace(" ", "")) for c in text_chunks), 1)
+        # 여기서도 전처리 후 글자수를 기준으로 비율 계산 (숫자/약어 드리프트 방지)
+        preprocessed_lengths = [
+            max(len(self._preprocess_for_tts(c).replace(" ", "")), 1)
+            for c in text_chunks
+        ]
+        total_chars = max(sum(preprocessed_lengths), 1)
         chunks = []
         cursor = 0.0
 
         for idx, chunk_text in enumerate(text_chunks):
-            char_len = len(chunk_text.replace(" ", ""))
+            char_len = preprocessed_lengths[idx]
             ratio = char_len / total_chars
             duration = round(total_duration * ratio, 3)
             if idx == len(text_chunks) - 1:

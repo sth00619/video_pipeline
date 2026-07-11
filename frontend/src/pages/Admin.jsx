@@ -1,33 +1,19 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Shield, DollarSign, Video, Search, Filter } from 'lucide-react'
+import { Shield, DollarSign, Video } from 'lucide-react'
 import Layout from '../components/Layout'
+import JobFilterBar from '../components/JobFilterBar'
+import Pagination from '../components/Pagination'
+import StatusBadge from '../components/StatusBadge'
 import apiClient from '../api/client'
-
-const CATEGORY_LIST = ['ALL', 'KOSPI', 'KOSDAQ', 'US_STOCKS', 'INDIVIDUAL_STOCK', 'GLOBAL_MACRO', 'CRYPTO', 'CUSTOM']
-const MODE_LIST = ['ALL', 'AUTO', 'GUIDED', 'MANUAL']
-const STATUS_LIST = [
-  'ALL', 'DRAFT', 'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING', 'IMAGES_PENDING', 
-  'ASSEMBLING', 'PREVIEW_PENDING', 'SHORTS_SEGMENTS_PENDING', 'SHORTS_GENERATING', 
-  'SHORTS_PREVIEW_PENDING', 'READY', 'PUBLISHED', 'BUDGET_BLOCKED', 'FAILED'
-]
-
-const STATUS_LABEL = {
-  DRAFT: '초안', KEYWORD_PENDING: '키워드 대기', SCRIPT_PENDING: '스크립트 생성',
-  TTS_PENDING: 'TTS 생성', IMAGES_PENDING: '이미지 생성', ASSEMBLING: '조립중',
-  PREVIEW_PENDING: '미리보기', READY: '완료', PUBLISHED: '업로드됨',
-  BUDGET_BLOCKED: '예산초과', FAILED: '오류',
-  SHORTS_SEGMENTS_PENDING: '쇼츠구간', SHORTS_GENERATING: '쇼츠생성',
-  SHORTS_PREVIEW_PENDING: '쇼츠미리보기',
-}
+import { isCompleted } from '../constants/jobStatus'
 
 export default function Admin() {
   const navigate = useNavigate()
   const [adminFilter, setAdminFilter] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
 
-  // 상세 필터 검색 상태
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ALL')
   const [selectedMode, setSelectedMode] = useState('ALL')
@@ -39,49 +25,29 @@ export default function Admin() {
   })
 
   const totalCost = jobs.reduce((sum, j) => sum + (parseFloat(j.costAccumulated) || 0), 0)
-  const completedJobs = jobs.filter(j => ['READY', 'PUBLISHED'].includes(j.status))
+  const completedJobs = jobs.filter(j => isCompleted(j.status))
 
   const handleFilterChange = (filter) => {
     setAdminFilter(filter)
     setCurrentPage(1)
   }
 
-  // 최신순 (ID 내림차순) 정렬 및 필터 적용
   const sortedJobs = [...jobs].sort((a, b) => b.id - a.id)
 
   const filteredJobs = sortedJobs.filter(job => {
-    // 1. 상단 큰 카드 필터링 (전체 vs 완료된 영상)
-    if (adminFilter === 'COMPLETED' && !['READY', 'PUBLISHED'].includes(job.status)) {
-      return false
-    }
-
-    // 2. 검색 키워드 필터링 (제목 또는 작성자)
+    if (adminFilter === 'COMPLETED' && !isCompleted(job.status)) return false
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      const titleMatch = job.title?.toLowerCase().includes(query)
-      const creatorMatch = job.createdBy?.toLowerCase().includes(query)
+      const q = searchQuery.toLowerCase()
+      const titleMatch = job.title?.toLowerCase().includes(q)
+      const creatorMatch = job.createdBy?.toLowerCase().includes(q)
       if (!titleMatch && !creatorMatch) return false
     }
-
-    // 3. 카테고리 필터링
-    if (selectedCategory !== 'ALL' && job.category !== selectedCategory) {
-      return false
-    }
-
-    // 4. 자율성 모드 필터링
-    if (selectedMode !== 'ALL' && job.autonomy !== selectedMode) {
-      return false
-    }
-
-    // 5. 상태 필터링
-    if (selectedStatus !== 'ALL' && job.status !== selectedStatus) {
-      return false
-    }
-
+    if (selectedCategory !== 'ALL' && job.category !== selectedCategory) return false
+    if (selectedMode !== 'ALL' && job.autonomy !== selectedMode) return false
+    if (selectedStatus !== 'ALL' && job.status !== selectedStatus) return false
     return true
   })
 
-  // 리셋 헬퍼
   const handleResetFilters = () => {
     setSearchQuery('')
     setSelectedCategory('ALL')
@@ -89,6 +55,8 @@ export default function Admin() {
     setSelectedStatus('ALL')
     setCurrentPage(1)
   }
+
+  const pageItems = filteredJobs.slice((currentPage - 1) * 10, currentPage * 10)
 
   return (
     <Layout>
@@ -100,7 +68,6 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* 통계 카드 */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <button
           onClick={() => handleFilterChange('ALL')}
@@ -129,84 +96,21 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* 필터 및 검색 바 */}
-      <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <Filter size={16} className="text-accent-cyan" />
-          <span className="text-sm font-semibold">정밀 검색 및 필터</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          {/* 검색창 */}
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={14} className="text-gray-400" />
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              placeholder="제목, 작성자 검색..."
-              className="w-full bg-navy-700 border border-navy-600 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent-cyan"
-            />
-          </div>
-
-          {/* 카테고리 */}
-          <div>
-            <select
-              value={selectedCategory}
-              onChange={e => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
-              className="w-full bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
-            >
-              <option value="ALL">카테고리: 전체</option>
-              {CATEGORY_LIST.filter(c => c !== 'ALL').map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* 모드 */}
-          <div>
-            <select
-              value={selectedMode}
-              onChange={e => { setSelectedMode(e.target.value); setCurrentPage(1); }}
-              className="w-full bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
-            >
-              <option value="ALL">모드: 전체</option>
-              {MODE_LIST.filter(m => m !== 'ALL').map(mode => (
-                <option key={mode} value={mode}>{mode}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* 상태 */}
-          <div>
-            <select
-              value={selectedStatus}
-              onChange={e => { setSelectedStatus(e.target.value); setCurrentPage(1); }}
-              className="w-full bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
-            >
-              <option value="ALL">상태: 전체</option>
-              {STATUS_LIST.filter(s => s !== 'ALL').map(status => (
-                <option key={status} value={status}>{STATUS_LABEL[status] || status}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* 필터 초기화 버튼 */}
-        {(searchQuery || selectedCategory !== 'ALL' || selectedMode !== 'ALL' || selectedStatus !== 'ALL') && (
-          <div className="flex justify-end mt-3">
-            <button
-              onClick={handleResetFilters}
-              className="text-[11px] text-accent-cyan hover:underline"
-            >
-              필터 전체 초기화
-            </button>
-          </div>
-        )}
+      <div className="mb-6">
+        <JobFilterBar
+          searchQuery={searchQuery}
+          onSearchChange={v => { setSearchQuery(v); setCurrentPage(1) }}
+          category={selectedCategory}
+          onCategoryChange={v => { setSelectedCategory(v); setCurrentPage(1) }}
+          mode={selectedMode}
+          onModeChange={v => { setSelectedMode(v); setCurrentPage(1) }}
+          status={selectedStatus}
+          onStatusChange={v => { setSelectedStatus(v); setCurrentPage(1) }}
+          showAuthorSearch
+          onReset={handleResetFilters}
+        />
       </div>
 
-      {/* 전체 작업 테이블 */}
       <div className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
         <div className="px-6 py-4 border-b border-navy-700 flex items-center justify-between">
           <h2 className="font-semibold text-sm">전체 작업 목록 ({filteredJobs.length}개)</h2>
@@ -217,7 +121,6 @@ export default function Admin() {
           )}
         </div>
         <div className="overflow-x-auto">
-          {/* table-fixed 레이아웃 적용 및 컬럼 가로폭 비율 할당 */}
           <table className="w-full text-sm table-fixed min-w-[950px]">
             <thead>
               <tr className="border-b border-navy-700 bg-navy-900/10">
@@ -238,27 +141,20 @@ export default function Admin() {
                   </td>
                 </tr>
               ) : (
-                filteredJobs.slice((currentPage - 1) * 10, currentPage * 10).map(job => (
+                pageItems.map(job => (
                   <tr
                     key={job.id}
                     onClick={() => navigate(`/jobs/${job.id}`)}
                     className="hover:bg-navy-700/50 transition cursor-pointer"
                   >
                     <td className="px-6 py-3.5 text-gray-400">#{job.id}</td>
-                    {/* 제목에 말줄임표 처리(truncate)를 주어 가로폭 찌그러짐을 영구 차단 */}
                     <td className="px-6 py-3.5 font-medium text-white truncate max-w-[280px]" title={job.title}>
                       {job.title}
                     </td>
                     <td className="px-6 py-3.5 text-gray-400">{job.category}</td>
                     <td className="px-6 py-3.5 text-gray-400">{job.autonomy}</td>
                     <td className="px-6 py-3.5">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        job.status === 'READY' ? 'bg-accent-green/20 text-accent-green' :
-                        job.status === 'FAILED' ? 'bg-accent-red/20 text-accent-red' :
-                        'bg-navy-700 text-gray-400'
-                      }`}>
-                        {STATUS_LABEL[job.status] || job.status}
-                      </span>
+                      <StatusBadge status={job.status} small />
                     </td>
                     <td className="px-6 py-3.5 text-gray-400">${parseFloat(job.costAccumulated || 0).toFixed(2)}</td>
                     <td className="px-6 py-3.5 text-gray-400 truncate max-w-[120px]" title={job.createdBy}>
@@ -271,46 +167,7 @@ export default function Admin() {
           </table>
         </div>
 
-        {/* 페이지네이션 제어기 */}
-        {filteredJobs.length > 10 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-navy-700 bg-navy-900/20">
-            <div className="text-xs text-gray-400">
-              총 {filteredJobs.length}개 중 {Math.min((currentPage - 1) * 10 + 1, filteredJobs.length)} - {Math.min(currentPage * 10, filteredJobs.length)} 표시
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-2.5 py-1.5 rounded-lg bg-navy-700 border border-navy-600 text-xs font-semibold hover:bg-navy-600 transition disabled:opacity-30 disabled:hover:bg-navy-700"
-              >
-                이전
-              </button>
-              {Array.from({ length: Math.ceil(filteredJobs.length / 10) }).map((_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
-                      currentPage === pageNum
-                        ? 'bg-accent-cyan text-navy-950 border-accent-cyan shadow-sm shadow-accent-cyan/20'
-                        : 'bg-navy-800 text-gray-300 border-navy-700 hover:bg-navy-700'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                )
-              })}
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredJobs.length / 10)))}
-                disabled={currentPage === Math.ceil(filteredJobs.length / 10)}
-                className="px-2.5 py-1.5 rounded-lg bg-navy-700 border border-navy-600 text-xs font-semibold hover:bg-navy-600 transition disabled:opacity-30 disabled:hover:bg-navy-700"
-              >
-                다음
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination total={filteredJobs.length} currentPage={currentPage} onChange={setCurrentPage} />
       </div>
     </Layout>
   )

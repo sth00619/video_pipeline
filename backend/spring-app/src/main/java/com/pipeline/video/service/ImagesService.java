@@ -73,9 +73,9 @@ public class ImagesService {
         ImagesGenerateResponse result = fastApiClient.generateImages(
                 jobId, ttsMetaJson, scriptMetaJson, characterImagePath, characterStylePrompt);
 
-        // 비용 기록 (Mock $0, 실제 Nano Banana Pro $0.03~0.05/장)
-        BigDecimal imgCost = BigDecimal.ZERO;
-        costService.record(jobId, "NANO_BANANA_PRO", imgCost, "USD",
+        // [버그 수정] 기존 imgCost = BigDecimal.ZERO → 실제 이미지 장 수 기반 요금 추정
+        java.math.BigDecimal imgCost = CostEstimator.geminiImages(result.getSceneCount());
+        costService.record(jobId, "GEMINI_IMAGE", imgCost, "USD",
                 String.format("씬 이미지 %d장 + GIF %d개",
                         result.getSceneCount(), result.getGifCount()));
 

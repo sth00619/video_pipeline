@@ -181,9 +181,17 @@ class KlingProvider(VideoProvider):
     def _generate_fal_api(self, prompt: str, output_path: str, duration: int, fal_key: str, image_url: str = None) -> bool:
         """
         Fal.ai HTTP Queue API를 통해 Kling 비디오 클립 생성 (비동기 폴링).
+
+        [리서치 반영 - 모델 변경] 기존 kling-video/v3는 멀티샷/네이티브오디오가
+        강점인 고가 모델인데, 우리는 "고정 캐릭터의 미니멀한 손짓/표정 + 배경
+        가벼운 움직임" 정도만 필요해서 과한 스펙이었습니다. Fal.ai 공식 문서와
+        커뮤니티 벤치마크 기준 kling-video/v2.6/pro가 캐릭터 일관성 대비 비용이
+        가장 좋아서 (image-to-video $0.07/초, audio off) 이걸로 교체합니다.
+        generate_audio는 우리가 TTS를 별도로 입히므로 명시적으로 꺼서 불필요한
+        2배 과금(오디오 켜면 $0.14/초)을 방지합니다.
         """
-        model_id = "fal-ai/kling-video/v3/standard/image-to-video" if image_url else "fal-ai/kling-video/v3/pro/text-to-video"
-        
+        model_id = "fal-ai/kling-video/v2.6/pro/image-to-video" if image_url else "fal-ai/kling-video/v1.6/pro/text-to-video"
+
         headers = {
             "Authorization": f"Key {fal_key}",
             "Content-Type": "application/json"
@@ -192,11 +200,15 @@ class KlingProvider(VideoProvider):
         payload = {
             "prompt": prompt,
             "duration": str(duration),
-            "aspect_ratio": "16:9"
+            "generate_audio": False,
         }
         if image_url:
+            # v2.6/v3 계열은 start_image_url 기준으로 aspect_ratio를 자동 추론하므로
+            # 별도 지정 시 UI에서 무시됨 (공식 문서 기준) — 생략
             payload["start_image_url"] = image_url
-            
+        else:
+            payload["aspect_ratio"] = "16:9"
+
         logger.info(f"Fal.ai {model_id} 생성 요청 제출 시작: prompt_len={len(prompt)}")
         try:
             resp = requests.post(submit_url, json=payload, headers=headers, timeout=30)
@@ -256,7 +268,7 @@ class KlingProvider(VideoProvider):
         payload = {
             "model_name": "kling-v3",
             "prompt": prompt,
-            "negative_prompt": "blurry, distorted, cartoonish, text artifacts, low quality, watermark",
+            "negative_prompt": "blurry, distorted, text artifacts, low quality, watermark, fast motion, camera movement, motion blur, extra limbs, face distortion, character deformation, walking, running, background people",
             "duration": str(duration),
             "aspect_ratio": "16:9",
             "mode": "pro"
@@ -305,7 +317,7 @@ class KlingProvider(VideoProvider):
             "model_name": "kling-v3",
             "image": image_url,
             "prompt": prompt,
-            "negative_prompt": "blurry, distorted, cartoonish, text artifacts, low quality, watermark",
+            "negative_prompt": "blurry, distorted, text artifacts, low quality, watermark, fast motion, camera movement, motion blur, extra limbs, face distortion, character deformation, walking, running, background people",
             "duration": "5",
             "aspect_ratio": "16:9",
             "mode": "pro"

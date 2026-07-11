@@ -188,7 +188,10 @@ YouTube 트렌딩 분석 기반 키워드 후보:
 }}"""
 
         response = client.messages.create(
-            model="claude-sonnet-5",
+            # 버그 수정: 존재하지 않는 "claude-sonnet-5" 오타 → 프로젝트 고정 모델로 교체.
+            # 이 오타 때문에 Claude 순위화 API 호출이 계속 실패하고
+            # _fallback_candidates()로만 빠지고 있었을 가능성이 높습니다.
+            model="claude-sonnet-4-6",
             max_tokens=3000,
             messages=[{"role": "user", "content": prompt}],
         )

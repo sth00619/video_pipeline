@@ -15,6 +15,7 @@ import logging
 import subprocess
 from pathlib import Path
 from app.utils.process_manager import register_process, unregister_process, is_job_stopped
+from app import runtime_config
 
 logger = logging.getLogger(__name__)
 
@@ -107,13 +108,35 @@ class LongformWorker:
             if video_provider and i < intro_kling_count:
                 try:
                     logger.info(f"씬 {i} Kling AI 움짤 생성 (초반 {intro_kling_count}씬)")
-                    prompt = scene.get("prompt", "") or scene.get("text", "") or "professional financial chart animation cinematic"
+
+                    # [리서치 반영 - 버그 수정] 기존에는 씬의 이미지 생성 프롬프트나
+                    # 대사 텍스트를 그대로 Kling 프롬프트로 재사용했습니다. 하지만
+                    # image-to-video는 이미지에 이미 있는 내용(캐릭터 생김새, 배경,
+                    # 구도)을 다시 설명하면 안 되고 "무엇이 어떻게 움직이는가"만
+                    # 묘사해야 결과가 안정적입니다 (Fal.ai/Kling 공식 프롬프트 가이드
+                    # 공통 원칙). 대사 텍스트를 그대로 넣으면 모델이 장면을 새로
+                    # 해석하려 들면서 캐릭터가 미묘하게 달라지는 원인이 됩니다.
+                    prompt = _build_kling_motion_prompt(scene.get("text", "") or scene.get("prompt", ""))
+
+                    # [버그 수정] 기존에는 image_url=None을 고정으로 넘겨서, Fal.ai/Kling이
+                    # 항상 image-to-video가 아닌 text-to-video로 동작했습니다. 즉 이미 생성된
+                    # 캐릭터 이미지(img_path)는 화면에 전혀 반영되지 않고, 매번 프롬프트
+                    # 텍스트만으로 완전히 새로운 그림을 만들고 있었습니다. 이게 "초반 움짤
+                    # 구간의 캐릭터가 나머지 정지 이미지 구간과 다르게 보인다"는 문제의
+                    # 실질적 원인 중 하나입니다.
+                    #
+                    # 수정: 로컬 이미지를 base64 data URI로 인코딩해 image_url로 전달합니다.
+                    # (공식 문서 확인 결과 base64 data URI는 정상 지원됩니다. 다만 "큰
+                    # 파일은 요청 성능에 영향을 줄 수 있다"는 경고가 있어, 트래픽이
+                    # 늘어나면 fal.ai 자체 스토리지 업로드 API로 교체를 권장합니다.)
+                    image_data_uri = _encode_image_as_data_uri(img_path)
+
                     video_provider.generate(
                         prompt=prompt,
                         duration=min(int(duration), 5),
                         output_path=clip_path,
                         image_path=img_path,
-                        image_url=None
+                        image_url=image_data_uri
                     )
                     if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
                         temp_kling = clip_path + ".temp.mp4"
@@ -142,7 +165,7 @@ class LongformWorker:
                 except Exception as e:
                     logger.warning(f"씬 {i} Kling AI 생성 실패, zoompan 폴백: {e}")
 
-            # 나머지 씬: FFmpeg zoompan 효과
+            # 나머지 씬: FFmpeg zoompan 효과 (줌 속도/최대 줌은 runtime_config로 조정 가능)
             if os.path.exists(img_path):
                 _ffmpeg_zoompan(img_path, clip_path, duration, bg_color, job_id)
             else:
@@ -179,16 +202,17 @@ class LongformWorker:
         # BGM 파일 탐색 (bgm_worker가 생성한 파일)
         bgm_path = f"/app/data/jobs/{job_id}/bgm.mp3"
         bgm_exists = os.path.exists(bgm_path) and os.path.getsize(bgm_path) > 0
+        bgm_volume = runtime_config.value("bgm_volume")
 
         if audio_exists:
             vf_filter = f'-vf "ass=\'{ass_path}\'" ' if (font_available and ass_exists) else ''
             vcodec = '-c:v libx264 -preset fast -pix_fmt yuv420p' if vf_filter else '-c:v copy'
 
             if bgm_exists:
-                # 3-트랙 믹싱: 나레이션(100%) + BGM(12%, ≈-18dB)
+                # 3-트랙 믹싱: 나레이션(100%) + BGM(runtime_config 값, 기본 12%)
                 merge_cmd = (
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" -i "{bgm_path}" '
-                    f'-filter_complex "[1:a]volume=1.0[narr];[2:a]volume=0.12,aloop=loop=-1:size=2e+09[bgm];'
+                    f'-filter_complex "[1:a]volume=1.0[narr];[2:a]volume={bgm_volume},aloop=loop=-1:size=2e+09[bgm];'
                     f'[narr][bgm]amix=inputs=2:duration=first:dropout_transition=3[mixed]" '
                     f'{vf_filter}'
                     f'{vcodec} '
@@ -196,7 +220,7 @@ class LongformWorker:
                     f'-c:a aac -b:a 192k -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
-                logger.info("BGM 믹싱 적용: 나레이션 + BGM(-18dB)")
+                logger.info(f"BGM 믹싱 적용: 나레이션 + BGM(volume={bgm_volume})")
             else:
                 merge_cmd = (
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
@@ -271,6 +295,7 @@ class LongformWorker:
         - 최대 20자 1줄
         """
         font_name = "NanumGothicBold" if os.path.exists(NANUM_BOLD) else "NanumGothic"
+        font_size = runtime_config.value("subtitle_font_size")
 
         header = f"""[Script Info]
 ScriptType: v4.00+
@@ -280,7 +305,7 @@ WrapStyle: 0
 ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Main,{font_name},76,&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,0,0,2,40,40,80,1
+Style: Main,{font_name},{font_size},&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,0,0,2,40,40,80,1
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
@@ -338,35 +363,83 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 # 모듈 수준 헬퍼 함수
 # ──────────────────────────────────────────────────────────
 
-# 목표 분량별 초반 AI 움짤 길이 (초 단위)
-_INTRO_KLING_SECONDS = {
-    5: 30,
-    10: 45,
-    15: 60,
-    20: 60,
-}
+
+def _build_kling_motion_prompt(scene_text: str) -> str:
+    """
+    Kling image-to-video용 "움직임 전용" 프롬프트를 만듭니다.
+
+    [리서치 반영] image-to-video는 이미지에 이미 있는 내용(캐릭터 생김새,
+    배경, 구도)을 다시 설명하면 안 되고, 무엇이 어떻게 움직이는지만
+    묘사해야 결과가 안정적입니다. 대사 텍스트를 그대로 프롬프트로 쓰면
+    모델이 장면을 새로 해석하려 들면서 캐릭터가 미묘하게 달라지는
+    원인이 됩니다. 또한 끝맺음을 명시하지 않으면 99% 지점에서 멈추는
+    문제가 흔해서, 반드시 "제자리로 돌아온다"까지 명시합니다.
+
+    씬 텍스트에 하락/상승 관련 표현이 있으면 손짓 뉘앙스를 거기에 맞춥니다
+    (예: 하락 → 걱정스러운 손짓, 상승 → 긍정적인 손짓).
+    """
+    down_keywords = ["하락", "급락", "내렸", "붕괴", "꺾", "약세", "부진", "악재"]
+    up_keywords = ["상승", "급등", "올랐", "돌파", "반등", "강세", "최고치", "호재"]
+
+    if scene_text and any(k in scene_text for k in down_keywords):
+        gesture = "worried facial expression, hands gesturing downward with concern"
+    elif scene_text and any(k in scene_text for k in up_keywords):
+        gesture = "cheerful facial expression, hands gesturing upward with excitement"
+    else:
+        gesture = "neutral calm expression, gentle hand gesture pointing toward the chart"
+
+    return (
+        f"Subtle, minimal animation of the fixed character in the image: "
+        f"{gesture}, soft blinking, slight head tilt, then settles back to "
+        f"neutral pose. Background chart elements show light ambient motion — "
+        f"data lines pulsing subtly, numbers flickering softly, then stabilizing. "
+        f"Character stays perfectly still in position, size and proportion, "
+        f"no camera movement, static shot, no zoom, no pan."
+    )
+
+
+def _encode_image_as_data_uri(img_path: str) -> str:
+    """
+    로컬 이미지 파일을 base64 data URI 문자열로 변환합니다.
+    Fal.ai/Kling image-to-video API의 image_url 파라미터에 공개 URL 대신
+    바로 전달할 수 있어, 별도 이미지 호스팅(MinIO 업로드 등) 없이
+    "이미 생성된 캐릭터 이미지"를 영상 생성의 시드로 사용할 수 있습니다.
+
+    주의: 이미지 용량이 매우 크면(예: 고해상도 4K PNG) 일부 API의 페이로드
+    크기 제한에 걸릴 수 있습니다. 이 경우 MinIO 등에 업로드 후 공개 URL을
+    발급하는 방식으로 교체하는 것을 권장합니다.
+    """
+    import base64
+    if not img_path or not os.path.exists(img_path):
+        return None
+    try:
+        ext = os.path.splitext(img_path)[1].lower()
+        mime = "image/png" if ext == ".png" else "image/jpeg"
+        with open(img_path, "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+        return f"data:{mime};base64,{b64_data}"
+    except Exception as e:
+        logger.warning(f"이미지 base64 인코딩 실패 ({img_path}): {e}")
+        return None
 
 
 def _get_intro_kling_count(total_duration: float, total_scenes: int) -> int:
     """
     영상 총 길이 기반으로 초반 AI 움짤(Kling) 대상 씬 수를 계산합니다.
-    - 5분 이하 → 앞 30초
-    - 10분 이하 → 앞 45초
-    - 15분 이하 → 앞 60초
-    - 20분 초과 → 앞 60초
+    구간별 초 값은 runtime_config에서 가져오므로 코드 수정 없이 조정 가능합니다.
     """
     if total_scenes <= 0 or total_duration <= 0:
         return 3  # 기본 3씬
 
     target_minutes = total_duration / 60.0
     if target_minutes <= 5:
-        intro_secs = 30
+        intro_secs = runtime_config.value("intro_kling_seconds_5min")
     elif target_minutes <= 10:
-        intro_secs = 45
+        intro_secs = runtime_config.value("intro_kling_seconds_10min")
     elif target_minutes <= 15:
-        intro_secs = 60
+        intro_secs = runtime_config.value("intro_kling_seconds_15min")
     else:
-        intro_secs = 60
+        intro_secs = runtime_config.value("intro_kling_seconds_20min")
 
     secs_per_scene = total_duration / total_scenes
     count = max(2, int(intro_secs / secs_per_scene))
@@ -378,12 +451,11 @@ def _get_intro_kling_count(total_duration: float, total_scenes: int) -> int:
 def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
     """
     정적 이미지에 FFmpeg zoompan 필터로 은은한 줌인 효과를 적용하여 생동감을 부여합니다.
-    - 이미지 스케일을 2000x1125로 올린 후 zoompan으로 중심에서 천천히 줌인
-    - 줌 배율: 1.0 → 1.06 (6% 줌인, 너무 과하지 않게)
+    줌 속도/최대 줌 배율은 runtime_config로 조정 가능 (기본: 1.0 → 1.06, 6% 줌인).
     """
     frames = int(duration * 30)  # 30fps 기준 프레임 수
-    zoom_speed = 0.0008  # 줌 속도 (값이 작을수록 느리게 줌인)
-    max_zoom = 1.06
+    zoom_speed = runtime_config.value("zoompan_speed")
+    max_zoom = runtime_config.value("zoompan_max_zoom")
 
     cmd = (
         f'ffmpeg -loop 1 -i "{img_path}" '

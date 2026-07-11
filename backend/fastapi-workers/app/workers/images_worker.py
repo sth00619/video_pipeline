@@ -22,6 +22,45 @@ from app.utils.process_manager import is_job_stopped
 
 logger = logging.getLogger(__name__)
 
+import re
+
+
+def _extract_market_signal(text: str) -> dict:
+    """
+    씬 텍스트에서 실제 언급된 등락 방향과 지수/수치를 추출합니다.
+    matplotlib 폴백 차트가 대본 내용과 모순되는 방향·숫자로 그려지는 것을
+    막기 위한 용도입니다 (예: "7,541.28pt, -3.28% 하락"인데 차트는
+    임의로 3000대에서 상승하는 그림이 나오는 문제 방지).
+    """
+    if not text:
+        return {"direction": None, "value": None, "pct": None}
+
+    direction = None
+    if any(k in text for k in ["상승", "급등", "올랐", "돌파", "반등", "강세", "최고치", "호재"]):
+        direction = "up"
+    if any(k in text for k in ["하락", "급락", "내렸", "붕괴", "꺾", "약세", "부진", "악재"]):
+        direction = "down"
+
+    pct_match = re.search(r'([+-]?\d+(?:\.\d+)?)\s*(?:퍼센트|%)', text)
+    pct = float(pct_match.group(1)) if pct_match else None
+    if pct is not None and direction is None:
+        if pct > 0:
+            direction = "up"
+        elif pct < 0:
+            direction = "down"
+    # 원문에 부호가 없어도("3.28% 하락") 방향 키워드가 있으면 부호를 보정
+    # (그래야 화면 라벨이 "+3.28%"처럼 실제와 반대로 표시되는 것을 방지)
+    if pct is not None and direction == "down" and pct > 0:
+        pct = -pct
+    elif pct is not None and direction == "up" and pct < 0:
+        pct = abs(pct)
+
+    # 지수/가격으로 보이는 숫자 우선 추출 (콤마 포함 큰 수 또는 4자리 이상)
+    value_match = re.search(r'(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{4,}(?:\.\d+)?)', text)
+    value = value_match.group(1) if value_match else None
+
+    return {"direction": direction, "value": value, "pct": pct}
+
 # 주식 플랫폼 컬러 팔레트 (네이비 테마 통일)
 COLOR_BG = "#0d1b2a"
 COLOR_BG2 = "#16213e"
@@ -52,7 +91,13 @@ class ImagesWorker:
                     import re
                     raw_script = script_data.get("script", "").strip()
                     parts = [p.strip() for p in re.split(r'(?m)^##\s*|\n{2,}', raw_script) if p.strip()]
+                    total_parts = len(parts)
+                    # section 키를 "scene_N" 같은 더미값이 아니라 실제 6종 중
+                    # 하나로 배정 (matplotlib 폴백 렌더러가 정상 동작하도록)
+                    section_keys = ["intro", "background", "data", "scenario", "action", "conclusion"]
                     for idx, part in enumerate(parts):
+                        ratio = idx / max(total_parts - 1, 1) if total_parts > 1 else 0
+                        section_type = section_keys[min(int(ratio * len(section_keys)), len(section_keys) - 1)]
                         scenes_meta.append({
                             "title": f"Scene {idx + 1}",
                             "content": part,
@@ -62,7 +107,7 @@ class ImagesWorker:
                                 f"wearing small navy business suit with gold tie, showing a neutral, calm and professional analyst pose, "
                                 f"generic plain smooth surface with no currency symbol. professional financial news studio background, dark navy blue background (#0d1b2a), glowing data screen, 3D render, smooth shading, anime cartoon style"
                             ),
-                            "section": f"scene_{idx}"
+                            "section": section_type
                         })
                 logger.info(f"script_meta_json에서 {len(scenes_meta)}개 씬 복원 성공")
             except Exception as e:
@@ -183,17 +228,39 @@ class ImagesWorker:
     # ── 시장 배경: 지수 추이 라인 차트 ──
     def _render_line_chart(self, text, img_path, plt):
         import numpy as np
+        # [버그 수정] 기존에는 np.random.randn()으로 완전 무작위 추세를 그려서,
+        # 대본이 "하락했습니다"라고 말해도 차트가 상승으로 나오는 등 내용과
+        # 모순되는 이미지가 나올 수 있었습니다 (예: 실제 7541.28pt/-3.28%인데
+        # 차트는 임의로 3000대에서 상승하는 그림). 씬 텍스트에서 등락 방향과
+        # 실제 언급된 수치를 추출해 최소한 그 방향/수치와는 어긋나지 않게
+        # 그립니다. (완벽히 정확한 차트는 아니지만 모순은 방지)
+        signal = _extract_market_signal(text)
+
         fig, ax2 = plt.subplots(figsize=(19.2, 10.8), dpi=100)
         fig.patch.set_facecolor(COLOR_BG)
 
-        # 차트 전체 화면 — 텍스트는 상단에 짧게만 표시
         ax2.set_facecolor(COLOR_BG2)
         days = np.arange(30)
         base = 2600
-        trend = np.cumsum(np.random.randn(30) * 8) + base
+        if signal["direction"] == "up":
+            drift = abs(np.random.randn()) * 3 + 1.5
+            trend = np.cumsum(np.random.randn(30) * 6 + drift) + base
+        elif signal["direction"] == "down":
+            drift = -(abs(np.random.randn()) * 3 + 1.5)
+            trend = np.cumsum(np.random.randn(30) * 6 + drift) + base
+        else:
+            trend = np.cumsum(np.random.randn(30) * 8) + base
         color = COLOR_ACCENT_GREEN if trend[-1] > trend[0] else COLOR_ACCENT_RED
         ax2.plot(days, trend, color=color, linewidth=3)
         ax2.fill_between(days, trend, trend.min() - 20, color=color, alpha=0.15)
+
+        # 씬에서 실제 언급된 수치가 있으면 차트 위에 그대로 표기 (임의 축 눈금과 혼동 방지)
+        if signal["value"]:
+            label = signal["value"]
+            if signal["pct"] is not None:
+                label += f" ({signal['pct']:+.2f}%)"
+            ax2.text(0.98, 0.92, label, transform=ax2.transAxes, ha="right", va="top",
+                      fontsize=24, color=COLOR_ACCENT_GOLD, weight="bold")
 
         # 상단에 씬 키워드만 짧게 (최대 20자)
         short_title = self._extract_title(text, max_chars=20)
@@ -210,13 +277,26 @@ class ImagesWorker:
     # ── 핵심 데이터: 캔들스틱 스타일 차트 ──
     def _render_candlestick(self, text, img_path, plt):
         import numpy as np
+        signal = _extract_market_signal(text)
+
         fig, ax2 = plt.subplots(figsize=(19.2, 10.8), dpi=100)
         fig.patch.set_facecolor(COLOR_BG)
 
         ax2.set_facecolor(COLOR_BG2)
         n = 20
-        opens = np.cumsum(np.random.randn(n) * 5) + 2600
+        if signal["direction"] == "up":
+            drift = abs(np.random.randn()) * 2 + 1.0
+        elif signal["direction"] == "down":
+            drift = -(abs(np.random.randn()) * 2 + 1.0)
+        else:
+            drift = 0
+        opens = np.cumsum(np.random.randn(n) * 5 + drift) + 2600
         closes = opens + np.random.randn(n) * 15
+        # 마지막 캔들(최신 시점)은 대본에서 확인된 방향과 반드시 일치시킴
+        if signal["direction"] == "up":
+            closes[-1] = opens[-1] + abs(np.random.randn() * 15) + 5
+        elif signal["direction"] == "down":
+            closes[-1] = opens[-1] - abs(np.random.randn() * 15) - 5
         highs = np.maximum(opens, closes) + np.abs(np.random.randn(n) * 5)
         lows = np.minimum(opens, closes) - np.abs(np.random.randn(n) * 5)
 
@@ -227,6 +307,13 @@ class ImagesWorker:
                 (i - 0.35, min(opens[i], closes[i])), 0.7, abs(closes[i] - opens[i]),
                 color=color
             ))
+
+        if signal["value"]:
+            label = signal["value"]
+            if signal["pct"] is not None:
+                label += f" ({signal['pct']:+.2f}%)"
+            ax2.text(0.98, 0.92, label, transform=ax2.transAxes, ha="right", va="top",
+                      fontsize=24, color=COLOR_ACCENT_GOLD, weight="bold")
 
         short_title = self._extract_title(text, max_chars=20)
         ax2.set_title(short_title, color=COLOR_TEXT, fontsize=28, pad=20, weight="bold")

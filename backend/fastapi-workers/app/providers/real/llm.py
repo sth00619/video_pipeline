@@ -19,8 +19,11 @@ class ClaudeProvider(LLMProvider):
     Anthropic Claude 공식 API 기반 LLM 프로바이더.
     """
 
-    def __init__(self, model: str = "claude-3-5-sonnet-20241022"):
-        self.model = model
+    def __init__(self, model: str = None):
+        # 버그 수정: 구형 모델("claude-3-5-sonnet-20241022")이 기본값으로
+        # 하드코딩되어 있었습니다. 프로젝트 고정 모델(claude-sonnet-4-6)로 교체.
+        from app.config import CLAUDE_MODEL
+        self.model = model or CLAUDE_MODEL
         self.api_key = os.getenv("ANTHROPIC_API_KEY")
 
     def generate(self, system_prompt: str, user_prompt: str, **kwargs) -> str:

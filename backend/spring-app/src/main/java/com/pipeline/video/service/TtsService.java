@@ -68,9 +68,17 @@ public class TtsService {
         // FastAPI 호출
         TtsGenerateResponse result = fastApiClient.generateTts(jobId, script, finalVoiceId);
 
-        // 비용 기록 (Mock $0, 실제 ElevenLabs는 $0.30/1K characters 기준)
-        costService.record(jobId, "ELEVENLABS_TTS", BigDecimal.ZERO, "USD",
-                String.format("TTS 합성: %d자, %.1f초", script.length(), result.getTotalDuration()));
+        // [버그 수정] 기존에는 BigDecimal.ZERO 하드코딩. 실제 ElevenLabs API를
+        // 호출한 경우에만 요금이 실제로 발생하므로, used_elevenlabs=true 일 때만
+        // 문자 수 기반 요금을 기록합니다. gTTS 폴백 시엔 무료이므로 $0.
+        boolean usedPaidTts = Boolean.TRUE.equals(result.getUsedElevenlabs());
+        java.math.BigDecimal ttsCost = usedPaidTts
+                ? CostEstimator.elevenLabs(script.length())
+                : java.math.BigDecimal.ZERO;
+        costService.record(jobId, usedPaidTts ? "ELEVENLABS_TTS" : "GTTS_FREE", ttsCost, "USD",
+                String.format("TTS 합성: %d자, %.1f초 (%s)",
+                        script.length(), result.getTotalDuration(),
+                        usedPaidTts ? "ElevenLabs" : "gTTS 무료 폴백"));
 
         // Asset 저장
         Asset asset = Asset.builder()

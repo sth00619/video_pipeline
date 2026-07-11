@@ -1,10 +1,402 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  ChevronLeft, ChevronRight, Sparkles, Target, Sliders, DollarSign,
+  Check, Zap, Users, Hand, Loader
+} from 'lucide-react'
 import Layout from '../components/Layout'
+import { jobsApi } from '../api/jobs'
+
+/**
+ * 새 영상 만들기 — 3단계 마법사 (Wizard).
+ *
+ * 이전 상태: 이 페이지는 "Sprint 1 Day 2에서 구현 예정" 이라는 placeholder만
+ * 있어서, 사이드바의 "새 영상 만들기" 버튼이 사실상 죽어있었습니다.
+ * (실제 폼은 Jobs.jsx 모달 안에만 있었음)
+ *
+ * 이 마법사는 영상 작업자·일반 직원용으로 설계되어 있어서 Jobs.jsx 모달의
+ * "한 화면 압축형" 폼과는 별개로, 각 항목의 의미를 자세히 설명해 주는
+ * 단계별 흐름을 제공합니다. 처음 쓰는 사람도 예산이나 자율성 모드가 뭘 뜻하는지
+ * 이 화면 안에서 이해할 수 있습니다.
+ */
+
+const CATEGORY_OPTIONS = [
+  { value: 'KOSPI', label: '코스피 (KOSPI)', desc: '한국 종합주가지수 및 대형주 중심' },
+  { value: 'KOSDAQ', label: '코스닥 (KOSDAQ)', desc: '코스닥 종목·테마주·중소형주' },
+  { value: 'US_STOCKS', label: '미국 주식', desc: 'S&P 500, 나스닥, 다우 지수' },
+  { value: 'INDIVIDUAL_STOCK', label: '개별 종목', desc: '삼성전자, SK하이닉스, 테슬라 등' },
+  { value: 'GLOBAL_MACRO', label: '글로벌 매크로', desc: 'FOMC, 환율, 국채, CPI' },
+  { value: 'CRYPTO', label: '암호화폐', desc: '비트코인, 이더리움, 알트코인' },
+  { value: 'CUSTOM', label: '직접 입력', desc: '위 카테고리에 안 맞는 주제' },
+]
+
+const AUTONOMY_OPTIONS = [
+  {
+    value: 'AUTO', label: '자동 (AUTO)', icon: Zap,
+    tag: '가장 빠름', tagColor: 'bg-accent-green/20 text-accent-green',
+    desc: '키워드→스크립트→음성→이미지→영상 조립까지 모든 단계 자동. 브라우저 안 켜도 됨.',
+    warning: '중간에 검토 없이 완주하므로, 마지막에 결과가 마음에 안 들면 다시 만들어야 합니다.',
+  },
+  {
+    value: 'GUIDED', label: '반자동 (GUIDED)', icon: Users,
+    tag: '추천', tagColor: 'bg-accent-cyan/20 text-accent-cyan',
+    desc: '키워드 후보 선택과 최종 미리보기만 사람이 검토, 나머지는 자동.',
+    warning: null,
+  },
+  {
+    value: 'MANUAL', label: '수동 (MANUAL)', icon: Hand,
+    tag: '완전 제어', tagColor: 'bg-accent-gold/20 text-accent-gold',
+    desc: '단계마다 결과를 검토·수정·승인. 대본 손보고 이미지 다시 뽑고 싶을 때.',
+    warning: '가장 오래 걸리고 사람 손이 많이 갑니다.',
+  },
+]
+
+const DURATION_OPTIONS = [
+  { value: 5, label: '5분', hint: '숏 영상. 인트로 30초 움짤' },
+  { value: 10, label: '10분', hint: '표준 길이. 인트로 45초 움짤' },
+  { value: 15, label: '15분', hint: '심층 분석. 인트로 60초 움짤' },
+  { value: 20, label: '20분', hint: '풀 리포트. 인트로 60초 움짤' },
+  { value: 30, label: '30분', hint: '롱폼 최대. 예산 여유 필요' },
+]
 
 export default function JobNew() {
+  const navigate = useNavigate()
+  const [step, setStep] = useState(1)
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState(null)
+
+  const [form, setForm] = useState({
+    title: '',
+    category: 'KOSPI',
+    autonomy: 'GUIDED',
+    longformTargetMinutes: 15,
+    budgetCap: 10,
+    makeShorts: true,
+    shortsCount: 3,
+  })
+
+  const canProceed = () => {
+    if (step === 1) return form.title.trim().length > 0
+    if (step === 2) return true
+    if (step === 3) return form.budgetCap > 0
+    return false
+  }
+
+  const handleSubmit = async () => {
+    setCreating(true)
+    setError(null)
+    try {
+      const job = await jobsApi.create(form)
+      // AUTO/GUIDED는 자동으로 키워드 탐색을 즉시 시작해 대기 시간 단축
+      if (form.autonomy !== 'MANUAL') {
+        try {
+          await jobsApi.searchKeyword(job.id, form.title, 5)
+        } catch (_) {
+          // 키워드 탐색 실패해도 Job은 만들어졌으니 상세로 이동해서 사용자가 재시도 가능
+        }
+      }
+      navigate(`/jobs/${job.id}`)
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || '작업 생성 실패')
+      setCreating(false)
+    }
+  }
+
   return (
     <Layout>
-      <h1 className="text-2xl font-bold mb-2">새 영상 만들기</h1>
-      <p className="text-gray-400">Sprint 1 Day 2에서 구현 예정 — 카테고리, 자율성 모드, 목표 길이 선택</p>
+      <div className="max-w-3xl mx-auto">
+        {/* 헤더 */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => navigate('/jobs')}
+            className="text-gray-400 hover:text-white transition"
+            title="목록으로 돌아가기"
+          >
+            <ChevronLeft size={22} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold">새 영상 만들기</h1>
+            <p className="text-gray-400 text-sm mt-0.5">
+              세 단계로 나눠서 안내합니다. 각 항목 설명을 읽으면서 진행하세요.
+            </p>
+          </div>
+        </div>
+
+        {/* 진행 표시기 */}
+        <div className="flex items-center gap-2 mb-8">
+          {[
+            { n: 1, label: '주제·카테고리' },
+            { n: 2, label: '자율성·길이' },
+            { n: 3, label: '예산·확인' },
+          ].map((s, i) => (
+            <div key={s.n} className="flex-1 flex items-center gap-2">
+              <div className={`flex items-center gap-2 flex-1 ${step === s.n ? 'text-accent-cyan' : step > s.n ? 'text-accent-green' : 'text-gray-500'}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
+                  step > s.n ? 'border-accent-green bg-accent-green/10' :
+                  step === s.n ? 'border-accent-cyan bg-accent-cyan/10' :
+                  'border-navy-600 bg-navy-800'
+                }`}>
+                  {step > s.n ? <Check size={14} /> : s.n}
+                </div>
+                <span className="text-xs font-medium">{s.label}</span>
+              </div>
+              {i < 2 && <div className={`flex-1 h-0.5 ${step > s.n ? 'bg-accent-green' : 'bg-navy-700'}`} />}
+            </div>
+          ))}
+        </div>
+
+        {/* 스텝별 본문 */}
+        <div className="bg-navy-800 rounded-xl border border-navy-700 p-6 mb-4">
+          {step === 1 && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Target size={18} className="text-accent-cyan" />
+                <h2 className="font-semibold">1단계 — 영상 주제와 카테고리</h2>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">영상 주제</label>
+                <input
+                  autoFocus
+                  value={form.title}
+                  onChange={e => setForm({ ...form, title: e.target.value })}
+                  placeholder="예: 코스피 주간 전망, 삼성전자 3분기 실적 분석"
+                  className="w-full bg-navy-700 border border-navy-600 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+                />
+                <p className="text-xs text-gray-500 mt-1.5">
+                  구체적일수록 좋습니다. "주식"보다는 "삼성전자 반도체 실적"처럼 대상을 좁혀 주세요.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">카테고리</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CATEGORY_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, category: opt.value })}
+                      className={`text-left p-3 rounded-lg border transition ${
+                        form.category === opt.value
+                          ? 'border-accent-cyan bg-accent-cyan/10'
+                          : 'border-navy-700 bg-navy-700/40 hover:border-navy-600'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold">{opt.label}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Sliders size={18} className="text-accent-cyan" />
+                <h2 className="font-semibold">2단계 — 자율성 모드와 목표 길이</h2>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">자율성 모드</label>
+                <div className="space-y-2">
+                  {AUTONOMY_OPTIONS.map(opt => {
+                    const Icon = opt.icon
+                    const selected = form.autonomy === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setForm({ ...form, autonomy: opt.value })}
+                        className={`w-full text-left p-3.5 rounded-lg border transition ${
+                          selected
+                            ? 'border-accent-cyan bg-accent-cyan/10'
+                            : 'border-navy-700 bg-navy-700/40 hover:border-navy-600'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <Icon size={18} className={selected ? 'text-accent-cyan mt-0.5' : 'text-gray-400 mt-0.5'} />
+                            <div>
+                              <div className="text-sm font-semibold flex items-center gap-2">
+                                {opt.label}
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${opt.tagColor}`}>{opt.tag}</span>
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1 leading-relaxed">{opt.desc}</div>
+                              {opt.warning && (
+                                <div className="text-xs text-accent-gold mt-1.5">⚠ {opt.warning}</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-2">목표 길이</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {DURATION_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, longformTargetMinutes: opt.value })}
+                      className={`p-2.5 rounded-lg border transition text-center ${
+                        form.longformTargetMinutes === opt.value
+                          ? 'border-accent-cyan bg-accent-cyan/10'
+                          : 'border-navy-700 bg-navy-700/40 hover:border-navy-600'
+                      }`}
+                    >
+                      <div className="text-sm font-bold">{opt.label}</div>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {DURATION_OPTIONS.find(o => o.value === form.longformTargetMinutes)?.hint}
+                </p>
+              </div>
+
+              <div className="border-t border-navy-700 pt-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.makeShorts}
+                    onChange={e => setForm({ ...form, makeShorts: e.target.checked })}
+                    className="mt-1 accent-accent-cyan"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">완성 후 쇼츠도 자동 생성</div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      롱폼에서 시나리오 3개와 키워드 10개를 자동 추출해 쇼츠 후보로 만들어 줍니다.
+                    </div>
+                  </div>
+                </label>
+                {form.makeShorts && (
+                  <div className="ml-6 mt-2 flex items-center gap-2">
+                    <span className="text-xs text-gray-400">쇼츠 개수:</span>
+                    <select
+                      value={form.shortsCount}
+                      onChange={e => setForm({ ...form, shortsCount: Number(e.target.value) })}
+                      className="bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-white focus:outline-none"
+                    >
+                      <option value={1}>1개</option>
+                      <option value={3}>3개</option>
+                      <option value={5}>5개</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign size={18} className="text-accent-cyan" />
+                <h2 className="font-semibold">3단계 — 예산 상한과 최종 확인</h2>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">
+                  예산 상한 (USD)
+                  <span className="text-xs text-gray-500 ml-2">
+                    실제 지출이 이 금액을 초과하면 작업이 자동 중지됩니다.
+                  </span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000}
+                    value={form.budgetCap}
+                    onChange={e => setForm({ ...form, budgetCap: Number(e.target.value) })}
+                    className="w-32 bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+                  />
+                  <span className="text-sm text-gray-400">USD</span>
+                  <div className="flex gap-1">
+                    {[5, 10, 20, 50].map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setForm({ ...form, budgetCap: v })}
+                        className="text-xs px-2 py-1 rounded border border-navy-600 bg-navy-700 hover:bg-navy-600 transition"
+                      >
+                        ${v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+                  대략적인 소진량: Claude 스크립트 생성 약 $0.5~2, TTS 약 $1~3, 이미지 생성 약 $1~2,
+                  인트로 움짤 약 $3~6. 15분 영상 한 편당 총 $6~13 정도가 표준입니다.
+                </p>
+              </div>
+
+              <div className="bg-navy-700/50 rounded-lg p-4 border border-navy-600">
+                <div className="text-xs text-gray-400 mb-2">최종 확인</div>
+                <div className="space-y-1.5 text-sm">
+                  <Row label="주제" value={form.title || '(미입력)'} />
+                  <Row label="카테고리" value={CATEGORY_OPTIONS.find(o => o.value === form.category)?.label} />
+                  <Row label="자율성" value={AUTONOMY_OPTIONS.find(o => o.value === form.autonomy)?.label} />
+                  <Row label="목표 길이" value={`${form.longformTargetMinutes}분`} />
+                  <Row label="쇼츠 생성" value={form.makeShorts ? `${form.shortsCount}개` : '안 함'} />
+                  <Row label="예산 상한" value={`$${form.budgetCap}`} highlight />
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-3 text-sm text-accent-red">
+                  {error}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 하단 네비게이션 */}
+        <div className="flex items-center justify-between">
+          {step > 1 ? (
+            <button
+              onClick={() => setStep(step - 1)}
+              disabled={creating}
+              className="flex items-center gap-2 bg-navy-700 text-gray-300 hover:text-white rounded-lg px-4 py-2 text-sm transition disabled:opacity-50"
+            >
+              <ChevronLeft size={14} /> 이전
+            </button>
+          ) : <div />}
+
+          {step < 3 ? (
+            <button
+              onClick={() => setStep(step + 1)}
+              disabled={!canProceed()}
+              className="flex items-center gap-2 bg-accent-cyan text-navy-950 font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              다음 <ChevronRight size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!canProceed() || creating}
+              className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition disabled:opacity-50"
+            >
+              {creating ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {creating ? '작업 생성 중...' : '작업 시작'}
+            </button>
+          )}
+        </div>
+      </div>
     </Layout>
+  )
+}
+
+function Row({ label, value, highlight }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-gray-400 text-xs">{label}</span>
+      <span className={`font-medium ${highlight ? 'text-accent-cyan' : 'text-white'}`}>{value}</span>
+    </div>
   )
 }
