@@ -10,9 +10,16 @@ body {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0d1b2a;
+  background: #0d1b2a; /* navy-950 */
 }
 ::-webkit-scrollbar-thumb {
-  background: #1a1a2e;
+  /* [UI 개선] 기존 #1a1a2e는 tailwind.config.js에서 이미 바꾼 navy-700
+     구버전 값이라, 팔레트를 밝게 재조정한 뒤에도 스크롤바만 예전 톤으로
+     남아있었습니다. 새 navy-600(#2a3a5c)으로 맞추고, hover 시 한 단계
+     더 밝아지도록(navy-500) 추가해 존재감을 살짝 더 줬습니다. */
+  background: #2a3a5c; /* navy-600 */
   border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3d5074; /* navy-500 */
 }

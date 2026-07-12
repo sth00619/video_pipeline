@@ -47,16 +47,28 @@ public class VideoPipelineWorkflowImpl implements VideoPipelineWorkflow {
     private String rejectedGate = null;
 
     // Activity 옵션 — 각 단계는 최대 2시간 (이미지/롱폼 생성이 오래 걸릴 수 있음)
-    // 실패 시 최대 3회 자동 재시도, 재시도 간격 30초
+    //
+    // [긴급 버그 수정] 기존에 setHeartbeatTimeout(10분)을 설정해뒀는데, Activity
+    // 구현체 어디에서도 실제로 heartbeat를 보내는 코드가 없었습니다. Temporal은
+    // heartbeat 타임아웃이 설정되어 있으면 그 시간 안에 신호가 안 오면 Activity가
+    // 죽은 것으로 간주하고 처음부터 다시 실행합니다. 3-Round 팩트체크 스크립트
+    // 생성은 10분을 넘기는 경우가 있어서, 실제로는 정상 진행 중인데도 Temporal이
+    // "멈췄다"고 오판해 같은 단계를 여러 번 중복 실행했습니다 (스크립트+TTS가
+    // 3번씩 생성되고 비용이 3배로 나간 원인).
+    //
+    // 추가로 MaximumAttempts도 3 → 1로 낮췄습니다. ScriptService.generate() 등은
+    // 내부적으로 AUTO 모드에서 confirm()까지 연쇄 호출하는 멱등하지 않은 로직이라,
+    // Temporal이 "실패로 착각해서" 자동 재시도하면 스크립트 생성+게이트 승인+TTS
+    // 트리거까지 통째로 중복됩니다. 재시도가 안전해지려면 각 서비스를 멱등하게
+    // 만드는 리팩터가 필요한데, 그건 별도 작업이 필요하므로 우선 재시도 자체를
+    // 끄는 쪽으로 안전하게 갑니다 (실패 시 사람이 Temporal UI에서 수동으로
+    // 재시도 여부를 판단하는 게 지금은 더 안전합니다).
     private final VideoPipelineActivities activities = Workflow.newActivityStub(
             VideoPipelineActivities.class,
             ActivityOptions.newBuilder()
                     .setStartToCloseTimeout(Duration.ofHours(2))
-                    .setHeartbeatTimeout(Duration.ofMinutes(10))
                     .setRetryOptions(RetryOptions.newBuilder()
-                            .setMaximumAttempts(3)
-                            .setInitialInterval(Duration.ofSeconds(30))
-                            .setMaximumInterval(Duration.ofMinutes(5))
+                            .setMaximumAttempts(1)
                             .build())
                     .build()
     );

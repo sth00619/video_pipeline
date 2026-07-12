@@ -11,6 +11,12 @@ Nana Banana AI Image Provider — Official Gemini API + pollinations.ai fallback
    
 3. 무료 폴백 엔진:
    - API 키 미설정 시 기존 pollinations.ai 무료 프록시로 자동 폴백 ($0)
+
+v2.1 변경사항 (버그 수정):
+   [신규] Fal.ai 서킷 브레이커 — 계정 잠김/잔액 부족(403)을 감지하면 이후
+   요청은 Fal.ai를 건너뛰고 바로 Gemini/Pollinations로 진행합니다. 기존에는
+   잔액이 바닥난 상태에서도 씬마다 매번 Fal.ai를 먼저 시도했다가 403을
+   받고서야 폴백해서, 씬 하나당 불필요한 HTTP 왕복이 계속 발생했습니다.
 """
 import os
 import json
@@ -42,6 +48,13 @@ class NanaBananaProvider(ImageProvider):
     Nano Banana Pro (Google Gemini API) 및 pollinations.ai 기반 이미지 생성 프로바이더.
     """
     _gemini_disabled = False
+    # [신규] Fal.ai 계정 잠김/잔액 부족 감지 시 켜지는 서킷 브레이커.
+    # 기존에는 매 씬마다 Fal.ai를 먼저 시도했다가 403(잔액 부족)을 받고서야
+    # Gemini/Pollinations로 넘어갔는데, 잔액 부족은 그 Job이 끝날 때까지
+    # (혹은 사람이 충전할 때까지) 절대 저절로 풀리지 않는 상태이므로, 매번
+    # 다시 시도하는 건 순전히 시간 낭비였습니다. 한 번 감지되면 이후 요청은
+    # Fal.ai를 건너뛰고 바로 Gemini/Pollinations로 갑니다.
+    _fal_disabled = False
 
     def __init__(self):
         self.fallback_url = "https://image.pollinations.ai/prompt"
@@ -85,15 +98,17 @@ class NanaBananaProvider(ImageProvider):
         # 디렉토리 생성
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-        # 1. Fal.ai Flux AI (최우선)
+        # 1. Fal.ai Flux AI (최우선, 서킷 브레이커 열려있지 않은 경우만)
         fal_key = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
-        if fal_key:
+        if fal_key and not self.__class__._fal_disabled:
             try:
                 if self._generate_fal_flux(base_prompt, output_path, fal_key):
                     logger.info(f"Fal.ai Flux 이미지 생성 성공: {output_path}")
                     return output_path
             except Exception as e:
                 logger.warning(f"Fal.ai Flux 이미지 생성 실패, Gemini 시도: {e}")
+        elif fal_key and self.__class__._fal_disabled:
+            logger.debug("Fal.ai 서킷 브레이커 열림 상태 — Fal.ai 건너뛰고 Gemini로 바로 진행")
 
         # 2. 공식 Gemini API (Nano Banana Pro) 시도
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -131,6 +146,17 @@ class NanaBananaProvider(ImageProvider):
         try:
             # 동기 모드로 즉시 생성 시도
             resp = requests.post(submit_url, json=payload, headers=headers, timeout=20)
+
+            # [신규] 계정 잠김/잔액 부족 감지 → 서킷 브레이커 즉시 작동
+            if resp.status_code == 403:
+                logger.error(f"Fal.ai 계정 잠김/잔액 부족 감지 (403): {resp.text[:200]}")
+                self.__class__._fal_disabled = True
+                logger.warning(
+                    "Fal.ai 서킷 브레이커 작동 — 이 프로세스가 살아있는 동안 "
+                    "이후 이미지 생성은 Fal.ai를 건너뛰고 Gemini/Pollinations로 바로 진행합니다."
+                )
+                return False
+
             if resp.status_code == 200:
                 resp_json = resp.json()
                 images = resp_json.get("images", [])
@@ -145,6 +171,13 @@ class NanaBananaProvider(ImageProvider):
             # 비동기 대기 모드로 재시도
             payload["sync_mode"] = False
             resp = requests.post(submit_url, json=payload, headers=headers, timeout=30)
+
+            if resp.status_code == 403:
+                logger.error(f"Fal.ai 계정 잠김/잔액 부족 감지 (403, 비동기 모드): {resp.text[:200]}")
+                self.__class__._fal_disabled = True
+                logger.warning("Fal.ai 서킷 브레이커 작동 — 이후 이미지 생성은 Gemini/Pollinations로 바로 진행합니다.")
+                return False
+
             if resp.status_code != 200:
                 logger.warning(f"Fal.ai Flux 제출 실패 ({resp.status_code}): {resp.text}")
                 return False

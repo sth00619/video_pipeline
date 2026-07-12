@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Map;
@@ -95,28 +97,51 @@ public class GateService {
         jobRepository.save(job);
         log.info("Gate {} {}: job={} → {}", gate, result, jobId, next);
 
-        // [Phase 1 변경] 기존 triggerNextStepAsync() 대신 Temporal Signal 전송
+        // [긴급 버그 수정] 기존에는 이 시점에서 바로 Signal을 보냈는데, 이 메서드가
+        // @Transactional이라 실제 DB 커밋은 approve()가 리턴된 "이후"에 일어납니다.
+        // Signal을 받은 Temporal Workflow가 바로 다음 Activity(예: 이미지 생성)를
+        // 실행하면서 DB 상태를 다시 읽으면, 아직 커밋 전이라 이전 상태(TTS_PENDING
+        // 등)로 보여서 그 Activity 내부의 상태 가드 체크에 걸려 실패하는 경합
+        // 조건이 있었습니다.
         //
-        // KEYWORD 게이트 승인 시: Workflow를 새로 시작하고 KEYWORD Signal 전송
-        // 나머지 게이트 승인 시: 이미 실행 중인 Workflow에 Signal만 전송
+        // KEYWORD 게이트에만 Thread.sleep(300)으로 임시 땜빵을 해뒀었는데, 그건
+        // "운 좋게 타이밍이 맞은" 것일 뿐 근본 해결책이 아니었고, SCRIPT/TTS/IMAGES
+        // 게이트에서는 그 방편조차 없어서 그대로 실패했습니다.
         //
-        // AUTO 모드가 아니어도 Signal은 항상 전송합니다.
-        // Workflow는 Signal을 받아야 다음 단계로 진행하기 때문입니다.
-        // MANUAL/GUIDED 모드에서 사람이 승인 → GateController → 이 메서드 →
-        // Signal 전송 → Workflow 재개 흐름입니다.
-        if (gate == GateName.KEYWORD) {
-            // 첫 번째 게이트: Workflow 시작 후 Signal
-            workflowOrchestrator.startPipeline(jobId);
-            try { Thread.sleep(300); } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            workflowOrchestrator.sendApproveSignal(jobId, gate.name());
-        } else {
-            // 이후 게이트: 이미 실행 중인 Workflow에 Signal만 전송
-            workflowOrchestrator.sendApproveSignal(jobId, gate.name());
-        }
+        // 제대로 된 수정: TransactionSynchronizationManager로 "이 트랜잭션이 실제로
+        // 커밋된 직후"에만 Signal이 나가도록 등록합니다. sleep 같은 임의의 대기
+        // 시간에 의존하지 않고, DB 커밋과 Signal 전송의 순서를 확정적으로 보장합니다.
+        registerSignalAfterCommit(jobId, gate);
 
         return approval;
+    }
+
+    /**
+     * 현재 트랜잭션이 커밋된 직후에만 Temporal Signal을 전송하도록 등록합니다.
+     * 트랜잭션 동기화가 활성화되어 있지 않은 예외적 상황(테스트 등)에서는
+     * 안전하게 즉시 전송합니다.
+     */
+    private void registerSignalAfterCommit(Long jobId, GateName gate) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            sendSignalForGate(jobId, gate);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                sendSignalForGate(jobId, gate);
+            }
+        });
+    }
+
+    private void sendSignalForGate(Long jobId, GateName gate) {
+        if (gate == GateName.KEYWORD) {
+            // 첫 번째 게이트: Workflow를 먼저 시작한 뒤 Signal 전송
+            workflowOrchestrator.startPipeline(jobId);
+            workflowOrchestrator.sendApproveSignal(jobId, gate.name());
+        } else {
+            workflowOrchestrator.sendApproveSignal(jobId, gate.name());
+        }
     }
 
     @Transactional
@@ -137,8 +162,17 @@ public class GateService {
         jobRepository.save(job);
         log.info("Gate {} 거부: job={} → FAILED", gate, jobId);
 
-        // [Phase 1 변경] 거부 Signal 전송 → Workflow 즉시 종료
-        workflowOrchestrator.sendRejectSignal(jobId, gate.name());
+        // [버그 수정] approve()와 동일한 이유로 커밋 이후 전송
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    workflowOrchestrator.sendRejectSignal(jobId, gate.name());
+                }
+            });
+        } else {
+            workflowOrchestrator.sendRejectSignal(jobId, gate.name());
+        }
 
         return approval;
     }

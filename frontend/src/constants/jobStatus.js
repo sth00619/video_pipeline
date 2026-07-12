@@ -1,15 +1,11 @@
 /**
  * 작업 상태·카테고리·자율성 모드에 대한 공통 라벨과 색상.
  *
- * 이 파일이 왜 새로 생겼는지:
- *   Jobs.jsx, Dashboard.jsx, Admin.jsx 세 페이지가 각자 동일한
- *   CATEGORY_LIST / STATUS_LIST / STATUS_LABEL / STATUS_COLOR / MODE_LIST /
- *   AUTONOMY_LABEL을 복붙해서 갖고 있었습니다. 카테고리 하나 추가하거나
- *   상태 라벨 하나 바꾸려면 세 파일을 전부 고쳐야 했고, 실제로 그 과정에서
- *   Dashboard의 CATEGORY_LIST에는 ASSOCIATED_STOCKS가 있는데 Jobs/Admin에는 없는
- *   불일치까지 생겨 있었습니다. 여기서 한 번에 관리합니다.
- *
- * 각 페이지에서 필요한 것만 import 하세요.
+ * [UI 개선 v3] 기존에는 진행중 상태(KEYWORD/SCRIPT/TTS/IMAGES/ASSEMBLING)가
+ * 전부 accent-cyan 하나로만 뭉쳐 있어서, 리스트에 여러 Job이 있어도 화면이
+ * 단색으로 보이는 원인이었습니다. 파이프라인 단계별로 violet/amber를
+ * 섞어서 시각적으로 "지금 어느 단계인지"도 더 잘 구분되고, 색상도
+ * 다양해지도록 조정했습니다.
  */
 
 export const CATEGORIES = [
@@ -28,6 +24,19 @@ export const CATEGORY_LABEL = Object.fromEntries([
   ['ALL', '전체'],
   ...CATEGORIES.map(c => [c.value, c.label]),
 ])
+
+// [신규] 카테고리별 포인트 색상 — 리스트/태그에서 카테고리를 색으로도
+// 구분할 수 있도록 (기존엔 전부 무채색 텍스트였음)
+export const CATEGORY_COLOR = {
+  KOSPI: 'text-accent-cyan bg-accent-cyan/10 border-accent-cyan/20',
+  KOSDAQ: 'text-accent-violet bg-accent-violet/10 border-accent-violet/20',
+  US_STOCKS: 'text-accent-green bg-accent-green/10 border-accent-green/20',
+  INDIVIDUAL_STOCK: 'text-accent-gold bg-accent-gold/10 border-accent-gold/20',
+  ASSOCIATED_STOCKS: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
+  GLOBAL_MACRO: 'text-accent-violet bg-accent-violet/10 border-accent-violet/20',
+  CRYPTO: 'text-accent-gold bg-accent-gold/10 border-accent-gold/20',
+  CUSTOM: 'text-navy-400 bg-navy-700/40 border-navy-600',
+}
 
 export const MODE_LIST = ['ALL', 'AUTO', 'GUIDED', 'MANUAL']
 export const AUTONOMY_LABEL = { AUTO: '자동', GUIDED: '반자동', MANUAL: '수동' }
@@ -62,16 +71,16 @@ export const STATUS_LABEL = {
   FAILED: '오류',
 }
 
-/** 상태 뱃지에 적용할 Tailwind 유틸 클래스 */
+/** 상태 뱃지에 적용할 Tailwind 유틸 클래스 — 파이프라인 단계별로 색상 분산 */
 export const STATUS_COLOR = {
-  DRAFT: 'bg-navy-700 text-gray-400',
+  DRAFT: 'bg-navy-700 text-navy-400',
   KEYWORD_PENDING: 'bg-accent-cyan/10 text-accent-cyan',
-  SCRIPT_PENDING: 'bg-accent-cyan/10 text-accent-cyan',
-  TTS_PENDING: 'bg-accent-cyan/10 text-accent-cyan',
+  SCRIPT_PENDING: 'bg-accent-violet/10 text-accent-violet',
+  TTS_PENDING: 'bg-accent-amber/10 text-accent-amber',
   IMAGES_PENDING: 'bg-accent-cyan/10 text-accent-cyan',
-  ASSEMBLING: 'bg-accent-cyan/20 text-accent-cyan',
+  ASSEMBLING: 'bg-accent-violet/20 text-accent-violet',
   PREVIEW_PENDING: 'bg-accent-gold/20 text-accent-gold',
-  SHORTS_SEGMENTS_PENDING: 'bg-accent-gold/10 text-accent-gold',
+  SHORTS_SEGMENTS_PENDING: 'bg-accent-amber/10 text-accent-amber',
   SHORTS_GENERATING: 'bg-accent-cyan/20 text-accent-cyan',
   SHORTS_PREVIEW_PENDING: 'bg-accent-gold/10 text-accent-gold',
   READY: 'bg-accent-green/20 text-accent-green',

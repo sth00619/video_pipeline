@@ -102,6 +102,33 @@ public class WorkflowOrchestrator {
     }
 
     /**
+     * 실행 중인 Workflow를 취소합니다. Job 정지 버튼과 연결됩니다.
+     *
+     * [긴급 추가] 정지 버튼을 눌러도 실제로 안 멈추던 문제 수정.
+     * 기존 정지 기능(Phase A)은 FastAPI의 process_manager만 알고 있었고,
+     * Temporal이 실행을 담당하게 된 지금은 Temporal Workflow 자체를
+     * 취소해야 실제로 멈춥니다. cancel()은 현재 실행 중인 Activity에도
+     * 취소 신호를 전파합니다 (Activity 구현체가 InterruptedException을
+     * 확인하지 않으면 진행 중인 API 호출 자체는 끝까지 갈 수 있지만,
+     * 최소한 다음 단계로는 절대 진행하지 않습니다).
+     */
+    public void cancelPipeline(Long jobId) {
+        String workflowId = "video-pipeline-" + jobId;
+        log.info("Temporal Workflow 취소 요청: workflowId={}", workflowId);
+        try {
+            io.temporal.client.WorkflowStub stub =
+                    workflowClient.newUntypedWorkflowStub(workflowId);
+            stub.cancel();
+            log.info("Temporal Workflow 취소 완료: workflowId={}", workflowId);
+        } catch (Exception e) {
+            log.warn("Temporal Workflow 취소 실패 (이미 종료됐거나 존재하지 않을 수 있음): workflowId={}, error={}",
+                    workflowId, e.getMessage());
+            // Workflow가 아직 시작 안 됐거나 이미 끝난 경우일 수 있으므로
+            // 예외를 던지지 않고 로그만 남김 — 정지 버튼 자체는 항상 성공해야 함
+        }
+    }
+
+    /**
      * 기존 @Async triggerNextStepAsync와 호환되는 메서드.
      *
      * KeywordService 외의 서비스들이 이 메서드를 호출하던 곳이 있다면

@@ -71,6 +71,15 @@ const AUTONOMY_DESC = {
   AUTO: '모든 단계 자동 진행', GUIDED: '키워드·미리보기 검토 후 자동', MANUAL: '각 단계마다 수동 승인 필요',
 }
 
+/**
+ * [UI 개선]
+ * - 기존 text-gray-*(Tailwind 기본 회색) → text-navy-400(라벨류) / text-gray-200(본문류)로 통일.
+ *   navy 배경 위에서 gray는 색감이 미묘하게 어긋나 탁해 보이는 원인이었습니다.
+ * - text-[9px]/text-[10px]/text-[11px]처럼 너무 작은 임의 크기들을 text-xs(12px)
+ *   이상으로 올렸고, 대사/설명 본문(text-xs)은 text-sm(14px)으로 상향했습니다.
+ * - 카드들에 shadow-card를 추가해 배경과의 구분감을 살렸습니다.
+ * - 기능 로직(뮤테이션, 쿼리, 씬 편집/분할/재생성 등)은 전혀 건드리지 않았습니다.
+ */
 export default function JobDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -79,10 +88,9 @@ export default function JobDetail() {
   const [runningStep, setRunningStep] = useState(null)
   const [expandedScript, setExpandedScript] = useState(false)
 
-  // 스크립트 및 씬 이미지 편집 상태들
   const [isEditingScript, setIsEditingScript] = useState(false)
   const [editedScriptText, setEditedScriptText] = useState('')
-  const [scriptViewMode, setScriptViewMode] = useState('paragraphs') // 'paragraphs' | 'raw'
+  const [scriptViewMode, setScriptViewMode] = useState('paragraphs')
   const [editingSceneIndex, setEditingSceneIndex] = useState(null)
   const [editingSceneText, setEditingSceneText] = useState('')
   const [imageSalt, setImageSalt] = useState(0)
@@ -98,22 +106,18 @@ export default function JobDetail() {
     queryKey: ['costs', id], queryFn: () => jobsApi.costs(id), refetchInterval: 10000,
   })
 
-  // ── AUTO 모드일 때 활성화된 단계를 자동으로 실행 ──
   useEffect(() => {
     if (!job || job.autonomy !== 'AUTO' || runningStep || isLoading) return;
-
     const activeStep = PIPELINE_STEPS.find(step => {
       const ss = getStepStatus(step, job, approvals);
       return ss === 'active';
     });
-
     if (activeStep) {
       console.log('AUTO 모드: 자동 실행 트리거 ->', activeStep.key);
       handleRun(activeStep);
     }
   }, [job, approvals, runningStep, isLoading]);
 
-  // ── 각 단계 산출물 조회 (Asset 기반, 서버 상태 완전 복원) ──
   const { data: kwAssets = [] } = useQuery({
     queryKey: ['assets', id, 'KEYWORD'], queryFn: () => jobsApi.assets(id, 'KEYWORD'), enabled: !!job,
   })
@@ -292,7 +296,7 @@ export default function JobDetail() {
   }
 
   if (isLoading) return <Layout><div className="flex items-center justify-center h-64"><Loader className="animate-spin text-accent-cyan" size={32}/></div></Layout>
-  if (!job) return <Layout><div className="text-gray-400 p-8">작업을 찾을 수 없습니다.</div></Layout>
+  if (!job) return <Layout><div className="text-navy-400 p-8">작업을 찾을 수 없습니다.</div></Layout>
 
   const isAuto = job.autonomy === 'AUTO'
   const isGuided = job.autonomy === 'GUIDED'
@@ -307,13 +311,13 @@ export default function JobDetail() {
       {/* 헤더 */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/jobs')} className="text-gray-400 hover:text-white transition"><ChevronLeft size={24}/></button>
+          <button onClick={() => navigate('/jobs')} className="text-navy-400 hover:text-white transition"><ChevronLeft size={24}/></button>
           <div>
-            <h1 className="text-xl font-bold">{job.title}</h1>
-            <div className="text-sm text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold">{job.title}</h1>
+            <div className="text-sm text-navy-400 mt-1 flex items-center gap-2 flex-wrap">
               <span>{job.category}</span><span>·</span><span>{job.longformTargetMinutes}분</span><span>·</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${AUTONOMY_STYLE[job.autonomy]}`}>{job.autonomy}</span>
-              <span className="text-gray-500 text-xs">{AUTONOMY_DESC[job.autonomy]}</span>
+              <span className={`text-sm px-2.5 py-1 rounded-full border font-medium ${AUTONOMY_STYLE[job.autonomy]}`}>{job.autonomy}</span>
+              <span className="text-navy-400 text-sm">{AUTONOMY_DESC[job.autonomy]}</span>
             </div>
           </div>
         </div>
@@ -323,7 +327,7 @@ export default function JobDetail() {
             <button
               onClick={handleStop}
               disabled={stopMutation.isPending}
-              className="text-xs bg-red-950/40 text-red-400 border border-red-900/60 hover:bg-red-900/50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition font-semibold"
+              className="text-sm bg-red-950/40 text-red-400 border border-red-900/60 hover:bg-red-900/50 disabled:opacity-50 px-4 py-2 rounded-lg transition font-semibold"
             >
               작업 중지
             </button>
@@ -332,7 +336,7 @@ export default function JobDetail() {
             <button
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
-              className="text-xs bg-gray-800/60 text-gray-400 border border-gray-700 hover:bg-gray-700/50 disabled:opacity-50 px-3 py-1.5 rounded-lg transition"
+              className="text-sm bg-navy-700/60 text-navy-400 border border-navy-600 hover:bg-navy-600/50 disabled:opacity-50 px-4 py-2 rounded-lg transition"
             >
               작업 삭제
             </button>
@@ -341,37 +345,37 @@ export default function JobDetail() {
       </div>
 
       {isManual && !isDone && (
-        <div className="bg-accent-gold/10 border border-accent-gold/30 rounded-xl px-5 py-3 mb-5 flex items-center gap-3">
-          <AlertCircle className="text-accent-gold flex-shrink-0" size={18}/>
+        <div className="bg-accent-gold/10 border border-accent-gold/30 rounded-xl px-5 py-4 mb-5 flex items-center gap-3">
+          <AlertCircle className="text-accent-gold flex-shrink-0" size={20}/>
           <p className="text-sm text-accent-gold"><span className="font-semibold">수동 모드</span> — 각 단계마다 "실행" 후 결과를 확인하고 승인해야 다음 단계로 넘어갑니다.</p>
         </div>
       )}
       {isGuided && !isDone && (
-        <div className="bg-accent-cyan/10 border border-accent-cyan/30 rounded-xl px-5 py-3 mb-5 flex items-center gap-3">
-          <AlertCircle className="text-accent-cyan flex-shrink-0" size={18}/>
+        <div className="bg-accent-cyan/10 border border-accent-cyan/30 rounded-xl px-5 py-4 mb-5 flex items-center gap-3">
+          <AlertCircle className="text-accent-cyan flex-shrink-0" size={20}/>
           <p className="text-sm text-accent-cyan"><span className="font-semibold">반자동 모드</span> — 키워드 선택과 최종 미리보기만 검토하면 나머지는 자동 진행됩니다.</p>
         </div>
       )}
       {isAuto && !isDone && (
-        <div className="bg-accent-green/10 border border-accent-green/30 rounded-xl px-5 py-3 mb-5 flex items-center gap-3">
-          <Zap className="text-accent-green flex-shrink-0" size={18}/>
+        <div className="bg-accent-green/10 border border-accent-green/30 rounded-xl px-5 py-4 mb-5 flex items-center gap-3">
+          <Zap className="text-accent-green flex-shrink-0" size={20}/>
           <div>
             <p className="text-sm text-accent-green"><span className="font-semibold">완전 자동 모드</span> — 백엔드 서버가 모든 단계를 자율적으로 실행합니다.</p>
-            <p className="text-xs text-accent-green/70 mt-0.5">브라우저를 닫으셔도 진행됩니다. 이 페이지에서 실시간 진행 현황을 모니터링할 수 있습니다.</p>
+            <p className="text-sm text-accent-green/70 mt-1">브라우저를 닫으셔도 진행됩니다. 이 페이지에서 실시간 진행 현황을 모니터링할 수 있습니다.</p>
           </div>
         </div>
       )}
 
       {job.outputPath && (
-        <div className="bg-navy-800 rounded-xl border border-accent-green p-5 space-y-4 mb-6">
+        <div className="bg-navy-800 rounded-xl border border-accent-green p-5 space-y-4 mb-6 shadow-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <CheckCircle className="text-accent-green" size={20}/>
+              <CheckCircle className="text-accent-green" size={22}/>
               <div>
-                <div className="font-semibold text-sm">
+                <div className="font-semibold text-base">
                   {isDone ? '영상 생성 완료' : '영상 조립 완료 (미리보기)'}
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">{job.longformTargetMinutes}분 · 1920×1080</div>
+                <div className="text-sm text-navy-400 mt-0.5">{job.longformTargetMinutes}분 · 1920×1080</div>
               </div>
             </div>
             <div className="flex gap-2">
@@ -379,31 +383,30 @@ export default function JobDetail() {
                 <button
                   onClick={() => rebuildLongformMut.mutate()}
                   disabled={rebuildLongformMut.isPending}
-                  className="flex items-center gap-1 bg-accent-gold text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
+                  className="flex items-center gap-1.5 bg-accent-gold text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
                 >
-                  {rebuildLongformMut.isPending ? <Loader size={12} className="animate-spin"/> : <Zap size={12}/>}
+                  {rebuildLongformMut.isPending ? <Loader size={14} className="animate-spin"/> : <Zap size={14}/>}
                   동영상 재조립
                 </button>
               )}
               {['PREVIEW_PENDING', 'READY'].includes(job.status) && (
                 <a href={`/jobs/${id}/shorts`}
-                  className="flex items-center gap-1 bg-accent-cyan text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 transition"
+                  className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 transition"
                 >
                   쇼츠 제작하기
                 </a>
               )}
               <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
-                className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-xs px-3 py-1.5 rounded-lg hover:opacity-90 transition" download>
-                <Download size={12}/>MP4 다운로드
+                className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 transition" download>
+                <Download size={14}/>MP4 다운로드
               </a>
             </div>
           </div>
-          
-          {/* 비디오 플레이어 */}
+
           <div className="aspect-video bg-navy-950 rounded-lg overflow-hidden border border-navy-700">
-            <video 
+            <video
               key={imageSalt}
-              controls 
+              controls
               className="w-full h-full"
               src={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
             />
@@ -411,29 +414,27 @@ export default function JobDetail() {
         </div>
       )}
 
-      {/* YouTube 메타데이터 및 업로드 게이트 패키지 */}
       {['READY', 'PUBLISHED'].includes(job.status) && (
-        <div className="bg-navy-800 rounded-xl border border-accent-cyan p-5 space-y-4 mb-6">
+        <div className="bg-navy-800 rounded-xl border border-accent-cyan p-5 space-y-4 mb-6 shadow-card">
           <div className="flex items-center justify-between border-b border-navy-700 pb-3">
-            <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5">
-              <Youtube size={16}/> YouTube 업로드 및 수동 발행 지원 킷
+            <h3 className="text-base font-bold text-accent-cyan flex items-center gap-1.5">
+              <Youtube size={18}/> YouTube 업로드 및 수동 발행 지원 킷
             </h3>
             {job.status === 'PUBLISHED' ? (
-              <span className="text-[11px] bg-accent-green/10 text-accent-green font-bold px-2 py-0.5 rounded border border-accent-green/20">
+              <span className="text-sm bg-accent-green/10 text-accent-green font-bold px-2.5 py-1 rounded border border-accent-green/20">
                 업로드 완료
               </span>
             ) : (
-              <span className="text-[11px] bg-accent-gold/10 text-accent-gold font-bold px-2 py-0.5 rounded border border-accent-gold/20">
+              <span className="text-sm bg-accent-gold/10 text-accent-gold font-bold px-2.5 py-1 rounded border border-accent-gold/20">
                 업로드 대기 중 ({job.autonomy} 모드)
               </span>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* 썸네일 다운로드 */}
             <div className="bg-navy-900/60 p-3 rounded-lg border border-navy-700 flex flex-col justify-between">
               <div>
-                <h4 className="text-xs font-semibold text-gray-300 mb-2">AI 자동 생성 썸네일</h4>
+                <h4 className="text-sm font-semibold text-gray-200 mb-2">AI 자동 생성 썸네일</h4>
                 <div className="aspect-video bg-navy-950 rounded border border-navy-700 overflow-hidden relative">
                   <img
                     src={`/api/jobs/${id}/thumbnail/longform?t=${imageSalt}`}
@@ -451,32 +452,31 @@ export default function JobDetail() {
                 target="_blank"
                 rel="noreferrer"
                 download
-                className="mt-3 w-full bg-navy-700 border border-navy-600 text-center text-xs text-accent-cyan py-1.5 rounded hover:bg-navy-600 transition flex items-center justify-center gap-1"
+                className="mt-3 w-full bg-navy-700 border border-navy-600 text-center text-sm text-accent-cyan py-2 rounded hover:bg-navy-600 transition flex items-center justify-center gap-1"
               >
-                <Download size={12}/> 썸네일 다운로드
+                <Download size={14}/> 썸네일 다운로드
               </a>
             </div>
 
-            {/* 유튜브 메타데이터 복사 패널 */}
             <div className="md:col-span-2 space-y-3">
               {youtubePackage?.longform ? (
                 <>
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-gray-400">추천 제목 (3안)</span>
+                      <span className="text-sm font-semibold text-navy-400">추천 제목 (3안)</span>
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(youtubePackage.longform.titles?.join('\n') || '');
                           alert('추천 제목 3안이 복사되었습니다.');
                         }}
-                        className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                        className="text-sm text-accent-cyan hover:underline flex items-center gap-0.5"
                       >
-                        <Copy size={10}/> 전체 복사
+                        <Copy size={12}/> 전체 복사
                       </button>
                     </div>
-                    <div className="bg-navy-950 p-2 rounded border border-navy-700 space-y-1.5 mt-1">
+                    <div className="bg-navy-950 p-3 rounded border border-navy-700 space-y-2 mt-1.5">
                       {youtubePackage.longform.titles?.map((t, idx) => (
-                        <div key={idx} className="flex items-start gap-1.5 text-xs text-gray-300">
+                        <div key={idx} className="flex items-start gap-1.5 text-sm text-gray-200">
                           <span className="text-accent-cyan font-bold">안{idx+1}.</span>
                           <span className="flex-1 select-all">{t}</span>
                         </div>
@@ -486,53 +486,52 @@ export default function JobDetail() {
 
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-gray-400">더보기 상세 설명글 (Description)</span>
+                      <span className="text-sm font-semibold text-navy-400">더보기 상세 설명글 (Description)</span>
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(youtubePackage.longform.description || '');
                           alert('더보기 글이 복사되었습니다.');
                         }}
-                        className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                        className="text-sm text-accent-cyan hover:underline flex items-center gap-0.5"
                       >
-                        <Copy size={10}/> 복사
+                        <Copy size={12}/> 복사
                       </button>
                     </div>
                     <textarea
                       readOnly
                       value={youtubePackage.longform.description || ''}
-                      className="w-full bg-navy-950 border border-navy-700 rounded p-2 text-xs text-gray-300 mt-1 h-20 focus:outline-none resize-none font-mono"
+                      className="w-full bg-navy-950 border border-navy-700 rounded p-3 text-sm text-gray-200 mt-1.5 h-20 focus:outline-none resize-none font-mono"
                     />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-gray-400 font-mono">태그 / 해시태그</span>
+                      <span className="text-sm font-semibold text-navy-400 font-mono">태그 / 해시태그</span>
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(youtubePackage.longform.tags?.join(', ') || '');
                           alert('해시태그가 복사되었습니다.');
                         }}
-                        className="text-[10px] text-accent-cyan hover:underline flex items-center gap-0.5"
+                        className="text-sm text-accent-cyan hover:underline flex items-center gap-0.5"
                       >
-                        <Copy size={10}/> 복사
+                        <Copy size={12}/> 복사
                       </button>
                     </div>
-                    <div className="bg-navy-950 p-2 rounded border border-navy-700 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
+                    <div className="bg-navy-950 p-3 rounded border border-navy-700 mt-1.5 text-sm text-accent-cyan flex flex-wrap gap-1.5">
                       {youtubePackage.longform.tags?.map((tag, idx) => (
-                        <span key={idx} className="bg-navy-800 px-1.5 py-0.5 rounded border border-navy-700">#{tag}</span>
+                        <span key={idx} className="bg-navy-800 px-2 py-1 rounded border border-navy-700">#{tag}</span>
                       ))}
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="text-xs text-gray-400 h-full flex items-center justify-center">
-                  <Loader size={12} className="animate-spin mr-1"/> 유튜브 메타데이터 생성 중...
+                <div className="text-sm text-navy-400 h-full flex items-center justify-center">
+                  <Loader size={14} className="animate-spin mr-1.5"/> 유튜브 메타데이터 생성 중...
                 </div>
               )}
             </div>
           </div>
 
-          {/* 게이트 및 업로드 버튼 */}
           <div className="border-t border-navy-700 pt-3 flex items-center justify-between">
             <div>
               {job.youtubeUrl && (
@@ -540,13 +539,13 @@ export default function JobDetail() {
                   href={job.youtubeUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs text-accent-cyan hover:underline flex items-center gap-1"
+                  className="text-sm text-accent-cyan hover:underline flex items-center gap-1"
                 >
-                  <ExternalLink size={12}/> YouTube 업로드 동영상 링크 열기
+                  <ExternalLink size={14}/> YouTube 업로드 동영상 링크 열기
                 </a>
               )}
             </div>
-            
+
             <div className="flex gap-2">
               {job.status === 'READY' && (
                 <button
@@ -560,9 +559,9 @@ export default function JobDetail() {
                     }
                   }}
                   disabled={publishMut.isPending}
-                  className="flex items-center gap-1.5 bg-red-600 text-white font-semibold text-xs px-4 py-2 rounded-lg hover:bg-red-500 disabled:opacity-50 transition"
+                  className="flex items-center gap-1.5 bg-red-600 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-red-500 disabled:opacity-50 transition"
                 >
-                  {publishMut.isPending ? <Loader size={12} className="animate-spin"/> : <Youtube size={12}/>}
+                  {publishMut.isPending ? <Loader size={14} className="animate-spin"/> : <Youtube size={14}/>}
                   {job.autonomy === 'GUIDED' ? '업로드 검토 및 발행' : '즉시 YouTube 업로드'}
                 </button>
               )}
@@ -571,20 +570,19 @@ export default function JobDetail() {
         </div>
       )}
 
-      {/* GUIDED 모드 유튜브 업로드 검토 팝업 */}
       {isGuidedConfirmOpen && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="bg-navy-900 border border-navy-700 rounded-xl p-5 max-w-xl w-full space-y-4">
-            <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5 border-b border-navy-800 pb-2">
-              <Youtube size={16}/> YouTube 업로드 검토 (GUIDED 게이트)
+          <div className="bg-navy-900 border border-navy-700 rounded-xl p-6 max-w-xl w-full space-y-4">
+            <h3 className="text-base font-bold text-accent-cyan flex items-center gap-1.5 border-b border-navy-800 pb-3">
+              <Youtube size={18}/> YouTube 업로드 검토 (GUIDED 게이트)
             </h3>
-            
+
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-400">제목 선택</label>
-                <div className="space-y-1.5 mt-1">
+                <label className="text-sm text-navy-400">제목 선택</label>
+                <div className="space-y-1.5 mt-1.5">
                   {youtubePackage?.longform?.titles?.map((t, idx) => (
-                    <label key={idx} className="flex items-start gap-2 bg-navy-950 p-2 rounded border border-navy-800 hover:border-navy-700 cursor-pointer text-xs text-gray-300">
+                    <label key={idx} className="flex items-start gap-2 bg-navy-950 p-2.5 rounded border border-navy-800 hover:border-navy-700 cursor-pointer text-sm text-gray-200">
                       <input
                         type="radio"
                         name="selected_title"
@@ -598,19 +596,19 @@ export default function JobDetail() {
               </div>
 
               <div>
-                <label className="text-xs text-gray-400">더보기 상세 설명글</label>
+                <label className="text-sm text-navy-400">더보기 상세 설명글</label>
                 <textarea
                   readOnly
                   value={youtubePackage?.longform?.description || ''}
-                  className="w-full bg-navy-950 border border-navy-800 rounded p-2 text-xs text-gray-300 mt-1 h-24 focus:outline-none resize-none font-mono"
+                  className="w-full bg-navy-950 border border-navy-800 rounded p-2.5 text-sm text-gray-200 mt-1.5 h-24 focus:outline-none resize-none font-mono"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-gray-400">추천 해시태그</label>
-                <div className="bg-navy-950 p-2 rounded border border-navy-800 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
+                <label className="text-sm text-navy-400">추천 해시태그</label>
+                <div className="bg-navy-950 p-2.5 rounded border border-navy-800 mt-1.5 text-sm text-accent-cyan flex flex-wrap gap-1.5">
                   {youtubePackage?.longform?.tags?.map((tag, idx) => (
-                    <span key={idx} className="bg-navy-900 px-1.5 py-0.5 rounded border border-navy-800">#{tag}</span>
+                    <span key={idx} className="bg-navy-900 px-2 py-1 rounded border border-navy-800">#{tag}</span>
                   ))}
                 </div>
               </div>
@@ -619,7 +617,7 @@ export default function JobDetail() {
             <div className="flex justify-end gap-2 border-t border-navy-800 pt-3">
               <button
                 onClick={() => setIsGuidedConfirmOpen(false)}
-                className="bg-navy-700 hover:bg-navy-600 text-xs px-3 py-1.5 rounded text-gray-400 transition"
+                className="bg-navy-700 hover:bg-navy-600 text-sm px-4 py-2 rounded text-navy-400 transition"
               >
                 닫기
               </button>
@@ -628,7 +626,7 @@ export default function JobDetail() {
                   setIsGuidedConfirmOpen(false);
                   publishMut.mutate();
                 }}
-                className="bg-red-600 hover:bg-red-500 text-xs px-4 py-1.5 rounded text-white font-semibold transition"
+                className="bg-red-600 hover:bg-red-500 text-sm px-5 py-2 rounded text-white font-semibold transition"
               >
                 검토 승인 및 업로드
               </button>
@@ -648,90 +646,86 @@ export default function JobDetail() {
             const showManualApprove = isManual && ss === 'active' && runningStep !== step.key
 
             return (
-              <div key={step.key} className={`bg-navy-800 rounded-xl border transition ${ss === 'active' ? 'border-accent-cyan' : 'border-navy-700'}`}>
+              <div key={step.key} className={`bg-navy-800 rounded-xl border transition shadow-card ${ss === 'active' ? 'border-accent-cyan' : 'border-navy-700'}`}>
                 <div className="flex items-center justify-between px-5 py-4">
                   <div className="flex items-center gap-3">
                     <StepIcon status={ss} idx={idx+1}/>
                     <div>
-                      <div className="font-medium text-sm">{step.label}</div>
-                      {approval && <div className="text-xs text-gray-500 mt-0.5">{approval.result === 'AUTO_APPROVED' ? '⚡ 자동 승인' : `✓ ${approval.approvedBy}`}</div>}
-                      {ss === 'active' && isAuto && <div className="text-xs text-accent-cyan mt-0.5 flex items-center gap-1"><Loader size={10} className="animate-spin"/>자동 진행 중</div>}
-                      {ss === 'active' && !isAuto && <div className="text-xs text-accent-gold mt-0.5">승인 대기 중</div>}
+                      <div className="font-semibold text-base">{step.label}</div>
+                      {approval && <div className="text-sm text-navy-400 mt-0.5">{approval.result === 'AUTO_APPROVED' ? '⚡ 자동 승인' : `✓ ${approval.approvedBy}`}</div>}
+                      {ss === 'active' && isAuto && <div className="text-sm text-accent-cyan mt-0.5 flex items-center gap-1"><Loader size={12} className="animate-spin"/>자동 진행 중</div>}
+                      {ss === 'active' && !isAuto && <div className="text-sm text-accent-gold mt-0.5">승인 대기 중</div>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {showRun && (
                       <button onClick={() => handleRun(step)} disabled={!!runningStep}
-                        className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition">
-                        {runningStep === step.key ? <Loader size={12} className="animate-spin"/> : <Zap size={12}/>}실행
+                        className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition">
+                        {runningStep === step.key ? <Loader size={14} className="animate-spin"/> : <Zap size={14}/>}실행
                       </button>
                     )}
                     {(showManualApprove || showGuidedApprove) && (
                       <button onClick={() => setGateModal({ gate: step.gate, step })}
-                        className="text-xs bg-accent-gold/20 text-accent-gold border border-accent-gold/30 px-3 py-1.5 rounded-lg hover:bg-accent-gold/30 transition">검토 / 승인</button>
+                        className="text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/30 px-4 py-2 rounded-lg hover:bg-accent-gold/30 transition">검토 / 승인</button>
                     )}
-                    {ss === 'active' && isAuto && <Loader size={14} className="animate-spin text-accent-cyan"/>}
+                    {ss === 'active' && isAuto && <Loader size={16} className="animate-spin text-accent-cyan"/>}
                   </div>
                 </div>
 
-                {/* ── 단계별 상세 진척 안내 팁 ── */}
                 {ss === 'active' && (
-                  <div className="mx-5 mb-4 p-3.5 bg-navy-900/50 rounded-lg border border-navy-700/60 text-xs space-y-2">
-                    <div className="flex items-center justify-between text-gray-300 font-semibold">
+                  <div className="mx-5 mb-4 p-4 bg-navy-900/50 rounded-lg border border-navy-700/60 text-sm space-y-2.5">
+                    <div className="flex items-center justify-between text-gray-200 font-semibold">
                       <div className="flex items-center gap-1.5">
-                        <Clock size={12} className="text-accent-cyan"/>
+                        <Clock size={14} className="text-accent-cyan"/>
                         <span>예상 대기 시간:</span>
                         <span className="text-accent-cyan">{STEP_PROGRESS_INFO[step.key]?.est}</span>
                       </div>
                       {step.key === 'script' && (
-                        <div className="text-gray-400">
-                          목표 분량: <span className="text-accent-cyan">{job.longformTargetMinutes || 20}분</span> 
+                        <div className="text-navy-400">
+                          목표 분량: <span className="text-accent-cyan">{job.longformTargetMinutes || 20}분</span>
                           (약 <span className="text-accent-cyan">{(job.longformTargetMinutes || 20) * 300}자</span> 생성)
                         </div>
                       )}
                     </div>
-                    <div className="text-gray-400 leading-relaxed text-[11px]">
+                    <div className="text-navy-400 leading-relaxed text-sm">
                       {STEP_PROGRESS_INFO[step.key]?.desc}
                     </div>
                     {isAuto && (
-                      <div className="pt-2 border-t border-navy-700/40 flex items-center gap-2 text-accent-cyan text-[10px]">
-                        <Loader size={10} className="animate-spin"/>
+                      <div className="pt-2.5 border-t border-navy-700/40 flex items-center gap-2 text-accent-cyan text-sm">
+                        <Loader size={12} className="animate-spin"/>
                         <span>자동 모드가 실행 중입니다. 브라우저 창을 켜둔 채 잠시만 기다려 주세요.</span>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* ── 키워드 후보 ── */}
                 {step.key === 'keyword' && kwCandidates.length > 0 && (
                   <div className="px-5 pb-4 border-t border-navy-700">
-                    <p className="text-xs text-gray-500 mt-3 mb-2">후보 {kwCandidates.length}개</p>
+                    <p className="text-sm text-navy-400 mt-3 mb-2">후보 {kwCandidates.length}개</p>
                     <div className="space-y-1.5">
                       {kwCandidates.map((c, i) => (
-                        <div key={i} className={`flex items-center justify-between px-3 py-2 rounded-lg ${c.is_outperformer ? 'bg-accent-gold/10 border border-accent-gold/20' : 'bg-navy-700/50'}`}>
+                        <div key={i} className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg ${c.is_outperformer ? 'bg-accent-gold/10 border border-accent-gold/20' : 'bg-navy-700/50'}`}>
                           <div className="flex items-center gap-2">
-                            {c.is_outperformer && <Star size={11} className="text-accent-gold fill-accent-gold"/>}
-                            <span className="text-xs">{c.keyword}</span>
+                            {c.is_outperformer && <Star size={13} className="text-accent-gold fill-accent-gold"/>}
+                            <span className="text-sm">{c.keyword}</span>
                           </div>
-                          <div className="text-xs text-gray-500 flex gap-3">
+                          <div className="text-sm text-navy-400 flex gap-3">
                             <span>×{c.outperformance_index?.toFixed(1)}</span>
                             <span>{c.velocity_vph?.toFixed(0)}vph</span>
                           </div>
                         </div>
                       ))}
                     </div>
-                    {job.keyword && <div className="mt-2 text-xs text-gray-400">✓ 확정: <span className="text-accent-cyan">{job.keyword}</span></div>}
+                    {job.keyword && <div className="mt-2 text-sm text-navy-400">✓ 확정: <span className="text-accent-cyan">{job.keyword}</span></div>}
                   </div>
                 )}
 
-                {/* ── 스크립트 미리보기 (신규) ── */}
                 {step.key === 'script' && scriptData && (
                   <div className="px-5 pb-4 border-t border-navy-700">
-                    {/* 상단 툴바 */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 mt-3 mb-3 border-b border-navy-700/50 pb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-3 mb-3 border-b border-navy-700/50 pb-3">
                       <div className="flex items-center gap-2">
-                        <FileText size={13} className="text-accent-cyan"/>
-                        <span className="text-xs text-gray-400">
+                        <FileText size={15} className="text-accent-cyan"/>
+                        <span className="text-sm text-navy-400">
                           {scriptData.char_count?.toLocaleString()}자
                           {scriptData.used_real_llm === false && (
                             <span className="ml-2 text-accent-gold">⚠ Mock 스크립트</span>
@@ -741,21 +735,19 @@ export default function JobDetail() {
                           )}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 flex-wrap">
-                        {/* 뷰 모드 토글 */}
-                        <div className="flex bg-navy-700 rounded p-0.5 text-[10px]">
+                        <div className="flex bg-navy-700 rounded p-1 text-xs">
                           <button onClick={() => setScriptViewMode('paragraphs')}
-                            className={`px-2 py-0.5 rounded transition ${scriptViewMode === 'paragraphs' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-gray-400 hover:text-white'}`}>단락 가독성</button>
+                            className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'paragraphs' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-white'}`}>단락 가독성</button>
                           {sortedImageList.length > 0 && (
                             <button onClick={() => setScriptViewMode('mixed')}
-                              className={`px-2 py-0.5 rounded transition ${scriptViewMode === 'mixed' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-gray-400 hover:text-white'}`}>대본 + 이미지</button>
+                              className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'mixed' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-white'}`}>대본 + 이미지</button>
                           )}
                           <button onClick={() => setScriptViewMode('raw')}
-                            className={`px-2 py-0.5 rounded transition ${scriptViewMode === 'raw' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-gray-400 hover:text-white'}`}>기본 텍스트</button>
+                            className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'raw' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-white'}`}>기본 텍스트</button>
                         </div>
 
-                        {/* 문서 내보내기 */}
                         <div className="flex gap-1">
                           <button onClick={() => {
                             const txt = scriptData.script || '';
@@ -766,12 +758,12 @@ export default function JobDetail() {
                             a.download = `script_${id}.txt`;
                             a.click();
                             URL.revokeObjectURL(url);
-                          }} className="bg-navy-700 text-gray-300 hover:text-white text-[10px] px-2 py-1 rounded border border-navy-600 transition">TXT</button>
-                          
+                          }} className="bg-navy-700 text-gray-200 hover:text-white text-xs px-2.5 py-1.5 rounded border border-navy-600 transition">TXT</button>
+
                           <button onClick={() => {
                             const txt = scriptData.script || '';
                             const cleanParas = txt.split(/\r?\n+/).map(p => p.trim()).filter(Boolean);
-                            
+
                             const bodyContent = sortedImageList.length > 0 ? `
                               <h2>주식 자동화 영상 스토리보드 대본 (Job #${id})</h2>
                               <div class="meta">
@@ -828,13 +820,13 @@ export default function JobDetail() {
                             a.download = `script_${id}.doc`;
                             a.click();
                             URL.revokeObjectURL(url);
-                          }} className="bg-navy-700 text-gray-300 hover:text-white text-[10px] px-2 py-1 rounded border border-navy-600 transition">Word</button>
-                          
+                          }} className="bg-navy-700 text-gray-200 hover:text-white text-xs px-2.5 py-1.5 rounded border border-navy-600 transition">Word</button>
+
                           <button onClick={() => {
                             const txt = scriptData.script || '';
                             const cleanParas = txt.split(/\r?\n+/).map(p => p.trim()).filter(Boolean);
                             const printWindow = window.open('', '_blank');
-                            
+
                             const bodyContent = sortedImageList.length > 0 ? `
                               <h2>주식 자동화 영상 스토리보드 대본</h2>
                               <div class="meta">
@@ -885,12 +877,11 @@ export default function JobDetail() {
                             `;
                             printWindow.document.write(htmlContent);
                             printWindow.document.close();
-                          }} className="bg-navy-700 text-gray-300 hover:text-white text-[10px] px-2 py-1 rounded border border-navy-600 transition flex items-center gap-1">
-                            <Printer size={10}/>PDF 인쇄
+                          }} className="bg-navy-700 text-gray-200 hover:text-white text-xs px-2.5 py-1.5 rounded border border-navy-600 transition flex items-center gap-1">
+                            <Printer size={12}/>PDF 인쇄
                           </button>
                         </div>
 
-                        {/* 편집 모드 토글 (SCRIPT_PENDING 때만 노출) */}
                         {job.status === 'SCRIPT_PENDING' && (
                           <button onClick={() => {
                             if (isEditingScript) {
@@ -899,41 +890,40 @@ export default function JobDetail() {
                               setEditedScriptText(scriptData.script || '');
                               setIsEditingScript(true);
                             }
-                          }} className="flex items-center gap-1 text-[10px] bg-accent-gold/20 text-accent-gold border border-accent-gold/30 px-2 py-1 rounded hover:bg-accent-gold/30 transition">
-                            <Edit size={10}/>{isEditingScript ? '편집 취소' : '스크립트 수정'}
+                          }} className="flex items-center gap-1 text-xs bg-accent-gold/20 text-accent-gold border border-accent-gold/30 px-2.5 py-1.5 rounded hover:bg-accent-gold/30 transition">
+                            <Edit size={12}/>{isEditingScript ? '편집 취소' : '스크립트 수정'}
                           </button>
                         )}
 
                         <button onClick={() => setExpandedScript(!expandedScript)}
-                          className="text-xs text-accent-cyan flex items-center gap-1 hover:underline">
+                          className="text-sm text-accent-cyan flex items-center gap-1 hover:underline">
                           {expandedScript ? '접기' : '전체 보기'}
-                          {expandedScript ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                          {expandedScript ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
                         </button>
                       </div>
                     </div>
 
-                    {/* 스크립트 본문 */}
                     {isEditingScript ? (
                       <div className="space-y-3">
                         <textarea
                           value={editedScriptText}
                           onChange={e => setEditedScriptText(e.target.value)}
-                          className="w-full bg-navy-700 border border-navy-600 rounded-lg p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan font-mono resize-y"
+                          className="w-full bg-navy-700 border border-navy-600 rounded-lg p-3.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan font-mono resize-y"
                           rows={12}
                         />
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => setIsEditingScript(false)}
-                            className="bg-navy-700 text-gray-400 hover:text-white text-xs px-3 py-1.5 rounded transition"
+                            className="bg-navy-700 text-navy-400 hover:text-white text-sm px-4 py-2 rounded transition"
                           >
                             취소
                           </button>
                           <button
                             onClick={() => saveScriptMut.mutate(editedScriptText)}
                             disabled={saveScriptMut.isPending}
-                            className="flex items-center gap-1.5 bg-accent-green text-navy-950 text-xs font-semibold px-3 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                            className="flex items-center gap-1.5 bg-accent-green text-navy-950 text-sm font-semibold px-4 py-2 rounded hover:opacity-90 disabled:opacity-50 transition"
                           >
-                            <Save size={12}/>
+                            <Save size={14}/>
                             {saveScriptMut.isPending ? '저장 중...' : '수정 저장 및 확정'}
                           </button>
                         </div>
@@ -946,7 +936,7 @@ export default function JobDetail() {
                               .split(/\n+/)
                               .filter(Boolean)
                               .map((para, idx) => (
-                                <p key={idx} className="text-xs text-gray-300 leading-relaxed text-justify">
+                                <p key={idx} className="text-sm text-gray-200 leading-relaxed text-justify">
                                   {para}
                                 </p>
                               ))}
@@ -964,13 +954,13 @@ export default function JobDetail() {
                                   />
                                 </div>
                                 <div className="flex-1">
-                                  <div className="text-[10px] font-bold text-accent-cyan mb-1 flex items-center gap-1.5">
+                                  <div className="text-xs font-bold text-accent-cyan mb-1 flex items-center gap-1.5">
                                     <span>씬 #{img.index}</span>
-                                    <span className="text-gray-500 font-normal">
+                                    <span className="text-navy-400 font-normal">
                                       {fmt(img.start)} ~ {fmt(img.start + img.duration)}
                                     </span>
                                   </div>
-                                  <p className="text-xs text-gray-300 leading-relaxed text-justify">
+                                  <p className="text-sm text-gray-200 leading-relaxed text-justify">
                                     {img.text || img.prompt || '(내용 없음)'}
                                   </p>
                                 </div>
@@ -982,17 +972,17 @@ export default function JobDetail() {
                             {scriptData.sections && scriptData.sections.length > 0 ? (
                               <div className="space-y-2">
                                 {scriptData.sections.map((sec, i) => (
-                                  <div key={i} className="bg-navy-700/40 rounded-lg p-3">
-                                    <div className="text-xs font-semibold text-accent-gold mb-1">{sec.title}</div>
-                                    <p className="text-xs text-gray-300 leading-relaxed">
+                                  <div key={i} className="bg-navy-700/40 rounded-lg p-3.5">
+                                    <div className="text-sm font-semibold text-accent-gold mb-1">{sec.title}</div>
+                                    <p className="text-sm text-gray-200 leading-relaxed">
                                       {expandedScript ? sec.content : (sec.content?.slice(0, 80) + (sec.content?.length > 80 ? '...' : ''))}
                                     </p>
                                   </div>
                                 ))}
                               </div>
                             ) : scriptData.script ? (
-                              <div className="bg-navy-700/40 rounded-lg p-3">
-                                <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">
+                              <div className="bg-navy-700/40 rounded-lg p-3.5">
+                                <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
                                   {expandedScript ? scriptData.script : (scriptData.script.slice(0, 300) + (scriptData.script.length > 300 ? '...' : ''))}
                                 </p>
                               </div>
@@ -1004,37 +994,35 @@ export default function JobDetail() {
                   </div>
                 )}
 
-                {/* ── TTS 오디오 미리듣기 (신규) ── */}
                 {step.key === 'tts' && ttsInfo && (
                   <div className="px-5 pb-4 border-t border-navy-700">
-                    <div className="flex items-center gap-2 mt-3 mb-2">
-                      <Music size={13} className="text-accent-cyan"/>
-                      <span className="text-xs text-gray-400">
+                    <div className="flex items-center gap-2 mt-3 mb-2.5">
+                      <Music size={15} className="text-accent-cyan"/>
+                      <span className="text-sm text-navy-400">
                         {ttsInfo.total_duration ? `${(ttsInfo.total_duration/60).toFixed(1)}분` : ''}
                         {ttsInfo.chunks && ` · ${ttsInfo.chunks.length}개 자막 청크`}
                         {ttsInfo.used_gtts === true && <span className="ml-2 text-accent-green">✓ gTTS 실제 음성</span>}
                       </span>
                     </div>
                     {ttsInfo.audio_path && (
-                      <audio controls className="w-full h-8" style={{ filter: 'invert(0.9)' }}>
+                      <audio controls className="w-full h-9" style={{ filter: 'invert(0.9)' }}>
                         <source src={`/api/files/download?path=${encodeURIComponent(ttsInfo.audio_path)}&token=${token}`} type="audio/mpeg"/>
                       </audio>
                     )}
                   </div>
                 )}
 
-                {/* ── 이미지 갤러리 및 씬 편집기 ── */}
                 {((step.key === 'images' || step.key === 'longform') && sortedImageList.length > 0) && (
                   <div className="px-5 pb-4 border-t border-navy-700">
                     <div className="flex items-center justify-between mt-3 mb-3">
                       <div className="flex items-center gap-2">
-                        <ImageIcon size={13} className="text-accent-cyan"/>
-                        <span className="text-xs text-gray-400">
+                        <ImageIcon size={15} className="text-accent-cyan"/>
+                        <span className="text-sm text-navy-400">
                           {sortedImageList.length}개 씬 이미지 (AI 일러스트 기반)
                         </span>
                       </div>
                       {['IMAGES_PENDING', 'PREVIEW_PENDING', 'READY'].includes(job.status) && (
-                        <span className="text-[10px] bg-accent-cyan/10 text-accent-cyan px-2 py-0.5 rounded-full font-semibold">
+                        <span className="text-xs bg-accent-cyan/10 text-accent-cyan px-2.5 py-1 rounded-full font-semibold">
                           수정/재생성 활성화됨
                         </span>
                       )}
@@ -1044,10 +1032,9 @@ export default function JobDetail() {
                       {sortedImageList.map((img, i) => {
                         const isEditingThis = editingSceneIndex === img.index;
                         const isRegeneratingThis = regenImageMut.isPending && editingSceneIndex === img.index;
-                        
+
                         return (
-                          <div key={img.index || i} className="flex gap-4 bg-navy-800/40 border border-navy-700/60 rounded-lg p-3 hover:border-navy-600 transition">
-                            {/* 왼쪽: 이미지 썸네일 */}
+                          <div key={img.index || i} className="flex gap-4 bg-navy-800/40 border border-navy-700/60 rounded-lg p-3.5 hover:border-navy-600 transition">
                             <div className="w-40 aspect-video bg-navy-700 rounded overflow-hidden border border-navy-600 flex-shrink-0 relative">
                               <img
                                 src={`/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}&salt=${imageSalt}`}
@@ -1057,40 +1044,39 @@ export default function JobDetail() {
                               />
                             </div>
 
-                            {/* 오른쪽: 상세 정보 및 편집 */}
                             <div className="flex-1 flex flex-col justify-between">
                               <div>
                                 <div className="flex items-center justify-between">
-                                  <div className="text-[11px] font-semibold text-accent-cyan flex items-center gap-1.5">
-                                    <span className="bg-accent-cyan/10 px-1.5 py-0.5 rounded font-bold">씬 #{img.index}</span>
-                                    <span className="text-gray-500 font-normal flex items-center gap-0.5">
-                                      <Clock size={10}/>
+                                  <div className="text-xs font-semibold text-accent-cyan flex items-center gap-1.5">
+                                    <span className="bg-accent-cyan/10 px-2 py-0.5 rounded font-bold">씬 #{img.index}</span>
+                                    <span className="text-navy-400 font-normal flex items-center gap-0.5">
+                                      <Clock size={12}/>
                                       {fmt(img.start)} ~ {fmt(img.start + img.duration)} ({img.duration?.toFixed(1)}초)
                                     </span>
                                   </div>
-                                  <span className="text-[9px] bg-navy-700 text-gray-400 px-1.5 py-0.5 rounded border border-navy-600">
+                                  <span className="text-xs bg-navy-700 text-navy-400 px-2 py-0.5 rounded border border-navy-600">
                                     구분: {img.section}
                                   </span>
                                 </div>
 
-                                <div className="mt-2">
+                                <div className="mt-2.5">
                                   {isEditingThis ? (
                                     <textarea
                                       id={`scene-edit-${img.index}`}
                                       value={editingSceneText}
                                       onChange={e => setEditingSceneText(e.target.value)}
-                                      className="w-full bg-navy-700 border border-navy-600 rounded p-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
+                                      className="w-full bg-navy-700 border border-navy-600 rounded p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
                                       rows={2}
                                     />
                                   ) : (
-                                    <p className="text-xs text-gray-300 leading-relaxed text-justify line-clamp-3">
+                                    <p className="text-sm text-gray-200 leading-relaxed text-justify line-clamp-3">
                                       {img.text || img.prompt || '(내용 없음)'}
                                     </p>
                                   )}
                                 </div>
                               </div>
 
-                              <div className="flex justify-end gap-2 mt-2">
+                              <div className="flex justify-end gap-2 mt-2.5">
                                 {isEditingThis ? (
                                   <>
                                     <button
@@ -1114,16 +1100,16 @@ export default function JobDetail() {
                                         }
                                       }}
                                       disabled={isRegeneratingThis || splitSceneMut.isPending}
-                                      className="flex items-center gap-1 bg-red-500 text-white text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                                      className="flex items-center gap-1 bg-red-500 text-white text-xs font-semibold px-2.5 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
                                       title="커서가 있는 위치를 기준으로 씬을 2개로 분할합니다."
                                     >
-                                      {splitSceneMut.isPending ? <Loader size={10} className="animate-spin"/> : <Scissors size={10}/>}
+                                      {splitSceneMut.isPending ? <Loader size={12} className="animate-spin"/> : <Scissors size={12}/>}
                                       씬 분할
                                     </button>
                                     <button
                                       onClick={() => setEditingSceneIndex(null)}
                                       disabled={isRegeneratingThis || splitSceneMut.isPending}
-                                      className="bg-navy-700 text-gray-400 hover:text-white text-[10px] px-2.5 py-1.5 rounded transition"
+                                      className="bg-navy-700 text-navy-400 hover:text-white text-xs px-3 py-1.5 rounded transition"
                                     >
                                       취소
                                     </button>
@@ -1135,10 +1121,10 @@ export default function JobDetail() {
                                         mode: 'image'
                                       })}
                                       disabled={isRegeneratingThis || splitSceneMut.isPending}
-                                      className="flex items-center gap-1 bg-accent-cyan text-navy-950 text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                                      className="flex items-center gap-1 bg-accent-cyan text-navy-950 text-xs font-semibold px-2.5 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
                                       title="대사를 유지한 채 캐릭터 이미지만 다시 생성합니다."
                                     >
-                                      {isRegeneratingThis ? <Loader size={10} className="animate-spin"/> : <Save size={10}/>}
+                                      {isRegeneratingThis ? <Loader size={12} className="animate-spin"/> : <Save size={12}/>}
                                       이미지만 수정
                                     </button>
                                     <button
@@ -1149,10 +1135,10 @@ export default function JobDetail() {
                                         mode: 'text'
                                       })}
                                       disabled={isRegeneratingThis}
-                                      className="flex items-center gap-1 bg-accent-gold text-navy-950 text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                                      className="flex items-center gap-1 bg-accent-gold text-navy-950 text-xs font-semibold px-2.5 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
                                       title="이미지는 유지하고 자막/대사 텍스트만 업데이트합니다. (동영상 재조립 시 음성도 자동 반영됩니다.)"
                                     >
-                                      {isRegeneratingThis ? <Loader size={10} className="animate-spin"/> : <Save size={10}/>}
+                                      {isRegeneratingThis ? <Loader size={12} className="animate-spin"/> : <Save size={12}/>}
                                       텍스트만 수정
                                     </button>
                                     <button
@@ -1163,10 +1149,10 @@ export default function JobDetail() {
                                         mode: 'both'
                                       })}
                                       disabled={isRegeneratingThis}
-                                      className="flex items-center gap-1 bg-accent-green text-navy-950 text-[10px] font-semibold px-2 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
+                                      className="flex items-center gap-1 bg-accent-green text-navy-950 text-xs font-semibold px-2.5 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
                                       title="대사 텍스트를 수정하고 이미지도 새로 생성합니다."
                                     >
-                                      {isRegeneratingThis ? <Loader size={10} className="animate-spin"/> : <Save size={10}/>}
+                                      {isRegeneratingThis ? <Loader size={12} className="animate-spin"/> : <Save size={12}/>}
                                       텍스트+이미지 수정
                                     </button>
                                   </>
@@ -1177,9 +1163,9 @@ export default function JobDetail() {
                                         setEditingSceneIndex(img.index);
                                         setEditingSceneText(img.text || img.prompt || '');
                                       }}
-                                      className="flex items-center gap-1 text-[10px] bg-navy-700 text-gray-300 hover:text-white border border-navy-600 px-2 py-1 rounded transition"
+                                      className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-white border border-navy-600 px-2.5 py-1.5 rounded transition"
                                     >
-                                      <Edit size={10}/>
+                                      <Edit size={12}/>
                                       텍스트 수정 / 재생성
                                     </button>
                                   )
@@ -1198,40 +1184,38 @@ export default function JobDetail() {
 
         </div>
 
-        {/* 오른쪽 패널 */}
         <div className="space-y-4">
-          <div className="bg-navy-800 rounded-xl border border-navy-700 p-5">
-            <h3 className="text-sm font-semibold mb-3">작업 정보</h3>
-            <div className="space-y-2.5 text-sm">
+          <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
+            <h3 className="text-base font-semibold mb-3">작업 정보</h3>
+            <div className="space-y-3 text-sm">
               <InfoRow label="상태" value={<StatusBadge status={job.status} small/>}/>
               <InfoRow label="카테고리" value={job.category}/>
               <InfoRow label="목표 길이" value={`${job.longformTargetMinutes}분`}/>
-              <InfoRow label="자율성" value={<span className={`text-xs px-2 py-0.5 rounded-full border ${AUTONOMY_STYLE[job.autonomy]}`}>{job.autonomy}</span>}/>
-              {job.keyword && <InfoRow label="확정 키워드" value={<span className="text-accent-cyan text-xs">{job.keyword}</span>}/>}
+              <InfoRow label="자율성" value={<span className={`text-sm px-2.5 py-1 rounded-full border ${AUTONOMY_STYLE[job.autonomy]}`}>{job.autonomy}</span>}/>
+              {job.keyword && <InfoRow label="확정 키워드" value={<span className="text-accent-cyan text-sm">{job.keyword}</span>}/>}
             </div>
           </div>
 
-          {/* 비용 상세 (보강) */}
           {costs && (
-            <div className="bg-navy-800 rounded-xl border border-navy-700 p-5">
-              <h3 className="text-sm font-semibold mb-3">비용 상세</h3>
-              <div className="space-y-2 text-sm mb-3">
+            <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
+              <h3 className="text-base font-semibold mb-3">비용 상세</h3>
+              <div className="space-y-2.5 text-sm mb-3">
                 <InfoRow label="누적" value={`$${parseFloat(costs.currentTotal||0).toFixed(2)}`}/>
                 <InfoRow label="예산" value={costs.budgetCap ? `$${costs.budgetCap}` : '무제한'}/>
               </div>
               {costs.budgetCap && (
                 <div className="mb-3">
-                  <div className="h-1.5 bg-navy-700 rounded-full overflow-hidden">
+                  <div className="h-2 bg-navy-700 rounded-full overflow-hidden">
                     <div className="h-full bg-accent-cyan rounded-full transition-all" style={{width:`${Math.min(100,(costs.currentTotal/costs.budgetCap)*100)}%`}}/>
                   </div>
                 </div>
               )}
               {costs.items && costs.items.length > 0 && (
-                <div className="space-y-1.5 pt-2 border-t border-navy-700">
+                <div className="space-y-2 pt-2.5 border-t border-navy-700">
                   {costs.items.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500">{item.provider}</span>
-                      <span className="text-gray-300">${parseFloat(item.amount||0).toFixed(3)}</span>
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span className="text-navy-400">{item.provider}</span>
+                      <span className="text-gray-200">${parseFloat(item.amount||0).toFixed(3)}</span>
                     </div>
                   ))}
                 </div>
@@ -1240,12 +1224,12 @@ export default function JobDetail() {
           )}
 
           {approvals.length > 0 && (
-            <div className="bg-navy-800 rounded-xl border border-navy-700 p-5">
-              <h3 className="text-sm font-semibold mb-3">게이트 이력</h3>
-              <div className="space-y-2">
+            <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
+              <h3 className="text-base font-semibold mb-3">게이트 이력</h3>
+              <div className="space-y-2.5">
                 {approvals.map((a,i) => (
-                  <div key={i} className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400">{a.gate}</span>
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="text-navy-400">{a.gate}</span>
                     <span className={a.result==='REJECTED'?'text-accent-red':a.result==='AUTO_APPROVED'?'text-accent-cyan':'text-accent-green'}>
                       {a.result==='AUTO_APPROVED'?'⚡ 자동':a.result==='REJECTED'?'✗ 거부':'✓ 승인'}
                     </span>
@@ -1269,9 +1253,9 @@ export default function JobDetail() {
 }
 
 function StepIcon({status,idx}) {
-  if (status==='done') return <CheckCircle className="text-accent-green flex-shrink-0" size={20}/>
-  if (status==='active') return <Loader className="text-accent-cyan animate-spin flex-shrink-0" size={20}/>
-  return <div className="w-5 h-5 rounded-full border border-navy-600 flex items-center justify-center text-xs text-gray-600 flex-shrink-0">{idx}</div>
+  if (status==='done') return <CheckCircle className="text-accent-green flex-shrink-0" size={22}/>
+  if (status==='active') return <Loader className="text-accent-cyan animate-spin flex-shrink-0" size={22}/>
+  return <div className="w-6 h-6 rounded-full border border-navy-600 flex items-center justify-center text-sm text-navy-400 flex-shrink-0">{idx}</div>
 }
 
 function StatusBadge({status,small}) {
@@ -1281,19 +1265,19 @@ function StatusBadge({status,small}) {
     ASSEMBLING:{l:'조립중',c:'bg-accent-cyan/20 text-accent-cyan'},
     FAILED:{l:'오류',c:'bg-accent-red/20 text-accent-red'},
     BUDGET_BLOCKED:{l:'예산초과',c:'bg-accent-red/20 text-accent-red'},
-    DRAFT:{l:'초안',c:'bg-navy-700 text-gray-400'},
+    DRAFT:{l:'초안',c:'bg-navy-700 text-navy-400'},
     KEYWORD_PENDING:{l:'키워드',c:'bg-accent-cyan/10 text-accent-cyan'},
     SCRIPT_PENDING:{l:'스크립트',c:'bg-accent-cyan/10 text-accent-cyan'},
     TTS_PENDING:{l:'TTS',c:'bg-accent-cyan/10 text-accent-cyan'},
     IMAGES_PENDING:{l:'이미지',c:'bg-accent-cyan/10 text-accent-cyan'},
     PREVIEW_PENDING:{l:'미리보기 대기',c:'bg-accent-gold/20 text-accent-gold'},
   }
-  const c=M[status]||{l:status,c:'bg-navy-700 text-gray-400'}
-  return <span className={`${small?'text-xs px-2 py-0.5':'text-sm px-3 py-1.5'} rounded-full font-medium ${c.c}`}>{c.l}</span>
+  const c=M[status]||{l:status,c:'bg-navy-700 text-navy-400'}
+  return <span className={`${small?'text-sm px-3 py-1':'text-base px-4 py-1.5'} rounded-full font-medium ${c.c}`}>{c.l}</span>
 }
 
 function InfoRow({label,value}) {
-  return <div className="flex items-center justify-between gap-2"><span className="text-gray-500 flex-shrink-0">{label}</span><span className="font-medium text-right">{value}</span></div>
+  return <div className="flex items-center justify-between gap-2"><span className="text-navy-400 flex-shrink-0">{label}</span><span className="font-medium text-right">{value}</span></div>
 }
 
 function GateModal({gate,step,onApprove,onReject,onClose,loading}) {
@@ -1301,21 +1285,21 @@ function GateModal({gate,step,onApprove,onReject,onClose,loading}) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-navy-800 rounded-xl p-6 w-full max-w-sm border border-navy-700 shadow-2xl">
-        <h3 className="font-bold mb-2">{step.label} 검토</h3>
-        <p className="text-sm text-gray-400 mb-4">결과를 확인하고 승인 또는 거부하세요.</p>
+        <h3 className="font-bold text-base mb-2">{step.label} 검토</h3>
+        <p className="text-sm text-navy-400 mb-4">결과를 확인하고 승인 또는 거부하세요.</p>
         <textarea value={comment} onChange={e=>setComment(e.target.value)} placeholder="코멘트 (선택사항)" rows={3}
-          className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3 py-2 text-sm text-white mb-4 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"/>
+          className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3.5 py-2.5 text-sm text-white mb-4 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"/>
         <div className="flex gap-3">
           <button onClick={()=>onReject(comment)} disabled={loading}
             className="flex-1 flex items-center justify-center gap-2 bg-accent-red/20 text-accent-red border border-accent-red/30 rounded-lg py-2.5 text-sm hover:bg-accent-red/30 disabled:opacity-50 transition">
-            <ThumbsDown size={14}/>거부
+            <ThumbsDown size={15}/>거부
           </button>
           <button onClick={()=>onApprove(comment)} disabled={loading}
             className="flex-1 flex items-center justify-center gap-2 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-lg py-2.5 text-sm hover:bg-accent-green/30 disabled:opacity-50 transition">
-            <ThumbsUp size={14}/>승인
+            <ThumbsUp size={15}/>승인
           </button>
         </div>
-        <button onClick={onClose} className="w-full mt-2 text-gray-500 text-xs hover:text-gray-300 transition">닫기</button>
+        <button onClick={onClose} className="w-full mt-2 text-navy-400 text-sm hover:text-gray-200 transition">닫기</button>
       </div>
     </div>
   )

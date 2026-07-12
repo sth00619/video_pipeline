@@ -117,18 +117,21 @@ export default function Dashboard() {
               label="진행 중" value={inProgress.length}
               active={filter === 'IN_PROGRESS'}
               onClick={() => handleFilterChange(filter === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS')}
+              glow="glow-cyan"
             />
             <StatCard
               icon={<CheckCircle className="text-accent-green" />}
               label="완료" value={completed.length}
               active={filter === 'COMPLETED'}
               onClick={() => handleFilterChange(filter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
+              glow="glow-green"
             />
             <StatCard
               icon={<AlertCircle className="text-accent-red" />}
               label="오류" value={failed.length}
               active={filter === 'FAILED'}
               onClick={() => handleFilterChange(filter === 'FAILED' ? 'ALL' : 'FAILED')}
+              glow="glow-gold"
             />
           </div>
 
@@ -137,7 +140,7 @@ export default function Dashboard() {
             onSelectKeyword={handleSelectKeyword}
           />
 
-          <div className="bg-navy-800 rounded-xl p-6 border border-navy-700">
+          <div className="bg-hero-gradient bg-candle-pattern rounded-xl p-6 border border-accent-gold/20 shadow-card-lg relative overflow-hidden">
             <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Zap className="text-accent-gold" size={20} />
@@ -279,20 +282,20 @@ export default function Dashboard() {
   )
 }
 
-function StatCard({ icon, label, value, active, onClick }) {
+function StatCard({ icon, label, value, active, onClick, glow = 'glow-cyan' }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left bg-navy-800 rounded-xl p-5 border transition hover:bg-navy-700/40 cursor-pointer ${
-        active ? 'border-accent-cyan shadow-lg shadow-accent-cyan/10' : 'border-navy-700'
+      className={`w-full text-left bg-card-gradient rounded-xl p-5 border transition hover:border-navy-500 cursor-pointer ${
+        active ? `border-accent-cyan shadow-${glow}` : 'border-navy-700 shadow-card'
       }`}
     >
       <div className="flex items-center justify-between mb-3">
         {icon}
-        {active && <span className="text-[10px] bg-accent-cyan/20 text-accent-cyan px-1.5 py-0.5 rounded font-bold">필터 적용</span>}
+        {active && <span className="text-xs bg-accent-cyan/20 text-accent-cyan px-2 py-0.5 rounded font-bold">필터 적용</span>}
       </div>
       <div className="text-2xl font-bold">{value}</div>
-      <div className="text-sm text-gray-400 mt-1">{label}</div>
+      <div className="text-sm text-navy-400 mt-1">{label}</div>
     </button>
   )
 }

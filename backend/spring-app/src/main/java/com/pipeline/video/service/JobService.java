@@ -26,6 +26,8 @@ public class JobService {
     private final CostLedgerRepository costLedgerRepository;
     private final ApprovalRepository approvalRepository;
     private final FastApiClient fastApiClient;
+    // [긴급 추가] 정지 버튼이 Temporal Workflow도 취소하도록 연결하기 위해 주입
+    private final WorkflowOrchestrator workflowOrchestrator;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
@@ -213,6 +215,14 @@ public class JobService {
         log.info("Job {} 중지 요청 (by {}). 현재 상태: {}", jobId, username, job.getStatus());
         job.setStatus(JobStatus.FAILED);
         VideoJob savedJob = jobRepository.save(job);
+
+        // [긴급 수정] 기존에는 FastAPI 워커에만 중지 명령을 보냈는데, Temporal
+        // Workflow가 파이프라인 실행을 담당하게 된 지금은 Workflow 자체도
+        // 취소해야 실제로 다음 단계(TTS/이미지/조립)로 안 넘어갑니다.
+        // FastAPI stopJob()은 이미 실행 중인 개별 프로세스(ffmpeg 등)를 죽이는
+        // 역할이고, Temporal cancelPipeline()은 "다음 단계로 진행하지 않게"
+        // 막는 역할이라 둘 다 필요합니다.
+        workflowOrchestrator.cancelPipeline(jobId);
 
         // FastAPI 워커에 중지 명령 전송
         fastApiClient.stopJob(jobId);

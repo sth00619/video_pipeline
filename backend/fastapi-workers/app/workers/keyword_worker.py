@@ -8,12 +8,26 @@ v2 변경사항:
   [신규] Claude API로 뉴스 + YouTube 후보를 통합 순위화 + 콘텐츠 가능성 평가
   [신규] market_snapshot을 결과에 포함 → ScriptWorker에 재활용
 
+v2.1 변경사항 (버그 수정):
+  [버그 수정 - 중요] 이 단계에는 script_worker.py의 3-Round 팩트체크 같은
+  창작 방지 가드레일이 전혀 없었습니다. 그 결과 Claude가 "SK하이닉스"라는
+  실제 뉴스 키워드를 보고 "나스닥 상장 첫날 13% 급등"처럼 실제 시장 데이터에
+  전혀 없는 사실/수치를 자유롭게 지어내서 후보 제목으로 내놓는 사고가
+  있었습니다 (SK하이닉스는 코스피 상장 종목이며 나스닥 상장 이력 없음).
+
+  수정 1: 프롬프트에 "제공된 데이터 밖의 사실/수치 창작 절대 금지" 규칙을
+          명시적으로 추가.
+  수정 2: Claude가 반환한 각 후보를 실제 입력 데이터(뉴스/YouTube 후보 원문,
+          market_data 수치)에 비추어 사후 검증. 후보에 등장하는 퍼센트 수치가
+          어느 원본에도 없으면 그 후보를 드롭하고 폴백으로 채웁니다.
+
 흐름:
   1. 뉴스 RSS + 네이버 API → NLP 키워드 추출
   2. YouTube 트렌딩 → 점수 기반 후보 생성
   3. 시장 데이터 수집 (pykrx + yfinance)
-  4. Claude로 통합 순위화 (시장 맥락 포함)
-  5. 최종 후보 반환 (market_snapshot 포함)
+  4. Claude로 통합 순위화 (시장 맥락 포함, 창작 금지 규칙 적용)
+  5. 그라운딩 검증 → 근거 없는 후보 드롭 및 폴백 보충
+  6. 최종 후보 반환 (market_snapshot 포함)
 """
 import os
 import re
@@ -98,6 +112,24 @@ class KeywordWorker:
                     category, seed, limit, api_key
                 )
                 logger.info(f"Claude 순위화 완료: {len(candidates)}개 후보")
+
+                # [버그 수정] 그라운딩 검증 — 실제 데이터에 없는 수치를 지어낸
+                # 후보를 걸러내고, 부족해진 자리는 폴백 후보로 채웁니다.
+                candidates = self._filter_ungrounded_candidates(
+                    candidates, news_keywords, yt_candidates, market_data
+                )
+                if len(candidates) < limit:
+                    backup = self._fallback_candidates(
+                        news_keywords, yt_candidates, outperformer_count, limit
+                    )
+                    existing_kw = {c["keyword"] for c in candidates}
+                    for b in backup:
+                        if len(candidates) >= limit:
+                            break
+                        if b["keyword"] not in existing_kw:
+                            candidates.append(b)
+                            existing_kw.add(b["keyword"])
+
             except Exception as e:
                 logger.warning(f"Claude 순위화 실패, 폴백 사용: {e}")
                 candidates = self._fallback_candidates(
@@ -174,6 +206,19 @@ YouTube 트렌딩 분석 기반 키워드 후보:
 3. 20분 분량 영상으로 충분히 다룰 수 있는 깊이가 있는가?
 4. 뉴스와 YouTube 양쪽에서 주목받고 있는가?
 
+【절대 금지사항 — 반드시 지켜야 함】
+- 위 <market_context>, <news_keywords>, <youtube_trending>에 없는 회사명, 상장 여부,
+  등락률(%), 순매수/순매도 규모 등 어떠한 사실이나 수치도 새로 만들어내면 안 됩니다.
+- 예를 들어 어떤 종목이 실제로는 코스피 상장인데 "나스닥 상장"이라고 쓰거나,
+  실제 등락률이 제공되지 않았는데 "13% 급등"처럼 구체적인 숫자를 임의로 붙이는 것은
+  절대 금지입니다.
+- keyword는 반드시 위에 제공된 뉴스/YouTube 후보 문구를 그대로 쓰거나, 그 범위 안에서
+  자연스럽게 다듬는 정도로만 작성하세요. 후보 목록에 없는 새로운 팩트를 조합해서
+  자극적인 제목을 만들어내지 마세요.
+- 구체적인 수치(%, 포인트, 금액)를 keyword나 reason에 쓰려면 반드시 <market_context>에
+  실제로 그 수치가 있어야 합니다. 없으면 수치 없이 정성적으로만 표현하세요
+  (예: "급등" 대신 구체적 % 없이 "강세" 정도로).
+
 반드시 아래 JSON 형식으로만 응답하세요:
 {{
   "candidates": [
@@ -223,6 +268,68 @@ YouTube 트렌딩 분석 기반 키워드 후보:
                 "source_videos": [],
             })
         return result
+
+    # ──────────────────────────────────────────────────────────
+    # [신규] 그라운딩 검증 — Claude가 지어낸 수치가 섞인 후보를 걸러냄
+    # ──────────────────────────────────────────────────────────
+    def _filter_ungrounded_candidates(self, candidates: list, news_kw: list,
+                                        yt_candidates: list, market_data: dict) -> list:
+        """
+        각 후보의 keyword/reason에 등장하는 퍼센트(%) 수치가 실제 입력 데이터
+        (뉴스 헤드라인, YouTube 후보 원문, market_data 수치) 어디에도 없으면
+        그 후보를 근거 없는 것으로 간주해 드롭합니다.
+
+        완벽한 팩트체크는 아니지만("나스닥 상장" 같은 정성적 오류까지는 못 잡음),
+        가장 위험한 유형인 "구체적 수치 창작"은 확실히 걸러냅니다.
+        """
+        # 실제 데이터에 등장하는 모든 숫자를 모음 (뉴스 원문 + market_data 수치)
+        # 문자열이 아니라 float으로 모아야 "1.2%" vs "+1.20%" 같은 표기 차이로
+        # 정상 후보까지 걸러지는 것을 방지할 수 있습니다.
+        grounded_numbers = set()
+
+        def _collect_numbers(text: str):
+            for n in re.findall(r'\d+(?:\.\d+)?', text or ""):
+                try:
+                    grounded_numbers.add(round(float(n), 1))
+                except ValueError:
+                    pass
+
+        for kw in news_kw:
+            _collect_numbers(kw.get("sample_headline", ""))
+            _collect_numbers(kw.get("keyword", ""))
+
+        for c in yt_candidates:
+            _collect_numbers(c.get("keyword", ""))
+            for sv in c.get("source_videos", []):
+                _collect_numbers(sv.get("title", ""))
+
+        market_summary_text = _build_market_summary(market_data)
+        _collect_numbers(market_summary_text)
+
+        filtered = []
+        for c in candidates:
+            text = f"{c.get('keyword', '')} {c.get('reason', '')}"
+            pct_numbers = re.findall(r'(\d+(?:\.\d+)?)\s*%', text)
+
+            ungrounded = []
+            for n in pct_numbers:
+                try:
+                    n_val = round(float(n), 1)
+                except ValueError:
+                    continue
+                # 소수점 반올림 차이까지 감안해 ±0.1 오차는 허용
+                if not any(abs(n_val - g) <= 0.1 for g in grounded_numbers):
+                    ungrounded.append(n)
+
+            if ungrounded:
+                logger.warning(
+                    f"근거 없는 수치 포함 후보 드롭: keyword='{c.get('keyword')}', "
+                    f"근거 없는 수치={ungrounded} (실제 데이터에 없음)"
+                )
+                continue
+            filtered.append(c)
+
+        return filtered
 
     # ──────────────────────────────────────────────────────────
     # YouTube 점수 계산 (기존 로직 유지)
