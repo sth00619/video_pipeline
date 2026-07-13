@@ -350,9 +350,9 @@ class LongformWorker:
                 except Exception as e:
                     logger.warning(f"씬 {i} Kling AI 생성 실패, zoompan 폴백: {e}")
 
-            # 나머지 씬(또는 Kling 실패 시): FFmpeg zoompan 효과
+            # 나머지 씬(또는 Kling 실패 시): 정적 이미지 효과 (흔들림 방지 및 화질 극대화)
             if os.path.exists(img_path):
-                _ffmpeg_zoompan(img_path, clip_path, duration, bg_color, job_id)
+                _ffmpeg_static_image(img_path, clip_path, duration, bg_color, job_id)
             else:
                 _run_subprocess(
                     f'ffmpeg -f lavfi -i "color=c={bg_color}:s=1920x1080:r=30" '
@@ -560,6 +560,20 @@ def _verify_video(video_path: str) -> bool:
         return False
 
 
+def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
+    """
+    정적 이미지를 FFmpeg로 흔들림 없이(static) 고화질 비디오 클립으로 인코딩합니다.
+    """
+    cmd = (
+        f'ffmpeg -loop 1 -i "{img_path}" '
+        f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
+        f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,fps=30" '
+        f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-y "{clip_path}" -loglevel error'
+    )
+    _run_subprocess(cmd, job_id)
+
+
 def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
     """
     정적 이미지에 FFmpeg zoompan 필터로 은은한 줌인 효과를 적용하여 생동감을 부여합니다.
@@ -642,7 +656,7 @@ def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_durati
             for c in chunks:
                 c_len = len(c.get("text", ""))
                 c_start = float(c.get("start", 0))
-                c_end = float(c.get("end", total_duration))
+                c_end = float(c.get("end", c_start + c.get("duration", 0.0)))
                 if curr + c_len >= target_idx:
                     if c_len > 0:
                         sub_r = (target_idx - curr) / c_len

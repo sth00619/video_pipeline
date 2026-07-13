@@ -108,6 +108,21 @@ class TtsWorker:
 
         preprocessed = self._preprocess_for_tts(clean_script)
 
+        # 스크립트 변이 추적용 로그 저장 (디버그 및 싱크 추적)
+        try:
+            diff_log_path = job_dir / "tts_text_diff.log"
+            with open(diff_log_path, "w", encoding="utf-8") as f:
+                f.write("=== [1] ORIGINAL SCRIPT ===\n")
+                f.write(script)
+                f.write("\n\n=== [2] CLEANED NARRATION SCRIPT ===\n")
+                f.write(clean_script)
+                f.write("\n\n=== [3] PREPROCESSED FOR TTS ===\n")
+                f.write(preprocessed)
+                f.write("\n")
+            logger.info(f"스크립트 변이 추적 로그 저장 완료: {diff_log_path}")
+        except Exception as e:
+            logger.warning(f"스크립트 변이 추적 로그 저장 실패: {e}")
+
         # 2. 음성 생성 (ElevenLabs v3 → gTTS → 무음 폴백)
         used_tts = False
         tts_engine = "silent"
@@ -361,6 +376,7 @@ class TtsWorker:
             success = False
             for retry in range(2):
                 try:
+                    logger.info(f"ElevenLabs API 요청 (단일): URL={url}, model_id={payload.get('model_id')}, text_len={len(payload.get('text', ''))}")
                     resp = requests.post(url, json=payload, headers=headers, timeout=40)
                     if resp.status_code == 200:
                         with open(output_path, "wb") as f:
@@ -369,7 +385,7 @@ class TtsWorker:
                         success = True
                         break
                     else:
-                        logger.warning(f"ElevenLabs API 시도 {retry+1} 실패: {resp.status_code}")
+                        logger.warning(f"ElevenLabs API 시도 {retry+1} 실패: {resp.status_code}, 응답: {resp.text}")
                 except Exception as e:
                     logger.warning(f"ElevenLabs API 시도 {retry+1} 예외: {e}")
             
@@ -393,6 +409,7 @@ class TtsWorker:
                 parts.append(current)
                 
             tmp_files = []
+            elevenlabs_success_count = 0
             for idx, part in enumerate(parts):
                 if is_job_stopped(job_id):
                     raise RuntimeError(f"Job {job_id} stopped by user.")
@@ -408,6 +425,7 @@ class TtsWorker:
                 # 2회 재시도 루프
                 for retry in range(2):
                     try:
+                        logger.info(f"ElevenLabs API 요청: URL={url}, model_id={payload.get('model_id')}, text_len={len(payload.get('text', ''))}")
                         resp = requests.post(url, json=payload, headers=headers, timeout=40)
                         if resp.status_code == 200:
                             with open(tmp, "wb") as f:
@@ -415,9 +433,10 @@ class TtsWorker:
                             tmp_files.append(tmp)
                             logger.info(f"ElevenLabs 분할 {idx+1}/{len(parts)} 성공 (시도 {retry+1})")
                             chunk_success = True
+                            elevenlabs_success_count += 1
                             break
                         else:
-                            logger.warning(f"ElevenLabs 분할 {idx+1} 시도 {retry+1} 실패: {resp.status_code}")
+                            logger.warning(f"ElevenLabs 분할 {idx+1} 시도 {retry+1} 실패: {resp.status_code}, 응답: {resp.text}")
                     except Exception as e:
                         logger.warning(f"ElevenLabs 분할 {idx+1} 시도 {retry+1} 예외: {e}")
                 
@@ -440,6 +459,12 @@ class TtsWorker:
                             job_id
                         )
                         tmp_files.append(tmp)
+            
+            if elevenlabs_success_count == 0:
+                logger.warning("ElevenLabs 모든 분할 청크 요청 실패 -> gTTS 전체 폴백 시도")
+                for t in tmp_files:
+                    if os.path.exists(t): os.remove(t)
+                return False
                     
             list_file = tf.mktemp(suffix=".txt")
             with open(list_file, "w", encoding="utf-8") as f:
@@ -582,6 +607,7 @@ class TtsWorker:
                 "index": idx + 1,
                 "text": chunk_text,
                 "start": round(chunk_start, 3),
+                "end": round(chunk_start + duration, 3),
                 "duration": duration,
             })
             prev_end = chunk_start + duration
@@ -758,6 +784,7 @@ class TtsWorker:
                 "index": idx + 1,
                 "text": chunk_text,
                 "start": round(cursor, 3),
+                "end": round(cursor + duration, 3),
                 "duration": duration,
             })
             cursor = round(cursor + duration, 3)

@@ -340,26 +340,29 @@ class ScriptWorker:
 
         full_text = self._call_llm_with_fallback(SCRIPT_SYSTEM_PROMPT, [{"role": "user", "content": user_prompt}], max_tokens=8000)
         
-        # --- 메타데이터 파싱 로직 ---
+        # --- 메타데이터 파싱 및 본문 분리 로직 ---
         meta_title = "제목 자동 생성 실패"
         meta_thumb = "Stock market background"
         meta_desc = "상세 설명이 없습니다."
         meta_shorts = "쇼츠 대본 자동 생성 실패"
         
-        meta_match = re.search(r'##\s*메타데이터\s*(.*)', full_text, re.DOTALL)
-        if meta_match:
-            meta_text = meta_match.group(1)
-            t_match = re.search(r'\[추천 제목\]\s*:\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
+        script_body = full_text
+        meta_split = re.split(r'##\s*메타데이터', full_text, flags=re.IGNORECASE)
+        if len(meta_split) > 1:
+            script_body = meta_split[0].strip()
+            meta_text = meta_split[1]
+            
+            t_match = re.search(r'\[추천 제목\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
             if t_match: meta_title = t_match.group(1).strip()
-            th_match = re.search(r'\[추천 썸네일\]\s*:\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
+            th_match = re.search(r'\[추천 썸네일\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
             if th_match: meta_thumb = th_match.group(1).strip()
-            d_match = re.search(r'\[더보기 설명\]\s*:\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
+            d_match = re.search(r'\[더보기 설명\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
             if d_match: meta_desc = d_match.group(1).strip()
-            s_match = re.search(r'\[쇼츠 대본\]\s*:\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
+            s_match = re.search(r'\[쇼츠 대본\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
             if s_match: meta_shorts = s_match.group(1).strip()
 
-        sections = _parse_sections(full_text)
-        return full_text, sections, meta_title, meta_thumb, meta_desc, meta_shorts
+        sections = _parse_sections(script_body)
+        return script_body, sections, meta_title, meta_thumb, meta_desc, meta_shorts
 
     def _mock_generate(self, keyword, category_label, target_minutes, job_id):
         script_text, sections = self._mock_script(keyword, category_label, target_minutes)
@@ -480,6 +483,8 @@ def _parse_sections(full_text: str) -> list:
     for i in range(1, len(parts), 2):
         if i + 1 < len(parts):
             title = parts[i].strip()
+            if any(k in title for k in ["메타데이터", "추천", "유튜브", "Shorts", "쇼츠"]):
+                continue
             raw_content = parts[i + 1].strip()
             
             # [대사] 추출

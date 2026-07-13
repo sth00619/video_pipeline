@@ -132,17 +132,18 @@ export default function JobDetail() {
     queryKey: ['costs', id], queryFn: () => jobsApi.costs(id), refetchInterval: 10000,
   })
 
-  useEffect(() => {
-    if (!job || job.autonomy !== 'AUTO' || runningStep || isLoading) return;
-    const activeStep = PIPELINE_STEPS.find(step => {
-      const ss = getStepStatus(step, job, approvals);
-      return ss === 'active';
-    });
-    if (activeStep) {
-      console.log('AUTO 모드: 자동 실행 트리거 ->', activeStep.key);
-      handleRun(activeStep);
-    }
-  }, [job, approvals, runningStep, isLoading]);
+  // Temporal 백엔드 오케스트레이션이 활성화되었으므로, 프론트엔드에서의 AUTO 모드 이중 자동 트리거(REST API 중복 호출)를 방지하기 위해 비활성화합니다.
+  // useEffect(() => {
+  //   if (!job || job.autonomy !== 'AUTO' || runningStep || isLoading) return;
+  //   const activeStep = PIPELINE_STEPS.find(step => {
+  //     const ss = getStepStatus(step, job, approvals);
+  //     return ss === 'active';
+  //   });
+  //   if (activeStep) {
+  //     console.log('AUTO 모드: 자동 실행 트리거 ->', activeStep.key);
+  //     handleRun(activeStep);
+  //   }
+  // }, [job, approvals, runningStep, isLoading]);
 
   const { data: kwAssets = [] } = useQuery({
     queryKey: ['assets', id, 'KEYWORD'], queryFn: () => jobsApi.assets(id, 'KEYWORD'), enabled: !!job,
