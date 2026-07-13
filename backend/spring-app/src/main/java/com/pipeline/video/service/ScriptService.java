@@ -172,6 +172,8 @@ public class ScriptService {
                             narration = rawContent;
                         }
                     }
+
+                    narration = cleanScriptCommasAndPct(narration);
                     
                     if (visualIdx != -1) {
                         prompt = rawContent.substring(visualIdx + 5).trim();
@@ -262,6 +264,16 @@ public class ScriptService {
             log.info("스크립트 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
         }
         log.info("스크립트 확정: jobId={}, length={}자, sections={}개", jobId, scriptToSave.length(), sections.size());
+    }
+
+    private String cleanScriptCommasAndPct(String text) {
+        if (text == null) return "";
+        // 1. 퍼센트 치환
+        text = text.replaceAll("([+-]?\\d+\\.?\\d*)\\s*%", "$1포인트");
+        text = text.replaceAll("([+-]?\\d+\\.?\\d*)\\s*퍼센트", "$1포인트");
+        // 2. 천단위 콤마 제거
+        text = text.replaceAll("(\\d{1,3}),(\\d{3})", "$1$2");
+        return text;
     }
 
     private String safeJson(Object obj) {

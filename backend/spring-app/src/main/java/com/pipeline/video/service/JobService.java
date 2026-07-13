@@ -142,6 +142,9 @@ public class JobService {
         youtubePackage.put("longform", longformMeta);
         youtubePackage.put("shorts", shortsMeta);
         
+        assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.YOUTUBE_METADATA)
+                .ifPresent(assetRepository::delete);
+        
         Asset metadataAsset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.YOUTUBE_METADATA)
@@ -151,11 +154,19 @@ public class JobService {
         
         String characterImagePath = null;
         String characterStylePrompt = null;
+        String loraModelId = null;
+        String loraTriggerWord = null;
+        Double loraScale = 1.0;
         if (job.getChannelId() != null) {
             ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
             if (profile != null) {
                 characterImagePath = profile.getCharacterImagePath();
                 characterStylePrompt = profile.getCharacterStylePrompt();
+                loraModelId = profile.getLoraModelId();
+                loraTriggerWord = profile.getLoraTriggerWord();
+                if (profile.getLoraScale() != null) {
+                    loraScale = profile.getLoraScale().doubleValue();
+                }
             }
         }
         
@@ -169,7 +180,9 @@ public class JobService {
         String shortsThumbPath = "/app/data/jobs/" + jobId + "/shorts_thumbnail.png";
         
         try {
-            fastApiClient.generateThumbnailImage(jobId, longformTitle, "longform", longformThumbPath, characterImagePath, characterStylePrompt);
+            fastApiClient.generateThumbnailImage(jobId, longformTitle, "longform", longformThumbPath, 
+                                                 characterImagePath, characterStylePrompt,
+                                                 loraModelId, loraTriggerWord, loraScale);
         } catch (Exception e) {
             log.error("롱폼 썸네일 생성 실패: {}", e.getMessage());
         }
@@ -181,7 +194,9 @@ public class JobService {
                 if (sTitles != null && !sTitles.isEmpty()) shortsTitle = sTitles.get(0);
             }
             try {
-                fastApiClient.generateThumbnailImage(jobId, shortsTitle, "shorts", shortsThumbPath, characterImagePath, characterStylePrompt);
+                fastApiClient.generateThumbnailImage(jobId, shortsTitle, "shorts", shortsThumbPath, 
+                                                     characterImagePath, characterStylePrompt,
+                                                     loraModelId, loraTriggerWord, loraScale);
             } catch (Exception e) {
                 log.error("쇼츠 썸네일 생성 실패: {}", e.getMessage());
             }
@@ -190,6 +205,9 @@ public class JobService {
         Map<String, String> thumbPaths = new java.util.HashMap<>();
         thumbPaths.put("longform_path", "/api/jobs/" + jobId + "/thumbnail/longform");
         thumbPaths.put("shorts_path", "/api/jobs/" + jobId + "/thumbnail/shorts");
+        
+        assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.THUMBNAIL_IMAGE)
+                .ifPresent(assetRepository::delete);
         
         Asset thumbnailAsset = Asset.builder()
                 .jobId(jobId)

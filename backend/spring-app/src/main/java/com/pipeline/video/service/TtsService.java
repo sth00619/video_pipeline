@@ -54,19 +54,26 @@ public class TtsService {
 
         // 채널 프로필 로드 (커스텀 ElevenLabs 목소리가 설정되어 있는지 확인)
         String finalVoiceId = voiceId;
+        Double ttsSpeed = null;
         if (job.getChannelId() != null) {
             ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
-            if (profile != null && profile.getVoiceId() != null && !profile.getVoiceId().isBlank()) {
-                finalVoiceId = profile.getVoiceId();
-                log.info("채널 목소리 로드 완료: channelId={}, voiceId={}", job.getChannelId(), finalVoiceId);
+            if (profile != null) {
+                if (profile.getVoiceId() != null && !profile.getVoiceId().isBlank()) {
+                    finalVoiceId = profile.getVoiceId();
+                    log.info("채널 목소리 로드 완료: channelId={}, voiceId={}", job.getChannelId(), finalVoiceId);
+                }
+                if (profile.getTtsSpeedOverride() != null) {
+                    ttsSpeed = profile.getTtsSpeedOverride().doubleValue();
+                    log.info("채널 속도 오버라이드 로드 완료: channelId={}, speed={}", job.getChannelId(), ttsSpeed);
+                }
             }
         }
 
-        log.info("TTS 생성 시작: jobId={}, scriptLength={}자, voice={}, autonomy={}",
-                jobId, script.length(), finalVoiceId, job.getAutonomy());
+        log.info("TTS 생성 시작: jobId={}, scriptLength={}자, voice={}, speed={}, autonomy={}",
+                jobId, script.length(), finalVoiceId, ttsSpeed, job.getAutonomy());
 
         // FastAPI 호출
-        TtsGenerateResponse result = fastApiClient.generateTts(jobId, script, finalVoiceId);
+        TtsGenerateResponse result = fastApiClient.generateTts(jobId, script, finalVoiceId, ttsSpeed);
 
         // [버그 수정] 기존에는 BigDecimal.ZERO 하드코딩. 실제 ElevenLabs API를
         // 호출한 경우에만 요금이 실제로 발생하므로, used_elevenlabs=true 일 때만

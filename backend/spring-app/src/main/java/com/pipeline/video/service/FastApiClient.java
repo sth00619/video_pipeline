@@ -211,7 +211,24 @@ public class FastApiClient {
     }
 
     // Phase 3-4 — 이미지
-    public ImagesGenerateResponse generateImages(Long jobId, String ttsMetaJson, String scriptMetaJson, String characterImagePath, String characterStylePrompt) {
+    public ImagesGenerateResponse generateImages(Long jobId, String ttsMetaJson, String scriptMetaJson,
+                                                  String characterImagePath, String characterStylePrompt,
+                                                  String characterPosesDir) {
+        return generateImages(jobId, ttsMetaJson, scriptMetaJson, characterImagePath,
+                characterStylePrompt, characterPosesDir, null, null, null);
+    }
+
+    /**
+     * [Sprint 3] LoRA 모델 지정 버전 이미지 생성.
+     *
+     * loraModelId가 null이 아닌 시 FastAPI는 fal-ai/flux-lora 엔드포인트를 사용하여
+     * 캐릭터 일관성을 극대화합니다.
+     */
+    public ImagesGenerateResponse generateImages(Long jobId, String ttsMetaJson, String scriptMetaJson,
+                                                  String characterImagePath, String characterStylePrompt,
+                                                  String characterPosesDir,
+                                                  String loraModelId, String loraTriggerWord,
+                                                  Float loraScale) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -219,6 +236,18 @@ public class FastApiClient {
             bodyMap.put("script_meta", scriptMetaJson);
             bodyMap.put("character_image_path", characterImagePath);
             bodyMap.put("character_style_prompt", characterStylePrompt);
+            // [S2-4] 캐릭터 포즈 라이브러리 디렉토리
+            if (characterPosesDir != null && !characterPosesDir.isBlank()) {
+                bodyMap.put("character_poses_dir", characterPosesDir);
+            }
+            // [Sprint 3] LoRA 파라미터
+            if (loraModelId != null && !loraModelId.isBlank()) {
+                bodyMap.put("lora_model_id", loraModelId);
+                if (loraTriggerWord != null && !loraTriggerWord.isBlank()) {
+                    bodyMap.put("lora_trigger_word", loraTriggerWord);
+                }
+                bodyMap.put("lora_scale", loraScale != null ? loraScale : 1.0f);
+            }
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/images/generate", bodyMap),
                     ImagesGenerateResponse.class);
@@ -228,7 +257,18 @@ public class FastApiClient {
     }
 
     // Phase 3-4B — 단일 이미지 재생성
-    public void generateSingleImage(Long jobId, int index, String text, String section, String characterImagePath, String characterStylePrompt) {
+    public void generateSingleImage(Long jobId, int index, String text, String section,
+                                     String characterImagePath, String characterStylePrompt,
+                                     String characterPosesDir) {
+        generateSingleImage(jobId, index, text, section, characterImagePath,
+                characterStylePrompt, characterPosesDir, null, null, null);
+    }
+
+    /** [Sprint 3] LoRA 지정 단일 이미지 재생성 */
+    public void generateSingleImage(Long jobId, int index, String text, String section,
+                                     String characterImagePath, String characterStylePrompt,
+                                     String characterPosesDir,
+                                     String loraModelId, String loraTriggerWord, Float loraScale) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -237,6 +277,18 @@ public class FastApiClient {
             bodyMap.put("section", section);
             bodyMap.put("character_image_path", characterImagePath);
             bodyMap.put("character_style_prompt", characterStylePrompt);
+            // [S2-4] 캐릭터 포즈 라이브러리 디렉토리
+            if (characterPosesDir != null && !characterPosesDir.isBlank()) {
+                bodyMap.put("character_poses_dir", characterPosesDir);
+            }
+            // [Sprint 3] LoRA 파라미터
+            if (loraModelId != null && !loraModelId.isBlank()) {
+                bodyMap.put("lora_model_id", loraModelId);
+                if (loraTriggerWord != null && !loraTriggerWord.isBlank()) {
+                    bodyMap.put("lora_trigger_word", loraTriggerWord);
+                }
+                bodyMap.put("lora_scale", loraScale != null ? loraScale : 1.0f);
+            }
             postJson(fastApiUrl + "/workers/images/generate-single", bodyMap);
         } catch (Exception e) {
             throw new RuntimeException("단일 이미지 생성 오류: " + e.getMessage(), e);
@@ -310,7 +362,9 @@ public class FastApiClient {
         }
     }
 
-    public void generateThumbnailImage(Long jobId, String title, String format, String outputPath, String characterImagePath, String characterStylePrompt) {
+    public void generateThumbnailImage(Long jobId, String title, String format, String outputPath, 
+                                       String characterImagePath, String characterStylePrompt,
+                                       String loraModelId, String loraTriggerWord, Double loraScale) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -319,6 +373,9 @@ public class FastApiClient {
             bodyMap.put("output_path", outputPath);
             bodyMap.put("character_image_path", characterImagePath);
             bodyMap.put("character_style_prompt", characterStylePrompt);
+            bodyMap.put("lora_model_id", loraModelId);
+            bodyMap.put("lora_trigger_word", loraTriggerWord);
+            bodyMap.put("lora_scale", loraScale);
             postJson(fastApiUrl + "/workers/youtube/thumbnail", bodyMap);
         } catch (Exception e) {
             throw new RuntimeException("유튜브 썸네일 생성 오류: " + e.getMessage(), e);
@@ -332,6 +389,74 @@ public class FastApiClient {
             postJson(fastApiUrl + "/workers/jobs/" + jobId + "/stop", bodyMap);
         } catch (Exception e) {
             log.error("FastAPI 작업 중지 통지 실패: jobId={}, error={}", jobId, e.getMessage());
+        }
+    }
+
+    // ============================
+    // [Sprint 3] LoRA 캐릭터 파인튜닝 API
+    // ============================
+
+    /**
+     * [Sprint 3] LoRA 학습 시작.
+     * ZIP 파일을 FastAPI에 multipart/form-data로 전송하고 학습 request_id를 반환.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> startLoraTraining(
+            String channelId, byte[] zipBytes, String triggerWord, int steps, boolean isStyle)
+            throws IOException {
+        String urlStr = String.format(
+                "%s/workers/lora/train?channel_id=%s&trigger_word=%s&steps=%d&is_style=%b",
+                fastApiUrl, channelId, triggerWord, steps, isStyle
+        );
+        String boundary = UUID.randomUUID().toString().replace("-", "");
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setDoOutput(true);
+        conn.setConnectTimeout(10_000);
+        conn.setReadTimeout(300_000); // 5분 (파일 업로드 + 큐 등록)
+        conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            String partHeader = "--" + boundary + "\r\n"
+                    + "Content-Disposition: form-data; name=\"zip_file\"; filename=\"reference_images.zip\"\r\n"
+                    + "Content-Type: application/zip\r\n\r\n";
+            os.write(partHeader.getBytes(StandardCharsets.UTF_8));
+            os.write(zipBytes);
+            os.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+            os.flush();
+        }
+        int code = conn.getResponseCode();
+        InputStream is = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
+        String body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        if (code < 200 || code >= 300) {
+            throw new RuntimeException("LoRA 학습 시작 실패 (" + code + "): " + body);
+        }
+        return objectMapper.readValue(body, Map.class);
+    }
+
+    /**
+     * [Sprint 3] LoRA 학습 진행 상태 조회.
+     * 학습 완료 시 lora_model_url(safetensors URL) 포함.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getLoraStatus(String requestId) {
+        try {
+            String urlStr = fastApiUrl + "/workers/lora/status/" + requestId;
+            URL url = new URL(urlStr);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(30_000);
+            int code = conn.getResponseCode();
+            InputStream is = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
+            String body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            if (code < 200 || code >= 300) {
+                throw new RuntimeException("LoRA 상태 조회 실패 (" + code + "): " + body);
+            }
+            return objectMapper.readValue(body, Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("LoRA 상태 조회 오류: " + e.getMessage(), e);
         }
     }
 
@@ -373,5 +498,15 @@ public class FastApiClient {
         log.info("FastAPI 응답: code={}, bodyLen={}", code, responseBody.length());
         if (code < 200 || code >= 300) throw new RuntimeException("FastAPI 실패: " + code + " " + responseBody);
         return responseBody;
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getElevenLabsVoices() {
+        try {
+            return restTemplate.getForObject(fastApiUrl + "/workers/tts/voices", List.class);
+        } catch (Exception e) {
+            log.error("ElevenLabs 목소리 목록 조회 실패: {}", e.getMessage());
+            return List.of();
+        }
     }
 }

@@ -32,6 +32,20 @@ public class TemporalTestController {
 
     private final WorkflowClient workflowClient;
 
+    private final com.pipeline.video.service.LongformService longformService;
+
+    @GetMapping("/trigger-retry")
+    public String triggerRetry(@RequestParam Long jobId) {
+        new Thread(() -> {
+            try {
+                longformService.generate(jobId, "AUTO");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+        return "Triggered video assembly for Job " + jobId;
+    }
+
     @GetMapping("/hello")
     public String hello(@RequestParam(defaultValue = "송") String name) {
         HelloWorkflow workflow = workflowClient.newWorkflowStub(

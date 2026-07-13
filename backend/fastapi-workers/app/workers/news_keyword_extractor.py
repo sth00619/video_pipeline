@@ -120,17 +120,22 @@ class NewsKeywordExtractor:
             if not url:
                 continue
             try:
-                feed = feedparser.parse(url, request_headers={"User-Agent": "Mozilla/5.0"})
-                for entry in feed.entries[:15]:
-                    title = entry.get("title", "")
-                    summary = entry.get("summary", "")
-                    if title:
-                        headlines.append({
-                            "text": f"{title}. {summary}",
-                            "source": fname,
-                            "title": title,
-                        })
-                logger.info(f"RSS {fname}: {len(feed.entries)}건 수집")
+                # requests로 타임아웃을 지정하여 안정적으로 콘텐츠를 먼저 가져온 후 feedparser로 파싱
+                resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+                if resp.status_code == 200:
+                    feed = feedparser.parse(resp.content)
+                    for entry in feed.entries[:15]:
+                        title = entry.get("title", "")
+                        summary = entry.get("summary", "")
+                        if title:
+                            headlines.append({
+                                "text": f"{title}. {summary}",
+                                "source": fname,
+                                "title": title,
+                            })
+                    logger.info(f"RSS {fname}: {len(feed.entries)}건 수집")
+                else:
+                    logger.warning(f"RSS {fname} HTTP 오류 (status: {resp.status_code})")
                 time.sleep(0.3)
             except Exception as e:
                 logger.warning(f"RSS {fname} 수집 실패: {e}")

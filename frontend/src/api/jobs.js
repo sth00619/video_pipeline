@@ -28,8 +28,8 @@ export const jobsApi = {
     apiClient.post(`/jobs/${id}/script/confirm`, { finalScript: script }).then(r => r.data),
 
   // TTS
-  generateTts: (id) =>
-    apiClient.post(`/jobs/${id}/tts/generate`, { voiceId: 'default_ko' }).then(r => r.data),
+  generateTts: (id, voiceId = 'default_ko') =>
+    apiClient.post(`/jobs/${id}/tts/generate`, { voiceId }).then(r => r.data),
   confirmTts: (id) => apiClient.post(`/jobs/${id}/tts/confirm`, {}).then(r => r.data),
 
   // 이미지

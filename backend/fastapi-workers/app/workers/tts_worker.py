@@ -88,13 +88,14 @@ class TtsWorker:
                 part = part.strip()
                 if not part:
                     continue
-                # [대사]와 [비주얼] 사이의 텍스트만 추출
-                daesa_match = re.search(r'\[대사\]\s*(.*?)\s*(?:\[비주얼\]|$)', part, re.DOTALL)
+                # [대사]와 [비주얼/감정] 사이의 텍스트만 추출
+                daesa_match = re.search(r'\[대사\]\s*(.*?)\s*(?:\[비주얼|\[감정|$)', part, re.DOTALL)
                 if daesa_match:
                     clean_script += daesa_match.group(1).strip() + " "
                 else:
-                    # [대사] 태그가 없으면 [비주얼] 태그 이전의 텍스트 추출
-                    no_visual = re.sub(r'\[비주얼\].*$', '', part, flags=re.DOTALL).strip()
+                    # [대사] 태그가 없으면 [비주얼/감정] 태그 이전의 텍스트 추출
+                    no_visual = re.sub(r'\[비주얼.*$', '', part, flags=re.DOTALL).strip()
+                    no_visual = re.sub(r'\[감정.*$', '', no_visual, flags=re.DOTALL).strip()
                     # 첫 줄(씬 제목) 제거
                     lines = no_visual.split('\n')
                     if len(lines) > 1:
@@ -113,7 +114,7 @@ class TtsWorker:
         try:
             if os.getenv("ELEVENLABS_API_KEY"):
                 logger.info("ELEVENLABS_API_KEY 감지 → ElevenLabs v3 AI 성우 + 발음 사전 적용")
-                used_tts = self._generate_elevenlabs(preprocessed, mp3_path, voice_id, job_id)
+                used_tts = self._generate_elevenlabs(preprocessed, mp3_path, voice_id, job_id, tts_speed=speed)
                 if used_tts:
                     tts_engine = "elevenlabs"
             
@@ -134,16 +135,27 @@ class TtsWorker:
                 f'-y "{mp3_path}" -loglevel error',
                 job_id
             )
-        # 오디오 가속 적용 (atempo 필터) — runtime_config 값 사용
+        # 오디오 가속 적용 (atempo 필터) — ElevenLabs는 네이티브 배속 우선, 범위 이탈분이나 폴백용만 FFmpeg 처리
         if os.path.exists(mp3_path):
-            logger.info(f"음성 배속({speed}x) 적용 시작...")
-            temp_mp3 = mp3_path + ".speedup.mp3"
-            ret = self._run_subprocess(f'ffmpeg -i "{mp3_path}" -filter:a "atempo={speed}" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error', job_id)
-            if ret == 0 and os.path.exists(temp_mp3):
-                os.replace(temp_mp3, mp3_path)
-                logger.info(f"음성 배속({speed}x) 적용 성공")
-            else:
-                logger.error(f"음성 배속 적용 실패 (exit code: {ret})")
+            apply_ffmpeg_speed = speed
+            if tts_engine == "elevenlabs":
+                # ElevenLabs는 0.7~1.2 범위를 이미 네이티브로 가속하여 생성함
+                if 0.7 <= speed <= 1.2:
+                    apply_ffmpeg_speed = 1.0
+                elif speed > 1.2:
+                    apply_ffmpeg_speed = speed / 1.2
+                else: # speed < 0.7
+                    apply_ffmpeg_speed = speed / 0.7
+            
+            if apply_ffmpeg_speed != 1.0:
+                logger.info(f"음성 배속({apply_ffmpeg_speed:.3f}x) 적용 시작...")
+                temp_mp3 = mp3_path + ".speedup.mp3"
+                ret = self._run_subprocess(f'ffmpeg -i "{mp3_path}" -filter:a "atempo={apply_ffmpeg_speed}" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error', job_id)
+                if ret == 0 and os.path.exists(temp_mp3):
+                    os.replace(temp_mp3, mp3_path)
+                    logger.info(f"음성 배속({apply_ffmpeg_speed:.3f}x) 적용 성공")
+                else:
+                    logger.error(f"음성 배속 적용 실패 (exit code: {ret})")
 
         # 실제 MP3 길이 측정
         actual_duration = self._probe_duration(mp3_path) or len(clean_script) / 5.0
@@ -257,7 +269,7 @@ class TtsWorker:
 
         return os.path.exists(output_path)
 
-    def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str, job_id: int = 0) -> bool:
+    def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str, job_id: int = 0, tts_speed: float = None) -> bool:
         """
         ElevenLabs v3 + 발음 사전 기반 한국어 AI 성우 음성 생성.
         원본 스크립트 텍스트를 그대로 전달하고, 발음 사전이 금융 용어 발음을 교정합니다.
@@ -270,6 +282,28 @@ class TtsWorker:
         if not api_key:
             return False
 
+        # Sprint 1 (S1-4): ElevenLabs 쿼터 사전 체크
+        try:
+            quota_resp = requests.get(
+                "https://api.elevenlabs.io/v1/user/subscription",
+                headers={"xi-api-key": api_key},
+                timeout=10
+            )
+            if quota_resp.status_code == 200:
+                quota_data = quota_resp.json()
+                char_limit = quota_data.get("character_limit", 0)
+                char_count = quota_data.get("character_count", 0)
+                remaining = char_limit - char_count
+                required_chars = len(text)
+                logger.info(f"ElevenLabs 쿼터 정보: limit={char_limit}, count={char_count}, remaining={remaining}, required={required_chars}")
+                if remaining < required_chars * 1.1:
+                    logger.warning(f"ElevenLabs 잔여 쿼터 부족 ({remaining} < {required_chars * 1.1:.0f}) -> 즉시 gTTS 폴백")
+                    return False
+            else:
+                logger.warning(f"ElevenLabs 쿼터 조회 API 실패 (status: {quota_resp.status_code}) -> 일단 API 호출 시도")
+        except Exception as e:
+            logger.warning(f"ElevenLabs 쿼터 조회 예외 발생: {e} -> 일단 API 호출 시도")
+
         if is_job_stopped(job_id):
             raise RuntimeError(f"Job {job_id} stopped by user.")
         
@@ -277,18 +311,29 @@ class TtsWorker:
         if not voice_id or voice_id in ["gtts_ko", "default", "silent", "gtts_whisper_ko"]:
             voice_id = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
             
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        # [공식 권장] apply_text_normalization=off 쿼리 파라미터 전달 및 이중 가속/배속 파라미터
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?apply_text_normalization=off"
         headers = {
             "xi-api-key": api_key,
             "Content-Type": "application/json",
             "Accept": "audio/mpeg"
         }
 
+        # 네이티브 배속 설정 (0.7~1.2 범위 우선 적용)
+        speed = tts_speed if tts_speed is not None else 1.0
+        native_speed = 1.0
+        if 0.7 <= speed <= 1.2:
+            native_speed = speed
+        elif speed > 1.2:
+            native_speed = 1.2
+        else: # speed < 0.7
+            native_speed = 0.7
+
         # 발음 사전 로케이터 (금융 용어 발음 교정)
         pron_mgr = PronunciationManager.get_instance()
         pron_locators = pron_mgr.get_locators()
         
-        def _build_payload(chunk_text: str) -> dict:
+        def _build_payload(chunk_text: str, prev_text: str = "", next_text_val: str = "") -> dict:
             payload = {
                 "text": chunk_text,
                 "model_id": "eleven_multilingual_v2",
@@ -296,9 +341,16 @@ class TtsWorker:
                     "stability": runtime_config.value("elevenlabs_stability"),
                     "similarity_boost": runtime_config.value("elevenlabs_similarity_boost"),
                     "style": runtime_config.value("elevenlabs_style"),
-                    "use_speaker_boost": True
-                }
+                    "use_speaker_boost": True,
+                    "speed": native_speed
+                },
+                # [공식 가이드] Root level에도 normalization 끄기 설정 명시
+                "apply_text_normalization": "off"
             }
+            if prev_text:
+                payload["previous_text"] = prev_text
+            if next_text_val:
+                payload["next_text"] = next_text_val
             if pron_locators:
                 payload["pronunciation_dictionary_locators"] = pron_locators
             return payload
@@ -345,7 +397,12 @@ class TtsWorker:
                 if is_job_stopped(job_id):
                     raise RuntimeError(f"Job {job_id} stopped by user.")
                 tmp = tf.mktemp(suffix=f"_el_{idx}.mp3")
-                payload = _build_payload(part)
+                
+                # 이전 청크와 다음 청크를 힌트로 넘겨 억양 단절 보정
+                prev_p = parts[idx - 1] if idx > 0 else ""
+                next_p = parts[idx + 1] if idx + 1 < len(parts) else ""
+                
+                payload = _build_payload(part, prev_text=prev_p, next_text_val=next_p)
                 chunk_success = False
                 
                 # 2회 재시도 루프
@@ -714,13 +771,13 @@ class TtsWorker:
     def _preprocess_for_tts(text: str) -> str:
         """주식/경제 용어를 gTTS/ElevenLabs가 자연스럽게 읽도록 전처리"""
         text = re.sub(r'^##\s*.+$', '', text, flags=re.MULTILINE).strip()
-        text = re.sub(r'([+-]?\d+\.?\d*)%', r'\1퍼센트', text)
+        text = re.sub(r'([+-]?\d+\.?\d*)%', r'\1포인트', text)
         text = re.sub(r'\+(\d)', r'플러스 \1', text)
         text = re.sub(r'(?<!\d)-(\d)', r'마이너스 \1', text)
         text = re.sub(r'(\d+)pt\b', r'\1포인트', text)
         text = re.sub(r'(\d{1,3}),(\d{3})', r'\1\2', text)
 
-        # 숫자 -> 한글 한글화 함수
+        # 숫자 -> 한글 한글화 함수 (4자리 블록 만/억/조 단위 완벽 지원)
         def num_to_kor(num_str: str) -> str:
             if not num_str:
                 return ""
@@ -728,22 +785,51 @@ class TtsWorker:
                 return "영"
             if re.match(r'^0+$', num_str):
                 return "영" * len(num_str)
-            val = int(num_str)
-            if val >= 10000:
-                # 5자리 이상 대형 숫자는 한 자씩 읽기
-                return "".join(["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"][int(d)] for d in num_str)
-            units = ["", "십", "백", "천"]
-            nums = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
-            res = ""
-            length = len(num_str)
-            for i, digit in enumerate(num_str):
-                d_val = int(digit)
-                if d_val != 0:
-                    digit_name = nums[d_val]
-                    if d_val == 1 and (length - 1 - i) > 0:
+            
+            # 0으로 시작하는 숫자(예: 010)는 단순 자릿수 단위 없이 한 글자씩 읽음
+            if num_str.startswith("0"):
+                digit_names = ["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+                return "".join(digit_names[int(d)] for d in num_str)
+
+            # 한국어 표준 자릿수 한글화 (4자리 단위: 만, 억, 조, 경)
+            units_4 = ["", "만", "억", "조", "경"]
+            units_1 = ["", "십", "백", "천"]
+            digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+            
+            # 4자리 단위로 크기 맞춤
+            num_str = num_str.zfill(((len(num_str) + 3) // 4) * 4)
+            chunks = [num_str[i:i+4] for i in range(0, len(num_str), 4)]
+            chunks.reverse()
+            
+            result_parts = []
+            for chunk_idx, chunk in enumerate(chunks):
+                chunk_val = int(chunk)
+                if chunk_val == 0:
+                    continue
+                
+                chunk_str = ""
+                for i, digit in enumerate(chunk):
+                    d_val = int(digit)
+                    if d_val == 0:
+                        continue
+                    
+                    digit_name = digits[d_val]
+                    position = 3 - i  # 3: 천, 2: 백, 1: 십, 0: 일
+                    # 십, 백, 천 단위 바로 앞의 '일'은 자연스럽게 생략 (예: 일십 -> 십, 일백 -> 백)
+                    if d_val == 1 and position > 0:
                         digit_name = ""
-                    res += digit_name + units[length - 1 - i]
-            return res
+                    
+                    chunk_str += digit_name + units_1[position]
+                
+                # '일만'은 한국어 구어체에서 보통 '만'으로 읽음
+                if chunk_str == "일" and chunk_idx == 1:
+                    chunk_str = ""
+                
+                result_parts.append(chunk_str + units_4[chunk_idx])
+            
+            result_parts.reverse()
+            res = "".join(result_parts)
+            return res if res else "영"
 
         # 소수점 변환 (소수부 각 자릿수 개별 읽기: e.g. 6.56 -> 육 점 오육, 1.125 -> 일 점 일이오)
         def repl_decimal(match):

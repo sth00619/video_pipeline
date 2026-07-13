@@ -23,7 +23,7 @@ public class Asset {
     private Long jobId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255)")
     private AssetType assetType;
 
     private String localPath;

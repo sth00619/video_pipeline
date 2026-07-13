@@ -22,12 +22,12 @@ logger = logging.getLogger(__name__)
 # 카테고리별 BGM 프롬프트 매핑
 BGM_PROMPTS: dict[str, str] = {
     "KOSPI": (
-        "Korean financial news background music, professional and tense, "
+        "Korean financial news background music, professional and calm, stable melody, "
         "subtle electronic beats with piano, steady tempo, "
         "broadcast quality, instrumental only"
     ),
     "KOSDAQ": (
-        "Korean financial news background music, professional and tense, "
+        "Korean financial news background music, professional and calm, stable melody, "
         "subtle electronic beats with piano, steady tempo, "
         "broadcast quality, instrumental only"
     ),

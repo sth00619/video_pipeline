@@ -37,7 +37,6 @@ import com.pipeline.video.dto.TtsGenerateResponse;
  */
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class LongformService {
 
     private final VideoJobRepository jobRepository;
@@ -47,7 +46,27 @@ public class LongformService {
     private final GateService gateService;
     private final AutonomyService autonomyService;
     private final CostService costService;
+    private final JobService jobService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public LongformService(
+            VideoJobRepository jobRepository,
+            AssetRepository assetRepository,
+            ChannelProfileRepository channelProfileRepository,
+            FastApiClient fastApiClient,
+            GateService gateService,
+            AutonomyService autonomyService,
+            CostService costService,
+            @org.springframework.context.annotation.Lazy JobService jobService) {
+        this.jobRepository = jobRepository;
+        this.assetRepository = assetRepository;
+        this.channelProfileRepository = channelProfileRepository;
+        this.fastApiClient = fastApiClient;
+        this.gateService = gateService;
+        this.autonomyService = autonomyService;
+        this.costService = costService;
+        this.jobService = jobService;
+    }
 
     /**
      * TtsService.generate()와 동일한 규칙으로 채널 목소리를 조회합니다.
@@ -137,6 +156,14 @@ public class LongformService {
         // ASSEMBLING → PREVIEW_PENDING
         job.setStatus(JobStatus.PREVIEW_PENDING);
         jobRepository.save(job);
+
+        // [체크리스트 피드백 반영] 유튜브 패키지(썸네일, 제목, 더보기글, 태그) 자동 생성 추가
+        try {
+            log.info("유튜브 패키지(썸네일, 제목, 더보기글) 자동 생성 시작: jobId={}", jobId);
+            jobService.generateYoutubePackage(jobId);
+        } catch (Exception e) {
+            log.error("유튜브 패키지 자동 생성 실패: {}", e.getMessage());
+        }
 
         // 7. 쇼츠 시나리오 자동 추출
         try {
@@ -452,6 +479,15 @@ public class LongformService {
 
         job.setOutputPath(result.getVideoPath());
         jobRepository.save(job);
+
+        // [체크리스트 피드백 반영] 유튜브 패키지(썸네일, 제목, 더보기글, 태그) 자동 생성 추가
+        try {
+            log.info("수정 반영(재조립): 유튜브 패키지(썸네일, 제목, 더보기글) 자동 생성 시작: jobId={}", jobId);
+            // 기존 메타데이터/썸네일이 있을 수 있으므로 덮어쓰기 생성
+            jobService.generateYoutubePackage(jobId);
+        } catch (Exception e) {
+            log.error("수정 반영(재조립): 유튜브 패키지 자동 생성 실패: {}", e.getMessage());
+        }
 
         // 비용 기록 (재조립 추가 비용)
         costService.record(jobId, "FFMPEG_REASSEMBLE", BigDecimal.ZERO, "USD",

@@ -57,13 +57,15 @@ public class ImagesService {
         // 채널 프로필 로드 (캐릭터 일관성 파라미터 추출)
         String characterImagePath = null;
         String characterStylePrompt = null;
+        String characterPosesDir = null;  // [S2-4] 이중 레이어 합성용 포즈 디렉토리
         if (job.getChannelId() != null) {
             ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
             if (profile != null) {
                 characterImagePath = profile.getCharacterImagePath();
                 characterStylePrompt = profile.getCharacterStylePrompt();
-                log.info("채널 캐릭터 프로필 로드 완료: channelId={}, characterImagePath={}",
-                        job.getChannelId(), characterImagePath);
+                characterPosesDir = profile.getCharacterPosesDir();
+                log.info("채널 캐릭터 프로필 로드 완료: channelId={}, characterImagePath={}, posesDir={}",
+                        job.getChannelId(), characterImagePath, characterPosesDir);
             }
         }
 
@@ -71,7 +73,7 @@ public class ImagesService {
 
         // FastAPI 호출
         ImagesGenerateResponse result = fastApiClient.generateImages(
-                jobId, ttsMetaJson, scriptMetaJson, characterImagePath, characterStylePrompt);
+                jobId, ttsMetaJson, scriptMetaJson, characterImagePath, characterStylePrompt, characterPosesDir);
 
         // [버그 수정] 기존 imgCost = BigDecimal.ZERO → 실제 이미지 장 수 기반 요금 추정
         java.math.BigDecimal imgCost = CostEstimator.geminiImages(result.getSceneCount());
@@ -169,16 +171,18 @@ public class ImagesService {
                     .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
             String characterImagePath = null;
             String characterStylePrompt = null;
+            String characterPosesDir = null;  // [S2-4]
             if (job.getChannelId() != null) {
                 ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
                 if (profile != null) {
                     characterImagePath = profile.getCharacterImagePath();
                     characterStylePrompt = profile.getCharacterStylePrompt();
+                    characterPosesDir = profile.getCharacterPosesDir();
                 }
             }
 
             // 이미지 재생성은 sceneDto의 (업데이트되었거나 기존의) prompt를 기준으로 호출
-            fastApiClient.generateSingleImage(jobId, index, sceneDto.getPrompt(), sceneDto.getSection(), characterImagePath, characterStylePrompt);
+            fastApiClient.generateSingleImage(jobId, index, sceneDto.getPrompt(), sceneDto.getSection(), characterImagePath, characterStylePrompt, characterPosesDir);
             log.info("씬 이미지 재생성 요청 완료: jobId={}, index={}, section={}, mode={}", jobId, index, sceneDto.getSection(), mode);
         } else {
             log.info("씬 텍스트 수정 완료 (이미지 유지): jobId={}, index={}", jobId, index);

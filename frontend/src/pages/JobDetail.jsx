@@ -10,6 +10,7 @@ import {
 import Layout from '../components/Layout'
 import { jobsApi } from '../api/jobs'
 import { authStore } from '../store/auth'
+import apiClient from '../api/client'
 
 const PIPELINE_STEPS = [
   { key: 'keyword', label: '키워드 탐색', pendingStatus: 'KEYWORD_PENDING', gate: 'KEYWORD',
@@ -48,8 +49,8 @@ const STEP_PROGRESS_INFO = {
 }
 
 const STATUS_ORDER = [
-  'DRAFT','KEYWORD_PENDING','SCRIPT_PENDING','TTS_PENDING',
-  'IMAGES_PENDING','ASSEMBLING','PREVIEW_PENDING','READY','PUBLISHED',
+  'DRAFT', 'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING',
+  'IMAGES_PENDING', 'ASSEMBLING', 'PREVIEW_PENDING', 'READY', 'PUBLISHED', 'FAILED'
 ]
 
 function getStepStatus(step, job, approvals) {
@@ -95,10 +96,35 @@ export default function JobDetail() {
   const [editingSceneText, setEditingSceneText] = useState('')
   const [imageSalt, setImageSalt] = useState(0)
   const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
+  const [showEngPrompt, setShowEngPrompt] = useState({})
+
+  const [selectedVoiceId, setSelectedVoiceId] = useState('default_ko')
+
+  const { data: voices = [] } = useQuery({
+    queryKey: ['voices'],
+    queryFn: () => apiClient.get('/channels/voices').then(r => r.data),
+    staleTime: Infinity,
+  })
+
+  const { data: channels = [] } = useQuery({
+    queryKey: ['channels'],
+    queryFn: () => apiClient.get('/channels').then(r => r.data),
+    staleTime: Infinity,
+  })
 
   const { data: job, isLoading } = useQuery({
     queryKey: ['job', id], queryFn: () => jobsApi.get(id), refetchInterval: 3000,
   })
+
+  useEffect(() => {
+    if (job && channels.length > 0) {
+      const channel = channels.find(c => c.channelId === job.channelId)
+      if (channel && channel.voiceId) {
+        setSelectedVoiceId(channel.voiceId)
+      }
+    }
+  }, [job, channels])
+
   const { data: approvals = [] } = useQuery({
     queryKey: ['approvals', id], queryFn: () => jobsApi.approvals(id), refetchInterval: 3000,
   })
@@ -287,7 +313,11 @@ export default function JobDetail() {
   const handleRun = async (step) => {
     setRunningStep(step.key)
     try {
-      await step.runFn(id)
+      if (step.key === 'tts') {
+        await jobsApi.generateTts(id, selectedVoiceId)
+      } else {
+        await step.runFn(id)
+      }
       qc.invalidateQueries(['job',id])
       qc.invalidateQueries(['approvals',id])
       qc.invalidateQueries(['assets',id])
@@ -323,6 +353,28 @@ export default function JobDetail() {
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={job.status}/>
+          {job.status === 'DRAFT' && (
+            <button
+              onClick={async () => {
+                setRunningStep('keyword')
+                try {
+                  await jobsApi.searchKeyword(job.id, job.title || '', 5)
+                  qc.invalidateQueries(['job', id])
+                  qc.invalidateQueries(['assets', id])
+                } catch (e) {
+                  console.error(e)
+                  alert('작업 시작 실패: ' + (e.response?.data?.message || e.message))
+                } finally {
+                  setRunningStep(null)
+                }
+              }}
+              disabled={runningStep !== null}
+              className="text-sm bg-accent-green text-navy-950 hover:bg-opacity-90 disabled:opacity-50 px-4 py-2 rounded-lg transition font-semibold flex items-center gap-1.5"
+            >
+              {runningStep === 'keyword' ? <Loader className="animate-spin" size={14}/> : <Zap size={14}/>}
+              작업 시작
+            </button>
+          )}
           {isRunning && (
             <button
               onClick={handleStop}
@@ -659,10 +711,54 @@ export default function JobDetail() {
                   </div>
                   <div className="flex items-center gap-2">
                     {showRun && (
-                      <button onClick={() => handleRun(step)} disabled={!!runningStep}
-                        className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition">
-                        {runningStep === step.key ? <Loader size={14} className="animate-spin"/> : <Zap size={14}/>}실행
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {step.key === 'tts' && (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={selectedVoiceId}
+                              onChange={(e) => setSelectedVoiceId(e.target.value)}
+                              className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan"
+                            >
+                              <option value="default_ko">기본 한국어 목소리 (gTTS)</option>
+                              {voices.map((v) => (
+                                <option key={v.voiceId} value={v.voiceId}>
+                                  {v.name} ({v.category})
+                                </option>
+                              ))}
+                            </select>
+                            {selectedVoiceId !== 'default_ko' && voices.find(v => v.voiceId === selectedVoiceId) && (
+                              <div className="flex flex-col gap-1">
+                                {voices.find(v => v.voiceId === selectedVoiceId).previewUrl && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[9px] text-navy-400 font-semibold w-8">톤:</span>
+                                    <audio
+                                      src={voices.find(v => v.voiceId === selectedVoiceId).previewUrl}
+                                      controls
+                                      className="h-5 w-24"
+                                      style={{ filter: 'invert(0.9) hue-rotate(180deg)' }}
+                                    />
+                                  </div>
+                                )}
+                                {voices.find(v => v.voiceId === selectedVoiceId).auditionUrl && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[9px] text-accent-cyan font-semibold w-8">낭독:</span>
+                                    <audio
+                                      src={voices.find(v => v.voiceId === selectedVoiceId).auditionUrl}
+                                      controls
+                                      className="h-5 w-24"
+                                      style={{ filter: 'invert(0.9) hue-rotate(180deg)' }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <button onClick={() => handleRun(step)} disabled={!!runningStep}
+                          className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition">
+                          {runningStep === step.key ? <Loader size={14} className="animate-spin"/> : <Zap size={14}/>}실행
+                        </button>
+                      </div>
                     )}
                     {(showManualApprove || showGuidedApprove) && (
                       <button onClick={() => setGateModal({ gate: step.gate, step })}
@@ -780,7 +876,7 @@ export default function JobDetail() {
                                         <img src="${window.location.origin}/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}" width="240" height="135" style="border: 1px solid #dddddd; display: block;" />
                                       </td>
                                       <td style="vertical-align: top; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; text-align: justify; color: #333333;">
-                                        ${img.text || img.prompt || ''}
+                                        ${img.prompt_ko || img.text || img.prompt || ''}
                                       </td>
                                     </tr>
                                   </table>
@@ -842,7 +938,7 @@ export default function JobDetail() {
                                   <div style="flex: 1;">
                                     <div style="font-weight: bold; color: #0d1b2a; font-size: 13px; margin-bottom: 6px;">씬 #${img.index} (${fmt(img.start)} ~ ${fmt(img.start + img.duration)})</div>
                                     <p style="margin-top: 0; margin-bottom: 0; text-align: justify; font-size: 13px; line-height: 1.8;">
-                                      ${img.text || img.prompt || ''}
+                                      ${img.prompt_ko || img.text || img.prompt || ''}
                                     </p>
                                   </div>
                                 </div>
@@ -932,14 +1028,25 @@ export default function JobDetail() {
                       <div>
                         {scriptViewMode === 'paragraphs' ? (
                           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-4 border border-navy-700/50">
-                            {(expandedScript ? (scriptData.script || '') : ((scriptData.script || '').slice(0, 400) + ((scriptData.script || '').length > 400 ? '...' : '')))
-                              .split(/\n+/)
-                              .filter(Boolean)
-                              .map((para, idx) => (
-                                <p key={idx} className="text-sm text-gray-200 leading-relaxed text-justify">
-                                  {para}
-                                </p>
-                              ))}
+                            {(() => {
+                              const sections = scriptData.sections || [];
+                              if (sections.length > 0) {
+                                return sections.map((sec, idx) => (
+                                  <p key={idx} className="text-sm text-gray-200 leading-relaxed text-justify mb-2">
+                                    {sec.content}
+                                  </p>
+                                ));
+                              } else {
+                                return (expandedScript ? (scriptData.script || '') : ((scriptData.script || '').slice(0, 400) + ((scriptData.script || '').length > 400 ? '...' : '')))
+                                  .split(/\n+/)
+                                  .filter(Boolean)
+                                  .map((para, idx) => (
+                                    <p key={idx} className="text-sm text-gray-200 leading-relaxed text-justify">
+                                      {para}
+                                    </p>
+                                  ));
+                              }
+                            })()}
                           </div>
                         ) : scriptViewMode === 'mixed' && sortedImageList.length > 0 ? (
                           <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-4 border border-navy-700/50">
@@ -961,7 +1068,7 @@ export default function JobDetail() {
                                     </span>
                                   </div>
                                   <p className="text-sm text-gray-200 leading-relaxed text-justify">
-                                    {img.text || img.prompt || '(내용 없음)'}
+                                    {img.prompt_ko || img.text || img.prompt || '(내용 없음)'}
                                   </p>
                                 </div>
                               </div>
@@ -1069,9 +1176,26 @@ export default function JobDetail() {
                                       rows={2}
                                     />
                                   ) : (
-                                    <p className="text-sm text-gray-200 leading-relaxed text-justify line-clamp-3">
-                                      {img.text || img.prompt || '(내용 없음)'}
-                                    </p>
+                                    <div className="space-y-1.5">
+                                      <p className="text-sm text-gray-200 leading-relaxed text-justify line-clamp-3">
+                                        {img.prompt_ko || img.text || img.prompt || '(내용 없음)'}
+                                      </p>
+                                      {img.prompt_en && (
+                                        <div className="mt-1">
+                                          <button
+                                            onClick={() => setShowEngPrompt(prev => ({ ...prev, [img.index]: !prev[img.index] }))}
+                                            className="text-xs text-accent-cyan hover:underline flex items-center gap-1"
+                                          >
+                                            {showEngPrompt[img.index] ? '영문 AI 프롬프트 접기' : '영문 AI 프롬프트 보기'}
+                                          </button>
+                                          {showEngPrompt[img.index] && (
+                                            <p className="text-xs text-navy-400 bg-navy-900/40 p-2 rounded border border-navy-700 font-mono mt-1 leading-relaxed">
+                                              {img.prompt_en}
+                                            </p>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -1116,7 +1240,7 @@ export default function JobDetail() {
                                     <button
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
-                                        text: img.text || img.prompt || '',
+                                        text: img.prompt_ko || img.text || img.prompt || '',
                                         section: img.section,
                                         mode: 'image'
                                       })}
@@ -1161,7 +1285,7 @@ export default function JobDetail() {
                                     <button
                                       onClick={() => {
                                         setEditingSceneIndex(img.index);
-                                        setEditingSceneText(img.text || img.prompt || '');
+                                        setEditingSceneText(img.prompt_ko || img.text || img.prompt || '');
                                       }}
                                       className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-white border border-navy-600 px-2.5 py-1.5 rounded transition"
                                     >

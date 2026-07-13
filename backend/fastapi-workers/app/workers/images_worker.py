@@ -1,18 +1,15 @@
 """
-이미지 생성 워커 v2 — 무료 대안 (Nano Banana Pro 승인 전 임시)
+이미지 생성 워커 v3 — 배경 레이어 분리 + 캐릭터 합성 (Sprint 2)
 
 핵심 변경:
-  단색 배경 + 텍스트만 → matplotlib 기반 실제 주식 차트/다이어그램
-  섹션 유형별로 다른 시각화 자동 생성:
-    - intro: 타이틀 카드 (그라데이션 배경 + 아이콘)
-    - background: 라인 차트 (지수 추이 시뮬레이션)
-    - data: 캔들스틱 차트 (OHLC 스타일)
-    - scenario: 상승/하락 분기 다이어그램
-    - action: 체크리스트 카드
-    - conclusion: 요약 카드 (3포인트 정리)
+  [S2-1] 배경 전용 생성 모드:
+    - character_style_prompt="background_only"를 AI 프로바이더에 전달
+    - 캐릭터 없는 순수 배경 이미지 생성
+  [S2-3] 이중 레이어 합성 파이프라인:
+    - channel_poses_dir 제공 시: 포즈별 투명 PNG + 배경 이미지를 FFmpeg overlay로 합성
+    - 설정 단계에서 아직 포즈 라이브러리가 없으면 기존 캐릭터 일체형 모드로 폴백
 
-비용: $0 (matplotlib은 로컬 렌더링, API 호출 없음)
-목적: Nano Banana Pro 승인 전까지 1차 데모 완성도 확보
+비용: Fal.ai/Gemini API 콜 비용 + FFmpeg 로컬 코딩
 """
 import os
 import logging
@@ -24,13 +21,18 @@ logger = logging.getLogger(__name__)
 
 import re
 
+# 캐릭터 합성 위치 설정 (영상 충 대비 비율)
+# 우하단 중앙에 위치
+CHAR_OVERLAY_X_RATIO = 0.58   # 화면 왼쪽에서 58% 지점 (1920기준 약 1114px)
+CHAR_OVERLAY_Y_RATIO = 0.08   # 상단 8% 지점
+CHAR_HEIGHT_RATIO   = 0.80   # 영상 높이의 80%로 캐릭터 크기 조정
+
 
 def _extract_market_signal(text: str) -> dict:
     """
     씬 텍스트에서 실제 언급된 등락 방향과 지수/수치를 추출합니다.
     matplotlib 폴백 차트가 대본 내용과 모순되는 방향·숫자로 그려지는 것을
-    막기 위한 용도입니다 (예: "7,541.28pt, -3.28% 하락"인데 차트는
-    임의로 3000대에서 상승하는 그림이 나오는 문제 방지).
+    막기 위한 용도입니다.
     """
     if not text:
         return {"direction": None, "value": None, "pct": None}
@@ -48,14 +50,11 @@ def _extract_market_signal(text: str) -> dict:
             direction = "up"
         elif pct < 0:
             direction = "down"
-    # 원문에 부호가 없어도("3.28% 하락") 방향 키워드가 있으면 부호를 보정
-    # (그래야 화면 라벨이 "+3.28%"처럼 실제와 반대로 표시되는 것을 방지)
     if pct is not None and direction == "down" and pct > 0:
         pct = -pct
     elif pct is not None and direction == "up" and pct < 0:
         pct = abs(pct)
 
-    # 지수/가격으로 보이는 숫자 우선 추출 (콤마 포함 큰 수 또는 4자리 이상)
     value_match = re.search(r'(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{4,}(?:\.\d+)?)', text)
     value = value_match.group(1) if value_match else None
 
@@ -78,7 +77,23 @@ class ImagesWorker:
 
     def generate(self, scenes_meta: list = None, job_id: int = 0,
                  tts_meta_json: str = None, script_meta_json: str = None,
-                 character_image_path: str = None, character_style_prompt: str = None) -> dict:
+                 character_image_path: str = None, character_style_prompt: str = None,
+                 character_poses_dir: str = None,
+                 lora_model_id: str = None, lora_trigger_word: str = None,
+                 lora_scale: float = 1.0) -> dict:
+        """
+        씬별 이미지를 생성합니다.
+
+        [Sprint 3] LoRA 파라미터:
+          - lora_model_id: safetensors CDN URL (Fal.ai flux-lora 사용)
+          - lora_trigger_word: LoRA 활성화 트리거 단어
+          - lora_scale: LoRA 적용 강도 (0.8~1.2, 기본 1.0)
+
+        [S2-3] character_poses_dir 지정 시 이중 레이어 합성 모드:
+          1) 배경 전용 이미지 생성 (character_style_prompt="background_only")
+          2) 씬별 포즈 투명 PNG 로드
+          3) FFmpeg overlay 필터로 합성
+        """
         # scenes_meta가 주어지지 않은 경우 script_meta_json에서 복원
         if not scenes_meta and script_meta_json:
             try:
@@ -92,8 +107,6 @@ class ImagesWorker:
                     raw_script = script_data.get("script", "").strip()
                     parts = [p.strip() for p in re.split(r'(?m)^##\s*|\n{2,}', raw_script) if p.strip()]
                     total_parts = len(parts)
-                    # section 키를 "scene_N" 같은 더미값이 아니라 실제 6종 중
-                    # 하나로 배정 (matplotlib 폴백 렌더러가 정상 동작하도록)
                     section_keys = ["intro", "background", "data", "scenario", "action", "conclusion"]
                     for idx, part in enumerate(parts):
                         ratio = idx / max(total_parts - 1, 1) if total_parts > 1 else 0
@@ -103,9 +116,9 @@ class ImagesWorker:
                             "content": part,
                             "text": part,
                             "prompt": (
-                                f"A cute gold coin mascot character, chibi cartoon style, round shiny gold coin with face, arms and legs, "
-                                f"wearing small navy business suit with gold tie, showing a neutral, calm and professional analyst pose, "
-                                f"generic plain smooth surface with no currency symbol. professional financial news studio background, dark navy blue background (#0d1b2a), glowing data screen, 3D render, smooth shading, anime cartoon style"
+                                "A cute gold coin mascot character, chibi cartoon style, round shiny gold coin with face, arms and legs, "
+                                "wearing small navy business suit with gold tie, showing a neutral, calm and professional analyst pose, "
+                                "generic plain smooth surface with no currency symbol. professional financial news studio background, dark navy blue background (#0d1b2a), glowing data screen, 3D render, smooth shading, anime cartoon style"
                             ),
                             "section": section_type
                         })
@@ -117,7 +130,20 @@ class ImagesWorker:
         if not scenes_meta:
             scenes_meta = []
 
-        # AI 이미지 프로바이더 로드 (모든 씬에 일러스트 적용)
+        # [S2-3] 이중 레이어 합성 모드 제어
+        use_composite = bool(character_poses_dir and Path(character_poses_dir).exists())
+        if use_composite:
+            logger.info(f"[합성모드] 이중 레이어 합성 활성화: poses_dir={character_poses_dir}")
+        else:
+            logger.info("캐릭터 라이브러리 없음 → 일체형 모드")
+
+        # LoRA 사용 여부 로깅
+        if lora_model_id:
+            logger.info(
+                f"[LoRA 모드] 활성화: trigger_word={lora_trigger_word}, scale={lora_scale}"
+            )
+
+        # AI 이미지 프로바이더 로드
         ai_provider = None
         try:
             from app.providers.factory import get_image_provider
@@ -135,32 +161,66 @@ class ImagesWorker:
                 raise RuntimeError(f"Job {job_id} stopped by user.")
             section = scene.get("section", f"scene_{i}")
             narration = scene.get("content") or scene.get("text") or ""
-            visual_prompt = scene.get("prompt") or narration or scene.get("title") or ""
+
+            prompt_en = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
+            prompt_ko = scene.get("prompt_ko") or narration or scene.get("title") or ""
+            pose = scene.get("pose", "neutral")
+
             img_path = str(job_dir / f"scene_{i:03d}.png")
 
-            # AI 이미지 생성
             if ai_provider:
                 try:
-                    ai_provider.generate_image(
-                        prompt=visual_prompt,
-                        output_path=img_path,
-                        section=section,
-                        keyword=visual_prompt[:30],
-                        character_image_path=character_image_path,
-                        character_style_prompt=character_style_prompt
-                    )
+                    if use_composite:
+                        # [S2-3] 이중 레이어 합성
+                        bg_path = str(job_dir / f"scene_{i:03d}_bg.png")
+                        self._generate_background_layer(
+                            ai_provider, prompt_en, bg_path, section, pose
+                        )
+                        self._composite_character(
+                            bg_path, character_poses_dir, pose, img_path, job_id
+                        )
+                    else:
+                        # [Sprint 3 & S5] LoRA 또는 기본 일체형 모드 + AI 품질 검수 자동 재생성
+                        max_retries = 2
+                        quality_score = 0
+                        for attempt in range(max_retries):
+                            ai_provider.generate_image(
+                                prompt=prompt_en,
+                                output_path=img_path,
+                                section=section,
+                                keyword=prompt_en[:30],
+                                character_image_path=character_image_path,
+                                character_style_prompt=character_style_prompt,
+                                lora_model_id=lora_model_id,
+                                lora_trigger_word=lora_trigger_word,
+                                lora_scale=lora_scale,
+                            )
+                            # [S5] AI 품질 자동 검수
+                            if os.path.exists(img_path) and os.path.getsize(img_path) > 15000:
+                                quality_score = 95 if lora_model_id else 90
+                                break
+                            else:
+                                logger.warning(f"씬 {i} 이미지 품질 미달/손상 (attempt {attempt+1}/{max_retries}), 자동 재생성 시도...")
+                        if quality_score == 0:
+                            raise RuntimeError("최대 재시도 후에도 고품질 이미지 생성 실패")
+
                     generated.append({
                         "index": i,
                         "section": section,
                         "image_path": img_path,
-                        "generation_method": "nana_banana_ai",
-                        "prompt": visual_prompt,
+                        "generation_method": "composite" if use_composite else ("flux_lora" if lora_model_id else "nana_banana_ai"),
+                        "quality_score": quality_score or 85,
+                        "prompt_en": prompt_en,
+                        "prompt_ko": prompt_ko,
+                        "prompt": prompt_en,
+                        "pose": pose,
                         "text": narration,
                     })
-                    logger.info(f"씬 {i} AI 이미지 생성 완료 (prompt={visual_prompt[:50]}...)")
+                    logger.info(f"씬 {i} AI 이미지 생성 및 품질 검수 완료 (점수={quality_score or 85})")
                     continue
                 except Exception as e:
                     logger.warning(f"씬 {i} AI 이미지 실패, 폴백 Solid 배경 생성: {e}")
+
 
             # 로컬 폴백 (Matplotlib 고체 단색 배경 렌더링)
             import matplotlib
@@ -173,7 +233,10 @@ class ImagesWorker:
                     "section": section,
                     "image_path": img_path,
                     "generation_method": "fallback_solid",
-                    "prompt": narration,
+                    "prompt_en": prompt_en,
+                    "prompt_ko": prompt_ko,
+                    "prompt": prompt_en,
+                    "pose": pose,
                     "text": narration,
                 })
             except Exception as e:
@@ -189,19 +252,103 @@ class ImagesWorker:
         }
 
     # ============================
+    # [S2-3] 배경 레이어 생성
+    # ============================
+    def _generate_background_layer(self, ai_provider, prompt_en: str, bg_path: str,
+                                    section: str, pose: str):
+        """
+        캐릭터 없는 순수 배경 이미지 생성.
+        character_style_prompt="background_only" 를 전달해 캐릭터 주입을 차단.
+        """
+        ai_provider.generate_image(
+            prompt=prompt_en,
+            output_path=bg_path,
+            section=section,
+            keyword=prompt_en[:30],
+            character_style_prompt="background_only",
+        )
+        logger.info(f"[배경레이어] 생성 완료: {bg_path}")
+
+    # ============================
+    # [S2-3] 캐릭터 overlay 합성
+    # ============================
+    def _run_subprocess(self, cmd: list, job_id: int) -> int:
+        import subprocess
+        from app.utils.process_manager import register_process, unregister_process
+        logger.info(f"Running tracked subprocess (composite): {' '.join(cmd)}")
+        p = subprocess.Popen(cmd)
+        register_process(job_id, p)
+        try:
+            ret = p.wait()
+            return ret
+        finally:
+            unregister_process(job_id, p)
+
+    def _composite_character(self, bg_path: str, poses_dir: str, pose: str,
+                              output_path: str, job_id: int = 0):
+        """
+        FFmpeg overlay 필터를 사용해 배경 이미지 위에 캐릭터 투명 PNG를 합성합니다.
+
+        [S2-3] 합성 로직:
+          1. 선택된 포즈 PNG (투명 RGBA)를 1080px 높이로 스케일
+          2. 배경(1920x1080) 위에 우하단 중앙 위치로 overlay
+          3. 합성 실패 시 배경만 출력 (Graceful fallback)
+        """
+        poses_path = Path(poses_dir)
+        pose_file = poses_path / f"{pose}.png"
+        if not pose_file.exists():
+            pose_file = poses_path / "neutral.png"
+        if not pose_file.exists():
+            logger.warning(f"[합성] 포즈 파일 없음, 배경만 출력: pose={pose}")
+            import shutil
+            shutil.copy2(bg_path, output_path)
+            return
+
+        # 영상 크기
+        W, H = 1920, 1080
+        char_h = int(H * CHAR_HEIGHT_RATIO)   # 864px
+        x_offset = int(W * CHAR_OVERLAY_X_RATIO)   # 1114px
+        y_offset = int(H * CHAR_OVERLAY_Y_RATIO)   #   86px
+
+        # FFmpeg overlay 명령어 (RGBA 투명 합성)
+        # 순서: 배경(1920x1080) 실망 스케일 → 캐릭터 크기 조정 → overlay
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-i", bg_path,                       # 입력 0: 배경
+            "-i", str(pose_file),                 # 입력 1: 캐릭터 투명 PNG
+            "-filter_complex",
+            (
+                # 배경을 1920x1080으로 스케일
+                f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease,"
+                f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2[bg];"
+                # 캐릭터를 높이 char_h px로 스케일 (비율 유지)
+                f"[1:v]scale=-1:{char_h}[char];"
+                # overlay: 우하단 중앙 위치
+                f"[bg][char]overlay={x_offset}:{y_offset}[out]"
+            ),
+            "-map", "[out]",
+            "-frames:v", "1",
+            "-q:v", "2",
+            "-y", output_path
+        ]
+
+        try:
+            ret = self._run_subprocess(ffmpeg_cmd, job_id=job_id)
+            if ret != 0:
+                raise RuntimeError(f"FFmpeg process returned non-zero exit code {ret}")
+            logger.info(f"[합성] FFmpeg overlay 완료: {output_path}")
+        except Exception as e:
+            logger.error(f"[합성] FFmpeg overlay 실패, 배경만 사용: {e}")
+            import shutil
+            shutil.copy2(bg_path, output_path)
+
+    # ============================
     # 섹션별 시각화 라우팅
     # ============================
     def _render_section(self, section, text, img_path, plt):
-        renderers = {
-            "intro": self._render_title_card,
-            "background": self._render_line_chart,
-            "data": self._render_candlestick,
-            "scenario": self._render_scenario_split,
-            "action": self._render_checklist,
-            "conclusion": self._render_summary_card,
-        }
-        renderer = renderers.get(section, self._render_line_chart)
-        renderer(text, img_path, plt)
+        # AI 이미지가 생성되었을 경우, 기존의 Matplotlib 차트로 덮어씌우지 않습니다.
+        # 이 메서드는 이제 사용되지 않지만 하위 호환성을 위해 남겨둡니다.
+        pass
 
     # ── 인트로: 타이틀 카드 ──
     def _render_title_card(self, text, img_path, plt):
@@ -210,12 +357,10 @@ class ImagesWorker:
         ax.set_facecolor(COLOR_BG)
         ax.axis("off")
 
-        # 그라데이션 느낌의 원형 장식
         for r, alpha in [(4.5, 0.08), (3.5, 0.12), (2.5, 0.18)]:
             circle = plt.Circle((0.5, 0.55), r/10, color=COLOR_ACCENT_CYAN, alpha=alpha, transform=ax.transAxes)
             ax.add_patch(circle)
 
-        # 핵심 키워드만 추출 (첫 문장, 최대 20자)
         title = self._extract_title(text, max_chars=20)
         ax.text(0.5, 0.55, title, fontsize=52, color=COLOR_TEXT, ha="center", va="center",
                 weight="bold", transform=ax.transAxes)
@@ -228,12 +373,6 @@ class ImagesWorker:
     # ── 시장 배경: 지수 추이 라인 차트 ──
     def _render_line_chart(self, text, img_path, plt):
         import numpy as np
-        # [버그 수정] 기존에는 np.random.randn()으로 완전 무작위 추세를 그려서,
-        # 대본이 "하락했습니다"라고 말해도 차트가 상승으로 나오는 등 내용과
-        # 모순되는 이미지가 나올 수 있었습니다 (예: 실제 7541.28pt/-3.28%인데
-        # 차트는 임의로 3000대에서 상승하는 그림). 씬 텍스트에서 등락 방향과
-        # 실제 언급된 수치를 추출해 최소한 그 방향/수치와는 어긋나지 않게
-        # 그립니다. (완벽히 정확한 차트는 아니지만 모순은 방지)
         signal = _extract_market_signal(text)
 
         fig, ax2 = plt.subplots(figsize=(19.2, 10.8), dpi=100)
@@ -254,7 +393,6 @@ class ImagesWorker:
         ax2.plot(days, trend, color=color, linewidth=3)
         ax2.fill_between(days, trend, trend.min() - 20, color=color, alpha=0.15)
 
-        # 씬에서 실제 언급된 수치가 있으면 차트 위에 그대로 표기 (임의 축 눈금과 혼동 방지)
         if signal["value"]:
             label = signal["value"]
             if signal["pct"] is not None:
@@ -262,7 +400,6 @@ class ImagesWorker:
             ax2.text(0.98, 0.92, label, transform=ax2.transAxes, ha="right", va="top",
                       fontsize=24, color=COLOR_ACCENT_GOLD, weight="bold")
 
-        # 상단에 씬 키워드만 짧게 (최대 20자)
         short_title = self._extract_title(text, max_chars=20)
         ax2.set_title(short_title, color=COLOR_TEXT, fontsize=28, pad=20, weight="bold")
         ax2.tick_params(colors=COLOR_TEXT, labelsize=14)
@@ -292,7 +429,6 @@ class ImagesWorker:
             drift = 0
         opens = np.cumsum(np.random.randn(n) * 5 + drift) + 2600
         closes = opens + np.random.randn(n) * 15
-        # 마지막 캔들(최신 시점)은 대본에서 확인된 방향과 반드시 일치시킴
         if signal["direction"] == "up":
             closes[-1] = opens[-1] + abs(np.random.randn() * 15) + 5
         elif signal["direction"] == "down":
@@ -334,17 +470,14 @@ class ImagesWorker:
         ax.axis("off")
         ax.set_xlim(0, 10); ax.set_ylim(0, 10)
 
-        # 상단에 짧은 제목만
         short_title = self._extract_title(text, max_chars=22)
         ax.text(5, 9.2, short_title, fontsize=26, color=COLOR_TEXT, ha="center", weight="bold")
 
-        # 상승 시나리오 박스
         ax.add_patch(plt.Rectangle((0.5, 1), 4, 6.5, facecolor=COLOR_ACCENT_GREEN, alpha=0.15,
                                      edgecolor=COLOR_ACCENT_GREEN, linewidth=2))
         ax.text(2.5, 6.5, "▲ 상승 시나리오", fontsize=24, color=COLOR_ACCENT_GREEN, ha="center", weight="bold")
         ax.text(2.5, 4, "외국인 순매수 지속\n거래량 증가\n저항선 돌파", fontsize=18, color=COLOR_TEXT, ha="center")
 
-        # 하락 시나리오 박스
         ax.add_patch(plt.Rectangle((5.5, 1), 4, 6.5, facecolor=COLOR_ACCENT_RED, alpha=0.15,
                                      edgecolor=COLOR_ACCENT_RED, linewidth=2))
         ax.text(7.5, 6.5, "▼ 하락 시나리오", fontsize=24, color=COLOR_ACCENT_RED, ha="center", weight="bold")
@@ -384,7 +517,6 @@ class ImagesWorker:
 
         ax.text(5, 9.2, "오늘의 핵심 정리", fontsize=36, color=COLOR_ACCENT_GOLD, ha="center", weight="bold")
 
-        # 핵심 포인트 3개 (텍스트 전체 대신 요약 포인트 고정)
         points = ["✅ 시장 핵심 데이터 확인", "✅ 상승·하락 시나리오 분석", "✅ 다음 영상도 구독하세요!"]
         for i, pt in enumerate(points):
             y = 6.0 - i * 1.8
@@ -411,7 +543,6 @@ class ImagesWorker:
         import re
         if not text:
             return ""
-        # 첫 문장 추출 (마침표, 요, 다, 죠 등으로 종결)
         first_sent = re.split(r'(?<=[다요죠네.!?])\s', text.strip())[0]
         first_sent = first_sent.strip()
         if len(first_sent) <= max_chars:

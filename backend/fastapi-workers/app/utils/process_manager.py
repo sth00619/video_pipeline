@@ -125,7 +125,14 @@ def stop_job_processes(job_id: int):
         logger.info(f"Job {j_id} 활성 프로세스 {len(processes)}개 강제 종료 시작 (이 워커 프로세스 내)...")
         for p in list(processes):
             try:
-                p.kill()
+                if os.name == 'nt':
+                    # Windows: shell=True로 실행된 cmd.exe와 그 자식 프로세스(ffmpeg 등) 트리 전체를 강제 종료
+                    import subprocess as sp_lib
+                    sp_lib.run(f"taskkill /F /T /PID {p.pid}", shell=True, stdout=sp_lib.DEVNULL, stderr=sp_lib.DEVNULL)
+                    logger.info(f"Job {j_id} Windows 프로세스 트리 강제 종료 명령 전송 (PID: {p.pid})")
+                else:
+                    # Unix/Linux
+                    p.kill()
                 logger.info(f"Job {j_id} 프로세스 강제 종료 성공 (PID: {p.pid})")
             except Exception as e:
                 logger.error(f"Job {j_id} 프로세스 종료 중 오류: {e}")

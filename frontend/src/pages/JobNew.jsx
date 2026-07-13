@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, Sparkles, Target, Sliders, DollarSign,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import { jobsApi } from '../api/jobs'
+import apiClient from '../api/client'
 
 /**
  * 새 영상 만들기 — 3단계 마법사 (Wizard).
@@ -64,6 +65,13 @@ export default function JobNew() {
   const [step, setStep] = useState(1)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState(null)
+  const [channels, setChannels] = useState([])
+
+  useEffect(() => {
+    apiClient.get('/channels')
+      .then(r => setChannels(r.data))
+      .catch(e => console.error('채널 조회 실패:', e))
+  }, [])
 
   const [form, setForm] = useState({
     title: '',
@@ -166,6 +174,22 @@ export default function JobNew() {
                 <p className="text-xs text-gray-500 mt-1.5">
                   구체적일수록 좋습니다. "주식"보다는 "삼성전자 반도체 실적"처럼 대상을 좁혀 주세요.
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">대상 채널</label>
+                <select
+                  value={form.channelId || ''}
+                  onChange={e => setForm({ ...form, channelId: e.target.value || null })}
+                  className="w-full bg-navy-700 border border-navy-600 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+                >
+                  <option value="">채널 선택 안 함 (기본)</option>
+                  {channels.map(c => (
+                    <option key={c.channelId} value={c.channelId}>
+                      {c.channelName} ({c.channelId})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

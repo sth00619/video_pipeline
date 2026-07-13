@@ -247,7 +247,7 @@ class KeywordSearchRequest(BaseModel):
     job_id: Optional[int] = 0
 
 @app.post("/workers/keyword/search")
-async def keyword_search(request: KeywordSearchRequest):
+def keyword_search(request: KeywordSearchRequest):
     try:
         return get_keyword_worker().search(category=request.category, seed=request.seed, limit=request.limit, outperformer_count=request.outperformer_count, job_id=request.job_id or 0)
     except Exception as e:
@@ -259,7 +259,7 @@ class TrendingRequest(BaseModel):
     limit: int = 10
 
 @app.post("/workers/trending/youtube")
-async def trending_youtube(request: TrendingRequest):
+def trending_youtube(request: TrendingRequest):
     try:
         from app.providers.factory import get_trending_video_analyzer
         analyzer = get_trending_video_analyzer()
@@ -280,7 +280,7 @@ class ScriptGenerateRequest(BaseModel):
     market_data: Optional[dict] = None  # KeywordWorker에서 전달된 market_snapshot
 
 @app.post("/workers/script/generate")
-async def script_generate(request: ScriptGenerateRequest):
+def script_generate(request: ScriptGenerateRequest):
     try:
         return get_script_worker().generate(
             keyword=request.keyword,
@@ -303,7 +303,7 @@ class TtsGenerateRequest(BaseModel):
     tts_speed: Optional[float] = None  # 생략 시 runtime_config의 현재 기본값 사용
 
 @app.post("/workers/tts/generate")
-async def tts_generate(request: TtsGenerateRequest):
+def tts_generate(request: TtsGenerateRequest):
     try:
         return get_tts_worker().synthesize(
             request.script, request.voice_id, request.job_id or 0,
@@ -318,6 +318,55 @@ def download_tts(path: str):
     return FileResponse(path, media_type="audio/mpeg", filename=os.path.basename(path))
 
 
+@app.get("/workers/tts/voices")
+def get_elevenlabs_voices():
+    """ElevenLabs 계정에서 사용 가능한 모든 성우 목소리 목록 조회"""
+    api_key = os.environ.get("ELEVENLABS_API_KEY", "")
+    if not api_key:
+        return [
+            {"voice_id": "JBFqnCBsd6RMkjVDRZzb", "name": "George (Warm Storyteller - Default)"},
+            {"voice_id": "IKne3meq5aSn9XLyUdCD", "name": "Charlie (Deep Male)"},
+            {"voice_id": "SAz9YHcvj6GT2YYXdXww", "name": "River (Calm Informative)"},
+            {"voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice (Engaging Educator)"}
+        ]
+    try:
+        import requests
+        resp = requests.get(
+            "https://api.elevenlabs.io/v1/voices",
+            headers={"xi-api-key": api_key},
+            timeout=10
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            voices = data.get("voices", [])
+            return [
+                {
+                    "voice_id": v.get("voice_id"),
+                    "name": v.get("name"),
+                    "category": v.get("category"),
+                    "description": v.get("description") or f"{v.get('labels', {}).get('accent', '')} {v.get('labels', {}).get('gender', '')}",
+                    "preview_url": v.get("preview_url")
+                }
+                for v in voices
+            ]
+        else:
+            logger.warning(f"ElevenLabs Voices API 실패: {resp.status_code} {resp.text}")
+            return [
+                {"voice_id": "JBFqnCBsd6RMkjVDRZzb", "name": "George (Warm Storyteller - Default)"},
+                {"voice_id": "IKne3meq5aSn9XLyUdCD", "name": "Charlie (Deep Male)"},
+                {"voice_id": "SAz9YHcvj6GT2YYXdXww", "name": "River (Calm Informative)"},
+                {"voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice (Engaging Educator)"}
+            ]
+    except Exception as e:
+        logger.error(f"ElevenLabs 목소리 조회 중 오류: {e}")
+        return [
+            {"voice_id": "JBFqnCBsd6RMkjVDRZzb", "name": "George (Warm Storyteller - Default)"},
+            {"voice_id": "IKne3meq5aSn9XLyUdCD", "name": "Charlie (Deep Male)"},
+            {"voice_id": "SAz9YHcvj6GT2YYXdXww", "name": "River (Calm Informative)"},
+            {"voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice (Engaging Educator)"}
+        ]
+
+
 # ============================
 # Phase 3-4 — 이미지 + GIF
 # ============================
@@ -327,20 +376,32 @@ class ImagesGenerateRequest(BaseModel):
     job_id: Optional[int] = 0
     character_image_path: Optional[str] = None
     character_style_prompt: Optional[str] = None
+    character_poses_dir: Optional[str] = None  # [S2-4] 이중 레이어 합성용 포즈 디렉토리
+    # [Sprint 3] LoRA 캐릭터 파인튜닝 파라미터
+    lora_model_id: Optional[str] = None        # safetensors CDN URL (Fal.ai flux-lora)
+    lora_trigger_word: Optional[str] = None    # LoRA 활성화 트리거 단어
+    lora_scale: Optional[float] = 1.0          # LoRA 적용 강도 (0.8~1.2)
+
 
 @app.post("/workers/images/generate")
-async def images_generate(request: ImagesGenerateRequest):
+def images_generate(request: ImagesGenerateRequest):
     try:
         return get_images_worker().generate(
             tts_meta_json=request.tts_meta,
             script_meta_json=request.script_meta,
             job_id=request.job_id or 0,
             character_image_path=request.character_image_path,
-            character_style_prompt=request.character_style_prompt
+            character_style_prompt=request.character_style_prompt,
+            character_poses_dir=request.character_poses_dir,
+            # [Sprint 3] LoRA 파라미터 전달
+            lora_model_id=request.lora_model_id,
+            lora_trigger_word=request.lora_trigger_word,
+            lora_scale=request.lora_scale,
         )
     except Exception as e:
         logger.exception("이미지 생성 실패")
         raise HTTPException(500, f"이미지 생성 실패: {str(e)}")
+
 
 
 @app.get("/workers/images/download")
@@ -362,7 +423,7 @@ class LongformGenerateRequest(BaseModel):
     job_id: Optional[int] = 0
 
 @app.post("/workers/longform/generate")
-async def longform_generate(request: LongformGenerateRequest):
+def longform_generate(request: LongformGenerateRequest):
     try:
         return get_longform_worker().assemble(
             tts_meta_json=request.tts_meta,
@@ -386,6 +447,7 @@ class SingleImageGenerateRequest(BaseModel):
     job_id: int
     character_image_path: Optional[str] = None
     character_style_prompt: Optional[str] = None
+    character_poses_dir: Optional[str] = None  # [S2-4]
 
 @app.post("/workers/images/generate-single")
 async def generate_single_image(request: SingleImageGenerateRequest):
@@ -393,7 +455,27 @@ async def generate_single_image(request: SingleImageGenerateRequest):
         job_dir = DATA_DIR / "jobs" / str(request.job_id) / "images"
         job_dir.mkdir(parents=True, exist_ok=True)
         img_path = str(job_dir / f"scene_{request.index:03d}.png")
-        
+
+        images_worker = get_images_worker()
+
+        # [S2-3] 이중 레이어 합성 모드 (poses_dir 제공 시)
+        if request.character_poses_dir and Path(request.character_poses_dir).exists():
+            ai_provider = None
+            try:
+                from app.providers.factory import get_image_provider
+                ai_provider = get_image_provider()
+            except Exception:
+                pass
+            if ai_provider:
+                bg_path = str(job_dir / f"scene_{request.index:03d}_bg.png")
+                images_worker._generate_background_layer(
+                    ai_provider, request.text, bg_path, request.section, "neutral"
+                )
+                images_worker._composite_character(
+                    bg_path, request.character_poses_dir, "neutral", img_path, request.job_id
+                )
+                return {"status": "ok", "image_path": img_path}
+
         # AI 이미지 생성 시도 (일러스트 모드)
         ai_provider = None
         try:
@@ -420,12 +502,145 @@ async def generate_single_image(request: SingleImageGenerateRequest):
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        images_worker = get_images_worker()
         images_worker._render_section(request.section, request.text, img_path, plt)
         return {"status": "ok", "image_path": img_path}
     except Exception as e:
         logger.exception("단일 이미지 생성 실패")
         raise HTTPException(500, f"단일 이미지 생성 실패: {str(e)}")
+
+# ============================
+# [S2-2] 캐릭터 포즈 라이브러리 생성
+# ============================
+class CharacterLibraryRequest(BaseModel):
+    channel_id: str
+    character_description: str
+    regenerate: bool = False
+
+@app.post("/workers/character-library/generate")
+async def generate_character_library(request: CharacterLibraryRequest):
+    """
+    [S2-2] 주어진 캐릭터 설명으로 7개 포즈(neutral/happy/surprised/worried/thinking/explaining/pointing)를
+    배치 생성하고 배경 제거 후 /app/data/characters/<channel_id>/poses/ 에 저장합니다.
+    """
+    try:
+        from app.workers.character_library_worker import CharacterLibraryWorker
+        worker = CharacterLibraryWorker()
+        result = worker.generate_library(
+            channel_id=request.channel_id,
+            character_description=request.character_description,
+            regenerate=request.regenerate
+        )
+        return result
+    except Exception as e:
+        logger.exception("캐릭터 라이브러리 생성 실패")
+        raise HTTPException(500, f"생성 실패: {str(e)}")
+
+@app.get("/workers/character-library/list")
+async def list_character_libraries():
+    """[S2-2] 구성된 모든 칔널 라이브러리 목록 조회"""
+    try:
+        from app.workers.character_library_worker import CharacterLibraryWorker
+        return {"channels": CharacterLibraryWorker().list_channels()}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.get("/workers/character-library/{channel_id}/pose/{pose}")
+async def get_pose_image(channel_id: str, pose: str):
+    """[S2-2] 특정 칔널의 포즈 이미지 다운로드"""
+    try:
+        from app.workers.character_library_worker import CharacterLibraryWorker
+        path = CharacterLibraryWorker().get_pose_path(channel_id, pose)
+        if not path:
+            raise HTTPException(404, f"포즈 이미지 없음: channel={channel_id}, pose={pose}")
+        return FileResponse(path, media_type="image/png", filename=f"{channel_id}_{pose}.png")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ============================
+# [Sprint 3] LoRA 캐릭터 파인튜닝
+# ============================
+
+@app.post("/workers/lora/train")
+async def lora_train(
+    channel_id: str = Query(..., description="채널 고유 ID"),
+    trigger_word: str = Query(default="mycoin", description="LoRA 활성화 트리거 단어 (영문+숫자만)"),
+    steps: int = Query(default=1000, description="학습 스텝 수 (권장: 1000~2000)"),
+    is_style: bool = Query(default=False, description="스타일 LoRA 여부 (False=캐릭터/주제 LoRA)"),
+    zip_file: UploadFile = File(..., description="캐릭터 레퍼런스 이미지 ZIP 파일"),
+):
+    """
+    [Sprint 3] 채널 마스코트 캐릭터 LoRA 파인튜닝 학습 시작.
+
+    캐릭터 이미지(최소 10~20장)를 ZIP으로 묶어 업로드하면
+    Fal.ai flux-lora-fast-training 으로 개인화 LoRA 모델을 학습합니다.
+
+    - 학습 비용: ~$3~5 / 1회
+    - 소요 시간: 약 5~15분
+    - 완료 후 GET /workers/lora/status/{request_id} 로 상태 조회
+    - COMPLETED 시 반환된 lora_model_url 을 채널 프로필 loraModelId에 저장
+    """
+    try:
+        from app.workers.lora_trainer_worker import LoraTrainerWorker
+
+        # ZIP 파일 임시 저장
+        zip_data = await zip_file.read()
+        lora_dir = DATA_DIR / "lora" / channel_id
+        lora_dir.mkdir(parents=True, exist_ok=True)
+        zip_path = str(lora_dir / "reference_images.zip")
+        with open(zip_path, "wb") as f:
+            f.write(zip_data)
+        logger.info(f"LoRA 학습 ZIP 저장: {zip_path} ({len(zip_data)//1024}KB)")
+
+        worker = LoraTrainerWorker()
+        result = worker.train(
+            channel_id=channel_id,
+            zip_path=zip_path,
+            trigger_word=trigger_word,
+            steps=steps,
+            is_style=is_style,
+        )
+        return result
+    except Exception as e:
+        logger.exception("LoRA 학습 시작 실패")
+        raise HTTPException(500, f"LoRA 학습 시작 실패: {str(e)}")
+
+
+@app.get("/workers/lora/status/{request_id}")
+async def lora_status(request_id: str):
+    """
+    [Sprint 3] LoRA 학습 진행 상태 조회.
+
+    응답 status:
+      - IN_QUEUE: 큐 대기 중
+      - IN_PROGRESS: 학습 진행 중
+      - COMPLETED: 완료 (lora_model_url 포함)
+      - FAILED / ERROR: 실패
+    """
+    try:
+        from app.workers.lora_trainer_worker import LoraTrainerWorker
+        worker = LoraTrainerWorker()
+        return worker.get_status(request_id)
+    except Exception as e:
+        logger.exception("LoRA 상태 조회 실패")
+        raise HTTPException(500, f"LoRA 상태 조회 실패: {str(e)}")
+
+
+@app.get("/workers/lora/channel/{channel_id}")
+async def lora_channel_meta(channel_id: str):
+    """[Sprint 3] 채널의 LoRA 학습 메타데이터 조회"""
+    try:
+        from app.workers.lora_trainer_worker import LoraTrainerWorker
+        meta = LoraTrainerWorker().get_channel_training_meta(channel_id)
+        if not meta:
+            raise HTTPException(404, f"채널 '{channel_id}'의 LoRA 학습 이력 없음")
+        return meta
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 # ============================
 # 디버깅
@@ -559,6 +774,9 @@ class ThumbnailRequest(BaseModel):
     output_path: str
     character_image_path: Optional[str] = None
     character_style_prompt: Optional[str] = None
+    lora_model_id: Optional[str] = None
+    lora_trigger_word: Optional[str] = None
+    lora_scale: Optional[float] = 1.0
 
 
 @app.post("/workers/youtube/thumbnail")
@@ -583,7 +801,12 @@ def generate_thumbnail(req: ThumbnailRequest):
             prompt=prompt,
             output_path=req.output_path,
             section="intro",
-            keyword=req.title[:30]
+            keyword=req.title[:30],
+            character_image_path=req.character_image_path,
+            character_style_prompt=req.character_style_prompt,
+            lora_model_id=req.lora_model_id,
+            lora_trigger_word=req.lora_trigger_word,
+            lora_scale=req.lora_scale,
         )
         return {"status": "ok", "output_path": req.output_path}
     except Exception as e:

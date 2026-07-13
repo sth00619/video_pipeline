@@ -9,5 +9,4 @@ public class VideoPipelineApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(VideoPipelineApplication.class, args);
 	}
-
 }

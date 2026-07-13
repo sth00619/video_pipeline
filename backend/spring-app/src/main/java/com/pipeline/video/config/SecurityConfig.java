@@ -41,6 +41,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/health").permitAll()
+                .requestMatchers("/api/channels/voices/audition/**").permitAll()
+                .requestMatchers("/api/channels/voices/preview/**").permitAll()
                 // 파일 다운로드 — 인증된 사용자만 (JWT 필터 통과)
                 .requestMatchers("/api/files/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

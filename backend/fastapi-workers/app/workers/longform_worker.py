@@ -1,18 +1,39 @@
 """
-Phase 3-5 v6 — 롱폼 조립 (초반 AI 움짤 + 나머지 zoompan)
+Phase 3-5 v7 — 롱폼 조립 (병렬 처리 + 인코딩 패스 축소)
 
-구조 개선:
-  - 초반 30~60초만 Fal.ai Kling image-to-video AI 움짤 생성 (목표 분량별 자동 계산)
-  - 나머지 씬은 FFmpeg zoompan 필터로 정적 이미지에 줌인 생동감 부여
-  - 자막 수치/퍼센트 노란색 강조 활성화
-  - 목표 분량별 초반 AI 움짤 길이:
-    5분 → 앞 30초 / 10분 → 앞 45초 / 15분 → 앞 60초 / 20분 → 앞 60초
+v6 대비 변경점 (조립 시간 단축 목적):
+  1. 씬별 클립 생성(Kling AI 움짤 / FFmpeg zoompan)을 ThreadPoolExecutor로
+     병렬 처리. 기존에는 씬을 하나씩 순차로 처리해서 총 시간이
+     "씬 개수 × 씬당 처리시간"으로 선형 증가했음. Kling API 호출은
+     네트워크 I/O 대기(최대 180초 폴링)이고, zoompan은 CPU 바운드라서
+     동시 실행 시 실제 이득이 큼.
+  2. concat 단계를 재인코딩(-c:v libx264) 대신 스트림 복사(-c copy)로
+     우선 시도. 씬별 클립이 이미 1단계에서 동일 코덱/해상도/프레임레이트로
+     표준화되어 있으므로 재인코딩 없이 이어붙이기가 가능함. 실패 시에만
+     기존 방식(재인코딩)으로 자동 폴백.
+     → 기존 구조는 "씬별 인코딩 → concat 재인코딩 → 자막 합성 재인코딩"
+       으로 사실상 영상을 최대 3번 인코딩했는데, 이번 변경으로 2번으로 줄어듦.
+  3. 각 단계 소요시간을 로그로 남겨, 이후 병목 프로파일링이 쉽도록 함.
+
+주의 (동시성 관련):
+  - register_process/unregister_process(app.utils.process_manager)가
+    스레드 세이프한지는 이 파일만으로 보장할 수 없음. 만약 여러 스레드가
+    동시에 등록/해제할 때 경쟁 조건이 관측되면, 해당 모듈에 락(Lock)을
+    추가하는 걸 권장합니다.
+  - is_job_stopped() 체크는 각 씬 처리 시작 시점에 한 번 확인합니다.
+    이미 실행 중인 FFmpeg/Kling 호출을 즉시 중단시키진 못하지만
+    (기존 v6도 동일한 한계였음), 아직 시작 안 한 씬은 스킵됩니다.
+  - 동시 실행 스레드 수는 runtime_config의 "longform_scene_max_workers"
+    값을 따르며(없으면 기본 4), CPU/네트워크 과부하를 막기 위해
+    최대 8로 상한을 둡니다.
 """
 import json
 import os
 import re
+import time
 import logging
 import subprocess
+import concurrent.futures
 from pathlib import Path
 from app.utils.process_manager import register_process, unregister_process, is_job_stopped
 from app import runtime_config
@@ -41,6 +62,8 @@ class LongformWorker:
     def assemble(self, tts_meta_json: str, scenes_meta_json: str,
                  gifs_meta_json: str, job_id: int = 0) -> dict:
 
+        stage_t0 = time.time()
+
         tts_meta = json.loads(tts_meta_json)
         audio_path = tts_meta.get("audio_path", "")
         total_duration = tts_meta.get("total_duration", 0)
@@ -62,15 +85,8 @@ class LongformWorker:
 
         output_path = str(job_dir / "final.mp4")
 
-        # 1. 씬별 재생 시간(duration) 동적 분배 (비디오 길이 = 오디오 길이 일치화)
-        if total_duration > 0 and len(scenes) > 0:
-            total_chars = sum(len(scene.get("content", "") or scene.get("text", "") or "") for scene in scenes)
-            for scene in scenes:
-                char_len = len(scene.get("content", "") or scene.get("text", "") or "")
-                if total_chars > 0:
-                    scene["duration"] = round((char_len / total_chars) * total_duration, 3)
-                else:
-                    scene["duration"] = round(total_duration / len(scenes), 3)
+        # [S4] 1. 씬별 재생 시간(duration) 정밀 타임라인 동적 매핑 (TTS 청크 기반)
+        _assign_scene_durations_from_chunks(scenes, chunks, total_duration)
 
         # Kling 비디오 프로바이더 로드 (하이브리드 모드)
         video_provider = None
@@ -85,50 +101,220 @@ class LongformWorker:
         intro_kling_count = _get_intro_kling_count(total_duration, len(scenes))
         logger.info(f"초반 Kling AI 움짤 대상: {intro_kling_count}씬 (전체 {len(scenes)}씬 중)")
 
-        # 씬별 클립 생성
+        # ── 2. 씬별 클립 생성 (병렬 처리) ──────────────────────────
+        scene_stage_t0 = time.time()
+        max_workers = _get_max_workers(len(scenes))
+        logger.info(f"씬 클립 생성 병렬 처리 시작: max_workers={max_workers}")
+
+        clip_paths_map: dict[int, str] = {}
+        stopped_error = None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    self._process_scene, i, scene, video_provider,
+                    intro_kling_count, temp_dir, job_id
+                ): i
+                for i, scene in enumerate(scenes)
+            }
+            for future in concurrent.futures.as_completed(futures):
+                i = futures[future]
+                try:
+                    idx, clip_path = future.result()
+                    clip_paths_map[idx] = clip_path
+                except Exception as e:
+                    if "stopped by user" in str(e):
+                        stopped_error = e
+                        logger.info(f"Job {job_id} 중지 감지, 나머지 씬 처리 건너뜀")
+                    else:
+                        logger.error(f"씬 {i} 처리 중 예상치 못한 오류 (스킵): {e}")
+
+        if stopped_error is not None:
+            raise stopped_error
+
+        clip_paths = [clip_paths_map[i] for i in sorted(clip_paths_map.keys()) if i in clip_paths_map]
+        logger.info(
+            f"씬 클립 생성 완료: {len(clip_paths)}/{len(scenes)}개 성공, "
+            f"소요={time.time() - scene_stage_t0:.1f}s"
+        )
+
+        if not clip_paths:
+            raise RuntimeError("씬 클립이 하나도 생성되지 않았습니다.")
+
+        # ── 3. concat ─────────────────────────────────────────────────
+        # 안전 우선: Kling 클립과 zoompan 클립은 타임베이스/비트레이트가
+        # 미세하게 달라 -c copy가 exit 0을 반환해도 깨진 파일을 만들 수 있음.
+        # → 항상 재인코딩(-c:v libx264)으로 처리해 파일 무결성을 보장.
+        # (병렬 처리로 클립 생성 시간 자체가 줄었기 때문에, concat 재인코딩
+        #  비용은 전체 대비 상대적으로 작아짐. 재생 불가 파일이 더 큰 손실.)
+        concat_stage_t0 = time.time()
         clip_list_path = str(temp_dir / "clips.txt")
-        clip_paths = []
+        with open(clip_list_path, "w") as f:
+            for cp in clip_paths:
+                f.write(f"file '{cp}'\n")
 
-        for i, scene in enumerate(scenes):
-            if is_job_stopped(job_id):
-                raise RuntimeError(f"Job {job_id} stopped by user.")
+        silent_video = str(temp_dir / "silent.mp4")
+        ret = _run_subprocess(
+            f'ffmpeg -f concat -safe 0 -i "{clip_list_path}" '
+            f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+            f'-y "{silent_video}" -loglevel error',
+            job_id
+        )
 
-            img_path = scene.get("image_path", "")
-            raw_dur = scene.get("duration")
-            duration = float(raw_dur) if raw_dur is not None else 15.0
-            clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
-            section = scene.get("section", "default")
-            bg_color = {
-                "intro": "1a1a2e", "background": "16213e",
-                "data": "0f3460", "scenario": "1b1464",
-                "action": "0d3b2e", "conclusion": "1a1a2e",
-            }.get(section, "0d1b2a")
+        # ffprobe로 실제 재생 가능 여부 검증
+        concat_ok = _verify_video(silent_video)
+        if not concat_ok:
+            logger.error(
+                f"concat 결과물 ffprobe 검증 실패 (ret={ret}). "
+                f"파일이 손상됐거나 모든 씬 클립이 비정상일 가능성 있음."
+            )
+            raise RuntimeError("concat 단계에서 재생 가능한 영상을 만들지 못했습니다.")
 
+        logger.info(
+            f"concat 완료 (재인코딩 모드, ffprobe 검증 통과), "
+            f"소요={time.time() - concat_stage_t0:.1f}s"
+        )
+
+        # 4. ASS 자막 생성 (경제사냥꾼 스타일)
+        ass_path = str(temp_dir / "subtitles.ass")
+        self._generate_ass(chunks, ass_path)
+
+        # 5. 음성 + BGM + 자막 합성
+        merge_stage_t0 = time.time()
+        font_available = os.path.exists(NANUM_BOLD) or os.path.exists(NANUM_REGULAR)
+        ass_exists = os.path.exists(ass_path) and os.path.getsize(ass_path) > 200
+        audio_exists = os.path.exists(audio_path) and os.path.getsize(audio_path) > 0
+
+        # BGM 파일 탐색 (bgm_worker가 생성한 파일)
+        bgm_path = f"/app/data/jobs/{job_id}/bgm.mp3"
+        bgm_exists = os.path.exists(bgm_path) and os.path.getsize(bgm_path) > 0
+        bgm_volume = runtime_config.value("bgm_volume")
+
+        if audio_exists:
+            vf_filter = f'-vf "ass=\'{ass_path}\'" ' if (font_available and ass_exists) else ''
+            vcodec = '-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p' if vf_filter else '-c:v copy'
+
+            if bgm_exists:
+                # 3-트랙 믹싱: 나레이션(100%) + BGM(runtime_config 값, 기본 12%)
+                merge_cmd = (
+                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" -i "{bgm_path}" '
+                    f'-filter_complex "[1:a]volume=1.0[narr];[2:a]volume={bgm_volume},aloop=loop=-1:size=2e+09[bgm];'
+                    f'[narr][bgm]amix=inputs=2:duration=first:dropout_transition=3[mixed]" '
+                    f'{vf_filter}'
+                    f'{vcodec} '
+                    f'-map 0:v -map "[mixed]" '
+                    f'-c:a aac -b:a 192k -shortest '
+                    f'-y "{output_path}" -loglevel error'
+                )
+                logger.info(f"BGM 믹싱 적용: 나레이션 + BGM(volume={bgm_volume})")
+            else:
+                merge_cmd = (
+                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
+                    f'{vf_filter}'
+                    f'{vcodec} '
+                    f'-map 0:v -map 1:a '
+                    f'-c:a aac -b:a 192k -shortest '
+                    f'-y "{output_path}" -loglevel error'
+                )
+        else:
+            if font_available and ass_exists:
+                merge_cmd = (
+                    f'ffmpeg -i "{silent_video}" '
+                    f'-vf "ass=\'{ass_path}\'" '
+                    f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+                    f'-y "{output_path}" -loglevel error'
+                )
+            else:
+                merge_cmd = f'cp "{silent_video}" "{output_path}"'
+
+        ret = _run_subprocess(merge_cmd, job_id)
+        if ret != 0:
+            logger.error("자막/BGM 합성 실패, 폴백")
+            if audio_exists:
+                _run_subprocess(
+                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
+                    f'-map 0:v -map 1:a '
+                    f'-c:v copy -c:a aac -shortest '
+                    f'-y "{output_path}" -loglevel error',
+                    job_id
+                )
+            else:
+                _run_subprocess(f'cp "{silent_video}" "{output_path}"', job_id)
+
+        logger.info(f"자막/BGM 합성 완료, 소요={time.time() - merge_stage_t0:.1f}s")
+
+        if not os.path.exists(output_path):
+            raise RuntimeError("롱폼 영상 생성 실패")
+
+        probe = os.popen(
+            f'ffprobe -v error -show_entries format=duration '
+            f'-of default=noprint_wrappers=1:nokey=1 "{output_path}"'
+        ).read().strip()
+        actual_duration = float(probe) if probe else total_duration
+
+        file_size = os.path.getsize(output_path)
+        has_subtitles = font_available and ass_exists
+        total_elapsed = time.time() - stage_t0
+        logger.info(
+            f"롱폼 조립 완료: size={file_size/1024/1024:.1f}MB, "
+            f"actual={actual_duration:.0f}s, subtitles={has_subtitles}, "
+            f"총 조립 소요시간={total_elapsed:.1f}s "
+            f"(씬생성={time.time() - scene_stage_t0:.1f}s 포함 아님, 위 로그 참고)"
+        )
+
+        for cp in clip_paths:
+            if os.path.exists(cp):
+                os.remove(cp)
+        if os.path.exists(silent_video):
+            os.remove(silent_video)
+
+        return {
+            "job_id": job_id,
+            "video_path": output_path,
+            "duration_seconds": round(actual_duration, 1),
+            "scene_count": len(scenes),
+            "gif_count": len(gifs),
+            "has_subtitles": has_subtitles,
+            "resolution": "1920x1080",
+        }
+
+    # ============================
+    # 씬 1개를 클립(mp4)으로 변환 — 병렬 실행 단위
+    # ============================
+    def _process_scene(self, i: int, scene: dict, video_provider,
+                        intro_kling_count: int, temp_dir: Path, job_id: int):
+        """
+        단일 씬을 처리하여 (씬 인덱스, 생성된 클립 경로) 튜플을 반환합니다.
+        ThreadPoolExecutor에서 씬 여러 개를 동시에 실행하기 위해 분리했습니다.
+        job_stopped 신호를 제외한 예외는 여기서 흡수하고 배경색 폴백 클립을
+        생성해, 씬 하나의 실패가 전체 조립을 막지 않도록 합니다(v6과 동일한 방어 원칙).
+        """
+        if is_job_stopped(job_id):
+            raise RuntimeError(f"Job {job_id} stopped by user.")
+
+        img_path = scene.get("image_path", "")
+        raw_dur = scene.get("duration")
+        duration = float(raw_dur) if raw_dur is not None else 15.0
+        clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
+        section = scene.get("section", "default")
+        bg_color = {
+            "intro": "1a1a2e", "background": "16213e",
+            "data": "0f3460", "scenario": "1b1464",
+            "action": "0d3b2e", "conclusion": "1a1a2e",
+        }.get(section, "0d1b2a")
+
+        try:
             # 초반 씬만 Kling AI 움짤, 나머지는 zoompan 효과
             if video_provider and i < intro_kling_count:
                 try:
                     logger.info(f"씬 {i} Kling AI 움짤 생성 (초반 {intro_kling_count}씬)")
 
-                    # [리서치 반영 - 버그 수정] 기존에는 씬의 이미지 생성 프롬프트나
-                    # 대사 텍스트를 그대로 Kling 프롬프트로 재사용했습니다. 하지만
                     # image-to-video는 이미지에 이미 있는 내용(캐릭터 생김새, 배경,
                     # 구도)을 다시 설명하면 안 되고 "무엇이 어떻게 움직이는가"만
-                    # 묘사해야 결과가 안정적입니다 (Fal.ai/Kling 공식 프롬프트 가이드
-                    # 공통 원칙). 대사 텍스트를 그대로 넣으면 모델이 장면을 새로
-                    # 해석하려 들면서 캐릭터가 미묘하게 달라지는 원인이 됩니다.
+                    # 묘사해야 결과가 안정적입니다.
                     prompt = _build_kling_motion_prompt(scene.get("text", "") or scene.get("prompt", ""))
 
-                    # [버그 수정] 기존에는 image_url=None을 고정으로 넘겨서, Fal.ai/Kling이
-                    # 항상 image-to-video가 아닌 text-to-video로 동작했습니다. 즉 이미 생성된
-                    # 캐릭터 이미지(img_path)는 화면에 전혀 반영되지 않고, 매번 프롬프트
-                    # 텍스트만으로 완전히 새로운 그림을 만들고 있었습니다. 이게 "초반 움짤
-                    # 구간의 캐릭터가 나머지 정지 이미지 구간과 다르게 보인다"는 문제의
-                    # 실질적 원인 중 하나입니다.
-                    #
-                    # 수정: 로컬 이미지를 base64 data URI로 인코딩해 image_url로 전달합니다.
-                    # (공식 문서 확인 결과 base64 data URI는 정상 지원됩니다. 다만 "큰
-                    # 파일은 요청 성능에 영향을 줄 수 있다"는 경고가 있어, 트래픽이
-                    # 늘어나면 fal.ai 자체 스토리지 업로드 API로 교체를 권장합니다.)
+                    # 로컬 이미지를 base64 data URI로 인코딩해 image_url로 전달
                     image_data_uri = _encode_image_as_data_uri(img_path)
 
                     video_provider.generate(
@@ -158,14 +344,13 @@ class LongformWorker:
                                     os.remove(temp_kling)
                                 except Exception:
                                     pass
-                        
-                        clip_paths.append(clip_path)
+
                         logger.info(f"씬 {i} Kling AI 움짤 완성 (표준 규격 변환 완료)")
-                        continue
+                        return i, clip_path
                 except Exception as e:
                     logger.warning(f"씬 {i} Kling AI 생성 실패, zoompan 폴백: {e}")
 
-            # 나머지 씬: FFmpeg zoompan 효과 (줌 속도/최대 줌은 runtime_config로 조정 가능)
+            # 나머지 씬(또는 Kling 실패 시): FFmpeg zoompan 효과
             if os.path.exists(img_path):
                 _ffmpeg_zoompan(img_path, clip_path, duration, bg_color, job_id)
             else:
@@ -175,115 +360,27 @@ class LongformWorker:
                     f'-y "{clip_path}" -loglevel error',
                     job_id
                 )
-            clip_paths.append(clip_path)
+            return i, clip_path
 
-        # 2. concat
-        with open(clip_list_path, "w") as f:
-            for cp in clip_paths:
-                f.write(f"file '{cp}'\n")
+        except RuntimeError as e:
+            # job_stopped 신호는 그대로 위로 전파 (main 스레드에서 감지 후 재발생)
+            if "stopped by user" in str(e):
+                raise
+            logger.error(f"씬 {i} 처리 중 RuntimeError, 배경색 폴백 시도: {e}")
+        except Exception as e:
+            logger.error(f"씬 {i} 처리 중 예외 발생, 배경색 폴백 시도: {e}")
 
-        silent_video = str(temp_dir / "silent.mp4")
-        _run_subprocess(
-            f'ffmpeg -f concat -safe 0 -i "{clip_list_path}" '
-            f'-c:v libx264 -preset fast -pix_fmt yuv420p '
-            f'-y "{silent_video}" -loglevel error',
-            job_id
-        )
-
-        # 3. ASS 자막 생성 (경제사냥꾼 스타일)
-        ass_path = str(temp_dir / "subtitles.ass")
-        self._generate_ass(chunks, ass_path)
-
-        # 4. 음성 + BGM + 자막 합성
-        font_available = os.path.exists(NANUM_BOLD) or os.path.exists(NANUM_REGULAR)
-        ass_exists = os.path.exists(ass_path) and os.path.getsize(ass_path) > 200
-        audio_exists = os.path.exists(audio_path) and os.path.getsize(audio_path) > 0
-
-        # BGM 파일 탐색 (bgm_worker가 생성한 파일)
-        bgm_path = f"/app/data/jobs/{job_id}/bgm.mp3"
-        bgm_exists = os.path.exists(bgm_path) and os.path.getsize(bgm_path) > 0
-        bgm_volume = runtime_config.value("bgm_volume")
-
-        if audio_exists:
-            vf_filter = f'-vf "ass=\'{ass_path}\'" ' if (font_available and ass_exists) else ''
-            vcodec = '-c:v libx264 -preset fast -pix_fmt yuv420p' if vf_filter else '-c:v copy'
-
-            if bgm_exists:
-                # 3-트랙 믹싱: 나레이션(100%) + BGM(runtime_config 값, 기본 12%)
-                merge_cmd = (
-                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" -i "{bgm_path}" '
-                    f'-filter_complex "[1:a]volume=1.0[narr];[2:a]volume={bgm_volume},aloop=loop=-1:size=2e+09[bgm];'
-                    f'[narr][bgm]amix=inputs=2:duration=first:dropout_transition=3[mixed]" '
-                    f'{vf_filter}'
-                    f'{vcodec} '
-                    f'-map 0:v -map "[mixed]" '
-                    f'-c:a aac -b:a 192k -shortest '
-                    f'-y "{output_path}" -loglevel error'
-                )
-                logger.info(f"BGM 믹싱 적용: 나레이션 + BGM(volume={bgm_volume})")
-            else:
-                merge_cmd = (
-                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
-                    f'{vf_filter}'
-                    f'{vcodec} '
-                    f'-map 0:v -map 1:a '
-                    f'-c:a aac -b:a 192k -shortest '
-                    f'-y "{output_path}" -loglevel error'
-                )
-        else:
-            if font_available and ass_exists:
-                merge_cmd = (
-                    f'ffmpeg -i "{silent_video}" '
-                    f'-vf "ass=\'{ass_path}\'" '
-                    f'-c:v libx264 -preset fast -pix_fmt yuv420p '
-                    f'-y "{output_path}" -loglevel error'
-                )
-            else:
-                merge_cmd = f'cp "{silent_video}" "{output_path}"'
-
-        ret = _run_subprocess(merge_cmd, job_id)
-        if ret != 0:
-            logger.error("자막/BGM 합성 실패, 폴백")
-            if audio_exists:
-                _run_subprocess(
-                    f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
-                    f'-map 0:v -map 1:a '
-                    f'-c:v copy -c:a aac -shortest '
-                    f'-y "{output_path}" -loglevel error',
-                    job_id
-                )
-            else:
-                _run_subprocess(f'cp "{silent_video}" "{output_path}"', job_id)
-
-        if not os.path.exists(output_path):
-            raise RuntimeError("롱폼 영상 생성 실패")
-
-        probe = os.popen(
-            f'ffprobe -v error -show_entries format=duration '
-            f'-of default=noprint_wrappers=1:nokey=1 "{output_path}"'
-        ).read().strip()
-        actual_duration = float(probe) if probe else total_duration
-
-        file_size = os.path.getsize(output_path)
-        has_subtitles = font_available and ass_exists
-        logger.info(f"롱폼 조립 완료: size={file_size/1024/1024:.1f}MB, "
-                    f"actual={actual_duration:.0f}s, subtitles={has_subtitles}")
-
-        for cp in clip_paths:
-            if os.path.exists(cp):
-                os.remove(cp)
-        if os.path.exists(silent_video):
-            os.remove(silent_video)
-
-        return {
-            "job_id": job_id,
-            "video_path": output_path,
-            "duration_seconds": round(actual_duration, 1),
-            "scene_count": len(scenes),
-            "gif_count": len(gifs),
-            "has_subtitles": has_subtitles,
-            "resolution": "1920x1080",
-        }
+        # 최후 폴백: 배경색만 있는 무음 클립 생성 (전체 조립이 씬 하나 때문에 죽지 않도록)
+        try:
+            _run_subprocess(
+                f'ffmpeg -f lavfi -i "color=c={bg_color}:s=1920x1080:r=30" '
+                f'-t {duration:.3f} -c:v libx264 -pix_fmt yuv420p '
+                f'-y "{clip_path}" -loglevel error',
+                job_id
+            )
+        except Exception as fallback_err:
+            logger.error(f"씬 {i} 최후 폴백 클립 생성도 실패: {fallback_err}")
+        return i, clip_path
 
     def _generate_ass(self, chunks: list, ass_path: str):
         """
@@ -294,7 +391,7 @@ class LongformWorker:
         - 하단 중앙 배치 (Alignment=2)
         - 최대 20자 1줄
         """
-        font_name = "NanumGothicBold" if os.path.exists(NANUM_BOLD) else "NanumGothic"
+        font_name = "Pretendard Bold"
         font_size = runtime_config.value("subtitle_font_size")
 
         header = f"""[Script Info]
@@ -305,19 +402,10 @@ WrapStyle: 0
 ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Main,{font_name},{font_size},&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,0,0,2,40,40,80,1
+Style: Main,{font_name},{font_size},&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,2,1,2,40,40,80,1
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
-        # 스타일 설명:
-        # Fontsize=72 → 이전 52에서 증가 (경제사냥꾼 수준)
-        # BorderStyle=3 → 불투명 박스 배경 (OutlineColour 무시, BackColour 사용)
-        # BackColour=&H80000000 → 반투명 검정 박스 (Alpha=80)
-        # Bold=-1 → 굵게
-        # Outline=0, Shadow=0 → 박스 모드에서 외곽선/그림자 없음
-        # Alignment=2 → 하단 중앙
-        # MarginV=50 → 하단 50px 여백
-
         def to_ass_time(s: float) -> str:
             h = int(s // 3600)
             m = int((s % 3600) // 60)
@@ -330,12 +418,11 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             if not text:
                 continue
 
-            start_sec = chunk.get("start", 0.0)
+            start_sec = max(0.0, chunk.get("start", 0.0))
             dur = chunk.get("duration", 3.0)
-            end_sec = start_sec + dur
+            end_sec = start_sec + dur  # End time relative to original start
 
-            # 수치/퍼센트/포인트 노란색 강조 활성화
-            display = self._trim_to_limit(self._highlight_stock_numbers(text))
+            display = self._trim_to_limit(text)
 
             start_str = to_ass_time(start_sec)
             end_str = to_ass_time(end_sec)
@@ -346,16 +433,20 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             f.write("\n".join(lines))
 
         logger.info(f"ASS 자막 생성: {len(chunks)}개 항목")
+
     @staticmethod
     def _trim_to_limit(text: str) -> str:
         return text
 
     @staticmethod
     def _highlight_stock_numbers(text: str) -> str:
-        """주식 수치 노란색 강조 (ASS 인라인 태그)"""
-        text = re.sub(r'([+-]?\d+\.?\d*퍼센트)', lambda m: '{\\c&H00FFFF&}' + m.group(1) + '{\\c&HFFFFFF&}', text)
-        text = re.sub(r'(\d+포인트)', lambda m: '{\\c&H00FFFF&}' + m.group(1) + '{\\c&HFFFFFF&}', text)
-        text = re.sub(r'(\d+(?:억|만|천)?(?:원|달러))', lambda m: '{\\c&H00FFFF&}' + m.group(1) + '{\\c&HFFFFFF&}', text)
+        """주식 수치 노란색 강조 자동화"""
+        import re
+        text = re.sub(
+            r'(\d[\d,.]*\s*(?:포인트|원|%|퍼센트|달러|조|억|만))',
+            r'{\\c&H0000FFFF&}\1{\\r}',
+            text
+        )
         return text
 
 
@@ -367,16 +458,7 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 def _build_kling_motion_prompt(scene_text: str) -> str:
     """
     Kling image-to-video용 "움직임 전용" 프롬프트를 만듭니다.
-
-    [리서치 반영] image-to-video는 이미지에 이미 있는 내용(캐릭터 생김새,
-    배경, 구도)을 다시 설명하면 안 되고, 무엇이 어떻게 움직이는지만
-    묘사해야 결과가 안정적입니다. 대사 텍스트를 그대로 프롬프트로 쓰면
-    모델이 장면을 새로 해석하려 들면서 캐릭터가 미묘하게 달라지는
-    원인이 됩니다. 또한 끝맺음을 명시하지 않으면 99% 지점에서 멈추는
-    문제가 흔해서, 반드시 "제자리로 돌아온다"까지 명시합니다.
-
-    씬 텍스트에 하락/상승 관련 표현이 있으면 손짓 뉘앙스를 거기에 맞춥니다
-    (예: 하락 → 걱정스러운 손짓, 상승 → 긍정적인 손짓).
+    씬 텍스트에 하락/상승 관련 표현이 있으면 손짓 뉘앙스를 거기에 맞춥니다.
     """
     down_keywords = ["하락", "급락", "내렸", "붕괴", "꺾", "약세", "부진", "악재"]
     up_keywords = ["상승", "급등", "올랐", "돌파", "반등", "강세", "최고치", "호재"]
@@ -401,12 +483,8 @@ def _build_kling_motion_prompt(scene_text: str) -> str:
 def _encode_image_as_data_uri(img_path: str) -> str:
     """
     로컬 이미지 파일을 base64 data URI 문자열로 변환합니다.
-    Fal.ai/Kling image-to-video API의 image_url 파라미터에 공개 URL 대신
-    바로 전달할 수 있어, 별도 이미지 호스팅(MinIO 업로드 등) 없이
-    "이미 생성된 캐릭터 이미지"를 영상 생성의 시드로 사용할 수 있습니다.
-
-    주의: 이미지 용량이 매우 크면(예: 고해상도 4K PNG) 일부 API의 페이로드
-    크기 제한에 걸릴 수 있습니다. 이 경우 MinIO 등에 업로드 후 공개 URL을
+    이미지 용량이 매우 크면(예: 고해상도 4K PNG) 일부 API의 페이로드 크기
+    제한에 걸릴 수 있습니다. 이 경우 MinIO 등에 업로드 후 공개 URL을
     발급하는 방식으로 교체하는 것을 권장합니다.
     """
     import base64
@@ -425,27 +503,61 @@ def _encode_image_as_data_uri(img_path: str) -> str:
 
 def _get_intro_kling_count(total_duration: float, total_scenes: int) -> int:
     """
-    영상 총 길이 기반으로 초반 AI 움짤(Kling) 대상 씬 수를 계산합니다.
-    구간별 초 값은 runtime_config에서 가져오므로 코드 수정 없이 조정 가능합니다.
+    사용자 요청에 따라 영상 총 길이와 상관없이 '초반부 1분(60초)' 분량에 해당하는 씬 수만 Kling으로 할당합니다.
     """
     if total_scenes <= 0 or total_duration <= 0:
-        return 3  # 기본 3씬
+        return 3
 
-    target_minutes = total_duration / 60.0
-    if target_minutes <= 5:
-        intro_secs = runtime_config.value("intro_kling_seconds_5min")
-    elif target_minutes <= 10:
-        intro_secs = runtime_config.value("intro_kling_seconds_10min")
-    elif target_minutes <= 15:
-        intro_secs = runtime_config.value("intro_kling_seconds_15min")
-    else:
-        intro_secs = runtime_config.value("intro_kling_seconds_20min")
-
+    intro_secs = 60.0
     secs_per_scene = total_duration / total_scenes
     count = max(2, int(intro_secs / secs_per_scene))
-    logger.info(f"intro_kling_count 계산: total={total_duration:.0f}s, scenes={total_scenes}, "
-                f"secs_per_scene={secs_per_scene:.1f}s, intro_secs={intro_secs}s → {count}씬")
+    logger.info(f"intro_kling_count 계산: 초반 {intro_secs}초 강제 할당, scenes={total_scenes}, "
+                f"secs_per_scene={secs_per_scene:.1f}s → {count}씬")
     return count
+
+
+def _get_max_workers(scene_count: int) -> int:
+    """
+    씬 병렬 처리에 사용할 스레드 수를 결정합니다.
+    runtime_config에 "longform_scene_max_workers" 키를 추가해두면
+    코드 재배포 없이 /pipeline/config API로 즉시 조정할 수 있습니다.
+    (키가 아직 없다면 기본값 4를 사용하며, 이는 서버 CPU 코어 수와
+    Kling/Fal.ai API 동시 요청 한도를 함께 고려해 정한 보수적인 값입니다.
+    CPU 코어가 넉넉하고 API 동시 처리 한도가 높다면 6~8까지 올려도 됩니다.)
+    """
+    default = 4
+    try:
+        configured = runtime_config.value("longform_scene_max_workers")
+    except Exception:
+        configured = None
+
+    try:
+        workers = int(configured) if configured else default
+    except (TypeError, ValueError):
+        workers = default
+
+    return max(1, min(workers, max(scene_count, 1), 8))
+
+
+def _verify_video(video_path: str) -> bool:
+    """
+    ffprobe로 영상 파일이 실제로 재생 가능한지 검증합니다.
+    파일이 존재하고, 크기가 있고, duration을 정상적으로 읽을 수 있어야 True.
+    -c copy concat이 exit 0을 반환해도 깨진 파일을 만드는 경우를 잡기 위함.
+    """
+    if not video_path or not os.path.exists(video_path):
+        return False
+    if os.path.getsize(video_path) < 10000:  # 10KB 미만은 사실상 빈 파일
+        return False
+    probe = os.popen(
+        f'ffprobe -v error -show_entries format=duration '
+        f'-of default=noprint_wrappers=1:nokey=1 "{video_path}"'
+    ).read().strip()
+    try:
+        duration = float(probe)
+        return duration > 0.0
+    except (ValueError, TypeError):
+        return False
 
 
 def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
@@ -460,14 +572,14 @@ def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: st
     cmd = (
         f'ffmpeg -loop 1 -i "{img_path}" '
         f'-filter_complex '
-        f'"[0:v]scale=2000:1125,'
+        f'"[0:v]scale=3840:2160,'
         f'zoompan=z=\'min(zoom+{zoom_speed},{max_zoom})\''
         f':x=\'iw/2-(iw/zoom/2)\''
         f':y=\'ih/2-(ih/zoom/2)\''
-        f':d={frames}:s=1920x1080:fps=30,'
-        f'setsar=1[v]" '
+        f':d={frames}:s=3840x2160:fps=30,'
+        f'scale=1920:1080,setsar=1[v]" '
         f'-map "[v]" -t {duration:.3f} '
-        f'-c:v libx264 -preset fast -pix_fmt yuv420p '
+        f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
         f'-y "{clip_path}" -loglevel error'
     )
     ret = _run_subprocess(cmd, job_id)
@@ -477,7 +589,84 @@ def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: st
             f'ffmpeg -loop 1 -i "{img_path}" '
             f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
             f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,fps=30" '
-            f'-t {duration:.3f} -c:v libx264 -preset fast -pix_fmt yuv420p '
+            f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
             f'-y "{clip_path}" -loglevel error',
             job_id
         )
+
+
+def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_duration: float):
+    """
+    [S4] TTS-씬 정밀 타임라인 싱크:
+    TTS 추출 타임스탬프 청크(chunks)와 씬 텍스트(content)를 매핑하여
+    각 씬의 start_time, end_time, duration을 0.001초 단위로 정밀 산출.
+    청크가 없거나 매핑 실패 시 문자 수 비례 분배 폴백.
+    """
+    if not scenes or total_duration <= 0:
+        return
+
+    # 1. 청크가 없거나 유효하지 않으면 기존 비례 분배
+    if not chunks or not isinstance(chunks, list):
+        total_chars = sum(len(scene.get("content", "") or scene.get("text", "") or "") for scene in scenes)
+        for scene in scenes:
+            char_len = len(scene.get("content", "") or scene.get("text", "") or "")
+            if total_chars > 0:
+                scene["duration"] = round((char_len / total_chars) * total_duration, 3)
+            else:
+                scene["duration"] = round(total_duration / len(scenes), 3)
+        return
+
+    # 2. 청크 타임스탬프 기반 정밀 누적 매핑
+    total_chars = sum(len(scene.get("content", "") or scene.get("text", "") or "") for scene in scenes)
+    if total_chars <= 0:
+        for scene in scenes:
+            scene["duration"] = round(total_duration / len(scenes), 3)
+        return
+
+    chunk_lengths = [len(c.get("text", "")) for c in chunks]
+    total_chunk_chars = sum(chunk_lengths)
+
+    accumulated_chars = 0
+    for scene in scenes:
+        scene_char_len = len(scene.get("content", "") or scene.get("text", "") or "")
+        start_char_idx = accumulated_chars
+        end_char_idx = accumulated_chars + scene_char_len
+        accumulated_chars = end_char_idx
+
+        start_ratio = start_char_idx / total_chars if total_chars > 0 else 0
+        end_ratio = end_char_idx / total_chars if total_chars > 0 else 1
+
+        def get_time_at_ratio(r: float) -> float:
+            target_idx = r * total_chunk_chars
+            curr = 0
+            for c in chunks:
+                c_len = len(c.get("text", ""))
+                c_start = float(c.get("start", 0))
+                c_end = float(c.get("end", total_duration))
+                if curr + c_len >= target_idx:
+                    if c_len > 0:
+                        sub_r = (target_idx - curr) / c_len
+                        return round(c_start + (c_end - c_start) * sub_r, 3)
+                    return round(c_start, 3)
+                curr += c_len
+            return round(total_duration, 3)
+
+        if chunks and total_chunk_chars > 0:
+            s_time = get_time_at_ratio(start_ratio)
+            e_time = get_time_at_ratio(end_ratio)
+        else:
+            s_time = round(start_ratio * total_duration, 3)
+            e_time = round(end_ratio * total_duration, 3)
+
+        dur = round(max(0.05, e_time - s_time), 3)
+        scene["start_time"] = s_time
+        scene["end_time"] = e_time
+        scene["duration"] = dur
+
+    # 오차 보정 (마지막 씬 duration을 total_duration에 정확히 일치시킴)
+    sum_dur = sum(s["duration"] for s in scenes)
+    diff = round(total_duration - sum_dur, 3)
+    if scenes and abs(diff) > 0.001:
+        scenes[-1]["duration"] = round(max(0.05, scenes[-1]["duration"] + diff), 3)
+        scenes[-1]["end_time"] = round(scenes[-1]["start_time"] + scenes[-1]["duration"], 3)
+

@@ -8,6 +8,7 @@ import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
 import { jobsApi } from '../api/jobs'
 import { AUTONOMY_LABEL } from '../constants/jobStatus'
+import apiClient from '../api/client'
 
 /**
  * 이전에는 이 파일이 CATEGORY_LIST / STATUS_LIST / STATUS_LABEL / STATUS_COLOR /
@@ -29,7 +30,7 @@ export default function Jobs() {
 
   const [form, setForm] = useState({
     title: '', category: 'KOSPI', autonomy: 'AUTO',
-    longformTargetMinutes: 20, budgetCap: 100,
+    longformTargetMinutes: 20, budgetCap: 100, channelId: ''
   })
   const [creating, setCreating] = useState(false)
 
@@ -37,6 +38,11 @@ export default function Jobs() {
     queryKey: ['jobs'],
     queryFn: jobsApi.list,
     refetchInterval: 5000,
+  })
+
+  const { data: channels = [] } = useQuery({
+    queryKey: ['channels'],
+    queryFn: () => apiClient.get('/channels').then(r => r.data),
   })
 
   const handleCreate = async (e) => {
@@ -168,6 +174,22 @@ export default function Jobs() {
                   required
                   autoFocus
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">대상 채널</label>
+                <select
+                  value={form.channelId || ''}
+                  onChange={e => setForm({ ...form, channelId: e.target.value || null })}
+                  className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+                >
+                  <option value="">채널 선택 안 함 (기본)</option>
+                  {channels.map(c => (
+                    <option key={c.channelId} value={c.channelId}>
+                      {c.channelName} ({c.channelId})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
