@@ -14,6 +14,7 @@
 import os
 import logging
 import random
+import time
 from pathlib import Path
 from app.utils.process_manager import is_job_stopped
 from app import runtime_config
@@ -243,6 +244,9 @@ class ImagesWorker:
             return gemini_batch.submit(job_id, batch_scenes, character_reference_paths)
 
         generated = []
+        # Keep direct Pro 2K rendering interactive, but do not burst a long
+        # sequence of paid requests into a transient rate/availability limit.
+        last_pro_request_finished_at = None
         for i, scene in enumerate(scenes_meta):
             if is_job_stopped(job_id):
                 raise RuntimeError(f"Job {job_id} stopped by user.")
@@ -257,6 +261,10 @@ class ImagesWorker:
             pose = scene.get("pose", "neutral")
             art_direction = scene.get("art_direction") or {}
             image_profile = scene.get("image_profile") or {}
+            is_direct_pro_scene = (
+                image_profile.get("tier") == "pro"
+                and runtime_config.value("image_provider") == "gemini"
+            )
             scene_market_snapshot = scene.get("market_snapshot") or market_snapshot
             character_required = bool(art_direction.get("character_required", True))
             pose_asset = art_direction.get("pose_asset") or pose
@@ -308,23 +316,43 @@ class ImagesWorker:
                         # [Sprint 3 & S5] LoRA 또는 기본 일체형 모드 + AI 품질 검수 자동 재생성
                         max_retries = 2
                         for attempt in range(max_retries):
-                            ai_provider.generate_image(
-                                prompt=prompt_en,
-                                output_path=raw_img_path,
-                                section=section,
-                                keyword=prompt_en[:30],
-                                character_image_path=character_reference_paths[0] if character_reference_paths else None,
-                                character_image_paths=character_reference_paths,
-                                character_style_prompt=effective_character_style,
-                                lora_model_id=lora_model_id,
-                                lora_trigger_word=lora_trigger_word,
-                                lora_scale=lora_scale,
-                                image_provider=runtime_config.value("image_provider"),
-                                gemini_model=image_profile.get("model"),
-                                gemini_image_size=image_profile.get("image_size"),
-                                gemini_service_tier=runtime_config.value("gemini_service_tier"),
-                                style_locked=bool(spec),
-                            )
+                            if is_direct_pro_scene and last_pro_request_finished_at is not None:
+                                delay_seconds = max(
+                                    0.0,
+                                    float(runtime_config.value("gemini_pro_request_delay_seconds")),
+                                )
+                                remaining_delay = delay_seconds - (
+                                    time.monotonic() - last_pro_request_finished_at
+                                )
+                                if remaining_delay > 0:
+                                    logger.info(
+                                        "Pacing Gemini Pro request for job %s scene %s: waiting %.1fs",
+                                        job_id, i, remaining_delay,
+                                    )
+                                    time.sleep(remaining_delay)
+                            try:
+                                ai_provider.generate_image(
+                                    prompt=prompt_en,
+                                    output_path=raw_img_path,
+                                    section=section,
+                                    keyword=prompt_en[:30],
+                                    character_image_path=character_reference_paths[0] if character_reference_paths else None,
+                                    character_image_paths=character_reference_paths,
+                                    character_style_prompt=effective_character_style,
+                                    lora_model_id=lora_model_id,
+                                    lora_trigger_word=lora_trigger_word,
+                                    lora_scale=lora_scale,
+                                    image_provider=runtime_config.value("image_provider"),
+                                    gemini_model=image_profile.get("model"),
+                                    gemini_image_size=image_profile.get("image_size"),
+                                    gemini_service_tier=runtime_config.value("gemini_service_tier"),
+                                    gemini_max_attempts=runtime_config.value("gemini_pro_max_attempts"),
+                                    gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+                                    style_locked=bool(spec),
+                                )
+                            finally:
+                                if is_direct_pro_scene:
+                                    last_pro_request_finished_at = time.monotonic()
                             # [S5] AI 품질 자동 검수
                             if os.path.exists(raw_img_path) and os.path.getsize(raw_img_path) > 15000:
                                 if runtime_config.value("image_headline_overlay"):

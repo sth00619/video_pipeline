@@ -135,6 +135,9 @@ class PipelineConfigUpdate(BaseModel):
     gemini_pro_batch_enabled: Optional[bool] = None
     gemini_pro_batch_fallback_enabled: Optional[bool] = None
     gemini_service_tier: Optional[str] = None
+    gemini_pro_max_attempts: Optional[int] = None
+    gemini_pro_retry_base_seconds: Optional[float] = None
+    gemini_pro_request_delay_seconds: Optional[float] = None
     visual_qa_enabled: Optional[bool] = None
     visual_qa_max_scenes: Optional[int] = None
     elevenlabs_voice_id: Optional[str] = None
@@ -587,7 +590,14 @@ async def generate_single_image(request: SingleImageGenerateRequest):
                     section=request.section,
                     keyword=request.text[:30],
                     character_image_path=request.character_image_path,
-                    character_style_prompt=request.character_style_prompt
+                    character_style_prompt=request.character_style_prompt,
+                    image_provider=runtime_config.value("image_provider"),
+                    gemini_model="gemini-3-pro-image",
+                    gemini_image_size="2K",
+                    gemini_service_tier=runtime_config.value("gemini_service_tier"),
+                    gemini_max_attempts=runtime_config.value("gemini_pro_max_attempts"),
+                    gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+                    style_locked=False,
                 )
                 return {"status": "ok", "image_path": img_path}
             except Exception as e:

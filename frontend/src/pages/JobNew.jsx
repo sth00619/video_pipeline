@@ -53,6 +53,7 @@ const AUTONOMY_OPTIONS = [
 ]
 
 const DURATION_OPTIONS = [
+  { value: 1, label: '1분 테스트', hint: '배포 검증용. 짧은 롱폼 전체 경로 확인' },
   { value: 5, label: '5분', hint: '숏 영상. 인트로 30초 움짤' },
   { value: 10, label: '10분', hint: '표준 길이. 인트로 45초 움짤' },
   { value: 15, label: '15분', hint: '심층 분석. 인트로 60초 움짤' },

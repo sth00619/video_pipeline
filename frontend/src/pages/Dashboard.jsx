@@ -161,6 +161,7 @@ export default function Dashboard() {
                   onChange={e => setDuration(Number(e.target.value))}
                   className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1 text-xs text-accent-cyan font-semibold focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
                 >
+                  <option value="1">1분 테스트</option>
                   <option value="5">5분</option>
                   <option value="10">10분</option>
                   <option value="15">15분</option>

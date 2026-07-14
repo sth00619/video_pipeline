@@ -65,7 +65,7 @@ def render_data_card(card: dict[str, Any], output_path: str) -> bool:
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
         from matplotlib.font_manager import FontProperties
-        from matplotlib.patches import FancyBboxPatch, Rectangle
+        import matplotlib.patheffects as path_effects
 
         font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
         bold_path = "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
@@ -80,31 +80,22 @@ def render_data_card(card: dict[str, Any], output_path: str) -> bool:
         ax.set_ylim(0, 1)
         ax.axis("off")
 
-        ax.add_patch(FancyBboxPatch(
-            (0.01, 0.03), 0.98, 0.94,
-            boxstyle="round,pad=0.015,rounding_size=0.035",
-            facecolor="#07182D", edgecolor="#60D8FF", linewidth=1.6, alpha=0.94,
-        ))
-        ax.add_patch(Rectangle((0.04, 0.16), 0.012, 0.68, facecolor="#F7C948", linewidth=0))
-        ax.text(0.075, 0.80, card["label"].upper(), color="#60D8FF", fontsize=12,
-                fontproperties=bold, va="center", weight="bold")
-        ax.text(0.075, 0.63, card["headline"], color="#FFFFFF", fontsize=22,
-                fontproperties=bold, va="center", weight="bold")
-        ax.text(0.075, 0.43, card["detail"], color="#C7D5E5", fontsize=13,
-                fontproperties=regular, va="center")
+        # The explanatory text is deliberately transparent.  Data cards used
+        # to reserve a large opaque panel in the upper-left of every eligible
+        # scene; that hid the artwork and read like an empty box.  Keep only
+        # legible text with a dark outline directly over the illustration.
+        outline = [path_effects.withStroke(linewidth=3.4, foreground="#07182D")]
+        ax.text(0.055, 0.82, card["label"].upper(), color="#60D8FF", fontsize=12,
+                fontproperties=bold, va="center", weight="bold", path_effects=outline)
+        ax.text(0.055, 0.64, card["headline"], color="#FFFFFF", fontsize=22,
+                fontproperties=bold, va="center", weight="bold", path_effects=outline)
+        ax.text(0.055, 0.45, card["detail"], color="#E5F1FF", fontsize=13,
+                fontproperties=regular, va="center", path_effects=outline)
 
         metrics = card.get("metrics") or []
         if metrics:
-            width = min(0.25, 0.76 / len(metrics))
-            for i, metric in enumerate(metrics):
-                x = 0.075 + i * (width + 0.025)
-                ax.add_patch(FancyBboxPatch(
-                    (x, 0.20), width, 0.13,
-                    boxstyle="round,pad=0.01,rounding_size=0.018",
-                    facecolor="#123353", edgecolor="#285C87", linewidth=0.8,
-                ))
-                ax.text(x + width / 2, 0.265, metric, color="#F7C948", fontsize=15,
-                        fontproperties=bold, ha="center", va="center", weight="bold")
+            ax.text(0.055, 0.25, "  ·  ".join(metrics), color="#F7C948", fontsize=15,
+                    fontproperties=bold, va="center", weight="bold", path_effects=outline)
 
         fig.savefig(output_path, transparent=True, dpi=100)
         plt.close(fig)

@@ -231,6 +231,7 @@ export default function Jobs() {
                     onChange={e => setForm({ ...form, longformTargetMinutes: Number(e.target.value) })}
                     className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
                   >
+                    <option value={1}>1분 테스트</option>
                     <option value={10}>10분</option>
                     <option value={15}>15분</option>
                     <option value={20}>20분</option>

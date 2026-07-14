@@ -38,6 +38,10 @@ from app.providers.real.prompt_builder import STYLE_LOCK
 
 logger = logging.getLogger(__name__)
 
+
+class GeminiImageGenerationError(RuntimeError):
+    """A Gemini image request failed after its same-quality retry policy."""
+
 # 캐릭터 일관성 유지 프롬프트 (의인화된 금색 코인 마스코트 캐릭터)
 CHARACTER_STYLE = (
     "featuring one friendly teal rounded market-card mascot, with a small diagonal chart notch rather than a currency symbol, "
@@ -223,9 +227,14 @@ class NanaBananaProvider(ImageProvider):
                     base_prompt, output_path, gemini_key, character_image_paths,
                     model=gemini_model, image_size=gemini_image_size,
                     service_tier=gemini_service_tier,
+                    max_attempts=kwargs.get("gemini_max_attempts"),
+                    retry_base_seconds=kwargs.get("gemini_retry_base_seconds"),
                 ):
                     logger.info(f"공식 Gemini API 이미지 생성 성공: model={gemini_model}, size={gemini_image_size}, path={output_path}")
                     return True
+            except GeminiImageGenerationError:
+                # Preserve the upstream response detail for all-Pro jobs.
+                raise
             except Exception as e:
                 logger.warning(f"공식 Gemini API 호출 실패: {e}")
             return False
@@ -238,7 +247,10 @@ class NanaBananaProvider(ImageProvider):
         if provider_preference == "gemini" and gemini_model == "gemini-3-pro-image":
             if try_gemini():
                 return output_path
-            raise RuntimeError("Gemini Pro image generation failed; refusing lower-quality fallback")
+            raise RuntimeError(
+                "Gemini Pro image generation returned no image after retries; "
+                "refusing lower-quality fallback"
+            )
 
         order = ("fal", "gemini") if provider_preference == "fal" else ("gemini", "fal")
         logger.info(f"이미지 공급자 선택: requested={provider_preference}, order={order}")
@@ -465,6 +477,8 @@ class NanaBananaProvider(ImageProvider):
         self, prompt: str, output_path: str, api_key: str,
         character_image_paths: list[str] | None = None, *, model: str, image_size: str,
         service_tier: str = "standard",
+        max_attempts: int | None = None,
+        retry_base_seconds: float | None = None,
     ) -> bool:
         """Use Gemini Interactions API so Flash and Pro share the same 16:9 contract."""
         import requests
@@ -514,11 +528,44 @@ class NanaBananaProvider(ImageProvider):
         if service_tier in {"priority", "flex"}:
             payload["generationConfig"]["serviceTier"] = service_tier
         headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
-        for attempt in range(3):
-            response = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                json=payload, headers=headers, timeout=120,
-            )
+        is_pro = model == "gemini-3-pro-image"
+        if max_attempts is None:
+            max_attempts = int(os.getenv(
+                "GEMINI_PRO_MAX_ATTEMPTS" if is_pro else "GEMINI_IMAGE_MAX_ATTEMPTS",
+                "5" if is_pro else "3",
+            ))
+        max_attempts = max(1, int(max_attempts))
+        if retry_base_seconds is None:
+            retry_base_seconds = float(os.getenv(
+                "GEMINI_PRO_RETRY_BASE_SECONDS" if is_pro else "GEMINI_IMAGE_RETRY_BASE_SECONDS",
+                "10" if is_pro else "5",
+            ))
+        retry_base_seconds = max(1.0, float(retry_base_seconds))
+        endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        last_failure = "unknown Gemini image failure"
+
+        def retry_delay(response, attempt: int) -> float:
+            retry_after = response.headers.get("Retry-After") if response is not None else None
+            try:
+                return min(120.0, max(1.0, float(retry_after)))
+            except (TypeError, ValueError):
+                return min(120.0, retry_base_seconds * (2 ** (attempt - 1)))
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = requests.post(endpoint, json=payload, headers=headers, timeout=120)
+            except requests.RequestException as exc:
+                last_failure = f"network error: {exc.__class__.__name__}: {exc}"
+                if attempt == max_attempts:
+                    break
+                wait_time = retry_delay(None, attempt)
+                logger.warning(
+                    "Gemini image network error (model=%s, attempt=%s/%s): %s; retrying in %.1fs",
+                    model, attempt, max_attempts, exc, wait_time,
+                )
+                time.sleep(wait_time)
+                continue
+
             if response.status_code == 200:
                 try:
                     logger.info(
@@ -536,44 +583,45 @@ class NanaBananaProvider(ImageProvider):
                             logger.warning(f"Gemini JPEG-to-PNG conversion failed; preserving JPEG bytes: {conversion_error}")
                             Path(output_path).write_bytes(image_bytes)
                         return True
+                    last_failure = "HTTP 200 response did not include an image output"
                     logger.warning("Gemini Interactions API response did not include an image output")
                 except Exception as exc:
+                    last_failure = f"HTTP 200 response parsing error: {exc.__class__.__name__}: {exc}"
                     logger.error(f"Gemini Interactions API 응답 파싱 에러: {exc}")
-                return False
-            response_text = response.text[:500]
-            # A project spending cap is a configuration/billing state, not a
-            # transient rate limit. Retrying it for every scene wastes time
-            # and leaves the user with an ambiguous "generation failed" job.
-            if response.status_code == 429 and "spending cap" in response_text.lower():
-                logger.error(
-                    "Gemini Pro project spending cap reached. Increase the "
-                    "Gemini API project cap before starting an image job."
-                )
-                return False
-            if response.status_code == 429 and attempt < 2:
-                wait_time = 20 * (attempt + 1)
-                logger.warning(f"Gemini API 할당량 초과. {wait_time}초 후 재시도합니다. ({attempt + 1}/3)")
-                time.sleep(wait_time)
-                continue
-            # Gemini Pro occasionally returns a 500 while the model is under
-            # temporary high demand. Keep the all-Pro contract, but retry the
-            # same request before surfacing a real failure to the job.
-            if (
-                response.status_code in {500, 503}
-                and "high demand" in response_text.lower()
-                and attempt < 2
-            ):
-                wait_time = 15 * (attempt + 1)
+                if attempt == max_attempts:
+                    break
+                wait_time = retry_delay(response, attempt)
                 logger.warning(
-                    "Gemini Pro is under high demand. Retrying in %ss (%s/3).",
-                    wait_time,
-                    attempt + 1,
+                    "Gemini image returned no usable image (model=%s, attempt=%s/%s); retrying in %.1fs",
+                    model, attempt, max_attempts, wait_time,
                 )
                 time.sleep(wait_time)
                 continue
-            logger.warning(f"Gemini API HTTP 에러 ({response.status_code}): {response_text}")
-            return False
-        return False
+
+            response_text = response.text[:500]
+            last_failure = f"HTTP {response.status_code}: {response_text}"
+            lower_response = response_text.lower()
+            # Billing caps and daily quota exhaustion are not transient. Do
+            # not wait through five attempts only to hide the real cause.
+            if response.status_code == 429 and (
+                "spending cap" in lower_response or "daily quota" in lower_response
+            ):
+                logger.error("Gemini image quota/cap reached (model=%s): %s", model, response_text)
+                raise GeminiImageGenerationError(last_failure)
+            if response.status_code in {429, 500, 502, 503, 504} and attempt < max_attempts:
+                wait_time = retry_delay(response, attempt)
+                logger.warning(
+                    "Gemini image transient HTTP error (model=%s, attempt=%s/%s, status=%s): %s; retrying in %.1fs",
+                    model, attempt, max_attempts, response.status_code, response_text, wait_time,
+                )
+                time.sleep(wait_time)
+                continue
+            logger.warning("Gemini image HTTP error (model=%s): %s", model, last_failure)
+            raise GeminiImageGenerationError(last_failure)
+
+        raise GeminiImageGenerationError(
+            f"Gemini image request exhausted {max_attempts} attempts: {last_failure}"
+        )
 
     def _generate_pollinations(self, prompt: str, output_path: str) -> str:
         """

@@ -42,8 +42,10 @@ public class ScriptService {
 
         int targetMinutes = job.getLongformTargetMinutes() != null
                 ? job.getLongformTargetMinutes() : 20;
-        // 1.25배속 가속을 고려하여 스크립트 분량을 1.25배 늘려서 생성
-        int llmTargetMinutes = (int) Math.round(targetMinutes * 1.25);
+        // The worker already calculates the narration budget from the selected
+        // ElevenLabs speed. Passing an inflated duration here caused a 5-minute
+        // job to ask the LLM for six minutes of speech.
+        int llmTargetMinutes = targetMinutes;
         String categoryName = job.getCategory() != null ? job.getCategory().name() : "CUSTOM";
 
         log.info("스크립트 생성: jobId={}, keyword={}, target={}분 (LLM 타겟: {}분), category={}",
@@ -77,7 +79,7 @@ public class ScriptService {
         int inputChars = marketSnapshotJson != null ? marketSnapshotJson.length() : 500;
         java.math.BigDecimal claudeCost = CostEstimator.claude(inputChars, outputChars, 3);
         costService.record(jobId, "CLAUDE_LLM", claudeCost, "USD",
-                String.format("스크립트 %d분 (실제 %d분) %d자, 3-Round 팩트체크", targetMinutes, llmTargetMinutes,
+                String.format("스크립트 목표 %d분 (LLM %d분) %d자, 3-Round 팩트체크", targetMinutes, llmTargetMinutes,
                         outputChars));
 
         Asset asset = Asset.builder()

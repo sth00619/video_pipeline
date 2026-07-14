@@ -39,9 +39,7 @@ from pathlib import Path
 from app.utils.process_manager import register_process, unregister_process, is_job_stopped, stop_job_processes
 from app import runtime_config
 from app.utils.quality_gate import assess_images, assess_subtitles, persist_quality_report
-from app.utils.data_cards import extract_data_card, render_data_card
 from app.utils.art_direction import assess_art_diversity
-from app.utils.market_charts import extract_market_chart, render_market_chart
 from app.utils.fal_billing import get_fal_credit_status
 
 logger = logging.getLogger(__name__)
@@ -108,27 +106,13 @@ class LongformWorker:
         # [S4] 1. 씬별 재생 시간(duration) 정밀 타임라인 동적 매핑 (TTS 청크 기반)
         _assign_scene_durations_from_chunks(scenes, chunks, total_duration)
 
-        # Matplotlib card rendering is deliberately sequential; scene clips
-        # themselves are still rendered concurrently below.
+        # Editorial overlay policy: scenes contain only the generated image/video
+        # and the timed subtitle track.  Do not add titles, data cards, charts,
+        # panels, or other text overlays to the image area.
         data_card_count = 0
         market_chart_count = 0
-        for i, scene in enumerate(scenes):
-            card = extract_data_card(scene)
-            if card:
-                card_path = str(temp_dir / f"data_card_{i:03d}.png")
-                if render_data_card(card, card_path):
-                    scene["data_card"] = card
-                    scene["data_card_path"] = card_path
-                    data_card_count += 1
-            chart = extract_market_chart(scene)
-            if chart:
-                chart_path = str(temp_dir / f"market_chart_{i:03d}.png")
-                if render_market_chart(chart, chart_path):
-                    scene["market_chart"] = chart
-                    scene["market_chart_path"] = chart_path
-                    market_chart_count += 1
         logger.info(
-            f"editorial overlays prepared: cards={data_card_count}, charts={market_chart_count}, scenes={len(scenes)}"
+            f"editorial overlays disabled: images + timed subtitles only (scenes={len(scenes)})"
         )
 
         # Kling 비디오 프로바이더 로드 (하이브리드 모드)
@@ -462,12 +446,6 @@ class LongformWorker:
                                 except Exception:
                                     pass
 
-                        card_path = scene.get("data_card_path", "")
-                        if _apply_data_card_overlay(clip_path, card_path, duration, job_id):
-                            logger.info(f"scene {i}: editorial data card overlaid")
-                        chart_path = scene.get("market_chart_path", "")
-                        if _apply_market_chart_overlay(clip_path, chart_path, duration, job_id):
-                            logger.info(f"scene {i}: verified market chart overlaid")
                         logger.info(f"씬 {i} Kling AI 움짤 완성 (표준 규격 변환 완료)")
                         return i, clip_path
                 except Exception as e:
@@ -483,12 +461,6 @@ class LongformWorker:
                     f'-y "{clip_path}" -loglevel error',
                     job_id
                 )
-            card_path = scene.get("data_card_path", "")
-            if _apply_data_card_overlay(clip_path, card_path, duration, job_id):
-                logger.info(f"scene {i}: editorial data card overlaid")
-            chart_path = scene.get("market_chart_path", "")
-            if _apply_market_chart_overlay(clip_path, chart_path, duration, job_id):
-                logger.info(f"scene {i}: verified market chart overlaid")
             return i, clip_path
 
         except Exception as e:

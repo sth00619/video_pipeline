@@ -25,12 +25,20 @@ def add_headline(image_path: str, output_path: str, headline: str, mood: str = "
     font = _font(size)
     draw = ImageDraw.Draw(image)
     color = COLORS.get(mood, COLORS["neutral"])
-    box = draw.textbbox((0, 0), headline, font=font, stroke_width=max(3, size // 11))
     x, y = int(width * 0.04), int(height * 0.035)
-    # A solid panel avoids putting synthetic typography on a busy background.
-    pad = int(size * 0.26)
-    draw.rounded_rectangle((x - pad, y - pad, x + (box[2]-box[0]) + pad, y + (box[3]-box[1]) + pad), radius=pad, fill=(255, 255, 255, 238), outline=(*color, 255), width=max(4, size // 13))
-    draw.text((x, y), headline, font=font, fill=(30, 25, 20, 255), stroke_width=1, stroke_fill=(255, 255, 255, 255))
+    # Keep the illustration unobstructed: show the headline directly on the
+    # image instead of placing it inside a white card/panel.  A soft shadow
+    # and dark outline preserve readability over both bright and dark scenes.
+    shadow_offset = max(2, size // 24)
+    stroke_width = max(3, size // 14)
+    draw.text(
+        (x + shadow_offset, y + shadow_offset), headline, font=font,
+        fill=(0, 0, 0, 150), stroke_width=stroke_width, stroke_fill=(0, 0, 0, 150),
+    )
+    draw.text(
+        (x, y), headline, font=font, fill=(*color, 255),
+        stroke_width=stroke_width, stroke_fill=(18, 22, 32, 255),
+    )
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     image.convert("RGB").save(output_path, quality=95)
     return output_path

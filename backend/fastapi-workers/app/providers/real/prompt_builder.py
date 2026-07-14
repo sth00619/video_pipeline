@@ -10,7 +10,8 @@ STYLE_LOCK = (
     "A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, "
     "NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, "
     "NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Do not depict screens, dashboards, "
-    "charts, signboards, documents, labels, or UI panels that could contain synthetic writing; use unlabeled physical props instead."
+    "charts, signboards, documents, labels, UI panels, blank white rectangles, empty title cards, empty frames, boards, "
+    "or presentation panels. Use unlabeled physical props and a continuous full-bleed illustrated background instead."
 )
 
 CHARACTER_LOCK = (
@@ -29,5 +30,6 @@ def build_prompt(spec: SceneSpec) -> str:
         f"ACTION: {spec.character_action}. Emotion: {spec.character_emotion}.",
         f"SETTING: {spec.setting}. BACKGROUND PROPS, all visible: {props}.",
         f"CAMERA: {spec.camera}." + side,
-        "Reserve the top-left for a post-production headline and the lower 18 percent for timed subtitles; keep those regions visually readable but do not generate any text.",
+        "Keep the top-left and lower 18 percent as ordinary full-bleed illustrated background; keep them visually readable "
+        "for post-production text, but never create blank space, a board, a card, a rectangle, or any panel there.",
     ))

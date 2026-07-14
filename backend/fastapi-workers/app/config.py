@@ -41,9 +41,10 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 # GET/POST /pipeline/config API(= app/runtime_config.py)를 쓰세요.
 # 그러면 Docker 재빌드 없이 다음 Job부터 즉시 반영됩니다.
 # ══════════════════════════════════════════════════════════
-# Keep the default brisk but natural for financial narration (1.10–1.20x).
-TTS_SPEED = float(os.getenv("TTS_SPEED", "1.18"))
-CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "610"))
+# ElevenLabs Korean narration at 1.25x (about 10% faster than the previous
+# 1.15x setting) measures roughly 280 non-space spoken characters/minute.
+TTS_SPEED = float(os.getenv("TTS_SPEED", "1.25"))
+CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "280"))
 SCENE_DURATION_SEC = float(os.getenv("SCENE_DURATION_SEC", "5.5"))
 SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "16"))
 SUBTITLE_FONT_SIZE = int(os.getenv("SUBTITLE_FONT_SIZE", "76"))
@@ -55,8 +56,14 @@ PRO_IMAGE_MAX_SCENES = int(os.getenv("PRO_IMAGE_MAX_SCENES", "999"))
 # Batch API has a 24-hour completion SLO, so it is an economy/background mode,
 # not the default path for a user waiting for a finished video.
 GEMINI_PRO_BATCH_ENABLED = os.getenv("GEMINI_PRO_BATCH_ENABLED", "false").lower() in {"1", "true", "yes"}
-GEMINI_PRO_BATCH_FALLBACK_ENABLED = os.getenv("GEMINI_PRO_BATCH_FALLBACK_ENABLED", "true").lower() in {"1", "true", "yes"}
+# Batch has a separate prepaid-credit contract. Never switch an interactive
+# long-form job onto it unless an operator explicitly enables it.
+GEMINI_PRO_BATCH_FALLBACK_ENABLED = os.getenv("GEMINI_PRO_BATCH_FALLBACK_ENABLED", "false").lower() in {"1", "true", "yes"}
 GEMINI_SERVICE_TIER = os.getenv("GEMINI_SERVICE_TIER", "standard").lower()
+# Pace and retry synchronous Pro 2K requests without changing their model.
+GEMINI_PRO_MAX_ATTEMPTS = int(os.getenv("GEMINI_PRO_MAX_ATTEMPTS", "5"))
+GEMINI_PRO_RETRY_BASE_SECONDS = float(os.getenv("GEMINI_PRO_RETRY_BASE_SECONDS", "10"))
+GEMINI_PRO_REQUEST_DELAY_SECONDS = float(os.getenv("GEMINI_PRO_REQUEST_DELAY_SECONDS", "3"))
 VISUAL_QA_ENABLED = os.getenv("VISUAL_QA_ENABLED", "true").lower() in {"1", "true", "yes"}
 VISUAL_QA_MAX_SCENES = int(os.getenv("VISUAL_QA_MAX_SCENES", "999"))
 

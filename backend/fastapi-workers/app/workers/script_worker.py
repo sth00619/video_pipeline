@@ -22,6 +22,7 @@ from typing import Optional
 
 from app.workers.market_data_collector import MarketDataCollector
 from app.config import CLAUDE_MODEL
+from app import runtime_config
 from app.utils.quality_gate import enrich_scene_plans, assess_scene_plan
 from app.utils.art_direction import direct_scenes, assess_art_diversity
 
@@ -218,8 +219,9 @@ class ScriptWorker:
     def generate(self, keyword: str, category: str, target_minutes: int,
                  market_data: Optional[dict] = None, job_id: int = 0) -> dict:
         category_label = CATEGORY_LABELS.get(category, "주식시장")
-        # 한국어 TTS 1.3x 배속 기준 분당 약 610자 (원본 470자 × 1.3 = 611자)
-        target_chars = target_minutes * 610  # 1.3x 배속 기준 실제 독해 속도
+        # Use the measured spoken-narration rate rather than the rich script's
+        # total character count (which also includes prompts and metadata).
+        target_chars = target_minutes * int(runtime_config.value("chars_per_minute"))
 
         logger.info(f"스크립트 생성 v3: job_id={job_id}, keyword={keyword}, "
                     f"category={category}, target={target_minutes}분")
@@ -343,6 +345,8 @@ class ScriptWorker:
 <market_context>{market_summary}</market_context>
 작성 규칙:
 - [대사], [비주얼 설명 (한국어)], [비주얼 프롬프트 (영어)], [감정] 포함
+- [대사] 블록만 합산해 공백 제외 약 {target_chars}자(±8%)로 작성. 비주얼 설명·영문 프롬프트·메타데이터는 이 분량에 포함하지 않음
+- 각 씬의 대사는 공백 제외 약 {chars_per_scene}자 내외의 짧고 완결된 생각 단위로 작성해 5~7초마다 시각 전환이 가능하게 구성
 - 마지막에 ## 메타데이터 섹션 추가 ([추천 제목], [추천 썸네일], [더보기 설명], [쇼츠 대본])
 - 쇼츠 대본은 본 영상의 핵심만 30초 내외로 요약한 강렬한 문장으로 작성
 목표 씬 수: 총 {num_scenes}개 내외"""
@@ -369,6 +373,11 @@ class ScriptWorker:
             if d_match: meta_desc = d_match.group(1).strip()
             s_match = re.search(r'\[쇼츠 대본\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
             if s_match: meta_shorts = s_match.group(1).strip()
+
+        # LLM instructions can occasionally be exceeded. Keep the spoken text
+        # within the requested video duration without touching visual prompts or
+        # metadata, so a 5-minute job cannot silently become a 9-minute TTS.
+        script_body = _cap_dialogue_to_target(script_body, target_chars)
 
         # The LLM often returns a valid but too-coarse outline (for example,
         # twenty 20-second scenes in a five-minute video).  Split the spoken
@@ -444,6 +453,85 @@ class ScriptWorker:
 # ──────────────────────────────────────────────────────────
 # 유틸 및 파싱 함수
 # ──────────────────────────────────────────────────────────
+def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
+    """Cap only [대사] content to the requested TTS duration budget.
+
+    Visual prompts remain intact for image generation. The cap works at sentence
+    boundaries where possible and keeps every scene instead of dropping a late
+    section of the story.
+    """
+    if not script_body or target_chars <= 0:
+        return script_body
+
+    pattern = re.compile(
+        r"(?ms)(\[대사\]\s*)(.*?)(?=^\s*\[(?:비주얼|감정)|^\s*##|\Z)"
+    )
+    matches = list(pattern.finditer(script_body))
+    if not matches:
+        return script_body
+
+    def char_count(value: str) -> int:
+        return len(re.sub(r"\s+", "", value))
+
+    original_counts = [char_count(match.group(2)) for match in matches]
+    total = sum(original_counts)
+    # Sentence boundaries leave some capacity unused when shortening. Reserve
+    # that natural-language margin so the final spoken result stays close to
+    # the requested duration instead of undershooting it by a full scene.
+    compaction_budget = round(target_chars * 1.18)
+    if total <= round(compaction_budget * 1.08):
+        return script_body
+
+    caps = [max(1, round(count * compaction_budget / total)) for count in original_counts]
+    difference = compaction_budget - sum(caps)
+    for idx in range(abs(difference)):
+        position = idx % len(caps)
+        if difference > 0:
+            caps[position] += 1
+        elif caps[position] > 1:
+            caps[position] -= 1
+
+    def shorten_dialogue(value: str, limit: int) -> str:
+        text = re.sub(r"\s+", " ", value).strip()
+        if char_count(text) <= limit:
+            return text
+        kept: list[str] = []
+        for sentence in re.split(r"(?<=[.!?。])\s*", text):
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            candidate = " ".join([*kept, sentence]).strip()
+            if char_count(candidate) <= limit:
+                kept.append(sentence)
+            elif not kept:
+                visible = 0
+                cut_at = 0
+                for char_index, char in enumerate(sentence):
+                    if not char.isspace():
+                        visible += 1
+                    if visible > max(1, limit - 1):
+                        break
+                    cut_at = char_index + 1
+                shortened = sentence[:cut_at].rstrip(" ,;:")
+                return (shortened + ".") if shortened else sentence[:1]
+            else:
+                break
+        return " ".join(kept).strip() or text[:max(1, limit)]
+
+    cap_iter = iter(caps)
+
+    def replace(match: re.Match) -> str:
+        return match.group(1) + shorten_dialogue(match.group(2), next(cap_iter)) + "\n"
+
+    compacted = pattern.sub(replace, script_body)
+    compacted_total = sum(char_count(match.group(2)) for match in pattern.finditer(compacted))
+    logger.warning(
+        "Narration capped for target duration: %s -> %s chars (target=%s, budget=%s)",
+        total, compacted_total, target_chars, compaction_budget,
+    )
+    return compacted
+
+
 def _calc_scene_count(target_minutes: int) -> int:
     """목표 분량별 씬(이미지) 수 계산 — 5~6초/씬 기준
     
@@ -487,8 +575,8 @@ def clean_script_commas_and_pct(text: str) -> str:
     return text
 
 
-def _split_sections_for_visual_pacing(sections: list, max_chars: int = 78) -> list:
-    """Split long narration into 6-8 second thought units for image direction.
+def _split_sections_for_visual_pacing(sections: list, max_chars: int = 34) -> list:
+    """Split long narration into 5-7 second thought units for image direction.
 
     We retain each source scene's topic and prompt as context, but every output
     unit receives its own scene director pass later in the image worker.  This
