@@ -370,7 +370,10 @@ class ScriptWorker:
             s_match = re.search(r'\[쇼츠 대본\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
             if s_match: meta_shorts = s_match.group(1).strip()
 
-        sections = _parse_sections(script_body)
+        # The LLM often returns a valid but too-coarse outline (for example,
+        # twenty 20-second scenes in a five-minute video).  Split the spoken
+        # content into short, complete thought units before images are planned.
+        sections = _split_sections_for_visual_pacing(_parse_sections(script_body))
         return script_body, sections, meta_title, meta_thumb, meta_desc, meta_shorts
 
     def _mock_generate(self, keyword, category_label, target_minutes, job_id):
@@ -482,6 +485,67 @@ def clean_script_commas_and_pct(text: str) -> str:
     # 2. 천단위 콤마 제거 (예: 6,806 -> 6806)
     text = re.sub(r'(\d{1,3}),(\d{3})', r'\1\2', text)
     return text
+
+
+def _split_sections_for_visual_pacing(sections: list, max_chars: int = 78) -> list:
+    """Split long narration into 6-8 second thought units for image direction.
+
+    We retain each source scene's topic and prompt as context, but every output
+    unit receives its own scene director pass later in the image worker.  This
+    prevents one illustration from being asked to explain an entire paragraph.
+    """
+    expanded: list[dict] = []
+    for source in sections:
+        text = re.sub(r"\s+", " ", str(source.get("content") or "")).strip()
+        if not text:
+            continue
+        sentences = [piece.strip() for piece in re.split(r"(?<=[.!?])\s+", text) if piece.strip()]
+        if not sentences:
+            sentences = [text]
+
+        units: list[str] = []
+        current = ""
+        for sentence in sentences:
+            candidates = [sentence]
+            if len(sentence.replace(" ", "")) > max_chars:
+                candidates = [part.strip() for part in re.split(r"(?<=,)\s+|(?<=; )\s+|(?<=그리고)\s+", sentence) if part.strip()]
+            for candidate in candidates:
+                words = candidate.split()
+                # Preserve word boundaries when an individual sentence remains long.
+                fragments: list[str] = []
+                fragment = ""
+                for word in words:
+                    proposed = f"{fragment} {word}".strip()
+                    if fragment and len(proposed.replace(" ", "")) > max_chars:
+                        fragments.append(fragment)
+                        fragment = word
+                    else:
+                        fragment = proposed
+                if fragment:
+                    fragments.append(fragment)
+                for fragment in fragments or [candidate]:
+                    proposed = f"{current} {fragment}".strip()
+                    if current and len(proposed.replace(" ", "")) > max_chars:
+                        units.append(current)
+                        current = fragment
+                    else:
+                        current = proposed
+        if current:
+            units.append(current)
+
+        for part_index, unit in enumerate(units, start=1):
+            scene = dict(source)
+            scene["content"] = unit
+            scene["text"] = unit
+            scene["char_count"] = len(unit)
+            if len(units) > 1:
+                scene["title"] = f"{source.get('title', 'Scene')} · {part_index}"
+            expanded.append(scene)
+
+    total = len(expanded)
+    for index, scene in enumerate(expanded):
+        scene["section"] = _assign_section_type(index, total)
+    return expanded
 
 
 def _parse_sections(full_text: str) -> list:

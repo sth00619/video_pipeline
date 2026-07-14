@@ -284,7 +284,8 @@ class ImagesWorker:
                         else:
                             import shutil
                             shutil.copy2(bg_path, img_path)
-                        add_headline(img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
+                        if runtime_config.value("image_headline_overlay"):
+                            add_headline(img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
                     else:
                         # [Sprint 3 & S5] LoRA 또는 기본 일체형 모드 + AI 품질 검수 자동 재생성
                         max_retries = 2
@@ -308,7 +309,13 @@ class ImagesWorker:
                             )
                             # [S5] AI 품질 자동 검수
                             if os.path.exists(raw_img_path) and os.path.getsize(raw_img_path) > 15000:
-                                add_headline(raw_img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
+                                if runtime_config.value("image_headline_overlay"):
+                                    add_headline(raw_img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
+                                else:
+                                    # Generated typography distracts from the scene.  Keep
+                                    # the clean Pro frame and render spoken text as subtitles.
+                                    import shutil
+                                    shutil.copy2(raw_img_path, img_path)
                                 quality_score = 95 if lora_model_id else 90
                                 break
                             else:

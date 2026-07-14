@@ -34,7 +34,7 @@ from typing import List, Dict
 from app.utils.process_manager import is_job_stopped, register_process, unregister_process
 from app import runtime_config
 from app.config import ELEVENLABS_TTS_MODEL
-from app.utils.quality_gate import sanitize_narration, assess_subtitles, persist_quality_report
+from app.utils.quality_gate import extract_narration, sanitize_narration, assess_subtitles, persist_quality_report
 from app.utils.korean_tts import normalize_korean_numbers_for_tts
 
 logger = logging.getLogger(__name__)
@@ -111,7 +111,12 @@ class TtsWorker:
 
         # A visual prompt accidentally reaching TTS becomes a visible subtitle.
         # Strip known prompt artifacts before speech and timing are generated.
-        clean_script = sanitize_narration(clean_script)
+        # Always parse the original rich script.  The legacy branch above could
+        # retain a top-level channel title or a markdown separator before the
+        # first [대사] block, causing the voice to open with editorial metadata.
+        clean_script = extract_narration(script)
+        if not clean_script:
+            raise ValueError("낭독 가능한 대사를 찾지 못했습니다.")
         preprocessed = self._preprocess_for_tts(clean_script)
 
         # 스크립트 변이 추적용 로그 저장 (디버그 및 싱크 추적)
@@ -375,9 +380,12 @@ class TtsWorker:
                 # [공식 가이드] Root level에도 normalization 끄기 설정 명시
                 "apply_text_normalization": "off"
             }
-            if prev_text:
+            # eleven_v3 rejects previous_text/next_text with a 400 response.
+            # A single rejected chunk used to downgrade the entire video to gTTS.
+            supports_context = not ELEVENLABS_TTS_MODEL.startswith("eleven_v3")
+            if prev_text and supports_context:
                 payload["previous_text"] = prev_text
-            if next_text_val:
+            if next_text_val and supports_context:
                 payload["next_text"] = next_text_val
             if pron_locators:
                 payload["pronunciation_dictionary_locators"] = pron_locators

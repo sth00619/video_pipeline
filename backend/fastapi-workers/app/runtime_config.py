@@ -29,6 +29,7 @@ _state = {
     "subtitle_max_chars": _cfg.SUBTITLE_MAX_CHARS,
     "subtitle_font_size": _cfg.SUBTITLE_FONT_SIZE,
     "subtitle_theme": _cfg.SUBTITLE_THEME,
+    "image_headline_overlay": _cfg.IMAGE_HEADLINE_OVERLAY,
     "image_provider": _cfg.IMAGE_PROVIDER,
     "image_quality_tier": _cfg.IMAGE_QUALITY_TIER,
     "pro_image_max_scenes": _cfg.PRO_IMAGE_MAX_SCENES,

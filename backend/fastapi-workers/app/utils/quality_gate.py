@@ -31,6 +31,50 @@ SECTION_VISUALS = {
 }
 
 
+def extract_narration(text: str) -> str:
+    """Return only the spoken narration from a rich production script."""
+    if not text:
+        return ""
+
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    dialogue_label = re.compile(r"^\s*\[\s*(?:대사|내레이션|narration|dialogue)\s*\]\s*(.*)$", re.I)
+    non_narration_label = re.compile(
+        r"^\s*\[\s*(?:비주얼|이미지|프롬프트|감정|visual|image|prompt|emotion|"
+        r"추천\s*제목|추천\s*썸네일|더보기\s*설명|쇼츠\s*대본)[^\]]*\].*$",
+        re.I,
+    )
+    has_dialogue_labels = any(dialogue_label.match(line) for line in lines)
+    spoken: list[str] = []
+    collecting = False
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        match = dialogue_label.match(line)
+        if match:
+            collecting = True
+            inline = match.group(1).strip()
+            if inline:
+                spoken.append(inline)
+            continue
+        if non_narration_label.match(line):
+            collecting = False
+            continue
+
+        if has_dialogue_labels:
+            if collecting and line and not line.startswith("#") and not re.fullmatch(r"[-─—]{3,}", line):
+                spoken.append(line)
+            continue
+
+        if not line or line.startswith("#") or re.fullmatch(r"[-─—]{3,}", line):
+            continue
+        if re.match(r"^(?:주제|씬\s*\d+|scene\s*\d+)\s*[:：]", line, re.I):
+            continue
+        spoken.append(line)
+
+    narration = re.sub(r"\s+", " ", " ".join(spoken)).strip()
+    return sanitize_narration(narration)
+
+
 def sanitize_narration(text: str) -> str:
     """Remove image-prompt residue before it can reach TTS or subtitles."""
     if not text:

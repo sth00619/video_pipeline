@@ -128,6 +128,7 @@ class PipelineConfigUpdate(BaseModel):
     subtitle_max_chars: Optional[int] = None
     subtitle_font_size: Optional[int] = None
     subtitle_theme: Optional[str] = None
+    image_headline_overlay: Optional[bool] = None
     image_provider: Optional[str] = None
     image_quality_tier: Optional[str] = None
     pro_image_max_scenes: Optional[int] = None

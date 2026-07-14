@@ -218,6 +218,11 @@ public class ScriptService {
             }
         }
 
+        // Rich scripts are stored for editing, but production needs compact
+        // narration-only scenes.  This also removes a channel title or visual
+        // prompt accidentally parsed as the first scene.
+        sections = normalizeSectionsForProduction(sections);
+
         if (sections.isEmpty()) {
             // 폴백: 이전 에셋에서 복원
             try {
@@ -264,6 +269,87 @@ public class ScriptService {
             log.info("스크립트 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
         }
         log.info("스크립트 확정: jobId={}, length={}자, sections={}개", jobId, scriptToSave.length(), sections.size());
+    }
+
+    private List<Map<String, Object>> normalizeSectionsForProduction(List<Map<String, Object>> sourceSections) {
+        List<Map<String, Object>> normalized = new java.util.ArrayList<>();
+        final int maxNarrationChars = 78;
+        for (Map<String, Object> source : sourceSections) {
+            String raw = source.get("content") != null ? source.get("content").toString()
+                    : (source.get("text") != null ? source.get("text").toString() : "");
+            String narration = extractNarrationOnly(raw);
+            if (narration.isBlank()) continue;
+
+            List<String> parts = splitNarrationForVisualPacing(narration, maxNarrationChars);
+            int partNumber = 0;
+            for (String part : parts) {
+                if (part.isBlank()) continue;
+                Map<String, Object> scene = new java.util.LinkedHashMap<>(source);
+                String title = String.valueOf(source.getOrDefault("title", "Scene"));
+                scene.put("title", parts.size() > 1 ? title + " · " + (++partNumber) : title);
+                scene.put("content", part);
+                scene.put("text", part);
+                scene.put("char_count", part.length());
+                // The FastAPI scene director creates the visual brief from this
+                // exact text.  Do not pass a stale prompt from the parent scene.
+                scene.put("prompt", "");
+                normalized.add(scene);
+            }
+        }
+
+        String[] flow = {"intro", "background", "data", "scenario", "action", "conclusion"};
+        for (int index = 0; index < normalized.size(); index++) {
+            int bucket = normalized.size() <= 1 ? 0
+                    : Math.min((index * flow.length) / normalized.size(), flow.length - 1);
+            normalized.get(index).put("section", flow[bucket]);
+        }
+        return normalized;
+    }
+
+    private String extractNarrationOnly(String raw) {
+        if (raw == null || raw.isBlank()) return "";
+        String dialogueTag = "[\uB300\uC0AC]";
+        int dialogue = raw.indexOf(dialogueTag);
+        if (dialogue >= 0) {
+            raw = raw.substring(dialogue + dialogueTag.length());
+            int end = raw.length();
+            for (String marker : List.of("[\uBE44\uC8FC\uC5BC", "[\uC774\uBBF8\uC9C0", "[\uD504\uB86C\uD504\uD2B8", "[\uAC10\uC815]")) {
+                int markerIndex = raw.indexOf(marker);
+                if (markerIndex >= 0) end = Math.min(end, markerIndex);
+            }
+            raw = raw.substring(0, end);
+        }
+        StringBuilder spoken = new StringBuilder();
+        for (String line : raw.replace("\r", "").split("\n")) {
+            String value = line.trim();
+            if (value.isEmpty() || value.startsWith("#") || value.matches("[-\\-─—]{3,}")) continue;
+            if (value.matches("^(?:\uC8FC\uC81C|\uC50C\\s*\\d+|scene\\s*\\d+)\\s*[:：].*")) continue;
+            if (value.startsWith("[")) break;
+            if (spoken.length() > 0) spoken.append(' ');
+            spoken.append(value);
+        }
+        return cleanScriptCommasAndPct(spoken.toString().replaceAll("\\s+", " ").trim());
+    }
+
+    private List<String> splitNarrationForVisualPacing(String narration, int maxChars) {
+        List<String> output = new java.util.ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        for (String sentence : narration.split("(?<=[.!?])\\s+")) {
+            for (String word : sentence.trim().split("\\s+")) {
+                if (word.isBlank()) continue;
+                String candidate = current.length() == 0 ? word : current + " " + word;
+                if (current.length() > 0 && candidate.replace(" ", "").length() > maxChars) {
+                    output.add(current.toString());
+                    current.setLength(0);
+                    current.append(word);
+                } else {
+                    if (current.length() > 0) current.append(' ');
+                    current.append(word);
+                }
+            }
+        }
+        if (current.length() > 0) output.add(current.toString());
+        return output;
     }
 
     private String cleanScriptCommasAndPct(String text) {

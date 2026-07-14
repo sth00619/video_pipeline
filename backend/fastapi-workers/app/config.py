@@ -41,12 +41,13 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 # GET/POST /pipeline/config API(= app/runtime_config.py)를 쓰세요.
 # 그러면 Docker 재빌드 없이 다음 Job부터 즉시 반영됩니다.
 # ══════════════════════════════════════════════════════════
-TTS_SPEED = float(os.getenv("TTS_SPEED", "1.15"))
+TTS_SPEED = float(os.getenv("TTS_SPEED", "1.32"))
 CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "610"))
 SCENE_DURATION_SEC = float(os.getenv("SCENE_DURATION_SEC", "5.5"))
 SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "16"))
 SUBTITLE_FONT_SIZE = int(os.getenv("SUBTITLE_FONT_SIZE", "76"))
 SUBTITLE_THEME = os.getenv("SUBTITLE_THEME", "economy")  # economy | knowledge
+IMAGE_HEADLINE_OVERLAY = os.getenv("IMAGE_HEADLINE_OVERLAY", "false").lower() in {"1", "true", "yes"}
 IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "gemini")   # gemini | fal | auto
 IMAGE_QUALITY_TIER = os.getenv("IMAGE_QUALITY_TIER", "pro")  # flash | hybrid | pro
 PRO_IMAGE_MAX_SCENES = int(os.getenv("PRO_IMAGE_MAX_SCENES", "999"))
