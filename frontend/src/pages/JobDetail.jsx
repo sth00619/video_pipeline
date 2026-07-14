@@ -94,6 +94,7 @@ export default function JobDetail() {
   const [scriptViewMode, setScriptViewMode] = useState('paragraphs')
   const [editingSceneIndex, setEditingSceneIndex] = useState(null)
   const [editingSceneText, setEditingSceneText] = useState('')
+  const [editingImagePrompt, setEditingImagePrompt] = useState('')
   const [imageSalt, setImageSalt] = useState(0)
   const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
   const [showEngPrompt, setShowEngPrompt] = useState({})
@@ -1188,13 +1189,23 @@ export default function JobDetail() {
 
                                 <div className="mt-2.5">
                                   {isEditingThis ? (
-                                    <textarea
-                                      id={`scene-edit-${img.index}`}
-                                      value={editingSceneText}
-                                      onChange={e => setEditingSceneText(e.target.value)}
-                                      className="w-full bg-navy-700 border border-navy-600 rounded p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
-                                      rows={2}
-                                    />
+                                    <div className="space-y-2">
+                                      <label className="block text-[11px] text-gray-400">씬 대사 / 자막 / 재조립용 텍스트</label>
+                                      <textarea
+                                        id={`scene-edit-${img.index}`}
+                                        value={editingSceneText}
+                                        onChange={e => setEditingSceneText(e.target.value)}
+                                        className="w-full bg-navy-700 border border-navy-600 rounded p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
+                                        rows={2}
+                                      />
+                                      <label className="block text-[11px] text-gray-400">이미지 재생성 지시 (이미지만 수정 시 사용)</label>
+                                      <textarea
+                                        value={editingImagePrompt}
+                                        onChange={e => setEditingImagePrompt(e.target.value)}
+                                        className="w-full bg-navy-900 border border-navy-600 rounded p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
+                                        rows={2}
+                                      />
+                                    </div>
                                   ) : (
                                     <div className="space-y-1.5">
                                       <p className="text-sm text-gray-200 leading-relaxed text-justify line-clamp-3">
@@ -1260,7 +1271,7 @@ export default function JobDetail() {
                                     <button
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
-                                        text: img.prompt_ko || img.text || img.prompt || '',
+                                        text: editingImagePrompt,
                                         section: img.section,
                                         mode: 'image'
                                       })}
@@ -1306,6 +1317,7 @@ export default function JobDetail() {
                                       onClick={() => {
                                         setEditingSceneIndex(img.index);
                                         setEditingSceneText(img.prompt_ko || img.text || img.prompt || '');
+                                        setEditingImagePrompt(img.prompt_en || img.prompt_ko || img.prompt || img.text || '');
                                       }}
                                       className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-white border border-navy-600 px-2.5 py-1.5 rounded transition"
                                     >

@@ -34,6 +34,7 @@ import urllib.request
 from pathlib import Path
 
 from app.providers.base import ImageProvider
+from app.providers.real.prompt_builder import STYLE_LOCK
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +147,10 @@ class NanaBananaProvider(ImageProvider):
             else:
                 char_prompt = CHARACTER_STYLE
 
-            is_directed_editorial_prompt = "Editorial scene family:" in prompt
+            # SceneSpec owns the mascot and medium. Never prepend the legacy
+            # teal-card mascot to a locked Goldie scene: it creates the exact
+            # mixed-character, pasted-together look this pipeline replaces.
+            is_directed_editorial_prompt = bool(kwargs.get("style_locked")) or "Editorial scene family:" in prompt
             is_english = all(ord(c) < 128 for c in prompt.replace(" ", "").replace(",", "").replace(".", ""))
             if is_directed_editorial_prompt:
                 # The scene director already specified the visual language. Do
@@ -171,6 +175,8 @@ class NanaBananaProvider(ImageProvider):
             logger.info(f"NanaBanana 이미지 생성 요청: prompt_len={len(base_prompt)}, lora={bool(lora_model_id)}")
 
         # 디렉토리 생성
+        if not is_background_only and STYLE_LOCK not in base_prompt:
+            base_prompt = STYLE_LOCK + "\n" + base_prompt
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
         # 공급자를 명시적으로 선택한다. 이전에는 로그가 NanaBanana라고 해도
@@ -210,9 +216,11 @@ class NanaBananaProvider(ImageProvider):
             if not gemini_key or self.__class__._gemini_disabled:
                 return False
             try:
-                character_image_path = kwargs.get("character_image_path")
+                character_image_paths = kwargs.get("character_image_paths") or []
+                if not character_image_paths and kwargs.get("character_image_path"):
+                    character_image_paths = [kwargs.get("character_image_path")]
                 if self._generate_gemini_api(
-                    base_prompt, output_path, gemini_key, character_image_path,
+                    base_prompt, output_path, gemini_key, character_image_paths,
                     model=gemini_model, image_size=gemini_image_size,
                     service_tier=gemini_service_tier,
                 ):
@@ -438,7 +446,12 @@ class NanaBananaProvider(ImageProvider):
 
     @staticmethod
     def _extract_interaction_image(response: dict) -> str | None:
-        """Read image data from the Interactions API response without relying on one layout."""
+        """Read image data from either GenerateContent or Interactions responses."""
+        for candidate in response.get("candidates") or []:
+            for block in (candidate.get("content") or {}).get("parts") or []:
+                inline = block.get("inlineData") or block.get("inline_data") or {}
+                if inline.get("data"):
+                    return inline["data"]
         output_image = response.get("output_image") or response.get("outputImage") or {}
         if isinstance(output_image, dict) and output_image.get("data"):
             return output_image["data"]
@@ -450,7 +463,7 @@ class NanaBananaProvider(ImageProvider):
 
     def _generate_gemini_api(
         self, prompt: str, output_path: str, api_key: str,
-        character_image_path: str = None, *, model: str, image_size: str,
+        character_image_paths: list[str] | None = None, *, model: str, image_size: str,
         service_tier: str = "standard",
     ) -> bool:
         """Use Gemini Interactions API so Flash and Pro share the same 16:9 contract."""
@@ -463,38 +476,47 @@ class NanaBananaProvider(ImageProvider):
             image_size = "1K"
 
         input_parts: list[dict] = []
+        reference_paths = [path for path in (character_image_paths or []) if path and os.path.exists(path)][:2]
+        # Add a secondary approved reference first; the primary sheet below
+        # still supplies the identity instruction exactly once.
+        for extra_reference in reference_paths[1:]:
+            try:
+                with open(extra_reference, "rb") as f:
+                    encoded = base64.b64encode(f.read()).decode()
+                mime = "image/png" if extra_reference.lower().endswith(".png") else "image/jpeg"
+                input_parts.append({"inlineData": {"mimeType": mime, "data": encoded}})
+            except Exception as exc:
+                logger.warning("Secondary character reference load failed: %s", exc)
+        character_image_path = reference_paths[0] if reference_paths else None
         if character_image_path and os.path.exists(character_image_path):
             try:
                 with open(character_image_path, "rb") as f:
                     encoded = base64.b64encode(f.read()).decode()
                 mime = "image/png" if character_image_path.lower().endswith(".png") else "image/jpeg"
-                input_parts.append({"type": "image", "data": encoded, "mime_type": mime})
+                input_parts.append({"inlineData": {"mimeType": mime, "data": encoded}})
                 prompt = (
                     "Use the attached image as the fixed channel character identity. Preserve its face, "
                     "silhouette, color palette and line style. Do not add a second mascot.\n\n" + prompt
                 )
             except Exception as exc:
                 logger.warning(f"캐릭터 레퍼런스 이미지 로드/인코딩 실패: {exc}")
-        input_parts.append({"type": "text", "text": prompt})
+        input_parts.append({"text": prompt})
 
         payload = {
-            "model": model,
-            "input": input_parts,
-            "response_format": {
-                "type": "image",
-                "mime_type": "image/jpeg",
-                "aspect_ratio": "16:9",
-                "image_size": image_size,
+            "contents": [{"parts": input_parts}],
+            "generationConfig": {
+                "responseModalities": ["IMAGE"],
+                "imageConfig": {"aspectRatio": "16:9", "imageSize": image_size},
             },
         }
         # Priority is an explicit caller choice for urgent Pro renders. Keep
         # standard as the default because it carries a premium price.
         if service_tier in {"priority", "flex"}:
-            payload["service_tier"] = service_tier
+            payload["generationConfig"]["serviceTier"] = service_tier
         headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
         for attempt in range(3):
             response = requests.post(
-                "https://generativelanguage.googleapis.com/v1beta/interactions",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                 json=payload, headers=headers, timeout=120,
             )
             if response.status_code == 200:

@@ -58,6 +58,7 @@ public class ShortsService {
         try {
             Map<String, Object> meta = new LinkedHashMap<>();
             meta.put("transcript", result.getTranscript() != null ? result.getTranscript() : "");
+            meta.put("total_duration", result.getTotalDuration());
             meta.put("words", result.getWords() != null ? result.getWords() : List.of());
             meta.put("segments", result.getTranscriptSegments() != null ? result.getTranscriptSegments() : List.of());
             meta.put("source_video_path", result.getSourceVideoPath());
@@ -133,15 +134,8 @@ public class ShortsService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        String sourcePath = job.getSourceVideoPath();
-        if (sourcePath == null || sourcePath.isBlank()) {
-            Optional<Asset> lfAsset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.LONGFORM_VIDEO);
-            if (lfAsset.isPresent()) {
-                sourcePath = lfAsset.get().getLocalPath();
-            }
-        }
-        if (sourcePath == null || sourcePath.isBlank())
-            throw new IllegalStateException("원본 영상 또는 롱폼 영상 경로가 없습니다.");
+        String sourcePath = resolveSourceVideoPath(job, jobId);
+        request = normalizeSegments(sourcePath, request);
 
         log.info("쇼츠 확정: jobId={}, segments={}개",
                 jobId, request.getSegments().size());
@@ -226,7 +220,7 @@ public class ShortsService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        String sourcePath = job.getSourceVideoPath();
+        String sourcePath = resolveSourceVideoPath(job, jobId);
         if (sourcePath == null || sourcePath.isBlank()) {
             Optional<Asset> lfAsset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.LONGFORM_VIDEO);
             if (lfAsset.isPresent()) {
@@ -239,6 +233,7 @@ public class ShortsService {
 
         log.info("쇼츠 병합 확정: jobId={}, segments={}개", jobId, request.getSegments().size());
 
+        request = normalizeSegments(sourcePath, request);
         String outputDir = "/app/data/jobs/" + jobId + "/shorts";
         new File(outputDir).mkdirs();
         String outputPath = outputDir + "/short_merged_" + System.currentTimeMillis() + ".mp4";
@@ -262,6 +257,51 @@ public class ShortsService {
 
         log.info("쇼츠 병합 확정 완료");
         return clips;
+    }
+
+    private String resolveSourceVideoPath(VideoJob job, Long jobId) {
+        if (job.getSourceVideoPath() != null && !job.getSourceVideoPath().isBlank()) {
+            return job.getSourceVideoPath();
+        }
+        if (job.getOutputPath() != null && !job.getOutputPath().isBlank()) {
+            return job.getOutputPath();
+        }
+        for (AssetType type : List.of(AssetType.LONGFORM_VIDEO, AssetType.SOURCE_VIDEO)) {
+            Optional<Asset> asset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, type);
+            if (asset.isPresent() && asset.get().getLocalPath() != null && !asset.get().getLocalPath().isBlank()) {
+                return asset.get().getLocalPath();
+            }
+        }
+        throw new IllegalStateException("No source or longform video is available for Shorts creation.");
+    }
+
+    private ShortsConfirmRequest normalizeSegments(String sourcePath, ShortsConfirmRequest request) {
+        List<Map<String, Object>> rawScenes = new ArrayList<>();
+        for (ShortsSegmentDto segment : request.getSegments() != null ? request.getSegments() : List.<ShortsSegmentDto>of()) {
+            Map<String, Object> scene = new LinkedHashMap<>();
+            scene.put("index", segment.getIndex());
+            scene.put("text", segment.getText() != null ? segment.getText() : "");
+            scene.put("start", segment.getStart() != null ? segment.getStart() : 0.0);
+            double duration = segment.getDuration() != null
+                    ? segment.getDuration()
+                    : ((segment.getEnd() != null && segment.getStart() != null) ? segment.getEnd() - segment.getStart() : 0.0);
+            scene.put("duration", Math.max(0.0, duration));
+            rawScenes.add(scene);
+        }
+        List<Map<String, Object>> normalized = fastApiClient.normalizeShortsScenes(sourcePath, rawScenes);
+        List<ShortsSegmentDto> segments = new ArrayList<>();
+        for (Map<String, Object> scene : normalized) {
+            ShortsSegmentDto segment = new ShortsSegmentDto();
+            segment.setIndex(((Number) scene.get("index")).intValue());
+            segment.setText(String.valueOf(scene.getOrDefault("text", "")));
+            segment.setStart(((Number) scene.get("start")).doubleValue());
+            segment.setEnd(((Number) scene.get("end")).doubleValue());
+            segment.setDuration(((Number) scene.get("duration")).doubleValue());
+            segments.add(segment);
+        }
+        ShortsConfirmRequest normalizedRequest = new ShortsConfirmRequest();
+        normalizedRequest.setSegments(segments);
+        return normalizedRequest;
     }
 
     private void saveClips(Long jobId, List<ShortClipInfo> clips) {

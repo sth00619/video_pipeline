@@ -29,6 +29,50 @@ STOCK_KW_MED = [
 
 class ShortsWorker:
 
+    def _prepare_segments_for_cut(self, source_path: str, segments: list) -> list:
+        """Expand short Whisper sentence matches instead of dropping them.
+
+        Keyword matching is sentence-level (often 1--5 seconds), but a Shorts
+        clip needs enough context to be watchable. Each short match is expanded
+        symmetrically to ``MIN_CLIP`` within the source-video bounds.
+        """
+        source_duration = self._get_duration(source_path)
+        prepared = []
+        for position, raw_segment in enumerate(segments):
+            segment = dict(raw_segment)
+            try:
+                start = max(0.0, float(segment.get("start", 0)))
+                end = float(segment.get("end", start + MIN_CLIP))
+            except (TypeError, ValueError):
+                logger.warning("Skipping Shorts segment %s with invalid timestamps", position)
+                continue
+            if end <= start:
+                logger.warning("Skipping Shorts segment %s with non-positive duration", position)
+                continue
+
+            if source_duration > 0:
+                start = min(start, source_duration)
+                end = min(end, source_duration)
+            duration = end - start
+            if duration < MIN_CLIP and source_duration > duration:
+                required = min(MIN_CLIP, source_duration)
+                padding = (required - duration) / 2
+                start = max(0.0, start - padding)
+                end = min(source_duration, end + padding)
+                if end - start < required:
+                    if start <= 0:
+                        end = min(source_duration, required)
+                    else:
+                        start = max(0.0, source_duration - required)
+                logger.info("Expanded short transcript segment %s to %.1fs", position, end - start)
+
+            if end - start < 0.05:
+                logger.warning("Skipping Shorts segment %s with insufficient duration", position)
+                continue
+            segment.update({"start": round(start, 3), "end": round(end, 3)})
+            prepared.append(segment)
+        return prepared
+
     def normalize_scenes(self, scenes: list[dict], video_path: str) -> list[dict]:
         """Fill missing scene timestamps from the actual source-video duration."""
         ordered = [dict(scene) for scene in sorted(scenes, key=lambda scene: int(scene.get("index", 0)))]
@@ -49,6 +93,9 @@ class ShortsWorker:
             and number(scene.get("duration")) > 0
             and number(scene.get("start")) + number(scene.get("duration")) <= total_duration + 0.25
             for scene in ordered
+        ) and all(
+            number(current.get("start")) >= number(previous.get("start")) + number(previous.get("duration")) - 0.25
+            for previous, current in zip(ordered, ordered[1:])
         )
         if valid:
             for scene in ordered:
@@ -180,6 +227,7 @@ class ShortsWorker:
         결과: 전체 내용 보존, 잘림 없음, 주식 차트/자막/수치 모두 표시
         """
         clips = []
+        segments = self._prepare_segments_for_cut(source_path, segments)
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
         for seg in segments:
@@ -415,6 +463,7 @@ class ShortsWorker:
         from pathlib import Path
         
         logger.info(f"쇼츠 병합 컷팅 시작: segments_count={len(segments)}")
+        segments = self._prepare_segments_for_cut(source_path, segments)
         tmp_clips = []
         
         try:

@@ -25,14 +25,16 @@ def _key() -> str:
     return key
 
 
-def _contents(prompt: str, character_path: str | None, character_required: bool) -> list[dict[str, Any]]:
+def _contents(prompt: str, character_paths: list[str] | None, character_required: bool) -> list[dict[str, Any]]:
     parts: list[dict[str, Any]] = [{"text": prompt}]
-    if character_required and character_path and Path(character_path).exists():
-        raw = Path(character_path).read_bytes()
-        mime = "image/png" if character_path.lower().endswith(".png") else "image/jpeg"
-        parts.insert(0, {"inlineData": {"mimeType": mime, "data": base64.b64encode(raw).decode()}})
+    reference_paths = [path for path in (character_paths or []) if path and Path(path).exists()][:2]
+    if character_required and reference_paths:
+        for character_path in reversed(reference_paths):
+            raw = Path(character_path).read_bytes()
+            mime = "image/png" if character_path.lower().endswith(".png") else "image/jpeg"
+            parts.insert(0, {"inlineData": {"mimeType": mime, "data": base64.b64encode(raw).decode()}})
         parts[-1]["text"] = (
-            "Use the supplied reference as the one fixed channel mascot. Preserve its face, silhouette, "
+            "Use the supplied reference sheet(s) as one fixed channel mascot. Preserve its face, silhouette, "
             "palette and line language; do not add a second mascot.\n\n" + prompt
         )
     return [{"role": "user", "parts": parts}]
@@ -41,7 +43,7 @@ def _contents(prompt: str, character_path: str | None, character_required: bool)
 def submit(
     job_id: int,
     scenes: list[dict[str, Any]],
-    character_path: str | None,
+    character_paths: list[str] | None,
     completed_scenes: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Submit queued Pro scenes and preserve any already-rendered direct scenes."""
@@ -52,7 +54,7 @@ def submit(
         prompt = scene["prompt_en"]
         requests_payload.append({
             "request": {
-                "contents": _contents(prompt, character_path, bool(direction.get("character_required"))),
+                "contents": _contents(prompt, character_paths, bool(direction.get("character_required"))),
                 "generationConfig": {
                     "responseModalities": ["TEXT", "IMAGE"],
                     "imageConfig": {"aspectRatio": "16:9", "imageSize": "2K"},
@@ -136,6 +138,15 @@ def poll(job_id: int) -> dict[str, Any]:
             path.write_bytes(raw)
         scene = dict(scene)
         scene.update({"image_path": str(path), "generation_method": "gemini_pro_batch_2k", "quality_score": 90, "batch_job_name": manifest["batch_name"]})
+        raw_path = image_dir / f"scene_{scene['index']:03d}_raw.png"
+        try:
+            from app.postprocess.text_overlay import add_headline
+            path.replace(raw_path)
+            add_headline(str(raw_path), str(path), str(scene.get("headline") or ""), str(scene.get("headline_mood") or "neutral"))
+        except Exception as exc:
+            logger.warning("Batch headline overlay skipped for scene %s: %s", scene["index"], exc)
+            if raw_path.exists() and not path.exists():
+                raw_path.replace(path)
         completed.append(scene)
     completed.sort(key=lambda scene: scene.get("index", 0))
     manifest["state"] = "BATCH_STATE_SUCCEEDED"

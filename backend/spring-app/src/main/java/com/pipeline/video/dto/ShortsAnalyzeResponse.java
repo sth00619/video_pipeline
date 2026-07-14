@@ -28,4 +28,7 @@ public class ShortsAnalyzeResponse {
 
     @JsonProperty("suggested_segments")
     private List<ShortsSegmentDto> suggestedSegments;
+
+    @JsonProperty("total_duration")
+    private Double totalDuration;
 }

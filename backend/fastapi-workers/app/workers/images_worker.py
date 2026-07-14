@@ -21,8 +21,13 @@ from app.utils.quality_gate import enrich_scene_plan, assess_images, persist_qua
 from app.utils.art_direction import direct_scenes, plan_image_quality_tiers, compile_editorial_prompt, assess_art_diversity
 from app.utils.visual_qa import assess_visual_alignment
 from app.utils import gemini_batch
+from app.pipeline.scene_director import SceneDirector, SceneSpec
+from app.providers.real.prompt_builder import build_prompt
+from app.postprocess.text_overlay import add_headline
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_CHARACTER_SHEET = Path("/app/assets/character/goldie_sheet_v1.png")
 
 import re
 
@@ -145,6 +150,33 @@ class ImagesWorker:
                 runtime_config.value("pro_image_max_scenes"),
             )
 
+        # Visual direction is deliberately separate from script writing. One
+        # coordinated request assigns a distinct role/costume/action to every
+        # scene; a deterministic fallback keeps the pipeline runnable when
+        # the director is temporarily unavailable.
+        directed_specs: dict[int, SceneSpec] = {}
+        if scenes_meta:
+            topic_context = " ".join(
+                str(scene.get("title") or scene.get("section") or "") for scene in scenes_meta[:4]
+            )
+            lines = [
+                (str(index), str(scene.get("content") or scene.get("text") or scene.get("prompt") or scene.get("title") or "시장 분석"))
+                for index, scene in enumerate(scenes_meta)
+            ]
+            specs = SceneDirector().direct_batch(lines, topic_context=topic_context)
+            directed_specs = {int(spec.scene_id): spec for spec in specs if str(spec.scene_id).isdigit()}
+            for index, scene in enumerate(scenes_meta):
+                if spec := directed_specs.get(index):
+                    scene["scene_spec"] = spec.to_dict()
+                    scene["headline"] = spec.headline
+
+        # The fixed reference sheet is used by default; an approved channel
+        # profile image is an additional reference, never a replacement.
+        character_reference_paths = []
+        for path in (str(DEFAULT_CHARACTER_SHEET), character_image_path):
+            if path and Path(path).exists() and path not in character_reference_paths:
+                character_reference_paths.append(path)
+
         # [S2-3] 이중 레이어 합성 모드 제어
         use_composite = bool(character_poses_dir and Path(character_poses_dir).exists())
         if use_composite:
@@ -173,8 +205,9 @@ class ImagesWorker:
         def build_batch_scene(original: dict, index: int) -> dict:
             scene = enrich_scene_plan(original, index, len(scenes_meta))
             narration = scene.get("content") or scene.get("text") or ""
+            spec = directed_specs.get(index)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = compile_editorial_prompt(scene, base_prompt)
+            prompt_en = build_prompt(spec) if spec else compile_editorial_prompt(scene, base_prompt)
             return {
                 "index": index,
                 "section": scene.get("section", f"scene_{index}"),
@@ -189,6 +222,9 @@ class ImagesWorker:
                 "image_profile": scene.get("image_profile") or {},
                 "market_snapshot": scene.get("market_snapshot") or market_snapshot,
                 "text": narration,
+                "headline": spec.headline if spec else scene.get("headline", ""),
+                "headline_mood": spec.mood if spec else "neutral",
+                "scene_spec": spec.to_dict() if spec else scene.get("scene_spec"),
             }
 
         # Batch is an explicitly selected economy mode. Interactive video
@@ -204,7 +240,7 @@ class ImagesWorker:
         if use_pro_batch:
             batch_scenes = [build_batch_scene(scene, i) for i, scene in enumerate(scenes_meta)]
             logger.info("Gemini Pro Batch submit: job=%s scenes=%s", job_id, len(batch_scenes))
-            return gemini_batch.submit(job_id, batch_scenes, character_image_path)
+            return gemini_batch.submit(job_id, batch_scenes, character_reference_paths)
 
         generated = []
         for i, scene in enumerate(scenes_meta):
@@ -214,8 +250,9 @@ class ImagesWorker:
             section = scene.get("section", f"scene_{i}")
             narration = scene.get("content") or scene.get("text") or ""
 
+            spec = directed_specs.get(i)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = compile_editorial_prompt(scene, base_prompt)
+            prompt_en = build_prompt(spec) if spec else compile_editorial_prompt(scene, base_prompt)
             prompt_ko = scene.get("prompt_ko") or narration or scene.get("title") or ""
             pose = scene.get("pose", "neutral")
             art_direction = scene.get("art_direction") or {}
@@ -228,6 +265,7 @@ class ImagesWorker:
             quality_score = 0
 
             img_path = str(job_dir / f"scene_{i:03d}.png")
+            raw_img_path = str(job_dir / f"scene_{i:03d}_raw.png")
 
             if ai_provider:
                 try:
@@ -246,16 +284,18 @@ class ImagesWorker:
                         else:
                             import shutil
                             shutil.copy2(bg_path, img_path)
+                        add_headline(img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
                     else:
                         # [Sprint 3 & S5] LoRA 또는 기본 일체형 모드 + AI 품질 검수 자동 재생성
                         max_retries = 2
                         for attempt in range(max_retries):
                             ai_provider.generate_image(
                                 prompt=prompt_en,
-                                output_path=img_path,
+                                output_path=raw_img_path,
                                 section=section,
                                 keyword=prompt_en[:30],
-                                character_image_path=character_image_path,
+                                character_image_path=character_reference_paths[0] if character_reference_paths else None,
+                                character_image_paths=character_reference_paths,
                                 character_style_prompt=effective_character_style,
                                 lora_model_id=lora_model_id,
                                 lora_trigger_word=lora_trigger_word,
@@ -264,9 +304,11 @@ class ImagesWorker:
                                 gemini_model=image_profile.get("model"),
                                 gemini_image_size=image_profile.get("image_size"),
                                 gemini_service_tier=runtime_config.value("gemini_service_tier"),
+                                style_locked=bool(spec),
                             )
                             # [S5] AI 품질 자동 검수
-                            if os.path.exists(img_path) and os.path.getsize(img_path) > 15000:
+                            if os.path.exists(raw_img_path) and os.path.getsize(raw_img_path) > 15000:
+                                add_headline(raw_img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
                                 quality_score = 95 if lora_model_id else 90
                                 break
                             else:
@@ -291,6 +333,9 @@ class ImagesWorker:
                         "image_profile": image_profile,
                         "market_snapshot": scene_market_snapshot,
                         "text": narration,
+                        "headline": spec.headline if spec else scene.get("headline", ""),
+                        "headline_mood": spec.mood if spec else "neutral",
+                        "scene_spec": spec.to_dict() if spec else scene.get("scene_spec"),
                     })
                     logger.info(f"씬 {i} AI 이미지 생성 및 품질 검수 완료 (점수={quality_score or 85})")
                     continue
@@ -309,7 +354,7 @@ class ImagesWorker:
                             return gemini_batch.submit(
                                 job_id,
                                 remaining,
-                                character_image_path,
+                                character_reference_paths,
                                 completed_scenes=generated,
                             )
                         # Do not publish the text-on-solid-background fallback

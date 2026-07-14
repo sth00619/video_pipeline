@@ -221,6 +221,17 @@ export default function Shorts() {
           }))
         })
         setAiScenarios(res.data)
+        if (Array.isArray(res.data.timeline_scenes) && res.data.timeline_scenes.length > 0) {
+          setScenes(res.data.timeline_scenes.map((scene, i) => ({
+            ...scene,
+            index: Number(scene.index ?? i + 1),
+            title: scene.title || `Scene ${scene.index ?? i + 1}`,
+            start: Number(scene.start || 0),
+            duration: Number(scene.duration || 0),
+          })))
+          const repairedDuration = res.data.timeline_scenes.reduce((max, scene) => Math.max(max, Number(scene.end || 0), Number(scene.start || 0) + Number(scene.duration || 0)), 0)
+          if (repairedDuration > 0) setTotalDur(repairedDuration)
+        }
       } else {
         alert('먼저 업로드 영상을 분석해 시간 정보가 있는 대본을 추출해 주세요.')
       }
@@ -340,14 +351,19 @@ export default function Shorts() {
 
     // 시간 정보 유효성 검증
     const invalidSegments = targetSegments.filter(s => s.start === null || s.start === undefined || isNaN(s.start));
-    if (invalidSegments.length > 0) {
+    if (false && invalidSegments.length > 0) {
       alert('⚠️ 씬의 시간 정보(타임스탬프)가 존재하지 않는 예전 버전의 프로젝트입니다.\n\n해결 방법: 상단의 [에디터] 탭으로 이동하신 후 우측 상단의 [수정 반영 및 재조립] 버튼을 한 번 눌러주세요. 영상이 재조립되면서 시간 정보가 정상적으로 매핑됩니다.');
       return;
     }
 
     setCutting(true)
     try {
-      const endpoint = isMerge ? `/jobs/${id}/shorts/confirm-merge` : `/jobs/${id}/shorts/confirm`
+      const targetId = id || job?.id
+      if (!targetId) {
+        alert('쇼츠 원본 job을 찾을 수 없습니다. 먼저 영상을 분석해 주세요.')
+        return
+      }
+      const endpoint = isMerge ? `/jobs/${targetId}/shorts/confirm-merge` : `/jobs/${targetId}/shorts/confirm`
       const res = await apiClient.post(endpoint, {
         segments: targetSegments.map(s => ({
           index: s.index,

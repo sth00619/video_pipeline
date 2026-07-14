@@ -231,6 +231,7 @@ async def analyze_shorts(file: UploadFile = File(...), shorts_count: int = Query
         "transcript_segments": analysis["transcript_segments"],
         "words": analysis["words"],
         "suggested_segments": analysis["suggested_segments"],
+        "total_duration": analysis["total_duration"],
     }
 
 class ShortsScene(BaseModel):
