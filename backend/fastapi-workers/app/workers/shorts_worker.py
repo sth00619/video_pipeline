@@ -1,10 +1,8 @@
 """
-쇼츠 추출 워커 v5 — 주식 콘텐츠 letterbox 변환
+쇼츠 추출 워커 v6 — 9:16 fill/crop 및 60초 상한
 
-핵심 변경: crop(잘림) → letterbox(전체 보존)
-  원본 16:9 영상을 1080x1920에 letterbox로 배치
-  위아래 네이비 패딩(#0d1b2a) — 주식 영상 배경과 동일
-  차트, 자막, 수치 잘림 없음
+원본 영상의 중심을 기준으로 세로 화면을 빈 여백 없이 채운다.
+모든 개별 쇼츠와 병합 쇼츠는 YouTube Shorts 권장 길이인 60초를 넘지 않는다.
 """
 import os
 import logging
@@ -14,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CLIP = 60.0
 MIN_CLIP = 10.0
+MAX_SHORT_DURATION = 60.0
 
 STOCK_KW_HIGH = [
     "지금 당장", "핵심은", "결론은", "정리하면",
@@ -28,6 +27,42 @@ STOCK_KW_MED = [
 
 
 class ShortsWorker:
+
+    @staticmethod
+    def _vertical_fill_filter() -> str:
+        """Fill a 9:16 canvas without letterboxing, preserving the source centre."""
+        return (
+            "scale=1080:1920:force_original_aspect_ratio=increase,"
+            "crop=1080:1920:(in_w-out_w)/2:(in_h-out_h)/2,setsar=1"
+        )
+
+    def _cap_segments_to_short_limit(self, segments: list) -> list:
+        """Keep ordered source ranges within the 60-second Shorts ceiling.
+
+        A final range is shortened when necessary instead of allowing a merged
+        output to silently exceed the platform limit.
+        """
+        capped, remaining = [], MAX_SHORT_DURATION
+        for raw_segment in segments:
+            if remaining <= 0:
+                break
+            segment = dict(raw_segment)
+            try:
+                start = float(segment.get("start", 0))
+                end = float(segment.get("end", start))
+            except (TypeError, ValueError):
+                continue
+            if end <= start:
+                continue
+            duration = min(end - start, remaining)
+            if duration <= 0:
+                continue
+            segment.update({"start": round(start, 3), "end": round(start + duration, 3)})
+            capped.append(segment)
+            remaining -= duration
+        if len(capped) < len(segments):
+            logger.info("Shorts timeline capped at %.0fs", MAX_SHORT_DURATION)
+        return capped
 
     def _prepare_segments_for_cut(self, source_path: str, segments: list) -> list:
         """Expand short Whisper sentence matches instead of dropping them.
@@ -215,16 +250,10 @@ class ShortsWorker:
 
     def cut(self, source_path: str, segments: list, output_dir: str) -> list:
         """
-        letterbox 방식으로 9:16 변환
+        빈 여백 없는 fill/crop 방식으로 9:16 변환
         
-        변환 방식:
-          scale=1080:1920:force_original_aspect_ratio=decrease
-            → 원본 비율 유지하며 1080x1920 안에 맞게 축소
-          pad=1080:1920:(ow-iw)/2:(oh-ih)/2:0x0d1b2a
-            → 16:9 영상 → 위아래 네이비 패딩으로 채움
-            → 예: 1080x607 영상 → 위 656px 패딩 + 영상 + 아래 657px 패딩
-        
-        결과: 전체 내용 보존, 잘림 없음, 주식 차트/자막/수치 모두 표시
+        원본 중심을 기준으로 1080x1920을 가득 채운 뒤 잘라낸다.
+        모든 결과는 최대 60초로 제한한다.
         """
         clips = []
         segments = self._prepare_segments_for_cut(source_path, segments)
@@ -233,7 +262,7 @@ class ShortsWorker:
         for seg in segments:
             idx = seg.get("index", len(clips) + 1)
             start = float(seg.get("start", 0))
-            end = float(seg.get("end", start + 60))
+            end = min(float(seg.get("end", start + MAX_SHORT_DURATION)), start + MAX_SHORT_DURATION)
             duration = end - start
 
             if duration < MIN_CLIP:
@@ -242,12 +271,7 @@ class ShortsWorker:
 
             output_path = str(Path(output_dir) / f"short_{idx:03d}.mp4")
 
-            # letterbox: 네이비 배경 (#0d1b2a — 주식 영상 배경색과 동일)
-            vf = (
-                "scale=1080:1920:force_original_aspect_ratio=decrease,"
-                "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:0x0d1b2a,"
-                "setsar=1"
-            )
+            vf = self._vertical_fill_filter()
 
             cmd = (
                 f'ffmpeg -i "{source_path}" '
@@ -260,13 +284,11 @@ class ShortsWorker:
             ret = os.system(cmd)
 
             if ret != 0:
-                # 폴백: 검정 배경
-                logger.warning(f"구간 {idx}: 네이비 패딩 실패, 검정으로 재시도")
+                logger.warning(f"구간 {idx}: fill/crop 인코딩 실패, 단순 인코더로 재시도")
                 cmd_fb = (
                     f'ffmpeg -i "{source_path}" '
                     f'-ss {start:.3f} -t {duration:.3f} '
-                    f'-vf "scale=1080:1920:force_original_aspect_ratio=decrease,'
-                    f'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,setsar=1" '
+                    f'-vf "{vf}" '
                     f'-c:v libx264 -preset fast -c:a aac '
                     f'-y "{output_path}" -loglevel error'
                 )
@@ -457,19 +479,22 @@ class ShortsWorker:
 
     def cut_and_merge(self, source_path: str, segments: list, output_path: str) -> dict:
         """
-        여러 씬 구간을 개별적으로 크롭(letterbox) 컷팅한 후 하나의 mp4 파일로 무손실 병합(Concat)합니다.
+        여러 씬 구간을 9:16 fill/crop으로 만들고, 총 60초 이내로 병합합니다.
         """
         import tempfile
         from pathlib import Path
         
         logger.info(f"쇼츠 병합 컷팅 시작: segments_count={len(segments)}")
-        segments = self._prepare_segments_for_cut(source_path, segments)
+        segments = self._cap_segments_to_short_limit(
+            self._prepare_segments_for_cut(source_path, segments)
+        )
         tmp_clips = []
+        rendered_duration = 0.0
         
         try:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
             
-            # 1. 각 구간별 컷팅 및 9:16 letterbox 패딩 인코딩
+            # 1. 각 구간별 컷팅 및 9:16 fill/crop 인코딩
             for idx, seg in enumerate(segments):
                 start = float(seg.get("start", 0))
                 end = float(seg.get("end", start + 15))
@@ -481,12 +506,7 @@ class ShortsWorker:
                     
                 tmp_clip = tempfile.mktemp(suffix=f"_merge_part_{idx}.mp4")
                 
-                # letterbox 네이비 배경 (#0d1b2a)
-                vf = (
-                    "scale=1080:1920:force_original_aspect_ratio=decrease,"
-                    "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:0x0d1b2a,"
-                    "setsar=1"
-                )
+                vf = self._vertical_fill_filter()
                 
                 cmd = (
                     f'ffmpeg -i "{source_path}" '
@@ -499,6 +519,7 @@ class ShortsWorker:
                 ret = os.system(cmd)
                 if ret == 0 and os.path.exists(tmp_clip):
                     tmp_clips.append(tmp_clip)
+                    rendered_duration += duration
                     
             if not tmp_clips:
                 raise ValueError("합성할 수 있는 유효한 영상 클립이 단 하나도 생성되지 않았습니다.")
@@ -519,7 +540,7 @@ class ShortsWorker:
                 os.remove(list_file)
                 
             if ret_merge == 0 and os.path.exists(output_path):
-                total_dur = sum(float(s.get("end", 0)) - float(s.get("start", 0)) for s in segments)
+                total_dur = min(MAX_SHORT_DURATION, rendered_duration)
                 logger.info(f"쇼츠 병합 완료: {output_path} ({total_dur:.1f}초)")
                 return {
                     "index": 1,
