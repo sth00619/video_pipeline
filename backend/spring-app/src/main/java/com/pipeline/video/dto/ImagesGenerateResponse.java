@@ -5,10 +5,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ImagesGenerateResponse {
+    private String status;
+
+    @JsonProperty("batch_job_name")
+    private String batchJobName;
+
+    @JsonProperty("batch_state")
+    private String batchState;
+
+    private String error;
+
     @JsonProperty("job_id")
     private Long jobId;
 
@@ -23,4 +34,7 @@ public class ImagesGenerateResponse {
 
     @JsonProperty("gifs")
     private List<GifClipDto> gifs;
+
+    @JsonProperty("quality_report")
+    private Map<String, Object> qualityReport;
 }

@@ -28,6 +28,7 @@ v6 대비 변경점 (조립 시간 단축 목적):
     최대 8로 상한을 둡니다.
 """
 import json
+import math
 import os
 import re
 import time
@@ -37,6 +38,11 @@ import concurrent.futures
 from pathlib import Path
 from app.utils.process_manager import register_process, unregister_process, is_job_stopped
 from app import runtime_config
+from app.utils.quality_gate import assess_images, assess_subtitles, persist_quality_report
+from app.utils.data_cards import extract_data_card, render_data_card
+from app.utils.art_direction import assess_art_diversity
+from app.utils.market_charts import extract_market_chart, render_market_chart
+from app.utils.fal_billing import get_fal_credit_status
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +61,20 @@ def _run_subprocess(cmd: str, job_id: int) -> int:
 
 NANUM_BOLD = "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
 NANUM_REGULAR = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+
+
+def _probe_duration(media_path: str) -> float:
+    """조립 단계가 추정값이 아닌 실제 미디어 길이를 사용하도록 한다."""
+    if not media_path or not os.path.exists(media_path):
+        return 0.0
+    raw = os.popen(
+        f'ffprobe -v error -show_entries format=duration '
+        f'-of default=noprint_wrappers=1:nokey=1 "{media_path}"'
+    ).read().strip()
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 class LongformWorker:
@@ -88,9 +108,35 @@ class LongformWorker:
         # [S4] 1. 씬별 재생 시간(duration) 정밀 타임라인 동적 매핑 (TTS 청크 기반)
         _assign_scene_durations_from_chunks(scenes, chunks, total_duration)
 
+        # Matplotlib card rendering is deliberately sequential; scene clips
+        # themselves are still rendered concurrently below.
+        data_card_count = 0
+        market_chart_count = 0
+        for i, scene in enumerate(scenes):
+            card = extract_data_card(scene)
+            if card:
+                card_path = str(temp_dir / f"data_card_{i:03d}.png")
+                if render_data_card(card, card_path):
+                    scene["data_card"] = card
+                    scene["data_card_path"] = card_path
+                    data_card_count += 1
+            chart = extract_market_chart(scene)
+            if chart:
+                chart_path = str(temp_dir / f"market_chart_{i:03d}.png")
+                if render_market_chart(chart, chart_path):
+                    scene["market_chart"] = chart
+                    scene["market_chart_path"] = chart_path
+                    market_chart_count += 1
+        logger.info(
+            f"editorial overlays prepared: cards={data_card_count}, charts={market_chart_count}, scenes={len(scenes)}"
+        )
+
         # Kling 비디오 프로바이더 로드 (하이브리드 모드)
+        fal_status = get_fal_credit_status()
         video_provider = None
         try:
+            if not fal_status["available"]:
+                raise RuntimeError(f"Fal billing preflight: {fal_status['reason']}")
             from app.providers.factory import get_video_provider
             video_provider = get_video_provider()
             logger.info("하이브리드 Kling 비디오 프로바이더 로드 성공")
@@ -98,6 +144,11 @@ class LongformWorker:
             logger.warning(f"Kling 비디오 프로바이더 로드 실패 (FFmpeg 폴백 사용): {e}")
 
         # 초반 AI 움짤 대상 씬 수 계산
+        # Do not invoke any video generator unless the Fal billing preflight
+        # confirms usable credit. Gemini Pro images still assemble normally.
+        if not fal_status["available"]:
+            video_provider = None
+            logger.info("Fal motion disabled: %s", fal_status["reason"])
         intro_kling_count = _get_intro_kling_count(total_duration, len(scenes))
         logger.info(f"초반 Kling AI 움짤 대상: {intro_kling_count}씬 (전체 {len(scenes)}씬 중)")
 
@@ -170,6 +221,29 @@ class LongformWorker:
             )
             raise RuntimeError("concat 단계에서 재생 가능한 영상을 만들지 못했습니다.")
 
+        # Kling은 5초 클립만 반환한다. 어떤 씬이 짧게 끝나도 최종 -shortest가
+        # 나레이션을 자르지 않도록 마지막 프레임을 복제해 오디오 길이를 보장한다.
+        audio_duration = _probe_duration(audio_path)
+        target_duration = audio_duration or float(total_duration or 0.0)
+        silent_duration = _probe_duration(silent_video)
+        if target_duration > 0 and silent_duration + 0.05 < target_duration:
+            pad_seconds = target_duration - silent_duration
+            padded_video = str(temp_dir / "silent_padded.mp4")
+            logger.warning(
+                f"시각 트랙이 나레이션보다 짧음: video={silent_duration:.2f}s, "
+                f"audio={target_duration:.2f}s. 마지막 프레임 {pad_seconds:.2f}s 패딩"
+            )
+            pad_ret = _run_subprocess(
+                f'ffmpeg -i "{silent_video}" '
+                f'-vf "tpad=stop_mode=clone:stop_duration={pad_seconds:.3f}" '
+                f'-t {target_duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+                f'-an -y "{padded_video}" -loglevel error',
+                job_id,
+            )
+            if pad_ret != 0 or not _verify_video(padded_video):
+                raise RuntimeError("나레이션 길이 보정 영상 생성 실패")
+            os.replace(padded_video, silent_video)
+
         logger.info(
             f"concat 완료 (재인코딩 모드, ffprobe 검증 통과), "
             f"소요={time.time() - concat_stage_t0:.1f}s"
@@ -199,21 +273,23 @@ class LongformWorker:
                 merge_cmd = (
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" -i "{bgm_path}" '
                     f'-filter_complex "[1:a]volume=1.0[narr];[2:a]volume={bgm_volume},aloop=loop=-1:size=2e+09[bgm];'
-                    f'[narr][bgm]amix=inputs=2:duration=first:dropout_transition=3[mixed]" '
+                    f'[narr][bgm]amix=inputs=2:duration=first:dropout_transition=3[mixed];'
+                    f'[mixed]loudnorm=I=-16:LRA=11:TP=-1.5:linear=true[master]" '
                     f'{vf_filter}'
                     f'{vcodec} '
-                    f'-map 0:v -map "[mixed]" '
-                    f'-c:a aac -b:a 192k -shortest '
+                    f'-map 0:v -map "[master]" '
+                    f'-c:a aac -b:a 192k -movflags +faststart -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
                 logger.info(f"BGM 믹싱 적용: 나레이션 + BGM(volume={bgm_volume})")
             else:
                 merge_cmd = (
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
+                    f'-filter_complex "[1:a]loudnorm=I=-16:LRA=11:TP=-1.5:linear=true[master]" '
                     f'{vf_filter}'
                     f'{vcodec} '
-                    f'-map 0:v -map 1:a '
-                    f'-c:a aac -b:a 192k -shortest '
+                    f'-map 0:v -map "[master]" '
+                    f'-c:a aac -b:a 192k -movflags +faststart -shortest '
                     f'-y "{output_path}" -loglevel error'
                 )
         else:
@@ -254,6 +330,24 @@ class LongformWorker:
 
         file_size = os.path.getsize(output_path)
         has_subtitles = font_available and ass_exists
+        subtitle_quality = assess_subtitles(
+            chunks, float(total_duration or actual_duration),
+            int(runtime_config.value("subtitle_max_chars")),
+        )
+        visual_quality = assess_images(scenes)
+        duration_delta = round(abs(actual_duration - float(total_duration or actual_duration)), 3)
+        quality_report = {
+            "score": min(subtitle_quality["score"], visual_quality["score"]),
+            "duration_delta_seconds": duration_delta,
+            "duration_ok": duration_delta <= 0.2,
+            "subtitles": subtitle_quality,
+            "images": visual_quality,
+            "art_direction": assess_art_diversity(scenes),
+            "has_subtitles": has_subtitles,
+            "data_card_count": data_card_count,
+            "market_chart_count": market_chart_count,
+        }
+        persist_quality_report(job_id, "longform", quality_report)
         total_elapsed = time.time() - stage_t0
         logger.info(
             f"롱폼 조립 완료: size={file_size/1024/1024:.1f}MB, "
@@ -274,8 +368,11 @@ class LongformWorker:
             "duration_seconds": round(actual_duration, 1),
             "scene_count": len(scenes),
             "gif_count": len(gifs),
+            "data_card_count": data_card_count,
+            "market_chart_count": market_chart_count,
             "has_subtitles": has_subtitles,
             "resolution": "1920x1080",
+            "quality_report": quality_report,
         }
 
     # ============================
@@ -317,20 +414,26 @@ class LongformWorker:
                     # 로컬 이미지를 base64 data URI로 인코딩해 image_url로 전달
                     image_data_uri = _encode_image_as_data_uri(img_path)
 
+                    motion_duration = min(max(int(duration), 1), 5)
                     video_provider.generate(
                         prompt=prompt,
-                        duration=min(int(duration), 5),
+                        duration=motion_duration,
                         output_path=clip_path,
                         image_path=img_path,
-                        image_url=image_data_uri
+                        image_url=image_data_uri,
+                        fal_only=True,
                     )
                     if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
                         temp_kling = clip_path + ".temp.mp4"
                         try:
                             os.rename(clip_path, temp_kling)
+                            # Kling 동작은 최대 5초만 사용하고, 나머지는 마지막
+                            # 프레임을 유지한다. 따라서 긴 씬도 정확한 길이를 가진다.
+                            freeze_duration = max(0.0, duration - motion_duration)
                             std_cmd = (
                                 f'ffmpeg -i "{temp_kling}" -vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
-                                f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30" '
+                                f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30,'
+                                f'tpad=stop_mode=clone:stop_duration={freeze_duration:.3f}" '
                                 f'-t {duration:.3f} -c:v libx264 -preset fast -pix_fmt yuv420p -an -y "{clip_path}" -loglevel error'
                             )
                             _run_subprocess(std_cmd, job_id)
@@ -345,6 +448,12 @@ class LongformWorker:
                                 except Exception:
                                     pass
 
+                        card_path = scene.get("data_card_path", "")
+                        if _apply_data_card_overlay(clip_path, card_path, duration, job_id):
+                            logger.info(f"scene {i}: editorial data card overlaid")
+                        chart_path = scene.get("market_chart_path", "")
+                        if _apply_market_chart_overlay(clip_path, chart_path, duration, job_id):
+                            logger.info(f"scene {i}: verified market chart overlaid")
                         logger.info(f"씬 {i} Kling AI 움짤 완성 (표준 규격 변환 완료)")
                         return i, clip_path
                 except Exception as e:
@@ -360,6 +469,12 @@ class LongformWorker:
                     f'-y "{clip_path}" -loglevel error',
                     job_id
                 )
+            card_path = scene.get("data_card_path", "")
+            if _apply_data_card_overlay(clip_path, card_path, duration, job_id):
+                logger.info(f"scene {i}: editorial data card overlaid")
+            chart_path = scene.get("market_chart_path", "")
+            if _apply_market_chart_overlay(clip_path, chart_path, duration, job_id):
+                logger.info(f"scene {i}: verified market chart overlaid")
             return i, clip_path
 
         except RuntimeError as e:
@@ -391,8 +506,26 @@ class LongformWorker:
         - 하단 중앙 배치 (Alignment=2)
         - 최대 20자 1줄
         """
-        font_name = "Pretendard Bold"
+        # Docker 이미지에 설치된 글꼴을 명시해 환경별 폴백을 없앤다.
+        # Fontconfig family name is NanumGothic; bold weight is controlled by
+        # the ASS Bold field below. "NanumGothicBold" would fall back to
+        # DejaVu Sans in the Docker image despite the font file being present.
+        font_name = "NanumGothic"
         font_size = runtime_config.value("subtitle_font_size")
+        theme = runtime_config.value("subtitle_theme")
+
+        if theme == "knowledge":
+            # 반투명 다크 바 + 흰 글자 + 금색 강조 포인트.
+            style = (
+                f"Style: Main,{font_name},{font_size},&H00FFFFFF,&H0000FFFF,"
+                "&H003A3122,&H88120E0B,-1,0,0,0,100,100,0,0,3,0,0,2,60,60,72,1"
+            )
+        else:
+            # 흰 굵은 글자와 검정 외곽선. 불투명 박스 없이 장면을 살린다.
+            style = (
+                f"Style: Main,{font_name},{font_size},&H00FFFFFF,&H0000FFFF,"
+                "&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,5,2,2,50,50,78,1"
+            )
 
         header = f"""[Script Info]
 ScriptType: v4.00+
@@ -402,7 +535,7 @@ WrapStyle: 0
 ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Main,{font_name},{font_size},&H00FFFFFF,&H000000FF,&H00000000,&H99000000,-1,0,0,0,100,100,1,0,3,2,1,2,40,40,80,1
+{style}
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
@@ -508,11 +641,13 @@ def _get_intro_kling_count(total_duration: float, total_scenes: int) -> int:
     if total_scenes <= 0 or total_duration <= 0:
         return 3
 
-    intro_secs = 60.0
+    intro_secs = min(60.0, total_duration)
     secs_per_scene = total_duration / total_scenes
-    count = max(2, int(intro_secs / secs_per_scene))
-    logger.info(f"intro_kling_count 계산: 초반 {intro_secs}초 강제 할당, scenes={total_scenes}, "
-                f"secs_per_scene={secs_per_scene:.1f}s → {count}씬")
+    scenes_in_first_minute = max(1, math.ceil(intro_secs / max(secs_per_scene, 0.1)))
+    max_clips = max(0, int(runtime_config.value("intro_kling_max_clips")))
+    count = min(total_scenes, scenes_in_first_minute, max_clips)
+    logger.info(f"intro_kling_count 계산: 첫 60초 이내 {scenes_in_first_minute}씬 중 "
+                f"움직임 예산 {max_clips}개 → {count}씬")
     return count
 
 
@@ -572,6 +707,48 @@ def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_colo
         f'-y "{clip_path}" -loglevel error'
     )
     _run_subprocess(cmd, job_id)
+
+
+def _apply_data_card_overlay(clip_path: str, card_path: str, duration: float, job_id: int) -> bool:
+    """Place deterministic Korean data-card text above the subtitle-safe area."""
+    if not card_path or not os.path.exists(card_path) or not _verify_video(clip_path):
+        return False
+    staged = clip_path + ".card.mp4"
+    cmd = (
+        f'ffmpeg -i "{clip_path}" -loop 1 -i "{card_path}" '
+        f'-filter_complex "[0:v][1:v]overlay=70:55:format=auto[v]" '
+        f'-map "[v]" -t {duration:.3f} -an '
+        f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-y "{staged}" -loglevel error'
+    )
+    ret = _run_subprocess(cmd, job_id)
+    if ret != 0 or not _verify_video(staged):
+        if os.path.exists(staged):
+            os.remove(staged)
+        return False
+    os.replace(staged, clip_path)
+    return True
+
+
+def _apply_market_chart_overlay(clip_path: str, chart_path: str, duration: float, job_id: int) -> bool:
+    """Place a real market-series chart beside the textual data card."""
+    if not chart_path or not os.path.exists(chart_path) or not _verify_video(clip_path):
+        return False
+    staged = clip_path + ".chart.mp4"
+    cmd = (
+        f'ffmpeg -i "{clip_path}" -loop 1 -i "{chart_path}" '
+        f'-filter_complex "[0:v][1:v]overlay=1120:65:format=auto[v]" '
+        f'-map "[v]" -t {duration:.3f} -an '
+        f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-y "{staged}" -loglevel error'
+    )
+    ret = _run_subprocess(cmd, job_id)
+    if ret != 0 or not _verify_video(staged):
+        if os.path.exists(staged):
+            os.remove(staged)
+        return False
+    os.replace(staged, clip_path)
+    return True
 
 
 def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):

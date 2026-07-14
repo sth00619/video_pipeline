@@ -4,6 +4,7 @@ public enum AssetType {
     KEYWORD,
     SCRIPT,
     TTS_AUDIO,
+    IMAGE_BATCH,
     SCENE_IMAGE,
     GIF_CLIP,
     LONGFORM_VIDEO,

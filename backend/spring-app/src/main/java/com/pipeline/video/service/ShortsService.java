@@ -47,10 +47,35 @@ public class ShortsService {
         job.setSourceVideoPath(result.getSourceVideoPath());
         job.setStatus(JobStatus.SHORTS_SEGMENTS_PENDING);
         jobRepository.save(job);
+        saveUploadedTranscript(jobId, result);
 
         costService.record(jobId, "WHISPER_STT", BigDecimal.ZERO, "USD", "쇼츠 분석");
         log.info("쇼츠 분석 완료: jobId={}", jobId);
         return result;
+    }
+
+    private void saveUploadedTranscript(Long jobId, ShortsAnalyzeResponse result) {
+        try {
+            Map<String, Object> meta = new LinkedHashMap<>();
+            meta.put("transcript", result.getTranscript() != null ? result.getTranscript() : "");
+            meta.put("words", result.getWords() != null ? result.getWords() : List.of());
+            meta.put("segments", result.getTranscriptSegments() != null ? result.getTranscriptSegments() : List.of());
+            meta.put("source_video_path", result.getSourceVideoPath());
+            assetRepository.save(Asset.builder()
+                    .jobId(jobId)
+                    .assetType(AssetType.TRANSCRIPT)
+                    .localPath(result.getSourceVideoPath())
+                    .metaJson(objectMapper.writeValueAsString(meta))
+                    .build());
+            assetRepository.save(Asset.builder()
+                    .jobId(jobId)
+                    .assetType(AssetType.SOURCE_VIDEO)
+                    .localPath(result.getSourceVideoPath())
+                    .metaJson("{\"source\":\"uploaded_shorts\"}")
+                    .build());
+        } catch (Exception e) {
+            log.warn("Failed to persist uploaded Shorts transcript: {}", e.getMessage());
+        }
     }
 
     // ============================
@@ -140,7 +165,33 @@ public class ShortsService {
         } else {
             List<Asset> sceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
             if (sceneAssets.isEmpty()) {
-                throw new IllegalStateException("씬 이미지 에셋이 존재하지 않으며 업로드된 씬 정보도 없습니다.");
+                Optional<Asset> transcriptAsset = assetRepository
+                        .findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.TRANSCRIPT);
+                if (transcriptAsset.isEmpty()) {
+                    throw new IllegalStateException("No scene images or uploaded transcript are available.");
+                }
+                try {
+                    Map<String, Object> transcriptMeta = objectMapper.readValue(
+                            transcriptAsset.get().getMetaJson(), new TypeReference<>() {});
+                    Object rawSegments = transcriptMeta.get("segments");
+                    if (rawSegments instanceof List<?> items) {
+                        int fallbackIndex = 1;
+                        for (Object item : items) {
+                            Map<String, Object> source = objectMapper.convertValue(item, new TypeReference<>() {});
+                            Map<String, Object> scene = new HashMap<>();
+                            scene.put("index", source.getOrDefault("index", fallbackIndex++));
+                            scene.put("text", source.getOrDefault("text", ""));
+                            scene.put("start", ((Number) source.getOrDefault("start", 0.0)).doubleValue());
+                            scene.put("duration", ((Number) source.getOrDefault("duration", 0.0)).doubleValue());
+                            scenes.add(scene);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Uploaded transcript parsing failed: {}", e.getMessage());
+                }
+                if (scenes.isEmpty()) {
+                    throw new IllegalStateException("Uploaded video transcript has no usable timed segments.");
+                }
             }
 
             for (Asset asset : sceneAssets) {
@@ -159,7 +210,15 @@ public class ShortsService {
         }
         }
 
-        return fastApiClient.extractShortsScenarios(jobId, scenes);
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        String sourcePath = resolveSourceVideoPath(job, jobId);
+        List<Map<String, Object>> timedScenes = fastApiClient.normalizeShortsScenes(sourcePath, scenes);
+        Map<String, Object> result = fastApiClient.extractShortsScenarios(jobId, timedScenes);
+        // Return the repaired timeline so the web client can immediately cut
+        // the scenario/keyword selection without relying on stale image assets.
+        result.put("timeline_scenes", timedScenes);
+        return result;
     }
 
     @Transactional

@@ -1140,6 +1140,10 @@ export default function JobDetail() {
                       {sortedImageList.map((img, i) => {
                         const isEditingThis = editingSceneIndex === img.index;
                         const isRegeneratingThis = regenImageMut.isPending && editingSceneIndex === img.index;
+                        const qualityScore = img.qualityScore ?? img.quality_score;
+                        const qualityFlags = img.qualityFlags ?? img.quality_flags ?? [];
+                        const retryRecommended = img.retryRecommended ?? img.retry_recommended;
+                        const imageProfile = img.imageProfile ?? img.image_profile;
 
                         return (
                           <div key={img.index || i} className="flex gap-4 bg-navy-800/40 border border-navy-700/60 rounded-lg p-3.5 hover:border-navy-600 transition">
@@ -1162,9 +1166,24 @@ export default function JobDetail() {
                                       {fmt(img.start)} ~ {fmt(img.start + img.duration)} ({img.duration?.toFixed(1)}초)
                                     </span>
                                   </div>
-                                  <span className="text-xs bg-navy-700 text-navy-400 px-2 py-0.5 rounded border border-navy-600">
-                                    구분: {img.section}
-                                  </span>
+                                  <div className="flex items-center gap-1.5">
+                                    {imageProfile?.tier && (
+                                      <span className={`text-xs px-2 py-0.5 rounded border ${imageProfile.tier === 'pro' ? 'bg-accent-gold/10 text-accent-gold border-accent-gold/30' : 'bg-navy-700 text-navy-400 border-navy-600'}`}>
+                                        {imageProfile.tier === 'pro' ? 'Pro 2K' : 'Flash 1K'}
+                                      </span>
+                                    )}
+                                    {qualityScore !== undefined && (
+                                      <span
+                                        className={`text-xs px-2 py-0.5 rounded border ${retryRecommended ? 'bg-accent-gold/10 text-accent-gold border-accent-gold/30' : 'bg-accent-green/10 text-accent-green border-accent-green/30'}`}
+                                        title={img.semanticReason || img.semantic_reason || (qualityFlags.length ? `품질 확인: ${qualityFlags.join(', ')}` : '기술 품질 확인 통과')}
+                                      >
+                                        {retryRecommended ? '검토 권장' : '품질 확인'} {qualityScore}점
+                                      </span>
+                                    )}
+                                    <span className="text-xs bg-navy-700 text-navy-400 px-2 py-0.5 rounded border border-navy-600">
+                                      구분: {img.section}
+                                    </span>
+                                  </div>
                                 </div>
 
                                 <div className="mt-2.5">

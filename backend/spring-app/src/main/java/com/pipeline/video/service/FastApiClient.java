@@ -64,6 +64,21 @@ public class FastApiClient {
     }
 
     @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> normalizeShortsScenes(String sourceVideoPath, List<Map<String, Object>> scenes) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("source_video_path", sourceVideoPath);
+            bodyMap.put("scenes", scenes);
+            String responseBody = postJson(fastApiUrl + "/workers/shorts/normalize-scenes", bodyMap);
+            Map<String, Object> response = objectMapper.readValue(responseBody, Map.class);
+            Object normalized = response.get("scenes");
+            return normalized instanceof List<?> list ? (List<Map<String, Object>>) list : List.of();
+        } catch (Exception e) {
+            throw new RuntimeException("FastAPI scene timeline normalization failed: " + e.getMessage(), e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     public List<ShortClipInfo> cutShorts(Long jobId, String sourceVideoPath, ShortsConfirmRequest request) {
         try {
             List<Map<String, Object>> segmentMaps = new ArrayList<>();
@@ -216,6 +231,18 @@ public class FastApiClient {
                                                   String characterPosesDir) {
         return generateImages(jobId, ttsMetaJson, scriptMetaJson, characterImagePath,
                 characterStylePrompt, characterPosesDir, null, null, null);
+    }
+
+    public ImagesGenerateResponse getImageBatchStatus(Long jobId) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            return objectMapper.readValue(
+                    postJson(fastApiUrl + "/workers/images/batch-status", bodyMap),
+                    ImagesGenerateResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Gemini Pro Batch 상태 조회 오류: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -507,6 +534,43 @@ public class FastApiClient {
         } catch (Exception e) {
             log.error("ElevenLabs 목소리 목록 조회 실패: {}", e.getMessage());
             return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getCharacterLibraryStatus(String channelId) {
+        try {
+            return restTemplate.getForObject(
+                    fastApiUrl + "/workers/character-library/" + channelId, Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("캐릭터 라이브러리 상태 조회 실패: " + e.getMessage(), e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> generateCharacterLibrary(
+            String channelId, String characterDescription, boolean regenerate) {
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("channel_id", channelId);
+            body.put("character_description", characterDescription);
+            body.put("regenerate", regenerate);
+            return objectMapper.readValue(
+                    postJson(fastApiUrl + "/workers/character-library/generate", body), Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("캐릭터 포즈 생성 실패: " + e.getMessage(), e);
+        }
+    }
+
+    public ResponseEntity<byte[]> getCharacterPose(String channelId, String pose) {
+        try {
+            return restTemplate.exchange(
+                    fastApiUrl + "/workers/character-library/" + channelId + "/pose/" + pose,
+                    HttpMethod.GET,
+                    null,
+                    byte[].class);
+        } catch (Exception e) {
+            throw new RuntimeException("캐릭터 포즈 조회 실패: " + e.getMessage(), e);
         }
     }
 }

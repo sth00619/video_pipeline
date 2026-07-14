@@ -19,6 +19,9 @@ public class ShortsSegmentDto {
     @JsonProperty("end")
     private Double end;
 
+    @JsonProperty("duration")
+    private Double duration;
+
     @JsonProperty("reason")
     private String reason;
 }

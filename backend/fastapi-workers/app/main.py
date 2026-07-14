@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from pathlib import Path
 from typing import List, Optional
@@ -18,6 +19,7 @@ from app.workers.bgm_worker import BgmWorker
 from app.workers.pronunciation_manager import PronunciationManager
 from app.config import APP_MODE, CLAUDE_MODEL
 from app import runtime_config
+from app.utils.fal_billing import get_fal_credit_status
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -101,6 +103,17 @@ def health():
     return {"status": "ok", "mode": APP_MODE, "claude_model": CLAUDE_MODEL}
 
 
+@app.get("/providers/status")
+def provider_status():
+    return {
+        "gemini": {
+            "image_model": "gemini-3-pro-image",
+            "quality_tier": runtime_config.value("image_quality_tier"),
+        },
+        "fal": get_fal_credit_status(),
+    }
+
+
 # ============================
 # 신규 — 파이프라인 파라미터 실시간 조정 API
 #
@@ -114,6 +127,15 @@ class PipelineConfigUpdate(BaseModel):
     scene_duration_sec: Optional[float] = None
     subtitle_max_chars: Optional[int] = None
     subtitle_font_size: Optional[int] = None
+    subtitle_theme: Optional[str] = None
+    image_provider: Optional[str] = None
+    image_quality_tier: Optional[str] = None
+    pro_image_max_scenes: Optional[int] = None
+    gemini_pro_batch_enabled: Optional[bool] = None
+    gemini_pro_batch_fallback_enabled: Optional[bool] = None
+    gemini_service_tier: Optional[str] = None
+    visual_qa_enabled: Optional[bool] = None
+    visual_qa_max_scenes: Optional[int] = None
     elevenlabs_voice_id: Optional[str] = None
     elevenlabs_stability: Optional[float] = None
     elevenlabs_similarity_boost: Optional[float] = None
@@ -125,6 +147,7 @@ class PipelineConfigUpdate(BaseModel):
     intro_kling_seconds_10min: Optional[int] = None
     intro_kling_seconds_15min: Optional[int] = None
     intro_kling_seconds_20min: Optional[int] = None
+    intro_kling_max_clips: Optional[int] = None
 
 
 @app.get("/pipeline/config")
@@ -147,6 +170,29 @@ def update_pipeline_config(update: PipelineConfigUpdate):
 def reset_pipeline_config():
     """환경변수 기본값으로 되돌립니다."""
     return {"status": "ok", "config": runtime_config.reset_to_env_defaults()}
+
+
+@app.get("/workers/quality/{job_id}")
+def get_quality_report(job_id: int, stage: Optional[str] = None):
+    """Return persisted deterministic quality-gate results for a job."""
+    quality_dir = DATA_DIR / "jobs" / str(job_id) / "quality"
+    if not quality_dir.exists():
+        raise HTTPException(404, "quality report not found")
+    allowed = {"tts", "images", "longform"}
+    stages = [stage] if stage else sorted(allowed)
+    if stage and stage not in allowed:
+        raise HTTPException(400, "invalid quality report stage")
+    reports = {}
+    for name in stages:
+        path = quality_dir / f"{name}.json"
+        if path.exists():
+            try:
+                reports[name] = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                reports[name] = {"error": "unreadable quality report"}
+    if not reports:
+        raise HTTPException(404, "quality report not found")
+    return {"job_id": job_id, "reports": reports}
 
 
 # ============================
@@ -178,7 +224,14 @@ async def analyze_shorts(file: UploadFile = File(...), shorts_count: int = Query
         analysis = get_shorts_worker().analyze(str(source_path), shorts_count=shorts_count)
     except Exception as e:
         raise HTTPException(500, f"분석 실패: {str(e)}")
-    return {"job_id": job_id, "source_video_path": str(source_path), "transcript": analysis["transcript"], "words": analysis["words"], "suggested_segments": analysis["suggested_segments"]}
+    return {
+        "job_id": job_id,
+        "source_video_path": str(source_path),
+        "transcript": analysis["transcript"],
+        "transcript_segments": analysis["transcript_segments"],
+        "words": analysis["words"],
+        "suggested_segments": analysis["suggested_segments"],
+    }
 
 class ShortsScene(BaseModel):
     index: int
@@ -189,6 +242,23 @@ class ShortsScene(BaseModel):
 class ShortsExtractScenariosRequest(BaseModel):
     job_id: int
     scenes: List[ShortsScene]
+
+class ShortsNormalizeScenesRequest(BaseModel):
+    source_video_path: str
+    scenes: List[ShortsScene]
+
+@app.post("/workers/shorts/normalize-scenes")
+async def normalize_shorts_scenes(request: ShortsNormalizeScenesRequest):
+    source = Path(request.source_video_path)
+    if not source.exists():
+        raise HTTPException(404, f"Source video not found: {source}")
+    try:
+        normalized = get_shorts_worker().normalize_scenes(
+            [scene.dict() for scene in request.scenes], str(source)
+        )
+        return {"source_video_path": str(source), "scenes": normalized}
+    except Exception as e:
+        raise HTTPException(500, f"Scene timeline normalization failed: {str(e)}")
 
 class ShortsCutMergeRequest(BaseModel):
     source_video_path: str
@@ -401,7 +471,18 @@ def images_generate(request: ImagesGenerateRequest):
     except Exception as e:
         logger.exception("이미지 생성 실패")
         raise HTTPException(500, f"이미지 생성 실패: {str(e)}")
+class ImagesBatchStatusRequest(BaseModel):
+    job_id: int
 
+
+@app.post("/workers/images/batch-status")
+def images_batch_status(request: ImagesBatchStatusRequest):
+    try:
+        from app.utils.gemini_batch import poll
+        return poll(request.job_id)
+    except Exception as e:
+        logger.exception("Gemini Pro Batch status failed")
+        raise HTTPException(500, f"Gemini Pro Batch status failed: {str(e)}")
 
 
 @app.get("/workers/images/download")
@@ -541,6 +622,15 @@ async def list_character_libraries():
     try:
         from app.workers.character_library_worker import CharacterLibraryWorker
         return {"channels": CharacterLibraryWorker().list_channels()}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.get("/workers/character-library/{channel_id}")
+async def get_character_library_status(channel_id: str):
+    """Return the usable pose names and metadata for one channel library."""
+    try:
+        from app.workers.character_library_worker import CharacterLibraryWorker
+        return CharacterLibraryWorker().get_library_status(channel_id)
     except Exception as e:
         raise HTTPException(500, str(e))
 

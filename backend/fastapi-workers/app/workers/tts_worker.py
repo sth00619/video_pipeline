@@ -33,6 +33,9 @@ from pathlib import Path
 from typing import List, Dict
 from app.utils.process_manager import is_job_stopped, register_process, unregister_process
 from app import runtime_config
+from app.config import ELEVENLABS_TTS_MODEL
+from app.utils.quality_gate import sanitize_narration, assess_subtitles, persist_quality_report
+from app.utils.korean_tts import normalize_korean_numbers_for_tts
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +109,9 @@ class TtsWorker:
         else:
             clean_script = script.strip()
 
+        # A visual prompt accidentally reaching TTS becomes a visible subtitle.
+        # Strip known prompt artifacts before speech and timing are generated.
+        clean_script = sanitize_narration(clean_script)
         preprocessed = self._preprocess_for_tts(clean_script)
 
         # 스크립트 변이 추적용 로그 저장 (디버그 및 싱크 추적)
@@ -211,7 +217,12 @@ class TtsWorker:
             logger.warning("글자 수 비례 타임스탬프로 폴백")
             chunks = self._fallback_timing(clean_script, actual_duration, subtitle_max_chars)
 
-        logger.info(f"TTS v6 완료: {actual_duration:.1f}초, chunks={len(chunks)}, engine={tts_engine}")
+        subtitle_quality = assess_subtitles(chunks, actual_duration, subtitle_max_chars)
+        persist_quality_report(job_id, "tts", subtitle_quality)
+        logger.info(
+            f"TTS v6 완료: {actual_duration:.1f}초, chunks={len(chunks)}, engine={tts_engine}, "
+            f"subtitle_quality={subtitle_quality['score']}"
+        )
 
         return {
             "job_id": job_id,
@@ -221,6 +232,7 @@ class TtsWorker:
             "chunks": chunks,
             "used_gtts": used_tts and (tts_engine == "gtts"),
             "used_elevenlabs": (tts_engine == "elevenlabs"),
+            "quality_report": {"subtitles": subtitle_quality},
         }
 
     # ============================
@@ -351,7 +363,8 @@ class TtsWorker:
         def _build_payload(chunk_text: str, prev_text: str = "", next_text_val: str = "") -> dict:
             payload = {
                 "text": chunk_text,
-                "model_id": "eleven_multilingual_v2",
+                "model_id": ELEVENLABS_TTS_MODEL,
+                "language_code": "ko",
                 "voice_settings": {
                     "stability": runtime_config.value("elevenlabs_stability"),
                     "similarity_boost": runtime_config.value("elevenlabs_similarity_boost"),
@@ -531,10 +544,17 @@ class TtsWorker:
             return []
 
         alignment = resp.json()
+        raw_characters = alignment.get("characters", [])
         raw_words = alignment.get("words", [])
-        if not raw_words:
+        if not raw_words and not raw_characters:
             logger.warning("Forced Alignment 결과에 단어가 없음")
             return []
+
+        if raw_characters:
+            character_chunks = self._map_timestamps_by_character_alignment(text_chunks, raw_characters)
+            if character_chunks:
+                logger.info(f"Forced Alignment character-level mapping complete: {len(character_chunks)} chunks")
+                return character_chunks
 
         engine_words = [
             {"word": w.get("text", ""), "start": w.get("start", 0.0), "end": w.get("end", 0.0)}
@@ -544,6 +564,54 @@ class TtsWorker:
 
         chunks = self._map_timestamps_by_preprocessed_length(text_chunks, engine_words)
         logger.info(f"Forced Alignment 정밀 매핑 완료 (자막=원본, 타이밍=발음전처리 기준): {len(text_chunks)}개 청크")
+        return chunks
+
+    def _map_timestamps_by_character_alignment(self, text_chunks: List[str], characters: List[Dict]) -> List[dict]:
+        """Map subtitle chunks to exact Forced Alignment character timings.
+
+        Word-length ratios drift at Korean spacing, punctuation, and spoken
+        numbers. The API returns timestamps for each character of the same
+        normalized text used by TTS, so use those boundaries directly.
+        """
+        timed = [
+            item for item in characters
+            if str(item.get("text", "")).strip()
+            and item.get("start") is not None and item.get("end") is not None
+        ]
+        expected_lengths = [
+            len(self._preprocess_for_tts(chunk).replace(" ", ""))
+            for chunk in text_chunks
+        ]
+        expected_total = sum(expected_lengths)
+        if not timed or not expected_total:
+            return []
+        if abs(len(timed) - expected_total) > max(12, int(expected_total * 0.08)):
+            logger.warning(
+                "Forced Alignment character count mismatch: aligned=%s expected=%s",
+                len(timed), expected_total,
+            )
+            return []
+
+        chunks: List[dict] = []
+        cursor = 0
+        previous_end = 0.0
+        for index, (text, char_count) in enumerate(zip(text_chunks, expected_lengths)):
+            if char_count <= 0:
+                continue
+            end_cursor = len(timed) if index == len(text_chunks) - 1 else min(cursor + char_count, len(timed))
+            if end_cursor <= cursor:
+                return []
+            start = max(previous_end, float(timed[cursor]["start"]))
+            end = max(start + 0.05, float(timed[end_cursor - 1]["end"]))
+            chunks.append({
+                "index": index + 1,
+                "text": text,
+                "start": round(start, 3),
+                "end": round(end, 3),
+                "duration": round(end - start, 3),
+            })
+            cursor = end_cursor
+            previous_end = end
         return chunks
 
     # ============================
@@ -798,11 +866,14 @@ class TtsWorker:
     def _preprocess_for_tts(text: str) -> str:
         """주식/경제 용어를 gTTS/ElevenLabs가 자연스럽게 읽도록 전처리"""
         text = re.sub(r'^##\s*.+$', '', text, flags=re.MULTILINE).strip()
-        text = re.sub(r'([+-]?\d+\.?\d*)%', r'\1포인트', text)
+        text = re.sub(r'([+-]?\d+\.?\d*)%', r'\1 퍼센트', text)
         text = re.sub(r'\+(\d)', r'플러스 \1', text)
         text = re.sub(r'(?<!\d)-(\d)', r'마이너스 \1', text)
-        text = re.sub(r'(\d+)pt\b', r'\1포인트', text)
+        text = re.sub(r'(\d+)pt\b', r'\1 포인트', text)
         text = re.sub(r'(\d{1,3}),(\d{3})', r'\1\2', text)
+        # TTS/STT alignment sees the same expanded text.  The original script is
+        # kept separately, so this cannot alter the subtitle text shown to viewers.
+        text = normalize_korean_numbers_for_tts(text)
 
         # 숫자 -> 한글 한글화 함수 (4자리 블록 만/억/조 단위 완벽 지원)
         def num_to_kor(num_str: str) -> str:

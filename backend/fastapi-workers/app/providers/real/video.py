@@ -144,6 +144,7 @@ class KlingProvider(VideoProvider):
 
         api_key = os.getenv("KLING_API_KEY") or os.getenv("KLING_ACCESS_KEY")
         fal_key = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
+        fal_only = bool(kwargs.get("fal_only"))
 
         # 1. Fal.ai 연동이 있으면 최우선 실행 (image-to-video 및 text-to-video 모두 지원)
         if fal_key:
@@ -153,6 +154,9 @@ class KlingProvider(VideoProvider):
                     return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
             except Exception as e:
                 logger.warning(f"Fal.ai Kling 비디오 생성 실패, 공식 API 폴백 시도: {e}")
+
+        if fal_only:
+            raise RuntimeError("Fal image-to-video was unavailable; use static Pro image motion")
 
         # 2. 공식 Kling API
         # 2-1. image_url이 있으면 image-to-video API 우선 시도

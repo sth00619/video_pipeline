@@ -28,6 +28,15 @@ _state = {
     "scene_duration_sec": _cfg.SCENE_DURATION_SEC,
     "subtitle_max_chars": _cfg.SUBTITLE_MAX_CHARS,
     "subtitle_font_size": _cfg.SUBTITLE_FONT_SIZE,
+    "subtitle_theme": _cfg.SUBTITLE_THEME,
+    "image_provider": _cfg.IMAGE_PROVIDER,
+    "image_quality_tier": _cfg.IMAGE_QUALITY_TIER,
+    "pro_image_max_scenes": _cfg.PRO_IMAGE_MAX_SCENES,
+    "gemini_pro_batch_enabled": _cfg.GEMINI_PRO_BATCH_ENABLED,
+    "gemini_pro_batch_fallback_enabled": _cfg.GEMINI_PRO_BATCH_FALLBACK_ENABLED,
+    "gemini_service_tier": _cfg.GEMINI_SERVICE_TIER,
+    "visual_qa_enabled": _cfg.VISUAL_QA_ENABLED,
+    "visual_qa_max_scenes": _cfg.VISUAL_QA_MAX_SCENES,
     "elevenlabs_voice_id": _cfg.ELEVENLABS_VOICE_ID,
     "elevenlabs_stability": _cfg.ELEVENLABS_STABILITY,
     "elevenlabs_similarity_boost": _cfg.ELEVENLABS_SIMILARITY_BOOST,
@@ -39,6 +48,7 @@ _state = {
     "intro_kling_seconds_10min": _cfg.INTRO_KLING_SECONDS_10MIN,
     "intro_kling_seconds_15min": _cfg.INTRO_KLING_SECONDS_15MIN,
     "intro_kling_seconds_20min": _cfg.INTRO_KLING_SECONDS_20MIN,
+    "intro_kling_max_clips": _cfg.INTRO_KLING_MAX_CLIPS,
 }
 
 _TYPES = {k: type(v) for k, v in _state.items()}

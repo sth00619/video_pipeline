@@ -75,6 +75,19 @@ public class ImagesService {
         ImagesGenerateResponse result = fastApiClient.generateImages(
                 jobId, ttsMetaJson, scriptMetaJson, characterImagePath, characterStylePrompt, characterPosesDir);
 
+        if ("BATCH_PENDING".equals(result.getStatus())) {
+            assetRepository.findByJobIdAndAssetType(jobId, AssetType.IMAGE_BATCH)
+                    .forEach(assetRepository::delete);
+            assetRepository.save(Asset.builder()
+                    .jobId(jobId)
+                    .assetType(AssetType.IMAGE_BATCH)
+                    .localPath(result.getBatchJobName())
+                    .metaJson(safeJson(result))
+                    .build());
+            log.info("Gemini Pro Batch submitted: jobId={}, batch={}", jobId, result.getBatchJobName());
+            return result;
+        }
+
         // [버그 수정] 기존 imgCost = BigDecimal.ZERO → 실제 이미지 장 수 기반 요금 추정
         java.math.BigDecimal imgCost = CostEstimator.geminiImages(result.getSceneCount());
         costService.record(jobId, "GEMINI_IMAGE", imgCost, "USD",
@@ -114,6 +127,34 @@ public class ImagesService {
         }
 
         return result;
+    }
+
+    @Transactional
+    public void completeBatch(Long jobId, Long batchAssetId, ImagesGenerateResponse result) {
+        if (!"BATCH_COMPLETE".equals(result.getStatus()) || assetRepository.findById(batchAssetId).isEmpty()) {
+            return;
+        }
+        if (result.getScenes() != null) {
+            for (SceneImageDto scene : result.getScenes()) {
+                Asset asset = Asset.builder()
+                        .jobId(jobId)
+                        .assetType(AssetType.SCENE_IMAGE)
+                        .localPath(scene.getImagePath())
+                        .metaJson(safeJson(scene))
+                        .build();
+                assetRepository.save(asset);
+            }
+        }
+        java.math.BigDecimal imgCost = CostEstimator.geminiProBatchImages(result.getSceneCount());
+        costService.record(jobId, "GEMINI_PRO_BATCH_IMAGE", imgCost, "USD",
+                String.format("Gemini Pro Batch scene images %d", result.getSceneCount()));
+        assetRepository.deleteById(batchAssetId);
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        if (autonomyService.shouldAutoApprove(job, GateName.IMAGES)) {
+            gateService.tryAutoApproveAtCurrentStatus(jobId);
+        }
+        log.info("Gemini Pro Batch completed: jobId={}, scenes={}", jobId, result.getSceneCount());
     }
 
     @Transactional
@@ -157,6 +198,8 @@ public class ImagesService {
 
         // 2. prompt 변경: mode가 "image"가 아닌 경우에만 텍스트를 업데이트함
         if (mode == null || !mode.equalsIgnoreCase("image")) {
+            sceneDto.setText(text);
+            sceneDto.setPromptKo(text);
             sceneDto.setPrompt(text);
         }
         if (section != null && !section.isBlank()) {
@@ -182,7 +225,12 @@ public class ImagesService {
             }
 
             // 이미지 재생성은 sceneDto의 (업데이트되었거나 기존의) prompt를 기준으로 호출
-            fastApiClient.generateSingleImage(jobId, index, sceneDto.getPrompt(), sceneDto.getSection(), characterImagePath, characterStylePrompt, characterPosesDir);
+            String imageInstruction = text != null && !text.isBlank()
+                    ? text
+                    : (sceneDto.getPromptEn() != null && !sceneDto.getPromptEn().isBlank()
+                        ? sceneDto.getPromptEn()
+                        : sceneDto.getPrompt());
+            fastApiClient.generateSingleImage(jobId, index, imageInstruction, sceneDto.getSection(), characterImagePath, characterStylePrompt, characterPosesDir);
             log.info("씬 이미지 재생성 요청 완료: jobId={}, index={}, section={}, mode={}", jobId, index, sceneDto.getSection(), mode);
         } else {
             log.info("씬 텍스트 수정 완료 (이미지 유지): jobId={}, index={}", jobId, index);

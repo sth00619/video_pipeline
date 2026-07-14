@@ -22,6 +22,8 @@ from typing import Optional
 
 from app.workers.market_data_collector import MarketDataCollector
 from app.config import CLAUDE_MODEL
+from app.utils.quality_gate import enrich_scene_plans, assess_scene_plan
+from app.utils.art_direction import direct_scenes, assess_art_diversity
 
 logger = logging.getLogger(__name__)
 
@@ -248,11 +250,13 @@ class ScriptWorker:
                 keyword, category_label, target_minutes, target_chars,
                 verified_facts, market_data
             )
+            sections = direct_scenes(enrich_scene_plans(sections))
             used_real_llm = True
 
         except Exception as e:
             logger.error(f"LLM API 호출 실패: {e} — Mock으로 폴백")
             full_script, sections = self._mock_script(keyword, category_label, target_minutes)
+            sections = direct_scenes(enrich_scene_plans(sections))
             verified_facts = []
             fact_check_log = [f"오류: {str(e)}"]
             used_real_llm = False
@@ -262,6 +266,9 @@ class ScriptWorker:
             meta_shorts = "쇼츠 대본 자동 생성 실패"
 
         logger.info(f"스크립트 생성 완료: {len(full_script)}자, job_id={job_id}")
+
+        scene_quality = assess_scene_plan(sections)
+        art_quality = assess_art_diversity(sections)
 
         return {
             "job_id": job_id,
@@ -273,7 +280,9 @@ class ScriptWorker:
             "fact_check_rounds": len(fact_check_log),
             "fact_check_log": fact_check_log,
             "market_snapshot_used": market_data is not None,
+            "market_snapshot": market_data or {},
             "used_real_llm": used_real_llm,
+            "quality_report": {"scene_plan": scene_quality, "art_direction": art_quality},
             "youtube_metadata": {
                 "title": meta_title,
                 "thumbnail_prompt": meta_thumb,

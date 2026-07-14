@@ -15,6 +15,7 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 # API Keys (prod only)
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
+ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_v3")
 KLING_API_KEY = os.getenv("KLING_API_KEY", "")
 GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY", "")
 FAL_KEY = os.getenv("FAL_KEY", "")
@@ -40,16 +41,27 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 # GET/POST /pipeline/config API(= app/runtime_config.py)를 쓰세요.
 # 그러면 Docker 재빌드 없이 다음 Job부터 즉시 반영됩니다.
 # ══════════════════════════════════════════════════════════
-TTS_SPEED = float(os.getenv("TTS_SPEED", "1.05"))
+TTS_SPEED = float(os.getenv("TTS_SPEED", "1.15"))
 CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "610"))
 SCENE_DURATION_SEC = float(os.getenv("SCENE_DURATION_SEC", "5.5"))
-SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "22"))
+SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "16"))
 SUBTITLE_FONT_SIZE = int(os.getenv("SUBTITLE_FONT_SIZE", "76"))
+SUBTITLE_THEME = os.getenv("SUBTITLE_THEME", "economy")  # economy | knowledge
+IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "gemini")   # gemini | fal | auto
+IMAGE_QUALITY_TIER = os.getenv("IMAGE_QUALITY_TIER", "pro")  # flash | hybrid | pro
+PRO_IMAGE_MAX_SCENES = int(os.getenv("PRO_IMAGE_MAX_SCENES", "999"))
+# Batch API has a 24-hour completion SLO, so it is an economy/background mode,
+# not the default path for a user waiting for a finished video.
+GEMINI_PRO_BATCH_ENABLED = os.getenv("GEMINI_PRO_BATCH_ENABLED", "false").lower() in {"1", "true", "yes"}
+GEMINI_PRO_BATCH_FALLBACK_ENABLED = os.getenv("GEMINI_PRO_BATCH_FALLBACK_ENABLED", "true").lower() in {"1", "true", "yes"}
+GEMINI_SERVICE_TIER = os.getenv("GEMINI_SERVICE_TIER", "standard").lower()
+VISUAL_QA_ENABLED = os.getenv("VISUAL_QA_ENABLED", "true").lower() in {"1", "true", "yes"}
+VISUAL_QA_MAX_SCENES = int(os.getenv("VISUAL_QA_MAX_SCENES", "999"))
 
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
-ELEVENLABS_STABILITY = float(os.getenv("ELEVENLABS_STABILITY", "0.85"))
-ELEVENLABS_SIMILARITY_BOOST = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.82"))
-ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.00"))
+ELEVENLABS_STABILITY = float(os.getenv("ELEVENLABS_STABILITY", "0.62"))
+ELEVENLABS_SIMILARITY_BOOST = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.80"))
+ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.05"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))
 ZOOMPAN_SPEED = float(os.getenv("ZOOMPAN_SPEED", "0.0008"))
@@ -59,4 +71,4 @@ INTRO_KLING_SECONDS_5MIN = int(os.getenv("INTRO_KLING_SECONDS_5MIN", "30"))
 INTRO_KLING_SECONDS_10MIN = int(os.getenv("INTRO_KLING_SECONDS_10MIN", "45"))
 INTRO_KLING_SECONDS_15MIN = int(os.getenv("INTRO_KLING_SECONDS_15MIN", "60"))
 INTRO_KLING_SECONDS_20MIN = int(os.getenv("INTRO_KLING_SECONDS_20MIN", "60"))
-
+INTRO_KLING_MAX_CLIPS = int(os.getenv("INTRO_KLING_MAX_CLIPS", "4"))

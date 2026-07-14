@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Shield, DollarSign, Video, Settings, Save } from 'lucide-react'
+import { Shield, DollarSign, Video, Settings, Save, ImagePlus, RefreshCw } from 'lucide-react'
 import Layout from '../components/Layout'
 import JobFilterBar from '../components/JobFilterBar'
 import Pagination from '../components/Pagination'
@@ -22,6 +22,7 @@ export default function Admin() {
   const [selectedStatus, setSelectedStatus] = useState('ALL')
 
   const [editedVoices, setEditedVoices] = useState({})
+  const [characterDescriptions, setCharacterDescriptions] = useState({})
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['admin-jobs'],
@@ -39,6 +40,22 @@ export default function Admin() {
     staleTime: Infinity,
   })
 
+  const { data: characterLibraries = {} } = useQuery({
+    queryKey: ['character-libraries', channels.map(c => c.channelId)],
+    queryFn: async () => {
+      const entries = await Promise.all(channels.map(async channel => {
+        try {
+          const response = await apiClient.get(`/channels/${channel.channelId}/character-library`)
+          return [channel.channelId, response.data]
+        } catch (_) {
+          return [channel.channelId, { exists: false, poses: [], poseCount: 0 }]
+        }
+      }))
+      return Object.fromEntries(entries)
+    },
+    enabled: channels.length > 0,
+  })
+
   const saveChannelMutation = useMutation({
     mutationFn: (profile) => apiClient.post('/channels', profile).then(r => r.data),
     onSuccess: () => {
@@ -48,6 +65,23 @@ export default function Admin() {
     onError: (err) => {
       alert('채널 설정 저장 실패: ' + (err.response?.data?.message || err.message))
     }
+  })
+
+  const characterLibraryMutation = useMutation({
+    mutationFn: ({ channelId, characterDescription, regenerate }) =>
+      apiClient.post(`/channels/${channelId}/character-library`, {
+        characterDescription,
+        regenerate,
+      }).then(r => r.data),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['character-libraries'] })
+      qc.invalidateQueries({ queryKey: ['admin-channels'] })
+      refetchChannels()
+      alert(variables.regenerate ? '캐릭터 포즈를 전체 재생성했습니다.' : '없는 캐릭터 포즈를 생성하고 채널에 연결했습니다.')
+    },
+    onError: (err) => {
+      alert('캐릭터 포즈 생성 실패: ' + (err.response?.data?.message || err.message))
+    },
   })
 
   const totalCost = jobs.reduce((sum, j) => sum + (parseFloat(j.costAccumulated) || 0), 0)
@@ -228,6 +262,12 @@ export default function Admin() {
               const currentVoiceId = editedVoices[channel.channelId] !== undefined
                 ? editedVoices[channel.channelId]
                 : (channel.voiceId || '');
+              const library = characterLibraries[channel.channelId] || { exists: false, poses: [], poseCount: 0 }
+              const characterDescription = characterDescriptions[channel.channelId] !== undefined
+                ? characterDescriptions[channel.channelId]
+                : (channel.characterStylePrompt || '')
+              const isGeneratingLibrary = characterLibraryMutation.isPending
+                && characterLibraryMutation.variables?.channelId === channel.channelId
 
               return (
                 <div key={channel.channelId} className="bg-navy-800 border border-navy-700 rounded-xl p-6 shadow-card space-y-4">
@@ -309,6 +349,78 @@ export default function Admin() {
                         AI 이미지 생성 시 일체형 모드/LoRA 가중치 제어용 프롬프트 정보입니다.
                       </p>
                     </div>
+                  </div>
+
+                  <div className="border-t border-navy-700 pt-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-white flex items-center gap-2">
+                          <ImagePlus size={16} className="text-accent-cyan" />
+                          고정 캐릭터 포즈 라이브러리
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          장면의 역할에 맞춰 표정·의상·포즈를 골라 배경 위에 합성합니다. 생성 후 이 채널의 모든 새 작업에 적용됩니다.
+                        </p>
+                      </div>
+                      <span className={`text-[11px] px-2 py-1 rounded-full font-semibold ${library.exists ? 'bg-accent-green/10 text-accent-green' : 'bg-navy-700 text-gray-400'}`}>
+                        {library.exists ? `${library.pose_count || library.poses?.length || 0}개 포즈 준비됨` : '아직 생성되지 않음'}
+                      </span>
+                    </div>
+
+                    <textarea
+                      value={characterDescription}
+                      onChange={e => setCharacterDescriptions({ ...characterDescriptions, [channel.channelId]: e.target.value })}
+                      placeholder="예: 초록색 지폐 마스코트, 3D 에디토리얼 카툰, 굵은 검은 외곽선, 큰 눈, 친근하고 신뢰감 있는 표정"
+                      rows={3}
+                      className="w-full bg-navy-900/40 border border-navy-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-accent-cyan"
+                    />
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => characterLibraryMutation.mutate({
+                          channelId: channel.channelId,
+                          characterDescription,
+                          regenerate: false,
+                        })}
+                        disabled={!characterDescription.trim() || isGeneratingLibrary}
+                        className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 text-sm font-semibold px-3 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+                      >
+                        <ImagePlus size={14} />
+                        {isGeneratingLibrary ? '생성 중…' : library.exists ? '누락 포즈 보완' : '포즈 라이브러리 생성'}
+                      </button>
+                      {library.exists && (
+                        <button
+                          onClick={() => characterLibraryMutation.mutate({
+                            channelId: channel.channelId,
+                            characterDescription,
+                            regenerate: true,
+                          })}
+                          disabled={!characterDescription.trim() || isGeneratingLibrary}
+                          className="flex items-center gap-1.5 border border-navy-600 text-gray-300 text-sm px-3 py-2 rounded-lg hover:border-accent-gold hover:text-white disabled:opacity-50"
+                        >
+                          <RefreshCw size={14} /> 전체 재생성
+                        </button>
+                      )}
+                      <span className="text-[11px] text-gray-500">외부 이미지 생성 API를 호출합니다.</span>
+                    </div>
+
+                    {library.exists && library.poses?.length > 0 && (
+                      <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 pt-1">
+                        {library.poses.map(item => (
+                          <div key={item.pose} className="rounded-lg bg-navy-900/50 border border-navy-700 overflow-hidden">
+                            <img
+                              src={`/api/channels/${channel.channelId}/character-library/pose/${item.pose}`}
+                              alt={item.label || item.pose}
+                              className="w-full aspect-[3/4] object-contain bg-white/5"
+                              loading="lazy"
+                            />
+                            <div className="px-1.5 py-1 text-[10px] text-center text-gray-400 truncate" title={item.label || item.pose}>
+                              {item.label || item.pose}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

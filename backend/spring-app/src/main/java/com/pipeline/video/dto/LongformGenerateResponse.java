@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import java.util.Map;
+
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class LongformGenerateResponse {
@@ -27,4 +29,13 @@ public class LongformGenerateResponse {
 
     @JsonProperty("resolution")
     private String resolution;
+
+    @JsonProperty("data_card_count")
+    private Integer dataCardCount;
+
+    @JsonProperty("market_chart_count")
+    private Integer marketChartCount;
+
+    @JsonProperty("quality_report")
+    private Map<String, Object> qualityReport;
 }

@@ -2,6 +2,7 @@ package com.pipeline.video.controller;
 
 import com.pipeline.video.domain.ChannelProfile;
 import com.pipeline.video.domain.ElevenLabsVoice;
+import com.pipeline.video.dto.CharacterLibraryGenerateRequest;
 import com.pipeline.video.repository.ChannelProfileRepository;
 import com.pipeline.video.repository.ElevenLabsVoiceRepository;
 import com.pipeline.video.service.FastApiClient;
@@ -197,6 +198,56 @@ public class ChannelProfileController {
         return channelProfileRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/character-library")
+    public ResponseEntity<Map<String, Object>> getCharacterLibrary(@PathVariable String id) {
+        if (!channelProfileRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(fastApiClient.getCharacterLibraryStatus(id));
+    }
+
+    @PostMapping("/{id}/character-library")
+    public ResponseEntity<Map<String, Object>> generateCharacterLibrary(
+            @PathVariable String id,
+            @RequestBody CharacterLibraryGenerateRequest request) {
+        ChannelProfile profile = channelProfileRepository.findById(id).orElse(null);
+        if (profile == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String description = request.getCharacterDescription();
+        if (description == null || description.isBlank()) {
+            description = profile.getCharacterStylePrompt();
+        }
+        if (description == null || description.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Map<String, Object> result = fastApiClient.generateCharacterLibrary(
+                id, description, request.isRegenerate());
+        Object posesDir = result.get("poses_dir");
+        if (posesDir instanceof String path && !path.isBlank()) {
+            profile.setCharacterPosesDir(path);
+        }
+        if (profile.getCharacterStylePrompt() == null || profile.getCharacterStylePrompt().isBlank()) {
+            profile.setCharacterStylePrompt(description);
+        }
+        channelProfileRepository.save(profile);
+        result.put("profile_updated", true);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{id}/character-library/pose/{pose}")
+    public ResponseEntity<byte[]> getCharacterPose(@PathVariable String id, @PathVariable String pose) {
+        if (!channelProfileRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        ResponseEntity<byte[]> response = fastApiClient.getCharacterPose(id, pose);
+        return ResponseEntity.status(response.getStatusCode())
+                .contentType(org.springframework.http.MediaType.IMAGE_PNG)
+                .body(response.getBody());
     }
 
     @PostMapping

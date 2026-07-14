@@ -39,24 +39,25 @@ logger = logging.getLogger(__name__)
 
 # 캐릭터 일관성 유지 프롬프트 (의인화된 금색 코인 마스코트 캐릭터)
 CHARACTER_STYLE = (
-    "featuring a cute gold coin mascot character, chibi cartoon style, round shiny gold coin with face, arms and legs, "
-    "wearing small navy business suit with gold tie, "
+    "featuring one friendly teal rounded market-card mascot, with a small diagonal chart notch rather than a currency symbol, "
+    "expressive face, arms and legs, clean silhouette, wearing the scene-specific wardrobe, "
 )
 
 # 금융 테마 프롬프트 스타일 수식어
 FINANCE_STYLE = (
-    "professional 3D render, vibrant colors, clean illustration, dark navy blue background (#0d1b2a), "
-    "smooth shading, high-quality, cinematic lighting, no text, no letters, no words, no watermark, no UI elements"
+    "original 2D Korean finance editorial comic illustration, thick variable black ink outlines, "
+    "two-to-three tone cel shading, saturated controlled palette, subtle print texture, layered foreground midground and background, "
+    "expressive readable faces, dynamic perspective, no photorealism, no glossy 3D toy render, "
+    "no text, no letters, no words, no watermark, no UI elements"
 )
 
 # [S2-1] 배경 전용 모드 스타일 수식어 (캐릭터 없는 순수 배경용)
 # 캐릭터 라이브러리 포즈 이미지와 FFmpeg overlay 합성될 배경 생성에 사용
 BACKGROUND_ONLY_STYLE = (
     "no people, no characters, no mascots, no figures, "
-    "cinematic wide establishing shot, "
-    "professional financial broadcast background, "
-    "dark navy blue gradient (#0d1b2a to #16213e), "
-    "depth of field, ambient glow, ultra detailed, 8K quality, "
+    "wide 2D editorial-comic establishing shot, bold variable ink outlines, two-tone cel shading, "
+    "specific real-world business props and layered industrial environment, colorful controlled scene palette, "
+    "not a dark empty studio, no photorealism, no glossy 3D render, "
     "no text, no letters, no words, no watermark, no UI elements"
 )
 
@@ -145,8 +146,13 @@ class NanaBananaProvider(ImageProvider):
             else:
                 char_prompt = CHARACTER_STYLE
 
+            is_directed_editorial_prompt = "Editorial scene family:" in prompt
             is_english = all(ord(c) < 128 for c in prompt.replace(" ", "").replace(",", "").replace(".", ""))
-            if not is_english or len(prompt) < 30:
+            if is_directed_editorial_prompt:
+                # The scene director already specified the visual language. Do
+                # not overwrite it with the old generic dark-blue 3D template.
+                base_prompt = (char_prompt + prompt) if char_prompt else prompt
+            elif not is_english or len(prompt) < 30:
                 section = kwargs.get("section", "default")
                 keyword = kwargs.get("keyword", "stock market KOSPI")
                 base_prompt = f"A scene representing {keyword} and {section}. " + char_prompt + FINANCE_STYLE
@@ -167,39 +173,75 @@ class NanaBananaProvider(ImageProvider):
         # 디렉토리 생성
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-        # 1. Fal.ai (최우선, 서킷 브레이커 열려있지 않은 경우만)
+        # 공급자를 명시적으로 선택한다. 이전에는 로그가 NanaBanana라고 해도
+        # Fal Flux가 항상 먼저 실행되어, 사용자가 기대한 참조 이미지 일관성
+        # (Gemini)을 얻지 못하는 문제가 있었다.
+        provider_preference = str(kwargs.get("image_provider", "auto")).lower()
+        if provider_preference not in {"auto", "gemini", "fal"}:
+            logger.warning(f"알 수 없는 image_provider={provider_preference}; auto로 처리")
+            provider_preference = "auto"
+
         fal_key = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
-        if fal_key and not self.__class__._fal_disabled:
+        gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        gemini_model = str(kwargs.get("gemini_model") or "gemini-3.1-flash-image")
+        gemini_image_size = str(kwargs.get("gemini_image_size") or "1K")
+        gemini_service_tier = str(kwargs.get("gemini_service_tier") or "standard").lower()
+
+        def try_fal() -> bool:
+            if not fal_key or self.__class__._fal_disabled:
+                return False
             try:
-                # [Sprint 3] LoRA 모델 지정 시 flux-lora 엔드포인트 사용
                 if lora_model_id:
                     if self._generate_fal_flux_lora(
                         base_prompt, output_path, fal_key,
                         lora_model_id, lora_scale
                     ):
                         logger.info(f"Fal.ai Flux-LoRA 이미지 생성 성공: {output_path}")
-                        return output_path
+                        return True
                 else:
                     if self._generate_fal_flux(base_prompt, output_path, fal_key):
                         logger.info(f"Fal.ai Flux 이미지 생성 성공: {output_path}")
-                        return output_path
+                        return True
             except Exception as e:
-                logger.warning(f"Fal.ai 이미지 생성 실패, Gemini 시도: {e}")
-        elif fal_key and self.__class__._fal_disabled:
-            logger.debug("Fal.ai 서킷 브레이커 열림 상태 — Gemini로 바로 진행")
+                logger.warning(f"Fal.ai 이미지 생성 실패: {e}")
+            return False
 
-        # 2. 공식 Gemini API 시도
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if api_key and not self.__class__._gemini_disabled:
+        def try_gemini() -> bool:
+            if not gemini_key or self.__class__._gemini_disabled:
+                return False
             try:
                 character_image_path = kwargs.get("character_image_path")
-                if self._generate_gemini_api(base_prompt, output_path, api_key, character_image_path):
-                    logger.info(f"공식 Gemini API 이미지 생성 성공: {output_path}")
-                    return output_path
+                if self._generate_gemini_api(
+                    base_prompt, output_path, gemini_key, character_image_path,
+                    model=gemini_model, image_size=gemini_image_size,
+                    service_tier=gemini_service_tier,
+                ):
+                    logger.info(f"공식 Gemini API 이미지 생성 성공: model={gemini_model}, size={gemini_image_size}, path={output_path}")
+                    return True
             except Exception as e:
-                logger.warning(f"공식 Gemini API 호출 실패, 무료 프록시로 폴백: {e}")
+                logger.warning(f"공식 Gemini API 호출 실패: {e}")
+            return False
 
-        # 3. 무료 pollinations.ai 프록시 폴백
+        # Gemini는 캐릭터 참조/일관성 씬의 기본값이다. Fal은 배경, LoRA 또는
+        # 명시적 선택 시 우선 사용한다. 실패하면 반대 제공자로만 폴백한다.
+        # A Pro-quality run must not silently downgrade to a different model.
+        # The caller will fail the job instead of rendering blank/text fallback
+        # scenes when Gemini Pro cannot return an image.
+        if provider_preference == "gemini" and gemini_model == "gemini-3-pro-image":
+            if try_gemini():
+                return output_path
+            raise RuntimeError("Gemini Pro image generation failed; refusing lower-quality fallback")
+
+        order = ("fal", "gemini") if provider_preference == "fal" else ("gemini", "fal")
+        logger.info(f"이미지 공급자 선택: requested={provider_preference}, order={order}")
+        for provider_name in order:
+            if provider_name == "gemini" and try_gemini():
+                return True
+            if provider_name == "fal" and try_fal():
+                return output_path
+
+        # 최후의 무료 폴백은 생성 방법을 메타데이터로 남겨 검수 화면에서
+        # AI 고품질 결과와 혼동되지 않게 한다.
         return self._generate_pollinations(base_prompt, output_path)
 
     def _generate_fal_flux_lora(self, prompt: str, output_path: str,
@@ -394,87 +436,121 @@ class NanaBananaProvider(ImageProvider):
             logger.error(f"Fal.ai Flux API 예외 발생: {e}")
             return False
 
-    def _generate_gemini_api(self, prompt: str, output_path: str, api_key: str, character_image_path: str = None) -> bool:
-        """
-        Google AI Studio 공식 Gemini 이미지 생성 API 호출 (429 Rate Limit 대응 재시도 탑재).
+    @staticmethod
+    def _extract_interaction_image(response: dict) -> str | None:
+        """Read image data from the Interactions API response without relying on one layout."""
+        output_image = response.get("output_image") or response.get("outputImage") or {}
+        if isinstance(output_image, dict) and output_image.get("data"):
+            return output_image["data"]
+        for step in response.get("steps") or []:
+            for block in step.get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "image" and block.get("data"):
+                    return block["data"]
+        return None
 
-        모델: gemini-3.1-flash-image
-        (검증 기준: 2026 Google AI Studio 공식 API list)
-        """
+    def _generate_gemini_api(
+        self, prompt: str, output_path: str, api_key: str,
+        character_image_path: str = None, *, model: str, image_size: str,
+        service_tier: str = "standard",
+    ) -> bool:
+        """Use Gemini Interactions API so Flash and Pro share the same 16:9 contract."""
         import requests
         import time
-        # 검증된 Gemini 이미지 생성 모델명 (2026)
-        GEMINI_IMAGE_MODEL = "gemini-3.1-flash-image"
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_IMAGE_MODEL}:generateContent?key={api_key}"
-        
-        # [Scenario A] Identity Anchor 및 다중 레퍼런스 포뮬러 주입
-        anchor_prefix = ""
-        parts = []
+
+        if model not in {"gemini-3.1-flash-image", "gemini-3-pro-image"}:
+            raise ValueError(f"Unsupported Gemini image model: {model}")
+        if image_size not in {"1K", "2K", "4K"}:
+            image_size = "1K"
+
+        input_parts: list[dict] = []
         if character_image_path and os.path.exists(character_image_path):
             try:
                 with open(character_image_path, "rb") as f:
-                    img_b64 = base64.b64encode(f.read()).decode()
+                    encoded = base64.b64encode(f.read()).decode()
                 mime = "image/png" if character_image_path.lower().endswith(".png") else "image/jpeg"
-                parts.append({
-                    "inlineData": {
-                        "mimeType": mime,
-                        "data": img_b64
-                    }
-                })
-                anchor_prefix = (
-                    "Use the attached reference image as an identity anchor. "
-                    "Strictly maintain the exact character features (face shape, suit, expression style, hairstyle) across all generated scenes. "
-                    "Generate the following scene while keeping the character identity 100% consistent:\n\n"
+                input_parts.append({"type": "image", "data": encoded, "mime_type": mime})
+                prompt = (
+                    "Use the attached image as the fixed channel character identity. Preserve its face, "
+                    "silhouette, color palette and line style. Do not add a second mascot.\n\n" + prompt
                 )
-                logger.info(f"Gemini API 요청에 Identity Anchor 이미지 및 프롬프트 주입 완료: {character_image_path}")
-            except Exception as e:
-                logger.warning(f"캐릭터 레퍼런스 이미지 로드/인코딩 실패: {e}")
-
-        parts.append({"text": f"{anchor_prefix}{prompt}"})
+            except Exception as exc:
+                logger.warning(f"캐릭터 레퍼런스 이미지 로드/인코딩 실패: {exc}")
+        input_parts.append({"type": "text", "text": prompt})
 
         payload = {
-            "contents": [
-                {
-                    "parts": parts
-                }
-            ],
-            "generationConfig": {
-                "responseModalities": ["IMAGE"]
-            }
+            "model": model,
+            "input": input_parts,
+            "response_format": {
+                "type": "image",
+                "mime_type": "image/jpeg",
+                "aspect_ratio": "16:9",
+                "image_size": image_size,
+            },
         }
-        headers = {"Content-Type": "application/json"}
-        
-        # Free Tier Rate Limit (2 RPM) 대응: 최대 5회 재시도 (매번 35초 대기)
-        MAX_ATTEMPTS = 5
-        for attempt in range(MAX_ATTEMPTS):
-            resp = requests.post(url, json=payload, headers=headers, timeout=60)
-            if resp.status_code == 200:
-                data = resp.json()
+        # Priority is an explicit caller choice for urgent Pro renders. Keep
+        # standard as the default because it carries a premium price.
+        if service_tier in {"priority", "flex"}:
+            payload["service_tier"] = service_tier
+        headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+        for attempt in range(3):
+            response = requests.post(
+                "https://generativelanguage.googleapis.com/v1beta/interactions",
+                json=payload, headers=headers, timeout=120,
+            )
+            if response.status_code == 200:
                 try:
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts:
-                            inline_data = parts[0].get("inlineData", {})
-                            if inline_data and "data" in inline_data:
-                                img_bytes = base64.b64decode(inline_data["data"])
-                                with open(output_path, "wb") as f:
-                                    f.write(img_bytes)
-                                return True
-                except Exception as e:
-                    logger.error(f"Gemini API 응답 파싱 에러: {e}")
-                    return False
-            elif resp.status_code == 429:
-                wait_time = 35
-                logger.warning(f"Gemini API 할당량 초과(429) 감지. {wait_time}초 후 재시도합니다. (시도 {attempt + 1}/{MAX_ATTEMPTS})")
-                time.sleep(wait_time)
-            else:
-                logger.warning(f"Gemini API HTTP 에러 ({resp.status_code}): {resp.text}")
+                    logger.info(
+                        "Gemini response service tier: %s",
+                        response.headers.get("x-gemini-service-tier", service_tier),
+                    )
+                    encoded = self._extract_interaction_image(response.json())
+                    if encoded:
+                        image_bytes = base64.b64decode(encoded)
+                        try:
+                            from io import BytesIO
+                            from PIL import Image
+                            Image.open(BytesIO(image_bytes)).convert("RGB").save(output_path, "PNG")
+                        except Exception as conversion_error:
+                            logger.warning(f"Gemini JPEG-to-PNG conversion failed; preserving JPEG bytes: {conversion_error}")
+                            Path(output_path).write_bytes(image_bytes)
+                        return True
+                    logger.warning("Gemini Interactions API response did not include an image output")
+                except Exception as exc:
+                    logger.error(f"Gemini Interactions API 응답 파싱 에러: {exc}")
                 return False
-                
-        logger.error(f"Gemini API 재시도 횟수 초과로 이미지 생성 실패: {prompt[:40]}...")
-        self.__class__._gemini_disabled = True
-        logger.warning("공식 Gemini API 실패로 인해 서킷 브레이커가 작동합니다. 이후 이미지 생성은 Pollinations로 즉시 폴백합니다.")
+            response_text = response.text[:500]
+            # A project spending cap is a configuration/billing state, not a
+            # transient rate limit. Retrying it for every scene wastes time
+            # and leaves the user with an ambiguous "generation failed" job.
+            if response.status_code == 429 and "spending cap" in response_text.lower():
+                logger.error(
+                    "Gemini Pro project spending cap reached. Increase the "
+                    "Gemini API project cap before starting an image job."
+                )
+                return False
+            if response.status_code == 429 and attempt < 2:
+                wait_time = 20 * (attempt + 1)
+                logger.warning(f"Gemini API 할당량 초과. {wait_time}초 후 재시도합니다. ({attempt + 1}/3)")
+                time.sleep(wait_time)
+                continue
+            # Gemini Pro occasionally returns a 500 while the model is under
+            # temporary high demand. Keep the all-Pro contract, but retry the
+            # same request before surfacing a real failure to the job.
+            if (
+                response.status_code in {500, 503}
+                and "high demand" in response_text.lower()
+                and attempt < 2
+            ):
+                wait_time = 15 * (attempt + 1)
+                logger.warning(
+                    "Gemini Pro is under high demand. Retrying in %ss (%s/3).",
+                    wait_time,
+                    attempt + 1,
+                )
+                time.sleep(wait_time)
+                continue
+            logger.warning(f"Gemini API HTTP 에러 ({response.status_code}): {response_text}")
+            return False
         return False
 
     def _generate_pollinations(self, prompt: str, output_path: str) -> str:

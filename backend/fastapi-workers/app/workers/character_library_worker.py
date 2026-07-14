@@ -20,6 +20,7 @@
 import os
 import logging
 import json
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,33 @@ POSE_CONFIGS = {
 }
 
 # 캐릭터 이미지 기본 크기 (합성 시 영상 대비 비율로 조정됨)
+POSE_CONFIGS.update({
+    "engineer": {
+        "desc": "wearing a yellow safety helmet and industrial workwear, holding a small chip and wrench, focused expression",
+        "ko": "factory engineer pose",
+    },
+    "scientist": {
+        "desc": "wearing a clean white lab coat and smart goggles, holding a glowing chip sample, curious expression",
+        "ko": "research scientist pose",
+    },
+    "analyst": {
+        "desc": "wearing a clean broadcaster jacket, holding a report folder, confident editorial analyst expression",
+        "ko": "editorial analyst pose",
+    },
+    "teacher": {
+        "desc": "wearing a warm teacher cardigan, holding a pointer and notebook, explaining expression",
+        "ko": "teacher explanation pose",
+    },
+    "explorer": {
+        "desc": "wearing a field explorer vest and utility cap, holding a magnifying glass, curious expression",
+        "ko": "field explorer pose",
+    },
+    "hero_business": {
+        "desc": "wearing a tailored navy business suit with a gold accent, standing proudly with one hand raised",
+        "ko": "business hero pose",
+    },
+})
+
 CHAR_WIDTH = 480
 CHAR_HEIGHT = 854  # 9:16 비율 (세로형 캐릭터)
 
@@ -67,6 +95,13 @@ class CharacterLibraryWorker:
     """
 
     POSES_BASE_DIR = Path("/app/data/characters")
+
+    @staticmethod
+    def _safe_channel_id(channel_id: str) -> str:
+        """Keep a user supplied channel id inside the character asset root."""
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,50}", channel_id or ""):
+            raise ValueError("channel_id must use letters, numbers, underscores, or hyphens")
+        return channel_id
 
     def generate_library(
         self,
@@ -86,6 +121,7 @@ class CharacterLibraryWorker:
               "errors": [...]
             }
         """
+        channel_id = self._safe_channel_id(channel_id)
         poses_dir = self.POSES_BASE_DIR / channel_id / "poses"
         poses_dir.mkdir(parents=True, exist_ok=True)
 
@@ -127,6 +163,9 @@ class CharacterLibraryWorker:
                     prompt=prompt,
                     output_path=str(raw_path),
                     character_style_prompt="none",  # 프로바이더의 CHARACTER_STYLE 중복 주입 방지
+                    image_provider="gemini",
+                    gemini_model="gemini-3-pro-image",
+                    gemini_image_size="2K",
                 )
             except Exception as e:
                 logger.error(f"포즈 '{pose_name}' 이미지 생성 실패: {e}")
@@ -178,6 +217,7 @@ class CharacterLibraryWorker:
         채널 ID와 포즈명으로 해당 캐릭터 투명 PNG 경로를 반환합니다.
         포즈가 없을 경우 'neutral'로 폴백하고, neutral도 없으면 None 반환.
         """
+        channel_id = self._safe_channel_id(channel_id)
         poses_dir = self.POSES_BASE_DIR / channel_id / "poses"
 
         # 요청한 포즈 확인
@@ -203,6 +243,32 @@ class CharacterLibraryWorker:
             for d in self.POSES_BASE_DIR.iterdir()
             if d.is_dir() and (d / "poses" / "library_meta.json").exists()
         ]
+
+    def get_library_status(self, channel_id: str) -> dict:
+        """Return usable pose metadata without exposing container file paths."""
+        channel_id = self._safe_channel_id(channel_id)
+        poses_dir = self.POSES_BASE_DIR / channel_id / "poses"
+        meta_path = poses_dir / "library_meta.json"
+        if not meta_path.exists():
+            return {"channel_id": channel_id, "exists": False, "poses": [], "pose_count": 0}
+
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            meta = {}
+
+        poses = []
+        for pose_name, pose_config in POSE_CONFIGS.items():
+            if (poses_dir / f"{pose_name}.png").exists():
+                poses.append({"pose": pose_name, "label": pose_config["ko"]})
+
+        return {
+            "channel_id": channel_id,
+            "exists": bool(poses),
+            "poses": poses,
+            "pose_count": len(poses),
+            "character_description": meta.get("character_description", ""),
+        }
 
     @staticmethod
     def _build_character_prompt(character_description: str, pose_desc: str) -> str:

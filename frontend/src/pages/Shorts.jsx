@@ -69,6 +69,7 @@ export default function Shorts() {
   // 롱폼 연동 모드 전용 상태
   const [job, setJob] = useState(null)
   const [scenes, setScenes] = useState([])
+  const [transcript, setTranscript] = useState('')
   const [loadingJob, setLoadingJob] = useState(false)
   const [aiScenarios, setAiScenarios] = useState(null)
   const [extractingAi, setExtractingAi] = useState(false)
@@ -122,10 +123,28 @@ export default function Shorts() {
           }
         }).filter(Boolean).sort((a, b) => a.index - b.index)
         
-        setScenes(sortedScenes)
+        let activeScenes = sortedScenes
+        if (activeScenes.length === 0) {
+          try {
+            const transcriptRes = await apiClient.get(`/jobs/${id}/assets?type=TRANSCRIPT`)
+            const latest = transcriptRes.data?.[transcriptRes.data.length - 1]
+            if (latest?.metaJson) {
+              const transcriptMeta = JSON.parse(latest.metaJson)
+              setTranscript(transcriptMeta.transcript || '')
+              activeScenes = (transcriptMeta.segments || []).map((s, i) => ({
+                index: s.index || i + 1,
+                title: `대본 ${s.index || i + 1}`,
+                text: s.text || '',
+                start: Number(s.start || 0),
+                duration: Number(s.duration ?? Math.max(0, Number(s.end || 0) - Number(s.start || 0)))
+              }))
+            }
+          } catch (err) {}
+        }
+        setScenes(activeScenes)
         
         // 총 씬 지속 시간의 합을 동적 분량으로 설정
-        const sumDur = sortedScenes.reduce((acc, s) => acc + (s.duration || 0), 0)
+        const sumDur = activeScenes.reduce((acc, s) => acc + (s.duration || 0), 0)
         setTotalDur(sumDur || 300)
 
         // 자동 생성된 쇼츠 시나리오가 있는지 확인 및 자동 로드
@@ -168,6 +187,7 @@ export default function Shorts() {
     setSegments([])
     setClips([])
     setAiScenarios(null)
+    setTranscript('')
     setActiveSeg(null)
   }
 
@@ -192,11 +212,17 @@ export default function Shorts() {
     try {
       // 롱폼 씬 데이터가 없다면, 직접 업로드한 씬(segments)을 전송
       if (scenes.length > 0) {
-        const res = await apiClient.post(`/jobs/${targetId}/shorts/extract-scenarios`)
+        const res = await apiClient.post(`/jobs/${targetId}/shorts/extract-scenarios`, {
+          scenes: scenes.map(scene => ({
+            index: Number(scene.index),
+            text: scene.text || scene.prompt || '',
+            start: Number(scene.start || 0),
+            duration: Number(scene.duration || 0)
+          }))
+        })
         setAiScenarios(res.data)
       } else {
-        // scenes가 없다면, segments 데이터를 기반으로 임시 씬 객체 생성하여 백엔드로 전달
-        alert('로컬 비디오는 현재 씬 자동 매핑을 지원하지 않습니다. 롱폼 연동 모드를 사용해주세요.')
+        alert('먼저 업로드 영상을 분석해 시간 정보가 있는 대본을 추출해 주세요.')
       }
     } catch (e) {
       alert('AI 추천 추출 실패: ' + (e.response?.data?.message || e.message))
@@ -375,6 +401,7 @@ export default function Shorts() {
         fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 1800000 }
       )
       const d = resAnalyze.data
+      setTranscript(d.transcript || '')
       const adj = (d.suggested_segments || []).map((s, i) => ({
         ...s, index: i + 1,
         label: SEG_LABELS[i % SEG_LABELS.length],
@@ -382,7 +409,14 @@ export default function Shorts() {
         end: s.end || parseFloat(Math.min(s.start + clipDur, totalDur || 300).toFixed(2))
       }))
       
-      const generatedScenes = adj.map(s => ({
+      const transcriptScenes = (d.transcript_segments || []).map((s, i) => ({
+        index: s.index || i + 1,
+        title: `대본 ${s.index || i + 1}`,
+        text: s.text || '',
+        start: Number(s.start || 0),
+        duration: Number(s.duration ?? Math.max(0, Number(s.end || 0) - Number(s.start || 0)))
+      })).filter(s => s.duration > 0 || s.text)
+      const generatedScenes = transcriptScenes.length ? transcriptScenes : adj.map(s => ({
         index: s.index,
         title: s.label,
         text: s.text,
@@ -518,6 +552,12 @@ export default function Shorts() {
                 * 씬 대사 블록을 마우스로 잡고 우측 타임라인으로 끌어다 놓으면 해당 구간이 추가됩니다.<br />
                 * 카드를 클릭하면 해당 구간으로 비디오 재생이 이동합니다.
               </p>
+              {!id && transcript && (
+                <details className="mb-3 rounded border border-navy-700 bg-navy-950/60 p-2">
+                  <summary className="cursor-pointer text-xs font-medium text-accent-cyan">추출된 전체 대본 보기</summary>
+                  <p className="mt-2 max-h-36 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-gray-300">{transcript}</p>
+                </details>
+              )}
               
               <div className="space-y-2.5 overflow-y-auto flex-1 pr-1.5">
                 {scenes.length === 0 ? (

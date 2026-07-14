@@ -46,4 +46,10 @@ public class ScriptGenerateResponse {
 
     @JsonProperty("used_real_llm")
     private Boolean usedRealLlm;
+
+    @JsonProperty("market_snapshot")
+    private Map<String, Object> marketSnapshot;
+
+    @JsonProperty("quality_report")
+    private Map<String, Object> qualityReport;
 }

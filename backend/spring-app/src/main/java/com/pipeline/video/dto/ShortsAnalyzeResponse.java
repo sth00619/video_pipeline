@@ -23,6 +23,9 @@ public class ShortsAnalyzeResponse {
     @JsonProperty("words")
     private List<Map<String, Object>> words;
 
+    @JsonProperty("transcript_segments")
+    private List<ShortsSegmentDto> transcriptSegments;
+
     @JsonProperty("suggested_segments")
     private List<ShortsSegmentDto> suggestedSegments;
 }

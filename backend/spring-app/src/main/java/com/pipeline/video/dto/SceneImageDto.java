@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import java.util.Map;
+import java.util.List;
+
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SceneImageDto {
@@ -36,4 +39,34 @@ public class SceneImageDto {
 
     @JsonProperty("section")
     private String section;
+
+    @JsonProperty("visual_type")
+    private String visualType;
+
+    @JsonProperty("visual_plan")
+    private Map<String, Object> visualPlan;
+
+    @JsonProperty("art_direction")
+    private Map<String, Object> artDirection;
+
+    @JsonProperty("image_profile")
+    private Map<String, Object> imageProfile;
+
+    @JsonProperty("market_snapshot")
+    private Map<String, Object> marketSnapshot;
+
+    @JsonProperty("quality_score")
+    private Integer qualityScore;
+
+    @JsonProperty("quality_flags")
+    private List<String> qualityFlags;
+
+    @JsonProperty("retry_recommended")
+    private Boolean retryRecommended;
+
+    @JsonProperty("semantic_score")
+    private Integer semanticScore;
+
+    @JsonProperty("semantic_reason")
+    private String semanticReason;
 }

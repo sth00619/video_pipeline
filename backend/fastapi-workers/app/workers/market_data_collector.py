@@ -201,6 +201,7 @@ class MarketDataCollector:
         """pykrx + FinanceDataReader로 한국 시장 데이터 수집"""
         data = {
             "index": {},
+            "chart_series": {},
             "supply_demand": {},
             "top_stocks": [],
             "market_indicators": {},
@@ -228,6 +229,9 @@ class MarketDataCollector:
                     "volume": int(latest.get("Volume", 0)),
                     "trading_value": int(latest.get("Amount", 0)),
                 }
+                series = _to_chart_series(kospi_df)
+                if series:
+                    data["chart_series"]["kospi"] = series
                 logger.info(f"FinanceDataReader 코스피 지수 수집: {data['index']['kospi']['close']}")
         except Exception as e:
             logger.warning(f"FinanceDataReader 코스피 수집 실패: {e}")
@@ -263,6 +267,9 @@ class MarketDataCollector:
                     "change_pct": round(float(change_pct), 2),
                     "volume": int(latest.get("Volume", 0)),
                 }
+                series = _to_chart_series(kosdaq_df)
+                if series:
+                    data["chart_series"]["kosdaq"] = series
                 logger.info(f"FinanceDataReader 코스닥 지수 수집: {data['index']['kosdaq']['close']}")
         except Exception as e:
             logger.warning(f"FinanceDataReader 코스닥 수집 실패: {e}")
@@ -336,6 +343,7 @@ class MarketDataCollector:
         """yfinance + Finnhub + FRED로 미국 시장 데이터 수집"""
         data = {
             "index": {},
+            "chart_series": {},
             "macro": {},
             "sector": {},
             "news_sentiment": None,
@@ -349,7 +357,7 @@ class MarketDataCollector:
             for name, symbol in US_INDEX_TICKERS.items():
                 try:
                     ticker = yf.Ticker(symbol)
-                    hist = ticker.history(period="5d")
+                    hist = ticker.history(period="1mo")
                     if not hist.empty:
                         latest_close = float(hist["Close"].iloc[-1])
                         prev_close = float(hist["Close"].iloc[-2]) if len(hist) > 1 else latest_close
@@ -359,6 +367,9 @@ class MarketDataCollector:
                             "change_pct": change_pct,
                             "volume": int(hist["Volume"].iloc[-1]),
                         }
+                        series = _to_chart_series(hist)
+                        if series:
+                            data["chart_series"][name] = series
                 except Exception:
                     pass
             logger.info(f"미국 지수 수집: {list(data['index'].keys())}")
@@ -437,3 +448,18 @@ def _format_krw(value) -> str:
         return f"{v:+,}원"
     except Exception:
         return str(value)
+
+
+def _to_chart_series(dataframe, limit: int = 30) -> list[dict]:
+    """Serialize only collected closing prices; do not fabricate missing dates."""
+    try:
+        if dataframe is None or dataframe.empty or "Close" not in dataframe.columns:
+            return []
+        rows = dataframe.tail(limit)
+        return [
+            {"date": str(index)[:10], "close": round(float(row["Close"]), 4)}
+            for index, row in rows.iterrows()
+            if row.get("Close") is not None
+        ]
+    except Exception:
+        return []

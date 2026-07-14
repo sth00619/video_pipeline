@@ -29,9 +29,47 @@ STOCK_KW_MED = [
 
 class ShortsWorker:
 
+    def normalize_scenes(self, scenes: list[dict], video_path: str) -> list[dict]:
+        """Fill missing scene timestamps from the actual source-video duration."""
+        ordered = [dict(scene) for scene in sorted(scenes, key=lambda scene: int(scene.get("index", 0)))]
+        if not ordered:
+            return []
+        total_duration = self._get_duration(video_path)
+        if total_duration <= 0:
+            raise RuntimeError("Could not determine source video duration")
+
+        def number(value, default=0.0):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        valid = all(
+            number(scene.get("start")) >= 0
+            and number(scene.get("duration")) > 0
+            and number(scene.get("start")) + number(scene.get("duration")) <= total_duration + 0.25
+            for scene in ordered
+        )
+        if valid:
+            for scene in ordered:
+                start = max(0.0, number(scene.get("start")))
+                duration = min(number(scene.get("duration")), max(0.05, total_duration - start))
+                scene.update({"start": round(start, 3), "duration": round(duration, 3), "end": round(start + duration, 3)})
+            return ordered
+
+        weights = [max(20, len(str(scene.get("text") or scene.get("prompt") or "").replace(" ", ""))) for scene in ordered]
+        total_weight = sum(weights) or len(ordered)
+        cursor = 0.0
+        for position, (scene, weight) in enumerate(zip(ordered, weights)):
+            duration = max(0.05, total_duration - cursor) if position == len(ordered) - 1 else max(0.05, total_duration * weight / total_weight)
+            duration = min(duration, max(0.05, total_duration - cursor))
+            scene.update({"start": round(cursor, 3), "duration": round(duration, 3), "end": round(cursor + duration, 3)})
+            cursor += duration
+        return ordered
+
     def analyze(self, video_path: str, shorts_count: int = 3) -> dict:
         total_duration = self._get_duration(video_path)
-        transcript, words, suggested = "", [], []
+        transcript, words, suggested, transcript_segments = "", [], [], []
         try:
             from app.providers.factory import get_transcript_provider
             provider = get_transcript_provider()
@@ -43,10 +81,21 @@ class ShortsWorker:
 
             if segments:
                 transcript = " ".join(s.text for s in segments)
-                for seg in segments:
+                for index, seg in enumerate(segments, start=1):
+                    transcript_segments.append({
+                        "index": index,
+                        "text": seg.text,
+                        "start": round(float(seg.start), 3),
+                        "end": round(float(seg.end), 3),
+                        "duration": round(max(0.0, float(seg.end) - float(seg.start)), 3),
+                    })
                     if seg.words:
                         for w in seg.words:
-                            words.append({"word": w.word, "start": w.start, "end": w.end})
+                            if isinstance(w, dict):
+                                word, start, end = w.get("word", ""), w.get("start", 0), w.get("end", 0)
+                            else:
+                                word, start, end = getattr(w, "word", ""), getattr(w, "start", 0), getattr(w, "end", 0)
+                            words.append({"word": word, "start": start, "end": end})
                 if not total_duration and segments:
                     total_duration = segments[-1].end
                 suggested = self._extract(segments, shorts_count, total_duration)
@@ -58,6 +107,7 @@ class ShortsWorker:
 
         return {
             "transcript": transcript,
+            "transcript_segments": transcript_segments,
             "words": words,
             "suggested_segments": suggested,
             "total_duration": round(total_duration, 2) if total_duration else 0,
@@ -278,6 +328,7 @@ class ShortsWorker:
             if match:
                 response_text = match.group(0)
             result = json.loads(response_text)
+            result["keywords"] = self._ensure_ten_keywords(result.get("keywords"), scenes)
             logger.info("Claude 4.6 쇼츠 추출 결과 파싱 성공")
             return result
         except Exception as e:
@@ -302,6 +353,11 @@ class ShortsWorker:
                     }
                 },
                 "keywords": [
+                    {"word": "핵심 지표", "description": "영상의 수치와 지표를 설명하는 구간", "matching_scene_indices": [1]},
+                    {"word": "시장 흐름", "description": "시장 방향성을 설명하는 구간", "matching_scene_indices": [1, 2]},
+                    {"word": "투자 포인트", "description": "의사결정에 도움이 되는 구간", "matching_scene_indices": [2]},
+                    {"word": "주가 변동", "description": "상승과 하락 원인을 설명하는 구간", "matching_scene_indices": [3]},
+                    {"word": "향후 전망", "description": "다음 흐름과 전망을 정리하는 구간", "matching_scene_indices": [4]},
                     {"word": "삼성전자", "description": "대본 내에서 삼성전자 동향을 다루는 구간", "matching_scene_indices": [1, 2, 5]},
                     {"word": "영업이익", "description": "실적 및 이익 컨센서스 언급 구간", "matching_scene_indices": [1, 3]},
                     {"word": "외국인", "description": "수급 및 투자주체별 거래 패턴 구간", "matching_scene_indices": [2, 4]},
@@ -309,6 +365,47 @@ class ShortsWorker:
                     {"word": "리스크", "description": "투자 시 주의해야 할 변동성 위험 요인", "matching_scene_indices": [3, 4]}
                 ]
             }
+
+    @staticmethod
+    def _ensure_ten_keywords(raw_keywords, scenes: list[dict]) -> list[dict]:
+        """Normalize model output to exactly ten selectable keyword cards."""
+        import re
+        scene_indices = [int(scene.get("index", position + 1)) for position, scene in enumerate(scenes)]
+        normalized, seen = [], set()
+        for item in raw_keywords or []:
+            if not isinstance(item, dict):
+                continue
+            word = str(item.get("word") or "").strip()
+            if not word or word in seen:
+                continue
+            matching = [int(value) for value in item.get("matching_scene_indices", []) if str(value).isdigit()]
+            normalized.append({
+                "word": word,
+                "description": str(item.get("description") or f"{word} 관련 구간"),
+                "matching_scene_indices": matching or scene_indices[:1],
+            })
+            seen.add(word)
+            if len(normalized) == 10:
+                return normalized
+
+        corpus = " ".join(str(scene.get("text") or scene.get("prompt") or "") for scene in scenes)
+        for word in re.findall(r"[가-힣A-Za-z0-9]{2,}", corpus):
+            if word in seen:
+                continue
+            matching = [int(scene.get("index", position + 1)) for position, scene in enumerate(scenes) if word in str(scene.get("text") or scene.get("prompt") or "")]
+            normalized.append({"word": word, "description": f"{word} 관련 핵심 구간", "matching_scene_indices": matching or scene_indices[:1]})
+            seen.add(word)
+            if len(normalized) == 10:
+                return normalized
+
+        while len(normalized) < 10:
+            number = len(normalized) + 1
+            normalized.append({
+                "word": f"핵심 장면 {number}",
+                "description": "영상 흐름을 기준으로 선택하는 보조 키워드",
+                "matching_scene_indices": [scene_indices[(number - 1) % len(scene_indices)]] if scene_indices else [],
+            })
+        return normalized
 
     def cut_and_merge(self, source_path: str, segments: list, output_path: str) -> dict:
         """

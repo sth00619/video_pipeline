@@ -38,6 +38,8 @@ public final class CostEstimator {
 
     // Gemini 3 Flash Image (per generated image, USD 근사)
     private static final BigDecimal GEMINI_PER_IMAGE = new BigDecimal("0.039");
+    // Gemini 3 Pro Image 1K/2K Batch (50% of the standard 2K rate), USD estimate.
+    private static final BigDecimal GEMINI_PRO_BATCH_2K_PER_IMAGE = new BigDecimal("0.067");
 
     // Fal.ai Kling image-to-video Pro (per second, USD 근사)
     // [리서치 반영] v3(고가) → v2.6 Pro로 모델 다운그레이드 + generate_audio=false
@@ -74,6 +76,12 @@ public final class CostEstimator {
     /** Gemini 이미지 생성 비용 추정 (장 수 기반) */
     public static BigDecimal geminiImages(int imageCount) {
         return GEMINI_PER_IMAGE.multiply(BigDecimal.valueOf(imageCount))
+                .setScale(4, RoundingMode.HALF_UP);
+    }
+
+    /** Gemini 3 Pro 2K Batch image cost estimate. */
+    public static BigDecimal geminiProBatchImages(int imageCount) {
+        return GEMINI_PRO_BATCH_2K_PER_IMAGE.multiply(BigDecimal.valueOf(imageCount))
                 .setScale(4, RoundingMode.HALF_UP);
     }
 

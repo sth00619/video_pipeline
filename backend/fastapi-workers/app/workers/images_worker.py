@@ -16,6 +16,11 @@ import logging
 import random
 from pathlib import Path
 from app.utils.process_manager import is_job_stopped
+from app import runtime_config
+from app.utils.quality_gate import enrich_scene_plan, assess_images, persist_quality_report
+from app.utils.art_direction import direct_scenes, plan_image_quality_tiers, compile_editorial_prompt, assess_art_diversity
+from app.utils.visual_qa import assess_visual_alignment
+from app.utils import gemini_batch
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +99,7 @@ class ImagesWorker:
           2) 씬별 포즈 투명 PNG 로드
           3) FFmpeg overlay 필터로 합성
         """
+        market_snapshot = {}
         # scenes_meta가 주어지지 않은 경우 script_meta_json에서 복원
         if not scenes_meta and script_meta_json:
             try:
@@ -101,6 +107,7 @@ class ImagesWorker:
                 script_data = json.loads(script_meta_json)
                 if isinstance(script_data, str):
                     script_data = json.loads(script_data)
+                market_snapshot = script_data.get("market_snapshot") or {}
                 scenes_meta = script_data.get("sections") or script_data.get("scenes") or []
                 if not scenes_meta and script_data.get("script"):
                     import re
@@ -115,11 +122,7 @@ class ImagesWorker:
                             "title": f"Scene {idx + 1}",
                             "content": part,
                             "text": part,
-                            "prompt": (
-                                "A cute gold coin mascot character, chibi cartoon style, round shiny gold coin with face, arms and legs, "
-                                "wearing small navy business suit with gold tie, showing a neutral, calm and professional analyst pose, "
-                                "generic plain smooth surface with no currency symbol. professional financial news studio background, dark navy blue background (#0d1b2a), glowing data screen, 3D render, smooth shading, anime cartoon style"
-                            ),
+                            "prompt": "A Korean finance editorial comic scene with one clear visual metaphor and specific business context.",
                             "section": section_type
                         })
                 logger.info(f"script_meta_json에서 {len(scenes_meta)}개 씬 복원 성공")
@@ -129,6 +132,18 @@ class ImagesWorker:
 
         if not scenes_meta:
             scenes_meta = []
+
+        if scenes_meta and not all(scene.get("art_direction") for scene in scenes_meta):
+            scenes_meta = direct_scenes([
+                enrich_scene_plan(scene, i, len(scenes_meta))
+                for i, scene in enumerate(scenes_meta)
+            ])
+        if scenes_meta:
+            scenes_meta = plan_image_quality_tiers(
+                scenes_meta,
+                runtime_config.value("image_quality_tier"),
+                runtime_config.value("pro_image_max_scenes"),
+            )
 
         # [S2-3] 이중 레이어 합성 모드 제어
         use_composite = bool(character_poses_dir and Path(character_poses_dir).exists())
@@ -155,34 +170,85 @@ class ImagesWorker:
         job_dir = Path(f"/app/data/jobs/{job_id}/images")
         job_dir.mkdir(parents=True, exist_ok=True)
 
+        def build_batch_scene(original: dict, index: int) -> dict:
+            scene = enrich_scene_plan(original, index, len(scenes_meta))
+            narration = scene.get("content") or scene.get("text") or ""
+            base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
+            prompt_en = compile_editorial_prompt(scene, base_prompt)
+            return {
+                "index": index,
+                "section": scene.get("section", f"scene_{index}"),
+                "prompt_en": prompt_en,
+                "prompt_ko": scene.get("prompt_ko") or narration or scene.get("title") or "",
+                "prompt": prompt_en,
+                "pose": scene.get("pose", "neutral"),
+                "visual_type": scene.get("visual_type"),
+                "visual_plan": scene.get("visual_plan"),
+                "art_direction": scene.get("art_direction") or {},
+                "style_profile": scene.get("style_profile", "editorial_comic_2d"),
+                "image_profile": scene.get("image_profile") or {},
+                "market_snapshot": scene.get("market_snapshot") or market_snapshot,
+                "text": narration,
+            }
+
+        # Batch is an explicitly selected economy mode. Interactive video
+        # creation stays on synchronous Pro rendering and only falls back to
+        # Batch after a retry-exhausted direct scene failure.
+        use_pro_batch = (
+            bool(runtime_config.value("gemini_pro_batch_enabled"))
+            and runtime_config.value("image_provider") == "gemini"
+            and bool(scenes_meta)
+            and all((scene.get("image_profile") or {}).get("tier") == "pro" for scene in scenes_meta)
+            and not lora_model_id
+        )
+        if use_pro_batch:
+            batch_scenes = [build_batch_scene(scene, i) for i, scene in enumerate(scenes_meta)]
+            logger.info("Gemini Pro Batch submit: job=%s scenes=%s", job_id, len(batch_scenes))
+            return gemini_batch.submit(job_id, batch_scenes, character_image_path)
+
         generated = []
         for i, scene in enumerate(scenes_meta):
             if is_job_stopped(job_id):
                 raise RuntimeError(f"Job {job_id} stopped by user.")
+            scene = enrich_scene_plan(scene, i, len(scenes_meta))
             section = scene.get("section", f"scene_{i}")
             narration = scene.get("content") or scene.get("text") or ""
 
-            prompt_en = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
+            base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
+            prompt_en = compile_editorial_prompt(scene, base_prompt)
             prompt_ko = scene.get("prompt_ko") or narration or scene.get("title") or ""
             pose = scene.get("pose", "neutral")
+            art_direction = scene.get("art_direction") or {}
+            image_profile = scene.get("image_profile") or {}
+            scene_market_snapshot = scene.get("market_snapshot") or market_snapshot
+            character_required = bool(art_direction.get("character_required", True))
+            pose_asset = art_direction.get("pose_asset") or pose
+            # Keep a successful composite render on the normal quality path.
+            # (The direct AI path assigns this inside its retry loop.)
+            quality_score = 0
 
             img_path = str(job_dir / f"scene_{i:03d}.png")
 
             if ai_provider:
                 try:
+                    effective_character_style = character_style_prompt if character_required else "none"
                     if use_composite:
                         # [S2-3] 이중 레이어 합성
                         bg_path = str(job_dir / f"scene_{i:03d}_bg.png")
                         self._generate_background_layer(
-                            ai_provider, prompt_en, bg_path, section, pose
+                            ai_provider, prompt_en, bg_path, section, pose, image_profile
                         )
-                        self._composite_character(
-                            bg_path, character_poses_dir, pose, img_path, job_id
-                        )
+                        if character_required:
+                            self._composite_character(
+                                bg_path, character_poses_dir, pose_asset, img_path, job_id,
+                                fallback_pose=pose,
+                            )
+                        else:
+                            import shutil
+                            shutil.copy2(bg_path, img_path)
                     else:
                         # [Sprint 3 & S5] LoRA 또는 기본 일체형 모드 + AI 품질 검수 자동 재생성
                         max_retries = 2
-                        quality_score = 0
                         for attempt in range(max_retries):
                             ai_provider.generate_image(
                                 prompt=prompt_en,
@@ -190,10 +256,14 @@ class ImagesWorker:
                                 section=section,
                                 keyword=prompt_en[:30],
                                 character_image_path=character_image_path,
-                                character_style_prompt=character_style_prompt,
+                                character_style_prompt=effective_character_style,
                                 lora_model_id=lora_model_id,
                                 lora_trigger_word=lora_trigger_word,
                                 lora_scale=lora_scale,
+                                image_provider=runtime_config.value("image_provider"),
+                                gemini_model=image_profile.get("model"),
+                                gemini_image_size=image_profile.get("image_size"),
+                                gemini_service_tier=runtime_config.value("gemini_service_tier"),
                             )
                             # [S5] AI 품질 자동 검수
                             if os.path.exists(img_path) and os.path.getsize(img_path) > 15000:
@@ -208,17 +278,43 @@ class ImagesWorker:
                         "index": i,
                         "section": section,
                         "image_path": img_path,
-                        "generation_method": "composite" if use_composite else ("flux_lora" if lora_model_id else "nana_banana_ai"),
+                        "generation_method": "composite" if use_composite else ("flux_lora" if lora_model_id else image_profile.get("tier", "flash") + "_gemini"),
                         "quality_score": quality_score or 85,
                         "prompt_en": prompt_en,
                         "prompt_ko": prompt_ko,
                         "prompt": prompt_en,
                         "pose": pose,
+                        "visual_type": scene.get("visual_type"),
+                        "visual_plan": scene.get("visual_plan"),
+                        "art_direction": art_direction,
+                        "style_profile": scene.get("style_profile", "editorial_comic_2d"),
+                        "image_profile": image_profile,
+                        "market_snapshot": scene_market_snapshot,
                         "text": narration,
                     })
                     logger.info(f"씬 {i} AI 이미지 생성 및 품질 검수 완료 (점수={quality_score or 85})")
                     continue
                 except Exception as e:
+                    if image_profile.get("tier") == "pro":
+                        if bool(runtime_config.value("gemini_pro_batch_fallback_enabled")) and not lora_model_id:
+                            remaining = [
+                                build_batch_scene(remaining_scene, remaining_index)
+                                for remaining_index, remaining_scene in enumerate(scenes_meta[i:], start=i)
+                            ]
+                            logger.warning(
+                                "Gemini Pro direct render exhausted retries at scene %s; "
+                                "submitting %s remaining scenes to Batch fallback (completed=%s).",
+                                i, len(remaining), len(generated),
+                            )
+                            return gemini_batch.submit(
+                                job_id,
+                                remaining,
+                                character_image_path,
+                                completed_scenes=generated,
+                            )
+                        # Do not publish the text-on-solid-background fallback
+                        # when a reference-quality image request failed.
+                        raise RuntimeError(f"Pro image scene {i} failed: {e}") from e
                     logger.warning(f"씬 {i} AI 이미지 실패, 폴백 Solid 배경 생성: {e}")
 
 
@@ -237,25 +333,59 @@ class ImagesWorker:
                     "prompt_ko": prompt_ko,
                     "prompt": prompt_en,
                     "pose": pose,
+                    "visual_type": scene.get("visual_type"),
+                    "visual_plan": scene.get("visual_plan"),
+                    "art_direction": art_direction,
+                    "style_profile": scene.get("style_profile", "editorial_comic_2d"),
+                    "image_profile": image_profile,
+                    "market_snapshot": scene_market_snapshot,
                     "text": narration,
                 })
             except Exception as e:
                 logger.error(f"씬 {i} 로컬 폴백 최종 실패: {e}")
 
-        logger.info(f"이미지 생성 완료: {len(generated)}개")
+        image_quality = assess_images(generated)
+        semantic_quality = assess_visual_alignment(
+            generated,
+            enabled=bool(runtime_config.value("visual_qa_enabled")),
+            max_scenes=int(runtime_config.value("visual_qa_max_scenes")),
+        )
+        semantic_by_index = {item["index"]: item for item in semantic_quality.get("reviewed", [])}
+        metrics_by_index = {
+            metric["index"]: metric
+            for metric in image_quality.get("scene_metrics", [])
+        }
+        for scene in generated:
+            metric = metrics_by_index.get(scene.get("index"), {})
+            scene["quality_score"] = metric.get("score", 0)
+            scene["quality_flags"] = metric.get("warnings", [])
+            scene["retry_recommended"] = metric.get("retry_recommended", False)
+            semantic = semantic_by_index.get(scene.get("index"))
+            if semantic:
+                scene["semantic_score"] = semantic["score"]
+                scene["semantic_reason"] = semantic["reason"]
+                scene["quality_score"] = min(scene["quality_score"], semantic["score"])
+                scene["retry_recommended"] = scene["retry_recommended"] or semantic["retry_recommended"]
+                if semantic["retry_recommended"]:
+                    scene["quality_flags"] = [*scene["quality_flags"], "semantic_review_recommended"]
+        image_quality["art_direction"] = assess_art_diversity(generated)
+        image_quality["semantic_alignment"] = semantic_quality
+        persist_quality_report(job_id, "images", image_quality)
+        logger.info(f"이미지 생성 완료: {len(generated)}개, quality={image_quality['score']}")
         return {
             "job_id": job_id,
             "scenes": generated,
             "scene_count": len(generated),
             "gifs": [],
-            "gif_count": 0
+            "gif_count": 0,
+            "quality_report": {"images": image_quality},
         }
 
     # ============================
     # [S2-3] 배경 레이어 생성
     # ============================
     def _generate_background_layer(self, ai_provider, prompt_en: str, bg_path: str,
-                                    section: str, pose: str):
+                                    section: str, pose: str, image_profile: dict | None = None):
         """
         캐릭터 없는 순수 배경 이미지 생성.
         character_style_prompt="background_only" 를 전달해 캐릭터 주입을 차단.
@@ -266,6 +396,9 @@ class ImagesWorker:
             section=section,
             keyword=prompt_en[:30],
             character_style_prompt="background_only",
+            image_provider=runtime_config.value("image_provider"),
+            gemini_model=(image_profile or {}).get("model"),
+            gemini_image_size=(image_profile or {}).get("image_size"),
         )
         logger.info(f"[배경레이어] 생성 완료: {bg_path}")
 
@@ -285,7 +418,8 @@ class ImagesWorker:
             unregister_process(job_id, p)
 
     def _composite_character(self, bg_path: str, poses_dir: str, pose: str,
-                              output_path: str, job_id: int = 0):
+                              output_path: str, job_id: int = 0,
+                              fallback_pose: str = None):
         """
         FFmpeg overlay 필터를 사용해 배경 이미지 위에 캐릭터 투명 PNG를 합성합니다.
 
@@ -296,6 +430,8 @@ class ImagesWorker:
         """
         poses_path = Path(poses_dir)
         pose_file = poses_path / f"{pose}.png"
+        if not pose_file.exists() and fallback_pose:
+            pose_file = poses_path / f"{fallback_pose}.png"
         if not pose_file.exists():
             pose_file = poses_path / "neutral.png"
         if not pose_file.exists():
