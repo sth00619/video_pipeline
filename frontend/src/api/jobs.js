@@ -39,6 +39,8 @@ export const jobsApi = {
     apiClient.post(`/jobs/${id}/images/scenes/${index}`, { text, section, mode }).then(r => r.data),
   splitScene: (id, index, part1, part2) =>
     apiClient.post(`/jobs/${id}/images/scenes/${index}/split`, { part1, part2 }).then(r => r.data),
+  setSceneKling: (id, index, enabled) =>
+    apiClient.post(`/jobs/${id}/images/scenes/${index}/kling`, { enabled }).then(r => r.data),
 
   // 롱폼
   generateLongform: (id) => apiClient.post(`/jobs/${id}/longform/generate`).then(r => r.data),

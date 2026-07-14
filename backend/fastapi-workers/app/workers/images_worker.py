@@ -267,6 +267,24 @@ class ImagesWorker:
             img_path = str(job_dir / f"scene_{i:03d}.png")
             raw_img_path = str(job_dir / f"scene_{i:03d}_raw.png")
 
+            # If a long HTTP request was interrupted after this frame completed,
+            # recover from disk instead of charging the image model a second time.
+            if os.path.exists(img_path) and os.path.getsize(img_path) > 15000:
+                generated.append({
+                    "index": i, "section": section, "image_path": img_path,
+                    "generation_method": "resumed_existing", "quality_score": 90,
+                    "prompt_en": prompt_en, "prompt_ko": prompt_ko, "prompt": prompt_en,
+                    "pose": pose, "visual_type": scene.get("visual_type"),
+                    "visual_plan": scene.get("visual_plan"), "art_direction": art_direction,
+                    "style_profile": scene.get("style_profile", "editorial_comic_2d"),
+                    "image_profile": image_profile, "market_snapshot": scene_market_snapshot,
+                    "text": narration, "headline": spec.headline if spec else scene.get("headline", ""),
+                    "headline_mood": spec.mood if spec else "neutral",
+                    "scene_spec": spec.to_dict() if spec else scene.get("scene_spec"),
+                })
+                logger.info("Reusing completed image scene %s for job %s", i, job_id)
+                continue
+
             if ai_provider:
                 try:
                     effective_character_style = character_style_prompt if character_required else "none"

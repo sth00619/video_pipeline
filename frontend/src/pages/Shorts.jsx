@@ -96,6 +96,8 @@ export default function Shorts() {
   
   // 롱폼 연동 모드 전용 상태
   const [job, setJob] = useState(null)
+  const [shortsJobId, setShortsJobId] = useState(null)
+  const [shortsProject, setShortsProject] = useState(null)
   const [scenes, setScenes] = useState([])
   const [transcript, setTranscript] = useState('')
   const [loadingJob, setLoadingJob] = useState(false)
@@ -124,25 +126,72 @@ export default function Shorts() {
   const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [imageSalt, setImageSalt] = useState(0)
+  const { shortsJobId: routeShortsJobId } = useParams()
+  const sourceJobId = id || shortsProject?.parentJobId
+  const isSavedProject = Boolean(routeShortsJobId && shortsProject)
 
   // 1. 롱폼 연동 모드 데이터 로드
   useEffect(() => {
-    if (!id) return
+    if (!routeShortsJobId) return
+    let cancelled = false
+    const loadProject = async () => {
+      setLoadingJob(true)
+      try {
+        const response = await apiClient.get(`/shorts/${routeShortsJobId}`)
+        if (cancelled) return
+        const project = response.data
+        setShortsProject(project)
+        setShortsJobId(project.id)
+        if (project.selectionJson) {
+          const savedSegments = JSON.parse(project.selectionJson)
+          if (Array.isArray(savedSegments)) {
+            setSegments(savedSegments.map((segment, index) => ({
+              ...segment,
+              index: segment.index || index + 1,
+              label: segment.label || segment.text || `쇼츠 구간 ${index + 1}`,
+              end: segment.end ?? (Number(segment.start || 0) + Number(segment.duration || 0)),
+            })))
+          }
+        }
+        if (project.resultJson) {
+          const savedClips = JSON.parse(project.resultJson)
+          if (Array.isArray(savedClips)) setClips(savedClips)
+        } else if (project.outputPath) {
+          setClips([{
+            index: 1,
+            text: project.title,
+            output_path: project.outputPath,
+            download_ready: project.downloadReady,
+          }])
+        }
+      } catch (e) {
+        alert('쇼츠 작업을 불러오지 못했습니다: ' + (e.response?.data?.message || e.message))
+      } finally {
+        if (!cancelled) setLoadingJob(false)
+      }
+    }
+    loadProject()
+    return () => { cancelled = true }
+  }, [routeShortsJobId])
+
+  useEffect(() => {
+    if (!sourceJobId) return
     
     const loadLongformData = async () => {
       setLoadingJob(true)
       try {
         // Job 상세 정보 가져오기
-        const jobRes = await apiClient.get(`/jobs/${id}`)
+        const jobRes = await apiClient.get(`/jobs/${sourceJobId}`)
         setJob(jobRes.data)
         
         // 롱폼 비디오가 존재하는 경우 프리뷰 URL 매핑
-        if (jobRes.data.outputPath) {
-          setFileUrl(`/api/files/download?path=${encodeURIComponent(jobRes.data.outputPath)}&token=${token}`)
+        const previewPath = jobRes.data.outputPath || jobRes.data.sourceVideoPath || shortsProject?.sourceVideoPath
+        if (previewPath) {
+          setFileUrl(`/api/files/download?path=${encodeURIComponent(previewPath)}&token=${token}`)
         }
 
         // 씬 목록 가져오기
-        const assetRes = await apiClient.get(`/jobs/${id}/assets?type=SCENE_IMAGE`)
+        const assetRes = await apiClient.get(`/jobs/${sourceJobId}/assets?type=SCENE_IMAGE`)
         const sortedScenes = (assetRes.data || []).map(asset => {
           try {
             return JSON.parse(asset.metaJson)
@@ -154,7 +203,23 @@ export default function Shorts() {
         let activeScenes = sortedScenes
         if (activeScenes.length === 0) {
           try {
-            const transcriptRes = await apiClient.get(`/jobs/${id}/assets?type=TRANSCRIPT`)
+            const ttsRes = await apiClient.get(`/jobs/${sourceJobId}/assets?type=TTS_AUDIO`)
+            const latestTts = ttsRes.data?.[ttsRes.data.length - 1]
+            const ttsMeta = latestTts?.metaJson ? JSON.parse(latestTts.metaJson) : null
+            const chunks = Array.isArray(ttsMeta?.chunks) ? ttsMeta.chunks : []
+            activeScenes = chunks.map((chunk, i) => ({
+              index: i + 1,
+              title: `스크립트 ${i + 1}`,
+              text: chunk.text || '',
+              start: Number(chunk.start || 0),
+              duration: Number(chunk.duration || 0),
+            })).filter(scene => scene.text && scene.duration > 0)
+            if (activeScenes.length) setTranscript(activeScenes.map(scene => scene.text).join(' '))
+          } catch (err) {}
+        }
+        if (activeScenes.length === 0) {
+          try {
+            const transcriptRes = await apiClient.get(`/jobs/${sourceJobId}/assets?type=TRANSCRIPT`)
             const latest = transcriptRes.data?.[transcriptRes.data.length - 1]
             if (latest?.metaJson) {
               const transcriptMeta = JSON.parse(latest.metaJson)
@@ -177,7 +242,7 @@ export default function Shorts() {
 
         // 자동 생성된 쇼츠 시나리오가 있는지 확인 및 자동 로드
         try {
-          const scenarioRes = await apiClient.get(`/jobs/${id}/assets?type=SHORTS_SCENARIO`)
+          const scenarioRes = await apiClient.get(`/jobs/${sourceJobId}/assets?type=SHORTS_SCENARIO`)
           if (scenarioRes.data && scenarioRes.data.length > 0) {
             const latestScenario = scenarioRes.data[scenarioRes.data.length - 1]
             if (latestScenario.metaJson) {
@@ -188,7 +253,7 @@ export default function Shorts() {
 
         // 유튜브 메타데이터 가져오기
         try {
-          const youtubeMetaRes = await apiClient.get(`/jobs/${id}/assets?type=YOUTUBE_METADATA`)
+          const youtubeMetaRes = await apiClient.get(`/jobs/${sourceJobId}/assets?type=YOUTUBE_METADATA`)
           if (youtubeMetaRes.data && youtubeMetaRes.data.length > 0) {
             const latest = youtubeMetaRes.data[youtubeMetaRes.data.length - 1]
             if (latest.metaJson) {
@@ -204,7 +269,7 @@ export default function Shorts() {
     }
 
     loadLongformData()
-  }, [id, token])
+  }, [sourceJobId, token, shortsProject?.sourceVideoPath])
 
   // 업로드 파일 핸들러 (로컬 모드)
   const handleFile = (f) => {
@@ -214,6 +279,7 @@ export default function Shorts() {
     setFileUrl(URL.createObjectURL(f))
     setSegments([])
     setClips([])
+    setShortsJobId(null)
     setAiScenarios(null)
     setTranscript('')
     setActiveSeg(null)
@@ -230,7 +296,7 @@ export default function Shorts() {
 
   // ── AI 기승전결 시나리오 및 추천 키워드 추출 (Claude 4.6 호출) ──
   const handleExtractAiScenarios = async () => {
-    const targetId = id || (job && job.id);
+    const targetId = sourceJobId || (job && job.id);
     if (!targetId) {
       alert('로컬 비디오의 경우 먼저 비디오 바로 아래에 있는 [업로드 영상 자동 분석 시작] 버튼을 눌러 스크립트를 추출해주세요.');
       return;
@@ -356,13 +422,14 @@ export default function Shorts() {
 
     setCutting(true)
     try {
-      const targetId = id || job?.id
+      const targetId = sourceJobId || job?.id
       if (!targetId) {
         alert('쇼츠 원본 job을 찾을 수 없습니다. 먼저 영상을 분석해 주세요.')
         return
       }
       const endpoint = isMerge ? `/jobs/${targetId}/shorts/confirm-merge` : `/jobs/${targetId}/shorts/confirm`
       const res = await apiClient.post(endpoint, {
+        shortsJobId,
         segments: targetSegments.map(s => ({
           index: s.index,
           text: s.label || s.text || `쇼츠 ${s.index}`,
@@ -370,7 +437,9 @@ export default function Shorts() {
           end: s.end
         }))
       })
-      setClips(Array.isArray(res.data) ? res.data : [res.data])
+      const nextClips = Array.isArray(res.data) ? res.data : [res.data]
+      setClips(nextClips)
+      if (nextClips[0]?.shorts_job_id) setShortsJobId(nextClips[0].shorts_job_id)
       alert(isMerge ? '선택한 구간들이 하나의 쇼츠로 병합 완료되었습니다.' : '개별 쇼츠 영상이 생성되었습니다.')
     } catch (e) {
       alert('생성 실패: ' + (e.response?.data?.message || e.message))
@@ -412,9 +481,10 @@ export default function Shorts() {
       
       const resAnalyze = await apiClient.post(
         `/jobs/${jid}/shorts/analyze?shortsCount=${shortsCount}`,
-        fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 1800000 }
+        fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 21600000 }
       )
       const d = resAnalyze.data
+      setShortsJobId(d.shorts_job_id || null)
       setTranscript(d.transcript || '')
       const adj = (d.suggested_segments || []).map((s, i) => ({
         ...s, index: i + 1,
@@ -463,9 +533,10 @@ export default function Shorts() {
         makeShorts: true
       })
       const res = await apiClient.post(`/jobs/${resJob.data.id}/shorts/cut-direct`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' }, timeout: 1800000
+        headers: { 'Content-Type': 'multipart/form-data' }, timeout: 21600000
       })
       setClips(res.data)
+      if (res.data?.[0]?.shorts_job_id) setShortsJobId(res.data[0].shorts_job_id)
     } catch (e) {
       alert('컷팅 실패: ' + e.message)
     } finally {
@@ -527,7 +598,7 @@ export default function Shorts() {
 
   const pct = (t) => totalDur ? `${(t / totalDur) * 100}%` : '0%'
 
-  const targetJobId = id || (job && job.id);
+  const targetJobId = sourceJobId || (job && job.id);
 
   return (
     <Layout>
@@ -535,7 +606,7 @@ export default function Shorts() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Video className="text-accent-cyan" size={24} />
-            {targetJobId ? (id ? `롱폼 연동 쇼츠 에디터 (Job #${id})` : `업로드 분석 쇼츠 에디터 (Job #${targetJobId})`) : '쇼츠 수동 제작기'}
+            {isSavedProject ? `쇼츠 프로젝트 #${shortsJobId}` : (targetJobId ? (id ? `롱폼 연동 쇼츠 에디터 (Job #${id})` : `업로드 분석 쇼츠 에디터 (Job #${targetJobId})`) : '쇼츠 수동 제작기')}
           </h1>
           <p className="text-gray-400 text-sm mt-1">
             {targetJobId ? '추출된 대사를 확인하며 마음에 드는 부분을 합쳐 쇼츠를 생성하세요.' : '비디오 파일을 직접 업로드해 잘라냅니다.'}
@@ -598,6 +669,7 @@ export default function Shorts() {
                           {fmt(scene.start)} ~ {fmt(scene.start + scene.duration)} ({scene.duration?.toFixed(1)}초)
                         </span>
                       </div>
+                      {scene.title && <div className="text-[11px] text-accent-cyan mb-1">{scene.title}</div>}
                       <p className="text-xs text-gray-200 leading-relaxed font-medium">
                         {scene.text || '(대사 없음)'}
                       </p>
@@ -695,7 +767,7 @@ export default function Shorts() {
                   </h4>
                   <button
                     onClick={handleExtractAiScenarios}
-                    disabled={extractingAi}
+                    disabled={extractingAi || scenes.length === 0}
                     className="flex items-center gap-1 bg-accent-gold text-navy-950 text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
                   >
                     {extractingAi ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
@@ -883,7 +955,7 @@ export default function Shorts() {
                 {/* 최종 컷팅 및 병합 액션 버튼 */}
                 {segments.length > 0 && (
                   <div className="flex gap-3 pt-2">
-                    {id ? (
+                    {(id || isSavedProject) ? (
                       <>
                         <button
                           onClick={() => handleCutShorts(true)}
@@ -931,6 +1003,7 @@ export default function Shorts() {
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
                           <Clock size={9} />
+                          {clip.download_ready === false && <span className="text-accent-gold">파일 확인 필요</span>}
                           <span>{clip.duration?.toFixed(1)}초 분량</span>
                           {clip.file_size_mb && <span className="ml-2 text-gray-600">{clip.file_size_mb}MB</span>}
                         </div>
@@ -941,7 +1014,7 @@ export default function Shorts() {
                           await downloadFile(clip.output_path, `short_${clip.index}.mp4`)
                           setDownloadingIdx(null)
                         }}
-                        disabled={downloadingIdx === i}
+                        disabled={downloadingIdx === i || clip.download_ready === false}
                         className="flex items-center gap-1.5 bg-accent-green text-navy-950 text-xs font-semibold py-1.5 px-3 rounded-lg hover:opacity-90 transition disabled:opacity-50"
                       >
                         {downloadingIdx === i ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
@@ -978,7 +1051,7 @@ export default function Shorts() {
                       <h4 className="text-xs font-semibold text-gray-300 mb-2">AI 자동 생성 썸네일 (9:16)</h4>
                       <div className="aspect-[9/16] w-24 mx-auto bg-navy-950 rounded border border-navy-700 overflow-hidden relative">
                         <img
-                          src={`/api/jobs/${id}/thumbnail/shorts?t=${imageSalt}`}
+                          src={`/api/jobs/${targetJobId}/thumbnail/shorts?t=${imageSalt}`}
                           alt="YouTube Shorts Thumbnail"
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -989,7 +1062,7 @@ export default function Shorts() {
                       </div>
                     </div>
                     <a
-                      href={`/api/jobs/${id}/thumbnail/shorts`}
+                      href={`/api/jobs/${targetJobId}/thumbnail/shorts`}
                       target="_blank"
                       rel="noreferrer"
                       download

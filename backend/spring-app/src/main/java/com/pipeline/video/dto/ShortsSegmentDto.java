@@ -10,6 +10,9 @@ public class ShortsSegmentDto {
     @JsonProperty("index")
     private Integer index;
 
+    @JsonProperty("title")
+    private String title;
+
     @JsonProperty("text")
     private String text;
 

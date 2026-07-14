@@ -43,6 +43,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/api/channels/voices/audition/**").permitAll()
                 .requestMatchers("/api/channels/voices/preview/**").permitAll()
+                // Browser <img> requests cannot send the JWT header. These are
+                // generated previews only; downloads and editing APIs stay protected.
+                .requestMatchers("/api/channels/*/character-library/pose/**").permitAll()
+                .requestMatchers("/api/jobs/*/thumbnail/**").permitAll()
                 // 파일 다운로드 — 인증된 사용자만 (JWT 필터 통과)
                 .requestMatchers("/api/files/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

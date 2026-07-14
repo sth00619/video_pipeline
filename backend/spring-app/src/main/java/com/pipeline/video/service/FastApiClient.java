@@ -45,7 +45,9 @@ public class FastApiClient {
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
         conn.setConnectTimeout(10_000);
-        conn.setReadTimeout(1_800_000); // 30분
+        // Scene transcription/enrichment may process a long upload. Keep this
+        // within the long-video workflow ceiling rather than timing out early.
+        conn.setReadTimeout(21_600_000);
         conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
         try (OutputStream os = conn.getOutputStream()) {
             String partHeader = "--" + boundary + "\r\n"
@@ -103,8 +105,11 @@ public class FastApiClient {
                 ShortClipInfo info = new ShortClipInfo();
                 info.setIndex((Integer) m.get("index"));
                 info.setText((String) m.get("text"));
+                info.setLabel((String) m.get("label"));
                 info.setStart(((Number) m.get("start")).doubleValue());
                 info.setEnd(((Number) m.get("end")).doubleValue());
+                if (m.get("duration") instanceof Number duration) info.setDuration(duration.doubleValue());
+                if (m.get("file_size_mb") instanceof Number size) info.setFileSizeMb(size.doubleValue());
                 info.setOutputPath((String) m.get("output_path"));
                 clips.add(info);
             }
@@ -142,8 +147,11 @@ public class FastApiClient {
             ShortClipInfo info = new ShortClipInfo();
             info.setIndex((Integer) clipMap.get("index"));
             info.setText((String) clipMap.get("text"));
+            info.setLabel((String) clipMap.get("label"));
             info.setStart(((Number) clipMap.get("start")).doubleValue());
             info.setEnd(((Number) clipMap.get("end")).doubleValue());
+            if (clipMap.get("duration") instanceof Number duration) info.setDuration(duration.doubleValue());
+            if (clipMap.get("file_size_mb") instanceof Number size) info.setFileSizeMb(size.doubleValue());
             info.setOutputPath((String) clipMap.get("output_path"));
             return info;
         } catch (Exception e) {
@@ -510,6 +518,12 @@ public class FastApiClient {
         conn.setConnectTimeout(10_000);
         conn.setReadTimeout(1_800_000); // 30분
         // UTF-8 charset 명시 — 한글 깨짐 방지 핵심
+        // Direct Pro image rendering is sequential and can exceed 30 minutes.
+        // The Temporal activity allows two hours, so keep this client timeout aligned.
+        if (urlStr.contains("/workers/images/generate")
+                || urlStr.contains("/workers/longform/generate")) {
+            conn.setReadTimeout(21_600_000);
+        }
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         conn.setRequestProperty("Accept", "application/json");
 

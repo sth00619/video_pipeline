@@ -223,6 +223,14 @@ async def analyze_shorts(file: UploadFile = File(...), shorts_count: int = Query
     with open(source_path, "wb") as f: f.write(content)
     try:
         analysis = get_shorts_worker().analyze(str(source_path), shorts_count=shorts_count)
+        # Whisper provides timestamps; the LLM turns each timestamped chunk
+        # into a concise, readable scene script without changing its range.
+        analysis["transcript_segments"] = get_shorts_worker().enhance_scene_script(
+            analysis["transcript_segments"]
+        )
+        analysis["transcript"] = " ".join(
+            scene.get("text", "") for scene in analysis["transcript_segments"]
+        )
     except Exception as e:
         raise HTTPException(500, f"분석 실패: {str(e)}")
     return {
@@ -508,6 +516,10 @@ class LongformGenerateRequest(BaseModel):
 @app.post("/workers/longform/generate")
 def longform_generate(request: LongformGenerateRequest):
     try:
+        # A new generate/rebuild request is an explicit retry, so clear a prior
+        # user/error stop marker before starting fresh worker processes.
+        from app.utils.process_manager import clear_job_stop
+        clear_job_stop(request.job_id or 0)
         return get_longform_worker().assemble(
             tts_meta_json=request.tts_meta,
             scenes_meta_json=request.scenes_meta,

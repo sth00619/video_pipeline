@@ -8,6 +8,7 @@ import com.pipeline.video.dto.ShortsAnalyzeResponse;
 import com.pipeline.video.dto.ShortsConfirmRequest;
 import com.pipeline.video.dto.ShortsSegmentDto;
 import com.pipeline.video.repository.AssetRepository;
+import com.pipeline.video.repository.ShortsJobRepository;
 import com.pipeline.video.repository.VideoJobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 @Service
@@ -26,6 +29,7 @@ public class ShortsService {
 
     private final VideoJobRepository jobRepository;
     private final AssetRepository assetRepository;
+    private final ShortsJobRepository shortsJobRepository;
     private final FastApiClient fastApiClient;
     private final CostService costService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -43,6 +47,19 @@ public class ShortsService {
                 jobId, shortsCount, file.getOriginalFilename());
 
         ShortsAnalyzeResponse result = fastApiClient.analyzeShorts(file, shortsCount, jobId);
+
+        ShortsJob shortsJob = ShortsJob.builder()
+                .parentJobId(jobId)
+                .sourceType("UPLOAD")
+                .title("Shorts: " + Optional.ofNullable(file.getOriginalFilename()).orElse(job.getTitle()))
+                .sourceVideoPath(result.getSourceVideoPath())
+                .transcriptJson(objectMapper.writeValueAsString(result))
+                .timelineJson(objectMapper.writeValueAsString(result.getTranscriptSegments()))
+                .status("EDITING")
+                .createdBy(username)
+                .build();
+        shortsJobRepository.save(shortsJob);
+        result.setShortsJobId(shortsJob.getId());
 
         job.setSourceVideoPath(result.getSourceVideoPath());
         job.setStatus(JobStatus.SHORTS_SEGMENTS_PENDING);
@@ -97,6 +114,17 @@ public class ShortsService {
         file.transferTo(new File(sourcePath));
         job.setSourceVideoPath(sourcePath);
 
+        ShortsJob shortsJob = ShortsJob.builder()
+                .parentJobId(jobId)
+                .sourceType("UPLOAD")
+                .title("Shorts: " + Optional.ofNullable(file.getOriginalFilename()).orElse(job.getTitle()))
+                .sourceVideoPath(sourcePath)
+                .timelineJson(segmentsJson)
+                .status("EDITING")
+                .createdBy(username)
+                .build();
+        shortsJobRepository.save(shortsJob);
+
         // JSON 구간 파싱 → ShortsSegmentDto 리스트
         List<Map<String, Object>> segMaps = objectMapper.readValue(
                 segmentsJson, new TypeReference<>() {});
@@ -113,9 +141,10 @@ public class ShortsService {
             segs.add(s);
         }
         req.setSegments(segs);
+        req.setShortsJobId(shortsJob.getId());
 
         List<ShortClipInfo> clips = fastApiClient.cutShorts(jobId, sourcePath, req);
-        saveClips(jobId, clips);
+        saveClips(jobId, clips, shortsJob, req);
 
         job.setStatus(JobStatus.READY);
         jobRepository.save(job);
@@ -134,6 +163,7 @@ public class ShortsService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
+        ShortsJob shortsJob = getOrCreateShortsJob(job, request, username, "LONGFORM");
         String sourcePath = resolveSourceVideoPath(job, jobId);
         request = normalizeSegments(sourcePath, request);
 
@@ -141,7 +171,7 @@ public class ShortsService {
                 jobId, request.getSegments().size());
 
         List<ShortClipInfo> clips = fastApiClient.cutShorts(jobId, sourcePath, request);
-        saveClips(jobId, clips);
+        saveClips(jobId, clips, shortsJob, request);
 
         job.setStatus(JobStatus.READY);
         jobRepository.save(job);
@@ -324,6 +354,7 @@ public class ShortsService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
+        ShortsJob shortsJob = getOrCreateShortsJob(job, request, username, "LONGFORM");
         String sourcePath = resolveSourceVideoPath(job, jobId);
         if (sourcePath == null || sourcePath.isBlank()) {
             Optional<Asset> lfAsset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.LONGFORM_VIDEO);
@@ -354,7 +385,7 @@ public class ShortsService {
 
         ShortClipInfo clip = fastApiClient.cutMergeShorts(jobId, sourcePath, segmentMaps, outputPath);
         List<ShortClipInfo> clips = List.of(clip);
-        saveClips(jobId, clips);
+        saveClips(jobId, clips, shortsJob, request);
 
         job.setStatus(JobStatus.READY);
         jobRepository.save(job);
@@ -408,9 +439,44 @@ public class ShortsService {
         return normalizedRequest;
     }
 
-    private void saveClips(Long jobId, List<ShortClipInfo> clips) {
+    private ShortsJob getOrCreateShortsJob(VideoJob parentJob, ShortsConfirmRequest request,
+                                            String username, String sourceType) {
+        if (request.getShortsJobId() != null) {
+            ShortsJob existing = shortsJobRepository.findById(request.getShortsJobId())
+                    .orElseThrow(() -> new IllegalArgumentException("Shorts project not found: " + request.getShortsJobId()));
+            if (!Objects.equals(existing.getParentJobId(), parentJob.getId())) {
+                throw new IllegalArgumentException("Shorts project belongs to another source video.");
+            }
+            return existing;
+        }
+        ShortsJob created = ShortsJob.builder()
+                .parentJobId(parentJob.getId())
+                .sourceType(sourceType)
+                .title("Shorts: " + parentJob.getTitle())
+                .sourceVideoPath(resolveSourceVideoPath(parentJob, parentJob.getId()))
+                .status("EDITING")
+                .createdBy(username)
+                .build();
+        return shortsJobRepository.save(created);
+    }
+
+    private void saveClips(Long jobId, List<ShortClipInfo> clips, ShortsJob shortsJob,
+                           ShortsConfirmRequest request) {
+        if (clips == null || clips.isEmpty()) {
+            throw new IllegalStateException("No Shorts file was produced. The video is not downloadable.");
+        }
+        for (ShortClipInfo clip : clips) {
+            if (!isDownloadReady(clip.getOutputPath())) {
+                throw new IllegalStateException("Shorts output is missing or empty: " + clip.getOutputPath());
+            }
+        }
         for (ShortClipInfo clip : clips) {
             try {
+                if (!isDownloadReady(clip.getOutputPath())) {
+                    throw new IllegalStateException("Shorts output is missing or empty: " + clip.getOutputPath());
+                }
+                clip.setShortsJobId(shortsJob.getId());
+                clip.setDownloadReady(true);
                 Asset asset = Asset.builder()
                         .jobId(jobId)
                         .assetType(AssetType.SHORT_CLIP)
@@ -421,6 +487,25 @@ public class ShortsService {
             } catch (Exception e) {
                 log.error("Asset 저장 실패: {}", e.getMessage());
             }
+        }
+        try {
+            shortsJob.setSelectionJson(objectMapper.writeValueAsString(request.getSegments()));
+            shortsJob.setResultJson(objectMapper.writeValueAsString(clips));
+            shortsJob.setOutputPath(clips.isEmpty() ? null : clips.get(0).getOutputPath());
+            shortsJob.setStatus("READY");
+            shortsJobRepository.save(shortsJob);
+        } catch (Exception e) {
+            log.error("Failed to persist Shorts project result: {}", e.getMessage());
+        }
+    }
+
+    private boolean isDownloadReady(String outputPath) {
+        if (outputPath == null || outputPath.isBlank()) return false;
+        try {
+            Path path = Path.of(outputPath).normalize();
+            return Files.isRegularFile(path) && Files.size(path) > 0;
+        } catch (Exception ignored) {
+            return false;
         }
     }
 }

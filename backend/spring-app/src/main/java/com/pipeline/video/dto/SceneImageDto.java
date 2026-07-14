@@ -58,6 +58,12 @@ public class SceneImageDto {
     @JsonProperty("quality_score")
     private Integer qualityScore;
 
+    @JsonProperty("generation_method")
+    private String generationMethod;
+
+    @JsonProperty("use_kling")
+    private Boolean useKling;
+
     @JsonProperty("quality_flags")
     private List<String> qualityFlags;
 

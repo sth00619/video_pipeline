@@ -260,6 +260,79 @@ class ShortsWorker:
             for i, (sc, st, en) in enumerate(selected[:count])
         ]
 
+    def enhance_scene_script(self, transcript_segments: list[dict]) -> list[dict]:
+        """Create readable, timestamp-safe script scenes from Whisper chunks.
+
+        Whisper is the timing authority.  The LLM can only improve wording and
+        titles, while this method owns all indexes and time ranges.  This keeps
+        later scenario/keyword cuts tied to the real source video.
+        """
+        source = [dict(segment) for segment in transcript_segments or [] if str(segment.get("text") or "").strip()]
+        if not source:
+            return []
+
+        total_duration = max(float(segment.get("end") or 0) for segment in source)
+        target_duration = max(8.0, min(20.0, total_duration / 60.0 if total_duration else 12.0))
+        scenes, bucket, bucket_start, bucket_end = [], [], 0.0, 0.0
+        for segment in source:
+            start, end = float(segment.get("start") or 0), float(segment.get("end") or 0)
+            if bucket and ((end - bucket_start) >= target_duration or sum(len(str(item.get("text") or "")) for item in bucket) >= 220):
+                scenes.append(self._script_scene(len(scenes) + 1, bucket, bucket_start, bucket_end))
+                bucket, bucket_start, bucket_end = [], start, start
+            if not bucket:
+                bucket_start = start
+            bucket.append(segment)
+            bucket_end = max(bucket_end, end)
+        if bucket:
+            scenes.append(self._script_scene(len(scenes) + 1, bucket, bucket_start, bucket_end))
+
+        try:
+            import json
+            import re
+            from app.providers.factory import get_llm_provider
+
+            llm = get_llm_provider()
+            source_text = "\n".join(
+                f'{scene["index"]}. {scene["text"]}' for scene in scenes
+            )
+            response = llm.generate(
+                system_prompt=(
+                    "You are a Korean video editor. Convert each supplied transcript scene into a concise, "
+                    "faithful Korean script card. Do not add facts, advice, or timestamps. Return only a JSON "
+                    "array with one object for every supplied index: {index, title, text}. Keep text in Korean."
+                ),
+                user_prompt=f"Transcript scenes:\n{source_text}",
+            )
+            match = re.search(r'\[.*\]', response, re.DOTALL)
+            rewritten = json.loads(match.group(0) if match else response)
+            by_index = {
+                int(item.get("index")): item for item in rewritten
+                if isinstance(item, dict) and str(item.get("index", "")).isdigit()
+            }
+            for scene in scenes:
+                item = by_index.get(scene["index"], {})
+                text = str(item.get("text") or "").strip()
+                title = str(item.get("title") or "").strip()
+                if text:
+                    scene["text"] = text
+                if title:
+                    scene["title"] = title[:80]
+        except Exception as exc:
+            logger.warning("LLM scene-script refinement unavailable; keeping Whisper scenes: %s", exc)
+        return scenes
+
+    @staticmethod
+    def _script_scene(index: int, segments: list[dict], start: float, end: float) -> dict:
+        text = " ".join(str(segment.get("text") or "").strip() for segment in segments).strip()
+        return {
+            "index": index,
+            "title": f"Scene {index}",
+            "text": text,
+            "start": round(start, 3),
+            "end": round(max(start, end), 3),
+            "duration": round(max(0.05, end - start), 3),
+        }
+
     def _equal_split(self, total_duration: float, count: int) -> list:
         labels = ["핵심 분석", "시나리오 분석", "실행 가이드", "결론 요약", "데이터 정리"]
         clip = min(DEFAULT_CLIP, total_duration / max(count, 1))

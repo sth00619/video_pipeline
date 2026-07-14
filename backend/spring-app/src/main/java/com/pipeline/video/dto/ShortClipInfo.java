@@ -10,6 +10,9 @@ import lombok.Data;
 @Data
 public class ShortClipInfo {
 
+    @JsonProperty("shorts_job_id")
+    private Long shortsJobId;
+
     private Integer index;
     private String text;
     private String label;
@@ -22,4 +25,7 @@ public class ShortClipInfo {
 
     @JsonProperty("file_size_mb")
     private Double fileSizeMb;
+
+    @JsonProperty("download_ready")
+    private Boolean downloadReady;
 }

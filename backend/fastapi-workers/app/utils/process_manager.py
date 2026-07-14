@@ -82,6 +82,20 @@ def is_job_stopped(job_id: int) -> bool:
     return j_id in _local_stopped_job_ids
 
 
+def clear_job_stop(job_id: int):
+    """Allow an explicitly requested new run of a previously stopped job."""
+    if not job_id:
+        return
+    j_id = int(job_id)
+    r = _get_redis()
+    if r is not None:
+        try:
+            r.delete(f"{STOP_KEY_PREFIX}{j_id}")
+        except Exception as e:
+            logger.warning(f"Job {j_id} stop flag reset failed: {e}")
+    _local_stopped_job_ids.discard(j_id)
+
+
 def register_process(job_id: int, process):
     """실행 중인 프로세스 등록 (이 워커 프로세스 내에서만 유효)"""
     if job_id:

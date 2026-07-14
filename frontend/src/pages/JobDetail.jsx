@@ -253,6 +253,16 @@ export default function JobDetail() {
     }
   })
 
+  const sceneKlingMut = useMutation({
+    mutationFn: ({ index, enabled }) => jobsApi.setSceneKling(id, index, enabled),
+    onSuccess: () => {
+      qc.invalidateQueries(['assets', id, 'SCENE_IMAGE'])
+    },
+    onError: (err) => {
+      alert('Kling 씬 설정 실패: ' + (err.response?.data?.message || err.message))
+    }
+  })
+
   const rebuildLongformMut = useMutation({
     mutationFn: () => jobsApi.rebuildLongform(id),
     onSuccess: () => {
@@ -1145,6 +1155,8 @@ export default function JobDetail() {
                         const qualityFlags = img.qualityFlags ?? img.quality_flags ?? [];
                         const retryRecommended = img.retryRecommended ?? img.retry_recommended;
                         const imageProfile = img.imageProfile ?? img.image_profile;
+                        const useKling = img.useKling ?? img.use_kling;
+                        const isKlingEligible = Number(img.start || 0) < 60;
 
                         return (
                           <div key={img.index || i} className="flex gap-4 bg-navy-800/40 border border-navy-700/60 rounded-lg p-3.5 hover:border-navy-600 transition">
@@ -1232,6 +1244,17 @@ export default function JobDetail() {
                               </div>
 
                               <div className="flex justify-end gap-2 mt-2.5">
+                                {!isEditingThis && isKlingEligible && ['IMAGES_PENDING', 'PREVIEW_PENDING', 'READY'].includes(job.status) && (
+                                  <button
+                                    onClick={() => sceneKlingMut.mutate({ index: img.index, enabled: !useKling })}
+                                    disabled={sceneKlingMut.isPending}
+                                    className={`flex items-center gap-1 text-xs border px-2.5 py-1.5 rounded transition disabled:opacity-50 ${useKling ? 'bg-purple-500/20 text-purple-200 border-purple-400/60' : 'bg-navy-700 text-gray-200 hover:text-white border-navy-600'}`}
+                                    title="직접 선택하면 초반 1분 안에서 선택한 씬만 Kling 영상화합니다."
+                                  >
+                                    <Zap size={12}/>
+                                    {useKling ? 'Kling 선택됨' : '이 씬 Kling'}
+                                  </button>
+                                )}
                                 {isEditingThis ? (
                                   <>
                                     <button

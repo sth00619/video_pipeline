@@ -63,4 +63,14 @@ public class ImagesController {
         imagesService.splitScene(jobId, index, part1, part2);
         return ResponseEntity.ok(Map.of("status", "OK"));
     }
+
+    @PostMapping("/scenes/{index}/kling")
+    public ResponseEntity<Map<String, String>> setSceneKling(
+            @PathVariable Long jobId,
+            @PathVariable int index,
+            @RequestBody Map<String, Boolean> body,
+            @AuthenticationPrincipal String username) {
+        imagesService.setSceneKling(jobId, index, Boolean.TRUE.equals(body.get("enabled")));
+        return ResponseEntity.ok(Map.of("status", "OK"));
+    }
 }

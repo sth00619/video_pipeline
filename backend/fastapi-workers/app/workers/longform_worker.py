@@ -36,7 +36,7 @@ import logging
 import subprocess
 import concurrent.futures
 from pathlib import Path
-from app.utils.process_manager import register_process, unregister_process, is_job_stopped
+from app.utils.process_manager import register_process, unregister_process, is_job_stopped, stop_job_processes
 from app import runtime_config
 from app.utils.quality_gate import assess_images, assess_subtitles, persist_quality_report
 from app.utils.data_cards import extract_data_card, render_data_card
@@ -151,6 +151,10 @@ class LongformWorker:
             logger.info("Fal motion disabled: %s", fal_status["reason"])
         intro_kling_count = _get_intro_kling_count(total_duration, len(scenes))
         logger.info(f"초반 Kling AI 움짤 대상: {intro_kling_count}씬 (전체 {len(scenes)}씬 중)")
+        # If the editor has selected one or more scenes, use exactly those;
+        # otherwise retain the safe automatic intro selection. Both paths are
+        # capped to the first minute by intro_kling_count.
+        has_manual_kling_selection = any("use_kling" in scene for scene in scenes)
 
         # ── 2. 씬별 클립 생성 (병렬 처리) ──────────────────────────
         scene_stage_t0 = time.time()
@@ -164,7 +168,9 @@ class LongformWorker:
             futures = {
                 executor.submit(
                     self._process_scene, i, scene, video_provider,
-                    intro_kling_count, temp_dir, job_id
+                    i < intro_kling_count and (
+                        bool(scene.get("use_kling")) if has_manual_kling_selection else True
+                    ), temp_dir, job_id
                 ): i
                 for i, scene in enumerate(scenes)
             }
@@ -174,11 +180,18 @@ class LongformWorker:
                     idx, clip_path = future.result()
                     clip_paths_map[idx] = clip_path
                 except Exception as e:
+                    stopped_error = e
                     if "stopped by user" in str(e):
-                        stopped_error = e
                         logger.info(f"Job {job_id} 중지 감지, 나머지 씬 처리 건너뜀")
                     else:
-                        logger.error(f"씬 {i} 처리 중 예상치 못한 오류 (스킵): {e}")
+                        # Do not deliver a final video containing silently
+                        # substituted scenes. Stop active FFmpeg work and let the
+                        # caller mark this job FAILED without automatic retry.
+                        logger.error(f"씬 {i} 처리 오류. Job {job_id} 전체 중지: {e}")
+                        stop_job_processes(job_id)
+                    for pending in futures:
+                        pending.cancel()
+                    break
 
         if stopped_error is not None:
             raise stopped_error
@@ -379,12 +392,13 @@ class LongformWorker:
     # 씬 1개를 클립(mp4)으로 변환 — 병렬 실행 단위
     # ============================
     def _process_scene(self, i: int, scene: dict, video_provider,
-                        intro_kling_count: int, temp_dir: Path, job_id: int):
+                        use_kling: bool, temp_dir: Path, job_id: int):
         """
         단일 씬을 처리하여 (씬 인덱스, 생성된 클립 경로) 튜플을 반환합니다.
         ThreadPoolExecutor에서 씬 여러 개를 동시에 실행하기 위해 분리했습니다.
-        job_stopped 신호를 제외한 예외는 여기서 흡수하고 배경색 폴백 클립을
-        생성해, 씬 하나의 실패가 전체 조립을 막지 않도록 합니다(v6과 동일한 방어 원칙).
+        Kling 인트로 실패는 정적 이미지로 안전하게 대체할 수 있지만, 이미지/FFmpeg
+        조립 자체의 오류는 호출자에게 전파합니다. 빈 배경 씬을 몰래 넣지 않고
+        작업 전체를 중지하는 정책입니다.
         """
         if is_job_stopped(job_id):
             raise RuntimeError(f"Job {job_id} stopped by user.")
@@ -402,7 +416,7 @@ class LongformWorker:
 
         try:
             # 초반 씬만 Kling AI 움짤, 나머지는 zoompan 효과
-            if video_provider and i < intro_kling_count:
+            if video_provider and use_kling:
                 try:
                     logger.info(f"씬 {i} Kling AI 움짤 생성 (초반 {intro_kling_count}씬)")
 
@@ -477,25 +491,9 @@ class LongformWorker:
                 logger.info(f"scene {i}: verified market chart overlaid")
             return i, clip_path
 
-        except RuntimeError as e:
-            # job_stopped 신호는 그대로 위로 전파 (main 스레드에서 감지 후 재발생)
-            if "stopped by user" in str(e):
-                raise
-            logger.error(f"씬 {i} 처리 중 RuntimeError, 배경색 폴백 시도: {e}")
         except Exception as e:
-            logger.error(f"씬 {i} 처리 중 예외 발생, 배경색 폴백 시도: {e}")
-
-        # 최후 폴백: 배경색만 있는 무음 클립 생성 (전체 조립이 씬 하나 때문에 죽지 않도록)
-        try:
-            _run_subprocess(
-                f'ffmpeg -f lavfi -i "color=c={bg_color}:s=1920x1080:r=30" '
-                f'-t {duration:.3f} -c:v libx264 -pix_fmt yuv420p '
-                f'-y "{clip_path}" -loglevel error',
-                job_id
-            )
-        except Exception as fallback_err:
-            logger.error(f"씬 {i} 최후 폴백 클립 생성도 실패: {fallback_err}")
-        return i, clip_path
+            logger.error(f"scene {i} processing failed; aborting job: {e}")
+            raise
 
     def _generate_ass(self, chunks: list, ass_path: str):
         """

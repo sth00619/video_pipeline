@@ -241,7 +241,7 @@ class CharacterLibraryWorker:
         return [
             d.name
             for d in self.POSES_BASE_DIR.iterdir()
-            if d.is_dir() and (d / "poses" / "library_meta.json").exists()
+            if d.is_dir() and any((d / "poses").glob("*.png"))
         ]
 
     def get_library_status(self, channel_id: str) -> dict:
@@ -253,7 +253,7 @@ class CharacterLibraryWorker:
             return {"channel_id": channel_id, "exists": False, "poses": [], "pose_count": 0}
 
         try:
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
         except (OSError, json.JSONDecodeError):
             meta = {}
 

@@ -7,6 +7,7 @@ import Jobs from './pages/Jobs'
 import JobNew from './pages/JobNew'
 import JobDetail from './pages/JobDetail'
 import Shorts from './pages/Shorts'
+import ShortsLibrary from './pages/ShortsLibrary'
 import Admin from './pages/Admin'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -40,6 +41,12 @@ export default function App() {
             <ProtectedRoute><JobDetail /></ProtectedRoute>
           } />
           <Route path="/shorts" element={
+            <ProtectedRoute><ShortsLibrary /></ProtectedRoute>
+          } />
+          <Route path="/shorts/new" element={
+            <ProtectedRoute><Shorts /></ProtectedRoute>
+          } />
+          <Route path="/shorts/:shortsJobId" element={
             <ProtectedRoute><Shorts /></ProtectedRoute>
           } />
           <Route path="/jobs/:id/shorts" element={

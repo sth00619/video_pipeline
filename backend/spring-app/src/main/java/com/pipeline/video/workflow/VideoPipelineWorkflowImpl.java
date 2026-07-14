@@ -66,7 +66,9 @@ public class VideoPipelineWorkflowImpl implements VideoPipelineWorkflow {
     private final VideoPipelineActivities activities = Workflow.newActivityStub(
             VideoPipelineActivities.class,
             ActivityOptions.newBuilder()
-                    .setStartToCloseTimeout(Duration.ofHours(2))
+                    // A 20-minute job can need a long sequential Pro image render.
+                    // This is a ceiling only; automatic retries remain disabled below.
+                    .setStartToCloseTimeout(Duration.ofHours(6))
                     .setRetryOptions(RetryOptions.newBuilder()
                             .setMaximumAttempts(1)
                             .build())

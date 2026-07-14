@@ -3,7 +3,8 @@ import { authStore } from '../store/auth'
 
 const apiClient = axios.create({
   baseURL: '/api',
-  timeout: 1800000,
+  // Long-form 10–20 minute rendering must not be aborted in the browser.
+  timeout: 21600000,
 })
 
 apiClient.interceptors.request.use((config) => {

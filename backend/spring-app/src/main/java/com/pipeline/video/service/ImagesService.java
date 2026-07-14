@@ -89,14 +89,23 @@ public class ImagesService {
         }
 
         // [버그 수정] 기존 imgCost = BigDecimal.ZERO → 실제 이미지 장 수 기반 요금 추정
-        java.math.BigDecimal imgCost = CostEstimator.geminiImages(result.getSceneCount());
+        long newlyRenderedSceneCount = result.getScenes() == null ? 0 : result.getScenes().stream()
+                .filter(scene -> !"resumed_existing".equals(scene.getGenerationMethod()))
+                .count();
+        if (newlyRenderedSceneCount > 0) {
+        java.math.BigDecimal imgCost = CostEstimator.geminiImages((int) newlyRenderedSceneCount);
         costService.record(jobId, "GEMINI_IMAGE", imgCost, "USD",
                 String.format("씬 이미지 %d장 + GIF %d개",
                         result.getSceneCount(), result.getGifCount()));
 
         // Asset 저장 — 씬 이미지
+        }
+
         if (result.getScenes() != null) {
             for (SceneImageDto scene : result.getScenes()) {
+                boolean alreadyRegistered = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE)
+                        .stream().anyMatch(existing -> scene.getImagePath().equals(existing.getLocalPath()));
+                if (alreadyRegistered) continue;
                 Asset asset = Asset.builder()
                         .jobId(jobId)
                         .assetType(AssetType.SCENE_IMAGE)
@@ -312,6 +321,29 @@ public class ImagesService {
             
         assetRepository.save(newAsset);
         log.info("씬 분할 완료: jobId={}, index={} → {} & {}", jobId, index, index, index + 1);
+    }
+
+    /**
+     * Once a scene has an explicit value, the renderer uses only explicitly
+     * selected scenes for Kling. The worker still enforces the first-minute cap.
+     */
+    @Transactional
+    public void setSceneKling(Long jobId, int index, boolean enabled) {
+        for (Asset asset : assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE)) {
+            try {
+                SceneImageDto dto = objectMapper.readValue(asset.getMetaJson(), SceneImageDto.class);
+                if (dto.getIndex() != null && dto.getIndex() == index) {
+                    dto.setUseKling(enabled);
+                    asset.setMetaJson(safeJson(dto));
+                    assetRepository.save(asset);
+                    log.info("Kling scene setting saved: jobId={}, index={}, enabled={}", jobId, index, enabled);
+                    return;
+                }
+            } catch (Exception ignored) {
+                // Continue searching assets with malformed legacy metadata.
+            }
+        }
+        throw new IllegalArgumentException("해당 씬 이미지를 찾을 수 없습니다: index=" + index);
     }
 
     // ============================

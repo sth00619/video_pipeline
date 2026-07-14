@@ -11,6 +11,10 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ShortsAnalyzeResponse {
 
+    /** Durable Shorts project created for this analysis. */
+    @JsonProperty("shorts_job_id")
+    private Long shortsJobId;
+
     @JsonProperty("job_id")
     private Long jobId;
 
