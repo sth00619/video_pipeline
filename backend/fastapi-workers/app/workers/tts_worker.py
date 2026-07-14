@@ -340,7 +340,7 @@ class TtsWorker:
             raise RuntimeError(f"Job {job_id} stopped by user.")
         
         # voice_id가 없거나 기본값이면 한국어 발음이 자연스러운 기본 voice_id 사용
-        if not voice_id or voice_id in ["gtts_ko", "default", "silent", "gtts_whisper_ko"]:
+        if not voice_id or voice_id in ["gtts_ko", "default", "default_ko", "silent", "gtts_whisper_ko"]:
             voice_id = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
             
         # [공식 권장] apply_text_normalization=off 쿼리 파라미터 전달 및 이중 가속/배속 파라미터
@@ -413,8 +413,10 @@ class TtsWorker:
             if success:
                 return True
             else:
-                logger.warning("ElevenLabs 단일 요청 실패 -> gTTS 단일 폴백 시도")
-                return self._generate_gtts(text, output_path, job_id)
+                # Let the caller perform the fallback so it can truthfully mark
+                # the resulting asset as gTTS rather than ElevenLabs audio.
+                logger.warning("ElevenLabs 단일 요청 실패 -> caller fallback")
+                return False
         else:
             # 800자 단위 분할 (문장 경계 기준)
             parts = []
