@@ -29,6 +29,32 @@ STOCK_KW_MED = [
 class ShortsWorker:
 
     @staticmethod
+    def _is_spoken_korean(text: object) -> bool:
+        value = str(text or "").strip()
+        if not value or value.startswith(("#", "[")):
+            return False
+        lower = value.lower()
+        if any(token in lower for token in ("2d digital", "comic illustration", "no readable text", "scene:", "action:", "camera:")):
+            return False
+        return sum("가" <= char <= "힣" for char in value) >= 2
+
+    def _clean_spoken_scenes(self, scenes: list[dict]) -> list[dict]:
+        """Reject image prompts and normalize the API's spoken-scene contract."""
+        cleaned = []
+        for scene in scenes or []:
+            text = str(scene.get("text") or "").strip()
+            if text.startswith("#"):
+                continue
+            text = text.lstrip("-— ").strip()
+            if not self._is_spoken_korean(text):
+                continue
+            item = dict(scene)
+            item["text"] = text
+            item["index"] = len(cleaned) + 1
+            cleaned.append(item)
+        return cleaned
+
+    @staticmethod
     def _vertical_fill_filter() -> str:
         """Fill a 9:16 canvas without letterboxing, preserving the source centre."""
         return (
@@ -110,7 +136,7 @@ class ShortsWorker:
 
     def normalize_scenes(self, scenes: list[dict], video_path: str) -> list[dict]:
         """Fill missing scene timestamps from the actual source-video duration."""
-        ordered = [dict(scene) for scene in sorted(scenes, key=lambda scene: int(scene.get("index", 0)))]
+        ordered = self._clean_spoken_scenes(scenes)
         if not ordered:
             return []
         total_duration = self._get_duration(video_path)
@@ -139,7 +165,7 @@ class ShortsWorker:
                 scene.update({"start": round(start, 3), "duration": round(duration, 3), "end": round(start + duration, 3)})
             return ordered
 
-        weights = [max(20, len(str(scene.get("text") or scene.get("prompt") or "").replace(" ", ""))) for scene in ordered]
+        weights = [max(20, len(str(scene.get("text") or "").replace(" ", ""))) for scene in ordered]
         total_weight = sum(weights) or len(ordered)
         cursor = 0.0
         for position, (scene, weight) in enumerate(zip(ordered, weights)):
@@ -330,6 +356,10 @@ class ShortsWorker:
         import json
         import re
         from app.providers.factory import get_llm_provider
+
+        scenes = self._clean_spoken_scenes(scenes)
+        if not scenes:
+            raise ValueError("No usable Korean narration scenes were supplied")
         
         # claude-sonnet-4-6를 제공하는 LLM 프로바이더 로드
         llm = get_llm_provider()
@@ -398,6 +428,7 @@ class ShortsWorker:
             if match:
                 response_text = match.group(0)
             result = json.loads(response_text)
+            result["scenarios"] = self._normalize_scenario_ranges(result.get("scenarios"), scenes)
             result["keywords"] = self._ensure_ten_keywords(result.get("keywords"), scenes)
             logger.info("Claude 4.6 쇼츠 추출 결과 파싱 성공")
             return result
@@ -437,6 +468,32 @@ class ShortsWorker:
             }
 
     @staticmethod
+    def _normalize_scenario_ranges(raw_scenarios, scenes: list[dict]) -> dict:
+        """Repair model output into real contiguous timeline ranges, capped at 60s."""
+        scene_ids = [int(scene["index"]) for scene in scenes]
+        positions = {scene_id: pos for pos, scene_id in enumerate(scene_ids)}
+        result = {}
+        for key in ("performance", "risk", "upside"):
+            item = dict((raw_scenarios or {}).get(key) or {})
+            chosen = [int(value) for value in item.get("selected_scene_indices", []) if str(value).isdigit() and int(value) in positions]
+            chosen = chosen or scene_ids[:1]
+            chosen.sort(key=lambda value: positions[value])
+            left, right = min(positions[value] for value in chosen), max(positions[value] for value in chosen)
+            # If the model selected an overlong span, retain the most relevant
+            # continuous 60-second window within it.
+            while right > left:
+                duration = float(scenes[right].get("start", 0)) + float(scenes[right].get("duration", 0)) - float(scenes[left].get("start", 0))
+                if duration <= MAX_SHORT_DURATION:
+                    break
+                if positions[chosen[0]] - left <= right - positions[chosen[-1]]:
+                    right -= 1
+                else:
+                    left += 1
+            item["selected_scene_indices"] = scene_ids[left:right + 1]
+            result[key] = item
+        return result
+
+    @staticmethod
     def _ensure_ten_keywords(raw_keywords, scenes: list[dict]) -> list[dict]:
         """Normalize model output to exactly ten selectable keyword cards."""
         import re
@@ -458,11 +515,11 @@ class ShortsWorker:
             if len(normalized) == 10:
                 return normalized
 
-        corpus = " ".join(str(scene.get("text") or scene.get("prompt") or "") for scene in scenes)
+        corpus = " ".join(str(scene.get("text") or "") for scene in scenes)
         for word in re.findall(r"[가-힣A-Za-z0-9]{2,}", corpus):
             if word in seen:
                 continue
-            matching = [int(scene.get("index", position + 1)) for position, scene in enumerate(scenes) if word in str(scene.get("text") or scene.get("prompt") or "")]
+            matching = [int(scene.get("index", position + 1)) for position, scene in enumerate(scenes) if word in str(scene.get("text") or "")]
             normalized.append({"word": word, "description": f"{word} 관련 핵심 구간", "matching_scene_indices": matching or scene_indices[:1]})
             seen.add(word)
             if len(normalized) == 10:

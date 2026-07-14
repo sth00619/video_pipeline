@@ -24,6 +24,34 @@ function parseSec(str = '') {
   return p.length === 2 ? parseFloat(p[0]) * 60 + parseFloat(p[1] || 0) : parseFloat(str) || 0
 }
 
+function isSpokenKorean(text) {
+  const value = String(text || '').trim()
+  return /[가-힣]{2}/.test(value) && !/(2d digital|comic illustration|no readable text|scene:|action:|camera:)/i.test(value)
+}
+
+function makeTimelineSegments(allScenes, selectedIndices) {
+  const ordered = allScenes.filter(s => isSpokenKorean(s.text)).sort((a, b) => Number(a.start || 0) - Number(b.start || 0))
+  const anchors = new Set((selectedIndices || []).map(Number))
+  let best = null
+  for (let left = 0; left < ordered.length; left++) {
+    for (let right = left; right < ordered.length; right++) {
+      const start = Number(ordered[left].start || 0)
+      const end = Number(ordered[right].start || 0) + Number(ordered[right].duration || 0)
+      const duration = Math.max(0, end - start)
+      if (duration > 60.05) break
+      const hits = ordered.slice(left, right + 1).filter(s => anchors.has(Number(s.index))).length
+      if (!hits) continue
+      const score = hits * 100 - Math.abs(42 - duration)
+      if (!best || score > best.score) best = { left, right, score }
+    }
+  }
+  if (!best) return []
+  return ordered.slice(best.left, best.right + 1).map((s, idx) => ({
+    index: idx + 1, label: s.title || `Scene ${s.index}`, text: s.text,
+    start: Number(s.start || 0), end: Number(s.start || 0) + Number(s.duration || 0)
+  }))
+}
+
 // JWT 포함 다운로드
 async function downloadFile(path, filename) {
   if (!path || path === 'undefined' || path === 'null') {
@@ -121,7 +149,7 @@ export default function Shorts() {
           } catch(e) {
             return null
           }
-        }).filter(Boolean).sort((a, b) => a.index - b.index)
+        }).filter(scene => scene && isSpokenKorean(scene.text)).sort((a, b) => a.index - b.index)
         
         let activeScenes = sortedScenes
         if (activeScenes.length === 0) {
@@ -212,14 +240,7 @@ export default function Shorts() {
     try {
       // 롱폼 씬 데이터가 없다면, 직접 업로드한 씬(segments)을 전송
       if (scenes.length > 0) {
-        const res = await apiClient.post(`/jobs/${targetId}/shorts/extract-scenarios`, {
-          scenes: scenes.map(scene => ({
-            index: Number(scene.index),
-            text: scene.text || scene.prompt || '',
-            start: Number(scene.start || 0),
-            duration: Number(scene.duration || 0)
-          }))
-        })
+        const res = await apiClient.post(`/jobs/${targetId}/shorts/extract-scenarios`, {})
         setAiScenarios(res.data)
         if (Array.isArray(res.data.timeline_scenes) && res.data.timeline_scenes.length > 0) {
           setScenes(res.data.timeline_scenes.map((scene, i) => ({
@@ -257,52 +278,29 @@ export default function Shorts() {
       return;
     }
 
-    const indices = new Set();
-    newSelected.forEach(k => {
-      if (k.matching_scene_indices) {
-        k.matching_scene_indices.forEach(idx => indices.add(Number(idx)));
-      }
-    });
-
-    const matchingScenes = scenes.filter(s => indices.has(Number(s.index))).sort((a, b) => Number(a.index) - Number(b.index));
-    if (!matchingScenes.length) {
+    const indices = newSelected.flatMap(k => k.matching_scene_indices || [])
+    const newSegs = makeTimelineSegments(scenes, indices)
+    if (!newSegs.length) {
       setSegments([]);
       return;
     }
-
-    const newSegs = matchingScenes.map((s, idx) => ({
-      index: idx + 1,
-      label: s.title || `Scene ${s.index}`,
-      text: s.text || s.prompt || '',
-      start: s.start,
-      end: s.start + s.duration
-    }))
-    
     setSegments(newSegs)
     setActiveSeg(0)
-    seek(matchingScenes[0].start)
+    seek(newSegs[0].start)
   }
 
   // ── AI 시나리오 클릭 시 해당 씬 리스트 적용 ──
   const handleApplyScenario = (scenario) => {
     const indices = scenario.selected_scene_indices || scenario.scene_indices || [];
-    const matchingScenes = scenes.filter(s => indices.map(Number).includes(Number(s.index)))
-    if (!matchingScenes.length) {
+    const newSegs = makeTimelineSegments(scenes, indices)
+    if (!newSegs.length) {
       alert('해당 시나리오의 씬 정보를 찾을 수 없습니다. (매칭된 인덱스 없음)')
       return
     }
 
-    const newSegs = matchingScenes.map((s, idx) => ({
-      index: idx + 1,
-      label: s.title || `Scene ${s.index}`,
-      text: s.text || s.prompt || '',
-      start: s.start,
-      end: s.start + s.duration
-    }))
-
     setSegments(newSegs)
     setActiveSeg(0)
-    seek(matchingScenes[0].start)
+    seek(newSegs[0].start)
     setSelectedKeywords([])
     
     // 시나리오 적용과 동시에 자동으로 단일 쇼츠 생성(Merge) 요청
@@ -322,14 +320,14 @@ export default function Shorts() {
       const scene = JSON.parse(dataStr)
       
       // 이미 타임라인에 있는지 확인
-      if (segments.some(s => s.text === (scene.text || scene.prompt))) {
+      if (segments.some(s => s.text === scene.text)) {
         return
       }
 
       const newSeg = {
         index: segments.length + 1,
         label: scene.title || `Scene ${scene.index}`,
-        text: scene.text || scene.prompt || '',
+        text: scene.text || '',
         start: scene.start,
         end: scene.start + scene.duration
       }
@@ -601,7 +599,7 @@ export default function Shorts() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-200 leading-relaxed font-medium">
-                        {scene.text || scene.prompt || '(대사 없음)'}
+                        {scene.text || '(대사 없음)'}
                       </p>
                     </div>
                   );

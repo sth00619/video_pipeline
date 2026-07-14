@@ -155,7 +155,7 @@ public class ShortsService {
         List<Map<String, Object>> scenes = new ArrayList<>();
         
         if (customScenes != null && !customScenes.isEmpty()) {
-            scenes.addAll(customScenes);
+            scenes.addAll(cleanNarrationScenes(customScenes));
         } else {
             List<Asset> sceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
             if (sceneAssets.isEmpty()) {
@@ -193,11 +193,13 @@ public class ShortsService {
                     Map<String, Object> meta = objectMapper.readValue(asset.getMetaJson(), new TypeReference<>() {});
                     Map<String, Object> scene = new HashMap<>();
                 scene.put("index", meta.get("index"));
-                String text = meta.get("text") != null ? meta.get("text").toString() : (meta.get("prompt") != null ? meta.get("prompt").toString() : "");
+                // `prompt` is an English image-generation instruction, not narration.
+                // Do not let it enter the Shorts timeline or keyword analysis.
+                String text = meta.get("text") != null ? meta.get("text").toString() : "";
                 scene.put("text", text);
                 scene.put("start", meta.get("start") != null ? ((Number) meta.get("start")).doubleValue() : 0.0);
                 scene.put("duration", meta.get("duration") != null ? ((Number) meta.get("duration")).doubleValue() : 15.0);
-                scenes.add(scene);
+                if (isKoreanNarration(text)) scenes.add(scene);
             } catch (Exception e) {
                 log.warn("씬 파싱 실패: {}", e.getMessage());
             }
@@ -207,12 +209,114 @@ public class ShortsService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
         String sourcePath = resolveSourceVideoPath(job, jobId);
+        // For a generated longform, TTS chunks are the authoritative narration
+        // timestamps. They replace image-scene estimates when available.
+        List<Map<String, Object>> ttsTimeline = loadTimedTtsScenes(jobId);
+        if (!ttsTimeline.isEmpty()) scenes = ttsTimeline;
+        scenes = cleanNarrationScenes(scenes);
+        if (scenes.isEmpty()) {
+            throw new IllegalStateException("No usable Korean narration was found. Upload analysis or TTS generation must finish first.");
+        }
         List<Map<String, Object>> timedScenes = fastApiClient.normalizeShortsScenes(sourcePath, scenes);
         Map<String, Object> result = fastApiClient.extractShortsScenarios(jobId, timedScenes);
         // Return the repaired timeline so the web client can immediately cut
         // the scenario/keyword selection without relying on stale image assets.
         result.put("timeline_scenes", timedScenes);
+        try {
+            assetRepository.save(Asset.builder()
+                    .jobId(jobId)
+                    .assetType(AssetType.SHORTS_SCENARIO)
+                    .metaJson(objectMapper.writeValueAsString(result))
+                    .build());
+        } catch (Exception e) {
+            log.warn("Failed to save Shorts scenario result: {}", e.getMessage());
+        }
         return result;
+    }
+
+    /** Keep image prompts out of spoken-text workflows. */
+    private List<Map<String, Object>> cleanNarrationScenes(List<Map<String, Object>> rawScenes) {
+        if (rawScenes == null) return new ArrayList<>();
+        List<Map<String, Object>> cleaned = new ArrayList<>();
+        int nextIndex = 1;
+        for (Map<String, Object> raw : rawScenes) {
+            if (raw == null) continue;
+            String text = String.valueOf(raw.getOrDefault("text", "")).trim();
+            if (text.startsWith("#")) continue;
+            text = text.replaceFirst("^[#\\-—\\s]+", "").trim();
+            if (!isKoreanNarration(text)) continue;
+            Map<String, Object> scene = new LinkedHashMap<>();
+            scene.put("index", nextIndex++);
+            scene.put("text", text);
+            double start = asDouble(raw.get("start"), 0.0);
+            double duration = asDouble(raw.get("duration"), 0.0);
+            if (duration <= 0 && raw.get("end") != null) duration = Math.max(0.0, asDouble(raw.get("end"), start) - start);
+            scene.put("start", start);
+            scene.put("duration", duration);
+            cleaned.add(scene);
+        }
+        return cleaned;
+    }
+
+    private List<Map<String, Object>> loadTimedTtsScenes(Long jobId) {
+        Optional<Asset> asset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.TTS_AUDIO);
+        if (asset.isEmpty()) return List.of();
+        try {
+            Map<String, Object> meta = objectMapper.readValue(asset.get().getMetaJson(), new TypeReference<>() {});
+            Object raw = meta.get("chunks");
+            if (!(raw instanceof List<?> items)) return List.of();
+            List<Map<String, Object>> chunks = new ArrayList<>();
+            for (Object item : items) chunks.add(objectMapper.convertValue(item, new TypeReference<Map<String, Object>>() {}));
+            return groupNarrationScenes(cleanNarrationScenes(chunks));
+        } catch (Exception e) {
+            log.warn("TTS timing parsing failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /** Keep UI cards meaningful while retaining exact TTS timing. */
+    private List<Map<String, Object>> groupNarrationScenes(List<Map<String, Object>> chunks) {
+        List<Map<String, Object>> grouped = new ArrayList<>();
+        StringBuilder text = new StringBuilder();
+        double start = 0.0, end = 0.0;
+        int index = 1;
+        for (Map<String, Object> chunk : chunks) {
+            String current = String.valueOf(chunk.get("text"));
+            double currentStart = asDouble(chunk.get("start"), end);
+            double currentEnd = currentStart + Math.max(0.0, asDouble(chunk.get("duration"), 0.0));
+            if (text.length() == 0) start = currentStart;
+            if (text.length() > 0 && ((currentEnd - start) > 9.5 || text.length() + current.length() > 115)) {
+                grouped.add(timedScene(index++, text.toString(), start, Math.max(0.05, end - start)));
+                text.setLength(0);
+                start = currentStart;
+            }
+            if (text.length() > 0) text.append(' ');
+            text.append(current);
+            end = Math.max(end, currentEnd);
+        }
+        if (text.length() > 0) grouped.add(timedScene(index, text.toString(), start, Math.max(0.05, end - start)));
+        return grouped;
+    }
+
+    private Map<String, Object> timedScene(int index, String text, double start, double duration) {
+        Map<String, Object> scene = new LinkedHashMap<>();
+        scene.put("index", index); scene.put("text", text);
+        scene.put("start", start); scene.put("duration", duration);
+        return scene;
+    }
+
+    private boolean isKoreanNarration(String text) {
+        if (text == null || text.isBlank() || text.startsWith("#") || text.startsWith("[")) return false;
+        String lower = text.toLowerCase(Locale.ROOT);
+        if (lower.contains("2d digital") || lower.contains("comic illustration") || lower.contains("no readable text")
+                || lower.contains("scene:") || lower.contains("action:") || lower.contains("camera:")) return false;
+        return text.chars().filter(ch -> ch >= 0xAC00 && ch <= 0xD7A3).count() >= 2;
+    }
+
+    private double asDouble(Object value, double fallback) {
+        if (value instanceof Number number) return number.doubleValue();
+        try { return value == null ? fallback : Double.parseDouble(value.toString()); }
+        catch (NumberFormatException ignored) { return fallback; }
     }
 
     @Transactional
