@@ -23,6 +23,8 @@ export default function Admin() {
 
   const [editedVoices, setEditedVoices] = useState({})
   const [characterDescriptions, setCharacterDescriptions] = useState({})
+  const [newChannelId, setNewChannelId] = useState('')
+  const [newChannelName, setNewChannelName] = useState('')
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['admin-jobs'],
@@ -114,6 +116,19 @@ export default function Admin() {
     setSelectedMode('ALL')
     setSelectedStatus('ALL')
     setCurrentPage(1)
+  }
+
+  const handleCreateChannel = () => {
+    if (!newChannelId.trim() || !newChannelName.trim()) return
+    saveChannelMutation.mutate({
+      channelId: newChannelId.trim(),
+      channelName: newChannelName.trim(),
+    }, {
+      onSuccess: () => {
+        setNewChannelId('')
+        setNewChannelName('')
+      }
+    })
   }
 
   const pageItems = filteredJobs.slice((currentPage - 1) * 10, currentPage * 10)
@@ -253,9 +268,47 @@ export default function Admin() {
         </>
       ) : (
         <div className="space-y-4">
+          {/* 새 채널 프로필 등록 폼 */}
+          <div className="bg-navy-800 border border-navy-700 rounded-xl p-6 shadow-card space-y-4">
+            <h3 className="text-base font-bold text-accent-cyan flex items-center gap-1.5 border-b border-navy-700 pb-3">
+              <Settings size={18} /> 새 채널 프로필 등록
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1 font-semibold">채널 ID (영문, 숫자, _, - 만 사용 가능)</label>
+                <input
+                  type="text"
+                  value={newChannelId}
+                  onChange={e => setNewChannelId(e.target.value.replace(/[^A-Za-z0-9_-]/g, ''))}
+                  placeholder="예: finance_hunter"
+                  className="w-full bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-accent-cyan"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1 font-semibold">채널 이름</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newChannelName}
+                    onChange={e => setNewChannelName(e.target.value)}
+                    placeholder="예: 재테크 사냥꾼"
+                    className="flex-1 bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-accent-cyan"
+                  />
+                  <button
+                    onClick={handleCreateChannel}
+                    disabled={!newChannelId.trim() || !newChannelName.trim() || saveChannelMutation.isPending}
+                    className="bg-accent-green text-navy-950 text-sm font-semibold px-5 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    <Save size={14} /> 등록
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {channels.length === 0 ? (
             <div className="bg-navy-800 border border-navy-700 rounded-xl p-8 text-center text-gray-500">
-              등록된 채널 프로필이 없습니다.
+              등록된 채널 프로필이 없습니다. 위 폼에서 첫 채널을 등록해 보세요.
             </div>
           ) : (
             channels.map(channel => {

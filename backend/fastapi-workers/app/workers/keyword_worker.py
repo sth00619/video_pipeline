@@ -33,6 +33,7 @@ import os
 import re
 import json
 import logging
+import math
 from typing import Optional
 
 from app.providers.factory import get_trending_video_analyzer
@@ -40,6 +41,31 @@ from app.workers.market_data_collector import MarketDataCollector
 from app.workers.news_keyword_extractor import NewsKeywordExtractor
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_float(val) -> float:
+    try:
+        if val is None:
+            return 0.0
+        f_val = float(val)
+        if math.isnan(f_val) or math.isinf(f_val):
+            return 0.0
+        return f_val
+    except Exception:
+        return 0.0
+
+
+def _clean_nan_values(val):
+    if isinstance(val, dict):
+        return {k: _clean_nan_values(v) for k, v in val.items()}
+    elif isinstance(val, list):
+        return [_clean_nan_values(x) for x in val]
+    elif isinstance(val, float):
+        if math.isnan(val) or math.isinf(val):
+            return 0.0
+        return val
+    else:
+        return val
 
 KR_CATEGORIES = {"KOSPI", "KOSDAQ", "INDIVIDUAL_STOCK", "ASSOCIATED_STOCKS"}
 US_CATEGORIES = {"US_STOCKS"}
@@ -142,7 +168,7 @@ class KeywordWorker:
 
         logger.info(f"키워드 탐색 완료: {len(candidates)}개 최종 후보")
 
-        return {
+        return _clean_nan_values({
             "job_id": job_id,
             "seed": seed,
             "category": category,
@@ -150,7 +176,7 @@ class KeywordWorker:
             "market_snapshot": market_data,   # ScriptWorker에 재활용
             "news_keyword_count": len(news_keywords),
             "yt_candidate_count": len(yt_candidates),
-        }
+        })
 
     # ──────────────────────────────────────────────────────────
     # Claude 통합 순위화
@@ -337,14 +363,19 @@ YouTube 트렌딩 분석 기반 키워드 후보:
     def _score_yt_videos(self, videos: list) -> list:
         scored = []
         for v in videos:
-            engagement_ratio = round(v.views / max(v.subscribers, 1), 3)
-            outperformance_index = round(v.views / max(v.channel_avg_views, 1), 2)
-            velocity_vph = round(v.views / max(v.hours_since_publish, 0.1), 1)
+            views = _clean_float(v.views)
+            subs = _clean_float(v.subscribers)
+            avg_views = _clean_float(v.channel_avg_views)
+            hours = _clean_float(v.hours_since_publish)
 
-            composite_score = (
+            engagement_ratio = _clean_float(round(views / max(subs, 1.0), 3))
+            outperformance_index = _clean_float(round(views / max(avg_views, 1.0), 2))
+            velocity_vph = _clean_float(round(views / max(hours, 0.1), 1))
+
+            composite_score = _clean_float(
                 min(engagement_ratio * 0.3, 3.0) +
                 min(outperformance_index * 0.4, 4.0) +
-                min(velocity_vph / 100, 3.0) * 0.3
+                min(velocity_vph / 100.0, 3.0) * 0.3
             )
 
             competition = "HIGH" if composite_score >= 5.0 else (
@@ -363,9 +394,9 @@ YouTube 트렌딩 분석 기반 키워드 후보:
                 "source_videos": [{
                     "title": v.title,
                     "channel_title": v.channel_title,
-                    "views": v.views,
-                    "subscribers": v.subscribers,
-                    "hours_since_publish": v.hours_since_publish,
+                    "views": views,
+                    "subscribers": subs,
+                    "hours_since_publish": hours,
                 }],
             })
 

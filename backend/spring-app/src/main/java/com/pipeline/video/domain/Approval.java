@@ -23,7 +23,7 @@ public class Approval {
     private Long jobId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255)")
     private GateName gate;
 
     // APPROVED / REJECTED / AUTO_APPROVED

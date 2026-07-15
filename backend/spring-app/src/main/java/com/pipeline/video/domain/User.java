@@ -29,7 +29,7 @@ public class User {
     private String email;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255)")
     private UserRole role;     // EDITOR / ADMIN
 
     @CreationTimestamp
