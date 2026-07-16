@@ -68,6 +68,11 @@ public class TtsService {
                 }
             }
         }
+        // 작업별 선택은 채널 기본값보다 우선합니다.
+        if (job.getTtsVoiceId() != null && !job.getTtsVoiceId().isBlank()) {
+            finalVoiceId = job.getTtsVoiceId();
+            log.info("작업별 GUIDED 목소리 로드: jobId={}, voiceId={}", jobId, finalVoiceId);
+        }
 
         log.info("TTS 생성 시작: jobId={}, scriptLength={}자, voice={}, speed={}, autonomy={}",
                 jobId, script.length(), finalVoiceId, ttsSpeed, job.getAutonomy());
@@ -103,6 +108,21 @@ public class TtsService {
         }
 
         return result;
+    }
+
+    @Transactional
+    public void selectVoice(Long jobId, String voiceId) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        if (job.getStatus() != JobStatus.TTS_PENDING) {
+            throw new IllegalStateException("목소리 선택은 TTS_PENDING 상태에서만 가능합니다. 현재: " + job.getStatus());
+        }
+        if (voiceId == null || voiceId.isBlank() || "default_ko".equals(voiceId)) {
+            throw new IllegalArgumentException("ElevenLabs 목소리를 선택하세요.");
+        }
+        job.setTtsVoiceId(voiceId.trim());
+        jobRepository.save(job);
+        log.info("GUIDED 목소리 선택 저장: jobId={}, voiceId={}", jobId, voiceId);
     }
 
     @Transactional

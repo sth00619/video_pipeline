@@ -34,6 +34,14 @@ public class TtsController {
         return ResponseEntity.ok(ttsService.generate(jobId, voiceId, username));
     }
 
+    @PostMapping("/select-voice")
+    public ResponseEntity<Map<String, String>> selectVoice(
+            @PathVariable Long jobId,
+            @RequestBody TtsGenerateRequest request) {
+        ttsService.selectVoice(jobId, request != null ? request.getVoiceId() : null);
+        return ResponseEntity.ok(Map.of("status", "OK", "voiceId", request.getVoiceId()));
+    }
+
     @PostMapping("/confirm")
     public ResponseEntity<Map<String, String>> confirm(
             @PathVariable Long jobId,

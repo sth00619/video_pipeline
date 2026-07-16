@@ -3,6 +3,8 @@ package com.pipeline.video.config;
 import com.pipeline.video.domain.User;
 import com.pipeline.video.domain.UserRole;
 import com.pipeline.video.repository.UserRepository;
+import com.pipeline.video.repository.ChannelProfileRepository;
+import com.pipeline.video.domain.ChannelProfile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +36,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ChannelProfileRepository channelProfileRepository;
 
     @Value("${ADMIN_SEED_PASSWORD:}")
     private String configuredPassword;
@@ -43,6 +46,7 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        seedChannelProfiles();
         if (userRepository.existsByUsername("admin")) {
             return;
         }
@@ -74,6 +78,21 @@ public class DataSeeder implements CommandLineRunner {
             log.warn(" .env에 ADMIN_SEED_PASSWORD=원하는비밀번호 를 추가하고 재기동하세요.");
             log.warn("=================================================================");
         }
+    }
+
+    private void seedChannelProfiles() {
+        if (channelProfileRepository.count() > 0) return;
+        channelProfileRepository.save(ChannelProfile.builder()
+                .channelId("channel_a").channelName("채널 A · 동전 캐릭터")
+                .characterKey("coin_character")
+                .characterStylePrompt("friendly Korean finance educator, green coin mascot, editorial 2D comic style")
+                .voiceId("JBFqnCBsd6RMkjVDRZzb").build());
+        channelProfileRepository.save(ChannelProfile.builder()
+                .channelId("channel_b").channelName("채널 B · 돈뭉치 캐릭터")
+                .characterKey("money_bundle_character")
+                .characterStylePrompt("friendly Korean finance educator, money bundle mascot, editorial 2D comic style")
+                .voiceId("EXAVITQu4vr4xnSDxMaL").build());
+        log.info("기본 채널 프로필 2개를 생성했습니다. 관리자 화면에서 캐릭터/음성을 변경할 수 있습니다.");
     }
 
     private String generateRandomPassword(int length) {

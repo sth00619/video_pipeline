@@ -8,6 +8,7 @@ import {
 import Layout from '../components/Layout'
 import apiClient from '../api/client'
 import { authStore } from '../store/auth'
+import { formatAutonomy } from '../constants/jobStatus'
 
 const SEG_LABELS = ['핵심 분석','시나리오 분석','실행 가이드','결론 요약','데이터 정리']
 const COLORS = ['text-accent-cyan','text-accent-gold','text-accent-green','text-purple-400','text-pink-400']
@@ -200,23 +201,27 @@ export default function Shorts() {
           }
         }).filter(scene => scene && isSpokenKorean(scene.text)).sort((a, b) => a.index - b.index)
         
+        // TTS chunks are the authoritative source for the rendered video
+        // timeline.  Image assets can be created before forced alignment and
+        // therefore often carry 0-second placeholder timings.
         let activeScenes = sortedScenes
-        if (activeScenes.length === 0) {
-          try {
-            const ttsRes = await apiClient.get(`/jobs/${sourceJobId}/assets?type=TTS_AUDIO`)
-            const latestTts = ttsRes.data?.[ttsRes.data.length - 1]
-            const ttsMeta = latestTts?.metaJson ? JSON.parse(latestTts.metaJson) : null
-            const chunks = Array.isArray(ttsMeta?.chunks) ? ttsMeta.chunks : []
-            activeScenes = chunks.map((chunk, i) => ({
-              index: i + 1,
-              title: `스크립트 ${i + 1}`,
-              text: chunk.text || '',
-              start: Number(chunk.start || 0),
-              duration: Number(chunk.duration || 0),
-            })).filter(scene => scene.text && scene.duration > 0)
-            if (activeScenes.length) setTranscript(activeScenes.map(scene => scene.text).join(' '))
-          } catch (err) {}
-        }
+        try {
+          const ttsRes = await apiClient.get(`/jobs/${sourceJobId}/assets?type=TTS_AUDIO`)
+          const latestTts = ttsRes.data?.[ttsRes.data.length - 1]
+          const ttsMeta = latestTts?.metaJson ? JSON.parse(latestTts.metaJson) : null
+          const chunks = Array.isArray(ttsMeta?.chunks) ? ttsMeta.chunks : []
+          const timedTtsScenes = chunks.map((chunk, i) => ({
+            index: i + 1,
+            title: `스크립트 ${i + 1}`,
+            text: chunk.text || '',
+            start: Number(chunk.start || 0),
+            duration: Number(chunk.duration || 0),
+          })).filter(scene => scene.text && scene.duration > 0)
+          if (timedTtsScenes.length) {
+            activeScenes = timedTtsScenes
+            setTranscript(timedTtsScenes.map(scene => scene.text).join(' '))
+          }
+        } catch (err) {}
         if (activeScenes.length === 0) {
           try {
             const transcriptRes = await apiClient.get(`/jobs/${sourceJobId}/assets?type=TRANSCRIPT`)
@@ -432,7 +437,9 @@ export default function Shorts() {
         shortsJobId,
         segments: targetSegments.map(s => ({
           index: s.index,
-          text: s.label || s.text || `쇼츠 ${s.index}`,
+          // The label is a UI title (often "Scene 1"), not narration.  The
+          // backend timeline normalizer must receive the actual Korean script.
+          text: s.text || s.label || `선택 구간 ${s.index}`,
           start: s.start,
           end: s.end
         }))
@@ -613,7 +620,7 @@ export default function Shorts() {
           </p>
         </div>
         {id && (
-          <button onClick={() => navigate(`/jobs/${id}`)} className="text-xs border border-navy-600 bg-navy-800 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition">
+          <button onClick={() => navigate(`/longform/${id}`)} className="text-xs border border-navy-600 bg-navy-800 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition">
             ← 롱폼 상세로 돌아가기
           </button>
         )}
@@ -955,7 +962,7 @@ export default function Shorts() {
                 {/* 최종 컷팅 및 병합 액션 버튼 */}
                 {segments.length > 0 && (
                   <div className="flex gap-3 pt-2">
-                    {(id || isSavedProject) ? (
+                    {(sourceJobId || job?.id) ? (
                       <>
                         <button
                           onClick={() => handleCutShorts(true)}
@@ -1039,7 +1046,7 @@ export default function Shorts() {
                     </span>
                   ) : (
                     <span className="text-[11px] bg-accent-gold/10 text-accent-gold font-bold px-2 py-0.5 rounded border border-accent-gold/20">
-                      업로드 대기 중 ({job.autonomy} 모드)
+                      업로드 대기 중 ({formatAutonomy(job.autonomy)})
                     </span>
                   )}
                 </div>

@@ -21,10 +21,11 @@ import logging
 from typing import Optional
 
 from app.workers.market_data_collector import MarketDataCollector
-from app.config import CLAUDE_MODEL
+from app.config import CLAUDE_MODEL, SCENE_DURATION_SEC
 from app import runtime_config
 from app.utils.quality_gate import enrich_scene_plans, assess_scene_plan
 from app.utils.art_direction import direct_scenes, assess_art_diversity
+from app.utils.market_charts import extract_market_chart
 
 logger = logging.getLogger(__name__)
 
@@ -151,13 +152,15 @@ class ScriptWorker:
         if anthropic_key:
             try:
                 from anthropic import Anthropic
+                from app.utils.anthropic_cache import cached_system, log_cache_usage
                 client = Anthropic(api_key=anthropic_key)
                 response = client.messages.create(
                     model=CLAUDE_MODEL,
                     max_tokens=max_tokens,
-                    system=system_prompt,
+                    system=cached_system(system_prompt),
                     messages=messages
                 )
+                log_cache_usage(response, "script_worker")
                 content_text = "".join(block.text for block in response.content if hasattr(block, "text"))
                 if content_text:
                     logger.info(f"Claude API 호출 성공 ({len(content_text)}자)")
@@ -217,7 +220,8 @@ class ScriptWorker:
             raise e
 
     def generate(self, keyword: str, category: str, target_minutes: int,
-                 market_data: Optional[dict] = None, job_id: int = 0) -> dict:
+                 market_data: Optional[dict] = None, job_id: int = 0,
+                 data_visuals_enabled: bool = True) -> dict:
         category_label = CATEGORY_LABELS.get(category, "주식시장")
         # Use the measured spoken-narration rate rather than the rich script's
         # total character count (which also includes prompts and metadata).
@@ -253,12 +257,18 @@ class ScriptWorker:
                 verified_facts, market_data
             )
             sections = direct_scenes(enrich_scene_plans(sections))
+            if data_visuals_enabled:
+                sections = _attach_verified_index_overlays(sections, market_data)
+                sections = _attach_verified_market_charts(sections)
             used_real_llm = True
 
         except Exception as e:
             logger.error(f"LLM API 호출 실패: {e} — Mock으로 폴백")
             full_script, sections = self._mock_script(keyword, category_label, target_minutes)
             sections = direct_scenes(enrich_scene_plans(sections))
+            if data_visuals_enabled:
+                sections = _attach_verified_index_overlays(sections, market_data)
+                sections = _attach_verified_market_charts(sections)
             verified_facts = []
             fact_check_log = [f"오류: {str(e)}"]
             used_real_llm = False
@@ -475,11 +485,11 @@ def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
 
     original_counts = [char_count(match.group(2)) for match in matches]
     total = sum(original_counts)
-    # Sentence boundaries leave some capacity unused when shortening. Reserve
-    # that natural-language margin so the final spoken result stays close to
-    # the requested duration instead of undershooting it by a full scene.
-    compaction_budget = round(target_chars * 1.18)
-    if total <= round(compaction_budget * 1.08):
+    # Keep the narration budget exact.  The previous sentence-only truncation
+    # could leave most of each scene's allowance unused, producing a 38-second
+    # TTS for a one-minute request.
+    compaction_budget = target_chars
+    if total <= compaction_budget:
         return script_body
 
     caps = [max(1, round(count * compaction_budget / total)) for count in original_counts]
@@ -515,6 +525,19 @@ def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
                 shortened = sentence[:cut_at].rstrip(" ,;:")
                 return (shortened + ".") if shortened else sentence[:1]
             else:
+                remaining = limit - char_count(" ".join(kept))
+                if remaining > 0:
+                    visible = 0
+                    cut_at = 0
+                    for char_index, char in enumerate(sentence):
+                        if not char.isspace():
+                            visible += 1
+                        if visible > remaining:
+                            break
+                        cut_at = char_index + 1
+                    tail = sentence[:cut_at].rstrip(" ,;:")
+                    if tail:
+                        kept.append(tail)
                 break
         return " ".join(kept).strip() or text[:max(1, limit)]
 
@@ -542,7 +565,7 @@ def _calc_scene_count(target_minutes: int) -> int:
     - 15분(900초) / 5.5초 = 약 164씬
     - 20분(1200초) / 5.5초 = 약 218씬
     """
-    secs_per_scene = 5.5
+    secs_per_scene = SCENE_DURATION_SEC
     total_seconds = target_minutes * 60
     return max(1, round(total_seconds / secs_per_scene))
 
@@ -727,6 +750,131 @@ def _count_text(content_blocks) -> int:
             elif isinstance(block, str):
                 total += len(block)
     return total
+
+
+def _attach_verified_index_overlays(sections: list[dict], market_data: dict) -> list[dict]:
+    """Attach cards only to data scenes backed by a collected market snapshot."""
+    if not isinstance(market_data, dict):
+        return sections
+    kr_index = ((market_data.get("kr") or {}).get("index") or {})
+    us_index = ((market_data.get("us") or {}).get("index") or {})
+    for scene in sections:
+        if str(scene.get("section") or "").lower() != "data":
+            continue
+        text = str(scene.get("content") or scene.get("text") or "").lower()
+        candidates = []
+        if any(token in text for token in ("kosdaq", "코스닥")):
+            candidates.append(("코스닥", kr_index.get("kosdaq"), "kr"))
+        if any(token in text for token in ("sp500", "s&p", "s&p500")):
+            candidates.append(("S&P 500", us_index.get("sp500"), "us"))
+        if any(token in text for token in ("nasdaq", "나스닥")):
+            candidates.append(("NASDAQ", us_index.get("nasdaq"), "us"))
+        candidates.extend([("코스피", kr_index.get("kospi"), "kr"), ("S&P 500", us_index.get("sp500"), "us")])
+        for label, raw, market in candidates:
+            if not isinstance(raw, dict) or raw.get("close") is None or raw.get("change_pct") is None:
+                continue
+            close = float(raw["close"])
+            change_pct = float(raw["change_pct"])
+            change = float(raw.get("change", close * change_pct / 100.0))
+            scene["index_data"] = {
+                "name": label,
+                "value": close,
+                "change": change,
+                "change_pct": change_pct,
+                "market": market,
+                "verified": True,
+                "source": "market_snapshot",
+            }
+            scene["overlay_placement"] = {"mode": "anchor", "anchor": "top_right", "margin": 40}
+            direction = dict(scene.get("art_direction") or {})
+            direction["overlay_strategy"] = "index_card"
+            scene["art_direction"] = direction
+            break
+    return sections
+
+
+def _attach_verified_market_charts(sections: list[dict], max_charts: int = 12) -> list[dict]:
+    """Attach a small, evenly-spaced set of narrative data visuals only.
+
+    The illustration model never receives exact chart values.  A chart payload
+    is created solely from the collector's closing-price series and is later
+    rendered by matplotlib/FFmpeg.  Keeping the chart budget bounded protects
+    long-form assembly throughput while still placing evidence throughout a
+    20-minute video.
+    """
+    candidates: list[tuple[int, int, dict]] = []
+    for index, scene in enumerate(sections):
+        chart = extract_market_chart(scene)
+        if chart:
+            text = str(scene.get("content") or scene.get("text") or "")
+            lower = text.lower()
+            # Prefer scenes that make a concrete claim, while still keeping
+            # selections distributed through the finished video.
+            score = 10 + (25 if any(char.isdigit() for char in text) else 0)
+            score += 15 if any(token in lower for token in ("상승", "하락", "급등", "급락", "등락", "비교", "대비", "비중", "점유", "계약", "순위")) else 0
+            candidates.append((index, score, chart))
+    if not candidates:
+        return sections
+
+    # Roughly one data-rich visual per 18 scenes (about 90 seconds), with a
+    # hard cap of 12.  A 17-minute video therefore receives about 10, while
+    # a 20-minute video receives at most 12 rather than 200+ slow data scenes.
+    proportional_budget = max(1, round(len(sections) / 18))
+    budget = min(int(max_charts), proportional_budget, len(candidates))
+    if budget == len(candidates):
+        selected = candidates
+    else:
+        selected = []
+        for bucket in range(budget):
+            start = round(bucket * len(candidates) / budget)
+            end = round((bucket + 1) * len(candidates) / budget)
+            selected.append(max(candidates[start:max(start + 1, end)], key=lambda item: item[1]))
+
+    for index, _, chart in selected:
+        chart = dict(chart)
+        text = str(sections[index].get("content") or sections[index].get("text") or "").lower()
+        if any(token in text for token in ("상승", "하락", "급등", "급락", "등락")):
+            chart["visual_kind"] = "change_arrow"
+        elif any(token in text for token in ("비중", "점유", "구성")) and chart.get("market_cap_pie"):
+            chart["visual_kind"] = "composition_pie"
+        elif any(token in text for token in ("비교", "대비", "vs")):
+            chart["visual_kind"] = "comparison"
+        else:
+            chart["visual_kind"] = "trend_dashboard"
+        family = str((sections[index].get("art_direction") or {}).get("family") or "")
+        if family in {"industry_environment", "factory_dashboard"}:
+            chart["visual_theme"] = "factory_panel"
+        elif family in {"news_headline", "news_context", "comparison_board"}:
+            chart["visual_theme"] = "paper_poster"
+        else:
+            chart["visual_theme"] = "chalkboard"
+        chart.update({"verified": True, "source": "market_snapshot.chart_series"})
+        sections[index]["market_chart"] = chart
+        # The old KOSPI corner card is a HUD, not part of the cartoon scene.
+        # An integrated display replaces it for these selected key scenes.
+        sections[index].pop("index_data", None)
+        direction = dict(sections[index].get("art_direction") or {})
+        # The image prompt and FFmpeg compositor share this semantic anchor.
+        # It replaces the previous one-size-fits-all (880,120) rectangle,
+        # which could land outside a generated paper prop.
+        surfaces = {
+            "factory_panel": {
+                "anchor": "right_factory_panel",
+                "x": 1010, "y": 155, "width": 720, "height": 500,
+            },
+            "paper_poster": {
+                "anchor": "right_paper_poster",
+                "x": 1130, "y": 175, "width": 590, "height": 570,
+            },
+            "chalkboard": {
+                "anchor": "right_chalkboard",
+                "x": 980, "y": 150, "width": 760, "height": 520,
+            },
+        }
+        direction["data_surface"] = surfaces.get(chart["visual_theme"], surfaces["chalkboard"])
+        direction["overlay_strategy"] = "integrated_verified_data_visual"
+        sections[index]["art_direction"] = direction
+    return sections
 
 
 def _build_market_summary_for_script(market_data: dict) -> str:

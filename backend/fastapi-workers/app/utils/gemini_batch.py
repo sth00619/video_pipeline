@@ -121,7 +121,25 @@ def poll(job_id: int) -> dict[str, Any]:
 
     inline = ((metadata.get("dest") or {}).get("inlinedResponses") or (metadata.get("dest") or {}).get("inlined_responses") or [])
     if len(inline) != len(manifest["scenes"]):
-        raise RuntimeError(f"Gemini Pro Batch returned {len(inline)} responses for {len(manifest['scenes'])} scenes")
+        # A terminal Google batch response with missing scene outputs is not a
+        # transport/server error.  Return an explicit terminal job state so
+        # the Spring poller stops retrying and a damaged partial image set can
+        # never proceed to assembly.
+        error = f"Gemini Pro Batch returned {len(inline)} responses for {len(manifest['scenes'])} scenes"
+        manifest["state"] = "BATCH_STATE_FAILED"
+        manifest["error"] = error
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+        return {
+            "status": "BATCH_FAILED",
+            "job_id": job_id,
+            "batch_job_name": manifest["batch_name"],
+            "batch_state": manifest["state"],
+            "error": error,
+            "scene_count": 0,
+            "gifs": [],
+            "gif_count": 0,
+            "scenes": [],
+        }
     image_dir = Path(f"/app/data/jobs/{job_id}/images")
     image_dir.mkdir(parents=True, exist_ok=True)
     completed = list(manifest.get("completed_scenes") or [])

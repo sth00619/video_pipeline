@@ -39,6 +39,12 @@ _state = {
     "gemini_pro_max_attempts": _cfg.GEMINI_PRO_MAX_ATTEMPTS,
     "gemini_pro_retry_base_seconds": _cfg.GEMINI_PRO_RETRY_BASE_SECONDS,
     "gemini_pro_request_delay_seconds": _cfg.GEMINI_PRO_REQUEST_DELAY_SECONDS,
+    "gemini_parallel_enabled": _cfg.GEMINI_PARALLEL_ENABLED,
+    "gemini_max_concurrency": _cfg.GEMINI_MAX_CONCURRENCY,
+    "gemini_retry_max": _cfg.GEMINI_RETRY_MAX,
+    "gemini_rpm_soft_cap": _cfg.GEMINI_RPM_SOFT_CAP,
+    "gemini_adaptive_backoff_enabled": _cfg.GEMINI_ADAPTIVE_BACKOFF_ENABLED,
+    "longform_scene_max_workers": _cfg.LONGFORM_SCENE_MAX_WORKERS,
     "visual_qa_enabled": _cfg.VISUAL_QA_ENABLED,
     "visual_qa_max_scenes": _cfg.VISUAL_QA_MAX_SCENES,
     "elevenlabs_voice_id": _cfg.ELEVENLABS_VOICE_ID,
@@ -53,6 +59,12 @@ _state = {
     "intro_kling_seconds_15min": _cfg.INTRO_KLING_SECONDS_15MIN,
     "intro_kling_seconds_20min": _cfg.INTRO_KLING_SECONDS_20MIN,
     "intro_kling_max_clips": _cfg.INTRO_KLING_MAX_CLIPS,
+    "img_cost_flash_1k_usd": _cfg.IMG_COST_FLASH_1K_USD,
+    "img_cost_pro_2k_usd": _cfg.IMG_COST_PRO_2K_USD,
+    "kling_cost_per_clip_usd": _cfg.KLING_COST_PER_CLIP_USD,
+    "usd_krw": _cfg.USD_KRW,
+    "max_budget_per_video_krw": _cfg.MAX_BUDGET_PER_VIDEO_KRW,
+    "budget_retry_buffer_pct": _cfg.BUDGET_RETRY_BUFFER_PCT,
 }
 
 _TYPES = {k: type(v) for k, v in _state.items()}

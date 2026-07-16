@@ -31,13 +31,13 @@ export default function App() {
           <Route path="/dashboard" element={
             <ProtectedRoute><Dashboard /></ProtectedRoute>
           } />
-          <Route path="/jobs" element={
+          <Route path="/longform" element={
             <ProtectedRoute><Jobs /></ProtectedRoute>
           } />
-          <Route path="/jobs/new" element={
+          <Route path="/longform/new" element={
             <ProtectedRoute><JobNew /></ProtectedRoute>
           } />
-          <Route path="/jobs/:id" element={
+          <Route path="/longform/:id" element={
             <ProtectedRoute><JobDetail /></ProtectedRoute>
           } />
           <Route path="/shorts" element={
@@ -49,9 +49,14 @@ export default function App() {
           <Route path="/shorts/:shortsJobId" element={
             <ProtectedRoute><Shorts /></ProtectedRoute>
           } />
-          <Route path="/jobs/:id/shorts" element={
+          <Route path="/longform/:id/shorts" element={
             <ProtectedRoute><Shorts /></ProtectedRoute>
           } />
+          {/* 기존 공유 링크는 새 롱폼 경로로 안전하게 넘깁니다. */}
+          <Route path="/jobs" element={<Navigate to="/longform" replace />} />
+          <Route path="/jobs/new" element={<Navigate to="/longform/new" replace />} />
+          <Route path="/jobs/:id/shorts" element={<LegacyJobRedirect suffix="/shorts" />} />
+          <Route path="/jobs/:id" element={<LegacyJobRedirect />} />
           <Route path="/admin" element={
             <ProtectedRoute adminOnly><Admin /></ProtectedRoute>
           } />
@@ -62,4 +67,9 @@ export default function App() {
       </BrowserRouter>
     </QueryClientProvider>
   )
+}
+
+function LegacyJobRedirect({ suffix = '' }) {
+  const id = window.location.pathname.split('/')[2]
+  return <Navigate to={`/longform/${id}${suffix}`} replace />
 }

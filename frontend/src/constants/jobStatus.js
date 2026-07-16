@@ -38,12 +38,11 @@ export const CATEGORY_COLOR = {
   CUSTOM: 'text-navy-400 bg-navy-700/40 border-navy-600',
 }
 
-export const MODE_LIST = ['ALL', 'AUTO', 'GUIDED', 'MANUAL']
-export const AUTONOMY_LABEL = { AUTO: '자동', GUIDED: '반자동', MANUAL: '수동' }
+export const MODE_LIST = ['ALL', 'AUTO', 'GUIDED']
+export const AUTONOMY_LABEL = { AUTO: '자동', GUIDED: '반자동' }
 export const AUTONOMY_STYLE = {
   AUTO: 'bg-accent-green/20 text-accent-green border-accent-green/30',
   GUIDED: 'bg-accent-cyan/20 text-accent-cyan border-accent-cyan/30',
-  MANUAL: 'bg-accent-gold/20 text-accent-gold border-accent-gold/30',
 }
 
 // Job 상태 - Spring Boot JobStatus enum과 1:1 매핑되어야 함
@@ -101,3 +100,24 @@ export const ERROR_STATUSES = ['FAILED', 'BUDGET_BLOCKED']
 export function isInProgress(status) { return IN_PROGRESS_STATUSES.includes(status) }
 export function isCompleted(status) { return COMPLETED_STATUSES.includes(status) }
 export function isError(status) { return ERROR_STATUSES.includes(status) }
+
+// API enum은 영문으로 유지하고, 작업자 화면에는 일관된 한국어를 표시합니다.
+export const KOREAN_CATEGORY_LABEL = {
+  KOSPI: '코스피', KOSDAQ: '코스닥', US_STOCKS: '미국 주식',
+  INDIVIDUAL_STOCK: '개별 종목', ASSOCIATED_STOCKS: '연관 종목',
+  GLOBAL_MACRO: '글로벌 거시경제', CRYPTO: '가상자산', CUSTOM: '직접 입력',
+}
+export const KOREAN_AUTONOMY_LABEL = { AUTO: '자동 모드', GUIDED: '반자동 모드', MANUAL: '직접 입력' }
+export const KOREAN_STATUS_LABEL = {
+  ALL: '전체', DRAFT: '초안', KEYWORD_PENDING: '키워드 선택 대기',
+  SCRIPT_PENDING: '스크립트 생성·검토', TTS_PENDING: '음성 선택·생성',
+  IMAGES_PENDING: '이미지 생성·검토', ASSEMBLING: '영상 조립 중',
+  PREVIEW_PENDING: '미리보기 검토', SHORTS_SEGMENTS_PENDING: '쇼츠 구간 선택',
+  SHORTS_GENERATING: '쇼츠 생성 중', SHORTS_PREVIEW_PENDING: '쇼츠 미리보기 검토',
+  EDITING: '편집 중', READY: '완료', PUBLISHED: '게시 완료',
+  BUDGET_BLOCKED: '예산 한도 초과', FAILED: '오류',
+}
+export const KOREAN_ROLE_LABEL = { ADMIN: '관리자', USER: '작업자' }
+export const formatCategory = (value) => KOREAN_CATEGORY_LABEL[value] || value || '-'
+export const formatAutonomy = (value) => KOREAN_AUTONOMY_LABEL[value] || value || '-'
+export const formatStatus = (value) => KOREAN_STATUS_LABEL[value] || value || '-'

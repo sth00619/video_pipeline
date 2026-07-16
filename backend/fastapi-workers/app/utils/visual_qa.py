@@ -49,7 +49,11 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
 
     eligible = [scene for scene in scenes if Path(str(scene.get("image_path") or "")).exists()]
     eligible.sort(key=_review_priority, reverse=True)
-    for scene in eligible[: max(0, int(max_scenes))]:
+    # Keep a long-form job bounded even if an operator accidentally supplies
+    # a very large runtime value. Deterministic file/codec checks cover all
+    # scenes; multimodal review is intentionally limited to anchor scenes.
+    review_limit = min(max(0, int(max_scenes)), 24)
+    for scene in eligible[:review_limit]:
         index = int(scene.get("index", 0))
         try:
             image_path = Path(str(scene["image_path"]))

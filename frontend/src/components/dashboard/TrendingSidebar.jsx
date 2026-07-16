@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Youtube, Users, Eye, Clock, ExternalLink } from 'lucide-react';
+import { Youtube, Users, Eye, Clock, ExternalLink, ThumbsUp } from 'lucide-react';
 import { jobsApi } from '../../api/jobs';
 
 export default function TrendingSidebar({ keyword }) {
@@ -84,7 +84,12 @@ export default function TrendingSidebar({ keyword }) {
                 </div>
                 <div className="flex items-center gap-3 text-[10px] text-gray-500 font-medium">
                   <span className="flex items-center gap-1"><Eye size={10}/> {formatNumber(video.views)}회</span>
+                  <span className="flex items-center gap-1"><Users size={10}/> {formatNumber(video.subscribers)}명</span>
+                  <span className="flex items-center gap-1"><ThumbsUp size={10}/> {(video.likes_available ?? video.likesAvailable) === false ? '비공개' : formatNumber(video.likes)}</span>
                   <span className="flex items-center gap-1"><Clock size={10}/> {video.hoursSincePublish < 24 ? `${Math.floor(video.hoursSincePublish)}시간 전` : `${Math.floor(video.hoursSincePublish/24)}일 전`}</span>
+                </div>
+                <div className="mt-1 text-[10px] text-gray-600">
+                  조회/구독 {video.subscribers ? `${(video.views / video.subscribers).toFixed(2)}×` : '계산 불가'} · 영상 {video.durationSeconds ? `${Math.round(video.durationSeconds)}초` : '길이 없음'}
                 </div>
               </div>
             </div>

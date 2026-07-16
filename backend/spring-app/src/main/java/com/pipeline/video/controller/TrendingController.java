@@ -19,7 +19,8 @@ public class TrendingController {
     private final TrendingService trendingService;
 
     @GetMapping("/youtube")
-    public ResponseEntity<List<TrendingVideoDto>> getTrendingYoutube(@RequestParam String keyword) {
+    public ResponseEntity<List<TrendingVideoDto>> getTrendingYoutube(
+            @RequestParam(required = false, defaultValue = "") String keyword) {
         return ResponseEntity.ok(trendingService.getTrendingVideos(keyword));
     }
 }

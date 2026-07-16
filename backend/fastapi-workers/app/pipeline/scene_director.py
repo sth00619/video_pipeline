@@ -8,6 +8,7 @@ import re
 from dataclasses import asdict, dataclass, field
 
 logger = logging.getLogger(__name__)
+from app.utils.anthropic_cache import cached_system, log_cache_usage
 
 
 @dataclass
@@ -102,10 +103,11 @@ class SceneDirector:
             payload = [{"scene_id": scene_id, "narration": narration} for scene_id, narration in lines]
             client = anthropic.Anthropic(api_key=self.api_key)
             response = client.messages.create(
-                model=self.model, max_tokens=min(16000, max(1800, 520 * len(payload))), system=_SYSTEM,
+                model=self.model, max_tokens=min(16000, max(1800, 520 * len(payload))), system=cached_system(_SYSTEM),
                 messages=[{"role": "user", "content": f"Topic: {topic_context or 'Korean finance'}\nScenes: {json.dumps(payload, ensure_ascii=False)}"}],
                 tools=[_SCENE_TOOL], tool_choice={"type": "tool", "name": "record_scene_directions"},
             )
+            log_cache_usage(response, "scene_director")
             tool_result = next((block.input for block in response.content if getattr(block, "type", "") == "tool_use"), None)
             if not tool_result:
                 raise RuntimeError("Claude did not return the scene-direction tool payload")

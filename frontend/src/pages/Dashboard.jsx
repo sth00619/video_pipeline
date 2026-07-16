@@ -1,302 +1,186 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Video, CheckCircle, Clock, AlertCircle, Plus, Zap } from 'lucide-react'
+import { ArrowRight, DollarSign, Film, ListFilter, Plus, Search, Video } from 'lucide-react'
 import Layout from '../components/Layout'
-import JobFilterBar from '../components/JobFilterBar'
-import Pagination from '../components/Pagination'
-import StatusBadge from '../components/StatusBadge'
 import { jobsApi } from '../api/jobs'
-import StockMindMap from '../components/dashboard/StockMindMap'
-import TrendingSidebar from '../components/dashboard/TrendingSidebar'
-import {
-  CATEGORIES, isInProgress, isCompleted, isError,
-} from '../constants/jobStatus'
+import apiClient from '../api/client'
+import { formatAutonomy, formatCategory, formatStatus } from '../constants/jobStatus'
+
+const STATUS_CLASS = {
+  READY: 'bg-accent-green/15 text-accent-green',
+  PUBLISHED: 'bg-accent-green/15 text-accent-green',
+  FAILED: 'bg-accent-red/15 text-accent-red',
+  BUDGET_BLOCKED: 'bg-accent-red/15 text-accent-red',
+}
+
+const CATEGORY_LABEL = {
+  KOSPI: '코스피', KOSDAQ: '코스닥', US_STOCKS: '미국 주식',
+  INDIVIDUAL_STOCK: '개별 종목', GLOBAL_MACRO: '글로벌 매크로', CRYPTO: '가상자산', CUSTOM: '직접 입력',
+}
+
+function formatDate(value) {
+  if (!value) return '-'
+  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(new Date(value))
+}
+
+function isShortsSourceJob(job) {
+  return job.renderProfile === 'SHORTS_9x16' || String(job.title || '').startsWith('쇼츠:')
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [quickTitle, setQuickTitle] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [filter, setFilter] = useState('ALL')
-  const [category, setCategory] = useState('KOSPI')
-  const [duration, setDuration] = useState(20)
-  const [autonomy, setAutonomy] = useState('AUTO')
-  const [currentPage, setCurrentPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [type, setType] = useState('ALL')
+  const [category, setCategory] = useState('ALL')
+  const [mode, setMode] = useState('ALL')
+  const [length, setLength] = useState('ALL')
+  const [page, setPage] = useState(1)
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('ALL')
-  const [selectedMode, setSelectedMode] = useState('ALL')
-  const [selectedStatus, setSelectedStatus] = useState('ALL')
+  const jobsQuery = useQuery({ queryKey: ['jobs'], queryFn: jobsApi.list, refetchInterval: 15000 })
+  const shortsQuery = useQuery({ queryKey: ['shorts'], queryFn: () => apiClient.get('/shorts').then(r => r.data), refetchInterval: 15000 })
+  const jobs = jobsQuery.data || []
+  const shorts = shortsQuery.data || []
 
-  const [selectedTrendingKeyword, setSelectedTrendingKeyword] = useState('주식')
-  const [selectedMindmapKeywords, setSelectedMindmapKeywords] = useState([])
+  const assets = useMemo(() => {
+    const longforms = jobs.filter(job => !isShortsSourceJob(job)).map(job => ({
+      id: `longform-${job.id}`,
+      type: 'LONGFORM',
+      title: job.title || '제목 없는 롱폼 작업',
+      keyword: job.keyword || '',
+      category: job.category || 'CUSTOM',
+      mode: job.autonomy || '-',
+      status: job.status || 'DRAFT',
+      minutes: Number(job.longformTargetMinutes) || 0,
+      cost: Number(job.costAccumulated) || 0,
+      budget: Number(job.budgetCap) || 0,
+      createdAt: job.updatedAt || job.createdAt,
+      href: `/longform/${job.id}`,
+    }))
+    const legacyShorts = jobs.filter(isShortsSourceJob).map(job => ({
+      id: `legacy-shorts-${job.id}`,
+      type: 'SHORTS',
+      title: job.title || '제목 없는 쇼츠 작업',
+      keyword: job.keyword || '',
+      category: job.category || 'CUSTOM',
+      mode: job.autonomy || '-',
+      status: job.status || 'DRAFT',
+      minutes: 0,
+      cost: Number(job.costAccumulated) || 0,
+      budget: Number(job.budgetCap) || 0,
+      createdAt: job.updatedAt || job.createdAt,
+      href: `/longform/${job.id}/shorts`,
+    }))
+    const shortProjects = shorts.map(project => ({
+      id: `shorts-${project.id}`,
+      type: 'SHORTS',
+      title: project.title || '제목 없는 쇼츠 프로젝트',
+      keyword: '',
+      category: 'CUSTOM',
+      mode: '-',
+      status: project.status || 'EDITING',
+      minutes: 0,
+      cost: null,
+      budget: null,
+      createdAt: project.updatedAt || project.createdAt,
+      href: `/shorts/${project.id}`,
+    }))
+    return [...longforms, ...legacyShorts, ...shortProjects]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+  }, [jobs, shorts])
 
-  const handleSelectKeyword = (kw) => {
-    let nextKeywords
-    if (selectedMindmapKeywords.includes(kw)) {
-      nextKeywords = selectedMindmapKeywords.filter(k => k !== kw)
-    } else {
-      nextKeywords = [...selectedMindmapKeywords, kw]
-    }
-    setSelectedMindmapKeywords(nextKeywords)
-    setQuickTitle(nextKeywords.join(', '))
-    setSelectedTrendingKeyword(nextKeywords.length > 0 ? nextKeywords[nextKeywords.length - 1] : '주식')
-  }
-
-  const { data: jobs = [] } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: jobsApi.list,
-    refetchInterval: 5000,
-  })
-
-  const inProgress = jobs.filter(j => isInProgress(j.status))
-  const completed = jobs.filter(j => isCompleted(j.status))
-  const failed = jobs.filter(j => isError(j.status))
-
-  const handleFilterChange = (newFilter) => {
-    setFilter(newFilter)
-    setCurrentPage(1)
-  }
-
-  const handleQuickStart = async (e) => {
-    e.preventDefault()
-    if (!quickTitle.trim()) return
-    setCreating(true)
-    try {
-      const job = await jobsApi.create({
-        title: quickTitle, category, autonomy,
-        longformTargetMinutes: duration, budgetCap: 100,
-      })
-      if (autonomy !== 'MANUAL') {
-        await jobsApi.searchKeyword(job.id, quickTitle, 5)
-      }
-      navigate(`/jobs/${job.id}`)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const sortedJobs = [...jobs].sort((a, b) => b.id - a.id)
-
-  const filteredJobs = sortedJobs.filter(j => {
-    if (filter === 'IN_PROGRESS' && !isInProgress(j.status)) return false
-    if (filter === 'COMPLETED' && !isCompleted(j.status)) return false
-    if (filter === 'FAILED' && !isError(j.status)) return false
-    if (searchQuery && !j.title?.toLowerCase().includes(searchQuery.toLowerCase())) return false
-    if (selectedCategory !== 'ALL' && j.category !== selectedCategory) return false
-    if (selectedMode !== 'ALL' && j.autonomy !== selectedMode) return false
-    if (selectedStatus !== 'ALL' && j.status !== selectedStatus) return false
+  const filtered = assets.filter(item => {
+    const needle = search.trim().toLowerCase()
+    if (needle && !`${item.title} ${item.keyword}`.toLowerCase().includes(needle)) return false
+    if (type !== 'ALL' && item.type !== type) return false
+    if (category !== 'ALL' && item.category !== category) return false
+    if (mode !== 'ALL' && item.mode !== mode) return false
+    if (length === 'SHORTS' && item.type !== 'SHORTS') return false
+    if (length === '1_5' && !(item.type === 'LONGFORM' && item.minutes <= 5)) return false
+    if (length === '6_15' && !(item.type === 'LONGFORM' && item.minutes >= 6 && item.minutes <= 15)) return false
+    if (length === '16_PLUS' && !(item.type === 'LONGFORM' && item.minutes >= 16)) return false
     return true
   })
+  const visible = filtered.slice((page - 1) * 10, page * 10)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / 10))
+  const totalCost = jobs.reduce((sum, job) => sum + (Number(job.costAccumulated) || 0), 0)
+  const longformCount = assets.filter(item => item.type === 'LONGFORM').length
+  const shortsCount = assets.filter(item => item.type === 'SHORTS').length
 
-  const handleResetFilters = () => {
-    setSearchQuery('')
-    setSelectedCategory('ALL')
-    setSelectedMode('ALL')
-    setSelectedStatus('ALL')
-    setCurrentPage(1)
-  }
-
-  const pageItems = filteredJobs.slice((currentPage - 1) * 10, currentPage * 10)
+  const update = (setter) => (value) => { setter(value); setPage(1) }
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">대시보드</h1>
-        <p className="text-gray-400 text-sm mt-1">AI 주식 영상 자동화 플랫폼</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 space-y-6">
-
-          <div className="grid grid-cols-3 gap-4">
-            <StatCard
-              icon={<Clock className="text-accent-cyan" />}
-              label="진행 중" value={inProgress.length}
-              active={filter === 'IN_PROGRESS'}
-              onClick={() => handleFilterChange(filter === 'IN_PROGRESS' ? 'ALL' : 'IN_PROGRESS')}
-              glow="glow-cyan"
-            />
-            <StatCard
-              icon={<CheckCircle className="text-accent-green" />}
-              label="완료" value={completed.length}
-              active={filter === 'COMPLETED'}
-              onClick={() => handleFilterChange(filter === 'COMPLETED' ? 'ALL' : 'COMPLETED')}
-              glow="glow-green"
-            />
-            <StatCard
-              icon={<AlertCircle className="text-accent-red" />}
-              label="오류" value={failed.length}
-              active={filter === 'FAILED'}
-              onClick={() => handleFilterChange(filter === 'FAILED' ? 'ALL' : 'FAILED')}
-              glow="glow-gold"
-            />
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-accent-cyan">작업 아카이브</p>
+            <h1 className="text-2xl font-bold text-white mt-1">모든 영상 작업</h1>
+            <p className="text-sm text-gray-400 mt-2">롱폼과 쇼츠를 한곳에서 찾아보고, 상세 작업으로 바로 이어갑니다.</p>
           </div>
-
-          <StockMindMap
-            selectedKeywords={selectedMindmapKeywords}
-            onSelectKeyword={handleSelectKeyword}
-          />
-
-          <div className="bg-hero-gradient bg-candle-pattern rounded-xl p-6 border border-accent-gold/20 shadow-card-lg relative overflow-hidden">
-            <div className="flex flex-wrap gap-4 items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Zap className="text-accent-gold" size={20} />
-                <h2 className="font-semibold">빠른 영상 시작</h2>
-              </div>
-              <div className="flex gap-2">
-                <select
-                  value={category}
-                  onChange={e => setCategory(e.target.value)}
-                  className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1 text-xs text-accent-cyan font-semibold focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
-                >
-                  {CATEGORIES.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
-                <select
-                  value={duration}
-                  onChange={e => setDuration(Number(e.target.value))}
-                  className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1 text-xs text-accent-cyan font-semibold focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
-                >
-                  <option value="1">1분 테스트</option>
-                  <option value="5">5분</option>
-                  <option value="10">10분</option>
-                  <option value="15">15분</option>
-                  <option value="20">20분</option>
-                  <option value="30">30분</option>
-                </select>
-                <select
-                  value={autonomy}
-                  onChange={e => setAutonomy(e.target.value)}
-                  className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1 text-xs text-accent-cyan font-semibold focus:outline-none focus:ring-1 focus:ring-accent-cyan cursor-pointer"
-                >
-                  <option value="AUTO">자동 (AUTO)</option>
-                  <option value="GUIDED">반자동 (GUIDED)</option>
-                  <option value="MANUAL">수동 (MANUAL)</option>
-                </select>
-              </div>
-            </div>
-            <form onSubmit={handleQuickStart} className="flex gap-3">
-              <input
-                value={quickTitle}
-                onChange={e => setQuickTitle(e.target.value)}
-                placeholder="영상 주제 입력 (예: 코스피 전망)"
-                className="flex-1 bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                required
-              />
-              <button
-                type="submit"
-                disabled={creating}
-                className="flex items-center gap-2 bg-accent-cyan text-navy-950 font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition disabled:opacity-50 whitespace-nowrap"
-              >
-                <Plus size={16} />
-                {creating ? '시작 중...' : '영상 만들기'}
-              </button>
-            </form>
-            <p className="text-xs text-gray-500 mt-2">
-              {autonomy === 'AUTO' && '키워드 탐색 → 스크립트 → 음성 → 이미지 → 영상 조립까지 완전 자동으로 가동됩니다.'}
-              {autonomy === 'GUIDED' && '단계마다 생성 결과를 검토하고 수동 승인/수정하며 진행하는 모드입니다.'}
-              {autonomy === 'MANUAL' && '직접 키워드를 작성하거나 영상 조립 구간을 정의하는 모드입니다.'}
-            </p>
-          </div>
-
-          <JobFilterBar
-            searchQuery={searchQuery}
-            onSearchChange={v => { setSearchQuery(v); setCurrentPage(1) }}
-            category={selectedCategory}
-            onCategoryChange={v => { setSelectedCategory(v); setCurrentPage(1) }}
-            mode={selectedMode}
-            onModeChange={v => { setSelectedMode(v); setCurrentPage(1) }}
-            status={selectedStatus}
-            onStatusChange={v => { setSelectedStatus(v); setCurrentPage(1) }}
-            onReset={handleResetFilters}
-          />
-
-          <div className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-navy-700">
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-sm">작업 목록 ({filteredJobs.length}개)</h2>
-                {filter !== 'ALL' && (
-                  <span className="text-[10px] bg-accent-cyan/10 text-accent-cyan px-2 py-0.5 rounded-full font-semibold">
-                    필터: {filter === 'IN_PROGRESS' ? '진행 중' : filter === 'COMPLETED' ? '완료' : '오류'}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => navigate('/jobs')}
-                className="text-xs text-accent-cyan hover:underline font-medium"
-              >
-                롱폼 작업 리스트 보기
-              </button>
-            </div>
-            {filteredJobs.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <Video size={40} className="mx-auto mb-3 opacity-30" />
-                <p>조건에 부합하는 작업이 없습니다.</p>
-                <button
-                  onClick={() => { handleFilterChange('ALL'); handleResetFilters() }}
-                  className="text-xs text-accent-cyan hover:underline mt-2"
-                >
-                  전체 초기화하기
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="divide-y divide-navy-700">
-                  {pageItems.map(job => (
-                    <button
-                      key={job.id}
-                      onClick={() => navigate(`/jobs/${job.id}`)}
-                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-navy-700/50 transition text-left"
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden mr-4">
-                        <div className="w-9 h-9 bg-navy-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Video size={18} className="text-gray-400" />
-                        </div>
-                        <div className="overflow-hidden">
-                          <div className="text-sm font-semibold truncate text-white max-w-[320px]" title={job.title}>
-                            {job.title}
-                          </div>
-                          <div className="text-xs text-gray-400 mt-0.5">
-                            {job.category} · {job.longformTargetMinutes}분 · {job.autonomy}
-                          </div>
-                        </div>
-                      </div>
-                      <StatusBadge status={job.status} small />
-                    </button>
-                  ))}
-                </div>
-                <Pagination total={filteredJobs.length} currentPage={currentPage} onChange={setCurrentPage} />
-              </>
-            )}
+          <div className="flex gap-2">
+            <button onClick={() => navigate('/shorts/new')} className="border border-navy-600 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:border-accent-cyan">쇼츠 만들기</button>
+            <button onClick={() => navigate('/longform/new')} className="bg-accent-cyan text-navy-950 rounded-lg px-4 py-2.5 text-sm font-semibold flex items-center gap-2"><Plus size={16}/>롱폼 만들기</button>
           </div>
         </div>
 
-        <div className="lg:col-span-1">
-          <TrendingSidebar keyword={selectedTrendingKeyword} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <SummaryCard icon={<Video size={19}/>} label="롱폼 작업" value={longformCount} onClick={() => update(setType)('LONGFORM')} />
+          <SummaryCard icon={<Film size={19}/>} label="쇼츠 프로젝트" value={shortsCount} onClick={() => update(setType)('SHORTS')} />
+          <SummaryCard icon={<DollarSign size={19}/>} label="누적 사용 비용" value={`$${totalCost.toFixed(2)}`} onClick={() => { setType('ALL'); setPage(1) }} />
+        </div>
+
+        {(jobsQuery.isError || shortsQuery.isError) && <div className="rounded-lg border border-accent-gold/40 bg-accent-gold/10 px-4 py-3 text-sm text-accent-gold">일부 목록을 불러오지 못했습니다. 서버가 실행 중인지 확인한 뒤 새로고침해 주세요.</div>}
+
+        <section className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
+          <div className="p-5 border-b border-navy-700">
+            <div className="flex items-center gap-2 text-white font-semibold"><ListFilter size={18} className="text-accent-cyan"/>검색 및 필터</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mt-4">
+              <label className="relative xl:col-span-1"><Search size={16} className="absolute left-3 top-3 text-gray-500"/><input value={search} onChange={e => update(setSearch)(e.target.value)} placeholder="제목 또는 키워드" className="w-full rounded-lg bg-navy-900 border border-navy-600 pl-9 pr-3 py-2.5 text-sm text-white" /></label>
+              <Select value={type} onChange={update(setType)} options={[["ALL","형식: 전체"],["LONGFORM","롱폼"],["SHORTS","쇼츠"]]} />
+              <Select value={length} onChange={update(setLength)} options={[["ALL","길이: 전체"],["SHORTS","쇼츠"],["1_5","롱폼 1~5분"],["6_15","롱폼 6~15분"],["16_PLUS","롱폼 16분+"]]} />
+              <Select value={category} onChange={update(setCategory)} options={[["ALL","주제: 전체"], ...Object.entries(CATEGORY_LABEL)]} />
+              <Select value={mode} onChange={update(setMode)} options={[["ALL","모드: 전체"],["AUTO","자동"],["GUIDED","반자동"]]} />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[850px] text-sm">
+              <thead className="text-left text-xs text-gray-400 bg-navy-900/50"><tr><th className="px-5 py-3">영상</th><th className="px-3 py-3">형식</th><th className="px-3 py-3">주제 · 길이</th><th className="px-3 py-3">모드</th><th className="px-3 py-3">상태</th><th className="px-3 py-3 text-right">비용</th><th className="px-5 py-3 text-right">최근 수정</th></tr></thead>
+              <tbody className="divide-y divide-navy-700">
+                {visible.map(item => <tr key={item.id} onClick={() => navigate(item.href)} className="cursor-pointer hover:bg-navy-700/40 transition">
+                  <td className="px-5 py-4"><div className="font-semibold text-white max-w-[300px] truncate">{item.title}</div><div className="text-xs text-gray-500 mt-1 max-w-[300px] truncate">{item.keyword || '키워드 없음'}</div></td>
+                  <td className="px-3 py-4"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${item.type === 'LONGFORM' ? 'bg-accent-cyan/10 text-accent-cyan' : 'bg-accent-violet/15 text-accent-violet'}`}>{item.type === 'LONGFORM' ? '롱폼' : '쇼츠'}</span></td>
+                  <td className="px-3 py-4 text-gray-300">{formatCategory(item.category)}<div className="text-xs text-gray-500 mt-1">{item.type === 'LONGFORM' ? `${item.minutes}분` : '세로 쇼츠'}</div></td>
+                  <td className="px-3 py-4 text-gray-300">{formatAutonomy(item.mode)}</td>
+                  <td className="px-3 py-4"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_CLASS[item.status] || 'bg-navy-700 text-gray-300'}`}>{formatStatus(item.status)}</span></td>
+                  <td className="px-3 py-4 text-right text-gray-300">{item.cost == null ? '-' : `$${item.cost.toFixed(2)}`}</td>
+                  <td className="px-5 py-4 text-right text-xs text-gray-500">{formatDate(item.createdAt)}</td>
+                </tr>)}
+                {!jobsQuery.isLoading && !shortsQuery.isLoading && visible.length === 0 && <tr><td colSpan="7" className="px-5 py-16 text-center text-gray-500">조건에 맞는 영상 작업이 없습니다.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length > 10 && <div className="flex items-center justify-between px-5 py-4 border-t border-navy-700"><span className="text-xs text-gray-500">{filtered.length}개 중 {(page - 1) * 10 + 1}–{Math.min(page * 10, filtered.length)}</span><div className="flex gap-2"><button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-3 py-1.5 border border-navy-600 rounded text-xs disabled:opacity-40">이전</button><button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1.5 border border-navy-600 rounded text-xs disabled:opacity-40">다음</button></div></div>}
+        </section>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <FlowCard title="롱폼 제작실" text="주제·키워드 조사, YouTube 비교, 스크립트·TTS·장면 생성과 재조립을 진행합니다." action="롱폼 작업으로" onClick={() => navigate('/longform')} />
+          <FlowCard title="쇼츠 제작실" text="직접 쇼츠를 만들거나, 완성된 롱폼 상세 화면에서 핵심 구간을 쇼츠로 전환합니다." action="쇼츠 작업으로" onClick={() => navigate('/shorts')} />
         </div>
       </div>
     </Layout>
   )
 }
 
-function StatCard({ icon, label, value, active, onClick, glow = 'glow-cyan' }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left bg-card-gradient rounded-xl p-5 border transition hover:border-navy-500 cursor-pointer ${
-        active ? `border-accent-cyan shadow-${glow}` : 'border-navy-700 shadow-card'
-      }`}
-    >
-      <div className="flex items-center justify-between mb-3">
-        {icon}
-        {active && <span className="text-xs bg-accent-cyan/20 text-accent-cyan px-2 py-0.5 rounded font-bold">필터 적용</span>}
-      </div>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-sm text-navy-400 mt-1">{label}</div>
-    </button>
-  )
+function Select({ value, onChange, options }) {
+  return <select value={value} onChange={e => onChange(e.target.value)} className="w-full rounded-lg bg-navy-900 border border-navy-600 px-3 py-2.5 text-sm text-white">{options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+}
+
+function SummaryCard({ icon, label, value, onClick }) {
+  return <button onClick={onClick} className="text-left bg-navy-800 border border-navy-700 hover:border-accent-cyan/60 rounded-xl p-5 transition"><div className="text-accent-cyan">{icon}</div><div className="text-2xl font-bold text-white mt-4">{value}</div><div className="text-sm text-gray-400 mt-1">{label}</div></button>
+}
+
+function FlowCard({ title, text, action, onClick }) {
+  return <button onClick={onClick} className="text-left bg-navy-800 border border-navy-700 hover:border-accent-cyan/60 rounded-xl p-5 transition"><h2 className="font-semibold text-white">{title}</h2><p className="text-sm text-gray-400 mt-2 leading-6">{text}</p><span className="inline-flex items-center gap-1 text-sm font-semibold text-accent-cyan mt-4">{action}<ArrowRight size={15}/></span></button>
 }

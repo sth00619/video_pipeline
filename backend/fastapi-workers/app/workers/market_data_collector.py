@@ -318,7 +318,11 @@ class MarketDataCollector:
                     top = listing.nlargest(10, cap_col)[["Name", "Code", cap_col]].dropna()
                     data["top_stocks"] = [
                         {"name": row["Name"], "symbol": row["Code"],
-                         "market_cap": _format_krw(row[cap_col])}
+                         "market_cap": _format_krw(row[cap_col]),
+                         # Keep the raw figure as well as the human-friendly
+                         # string.  The raw value powers factual pie charts;
+                         # the formatted field remains for script narration.
+                         "market_cap_value": float(row[cap_col])}
                         for _, row in top.iterrows()
                     ]
         except Exception as e:

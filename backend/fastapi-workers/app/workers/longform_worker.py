@@ -35,12 +35,17 @@ import time
 import logging
 import subprocess
 import concurrent.futures
+import shutil
 from pathlib import Path
 from app.utils.process_manager import register_process, unregister_process, is_job_stopped, stop_job_processes
 from app import runtime_config
 from app.utils.quality_gate import assess_images, assess_subtitles, persist_quality_report
 from app.utils.art_direction import assess_art_diversity
 from app.utils.fal_billing import get_fal_credit_status
+from app.utils.stock_overlay import Anchor, IndexData, Market, overlay_filter, render_index_card
+from app.utils.market_charts import render_market_chart
+from app.utils.data_surface_locator import locate_data_surface
+from app.utils.budget import load_preflight, record_cost
 
 logger = logging.getLogger(__name__)
 
@@ -103,16 +108,40 @@ class LongformWorker:
 
         output_path = str(job_dir / "final.mp4")
 
+        # Do not assemble a partial video. Validate the full scene set before
+        # starting FFmpeg; this is critical for 200+ scene jobs.
+        if not scenes:
+            raise RuntimeError("조립할 씬이 없습니다.")
+        expected_indices = set(range(len(scenes)))
+        actual_indices = [int(scene.get("index", i)) for i, scene in enumerate(scenes)]
+        if set(actual_indices) != expected_indices or len(actual_indices) != len(set(actual_indices)):
+            raise RuntimeError(
+                f"씬 인덱스가 연속적이지 않습니다: expected=0..{len(scenes) - 1}, actual={actual_indices[:12]}"
+            )
+        missing_images = [
+            int(scene.get("index", i))
+            for i, scene in enumerate(scenes)
+            if not _verify_image(scene.get("image_path", ""))
+        ]
+        if missing_images:
+            raise RuntimeError(f"이미지 생성이 완료되지 않은 씬이 있어 조립을 중단합니다: {missing_images[:20]}")
+
         # [S4] 1. 씬별 재생 시간(duration) 정밀 타임라인 동적 매핑 (TTS 청크 기반)
         _assign_scene_durations_from_chunks(scenes, chunks, total_duration)
 
-        # Editorial overlay policy: scenes contain only the generated image/video
-        # and the timed subtitle track.  Do not add titles, data cards, charts,
-        # panels, or other text overlays to the image area.
-        data_card_count = 0
-        market_chart_count = 0
+        # Editorial overlay policy: generic AI/text overlays remain disabled.
+        # Only scenes carrying an explicitly verified index_data payload may
+        # receive a deterministic card in _process_scene.
+        data_card_count = sum(
+            1 for scene in scenes
+            if isinstance(scene.get("index_data"), dict) and scene["index_data"].get("verified") is True
+        )
+        market_chart_count = sum(
+            1 for scene in scenes
+            if isinstance(scene.get("market_chart"), dict) and scene["market_chart"].get("verified") is True
+        )
         logger.info(
-            f"editorial overlays disabled: images + timed subtitles only (scenes={len(scenes)})"
+            f"editorial overlays: verified index cards={data_card_count}, market charts={market_chart_count} (scenes={len(scenes)})"
         )
 
         # Kling 비디오 프로바이더 로드 (하이브리드 모드)
@@ -134,6 +163,10 @@ class LongformWorker:
             video_provider = None
             logger.info("Fal motion disabled: %s", fal_status["reason"])
         intro_kling_count = _get_intro_kling_count(total_duration, len(scenes))
+        budget_preflight = load_preflight(job_id)
+        if budget_preflight:
+            intro_kling_count = min(intro_kling_count, int(budget_preflight.get("kling_clip_count", intro_kling_count)))
+            logger.info("Budget preflight applies Kling cap=%s, estimate=₩%s", intro_kling_count, budget_preflight.get("estimated_cost_krw"))
         logger.info(f"초반 Kling AI 움짤 대상: {intro_kling_count}씬 (전체 {len(scenes)}씬 중)")
         # If the editor has selected one or more scenes, use exactly those;
         # otherwise retain the safe automatic intro selection. Both paths are
@@ -180,7 +213,10 @@ class LongformWorker:
         if stopped_error is not None:
             raise stopped_error
 
-        clip_paths = [clip_paths_map[i] for i in sorted(clip_paths_map.keys()) if i in clip_paths_map]
+        if set(clip_paths_map) != expected_indices:
+            missing_clips = sorted(expected_indices - set(clip_paths_map))
+            raise RuntimeError(f"씬 클립이 누락되어 조립을 중단합니다: {missing_clips[:20]}")
+        clip_paths = [clip_paths_map[i] for i in sorted(clip_paths_map)]
         logger.info(
             f"씬 클립 생성 완료: {len(clip_paths)}/{len(scenes)}개 성공, "
             f"소요={time.time() - scene_stage_t0:.1f}s"
@@ -199,15 +235,37 @@ class LongformWorker:
         clip_list_path = str(temp_dir / "clips.txt")
         with open(clip_list_path, "w") as f:
             for cp in clip_paths:
-                f.write(f"file '{cp}'\n")
+                # FFmpeg's concat demuxer parses Windows drive-colons as a
+                # protocol unless the path uses POSIX separators and escapes
+                # the drive separator.
+                clip_ref = Path(cp).as_posix()
+                if os.name == "nt" and len(clip_ref) > 1 and clip_ref[1] == ":":
+                    clip_ref = clip_ref[0] + r"\:" + clip_ref[2:]
+                f.write(f"file '{clip_ref}'\n")
 
         silent_video = str(temp_dir / "silent.mp4")
-        ret = _run_subprocess(
-            f'ffmpeg -f concat -safe 0 -i "{clip_list_path}" '
-            f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
-            f'-y "{silent_video}" -loglevel error',
-            job_id
-        )
+        clip_manifest_path = temp_dir / "clip_manifest.json"
+        clip_manifest = [
+            {"path": cp, "size": os.path.getsize(cp), "mtime_ns": os.stat(cp).st_mtime_ns}
+            for cp in clip_paths
+        ]
+        can_reuse_silent = False
+        try:
+            previous_manifest = json.loads(clip_manifest_path.read_text(encoding="utf-8"))
+            can_reuse_silent = previous_manifest == clip_manifest and _verify_video(silent_video)
+        except (OSError, ValueError, TypeError):
+            can_reuse_silent = False
+
+        if can_reuse_silent:
+            ret = 0
+            logger.info("재생 가능한 silent.mp4와 씬 manifest를 재사용합니다.")
+        else:
+            ret = _run_subprocess(
+                f'ffmpeg -f concat -safe 0 -i "{clip_list_path}" '
+                f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+                f'-y "{silent_video}" -loglevel error',
+                job_id
+            )
 
         # ffprobe로 실제 재생 가능 여부 검증
         concat_ok = _verify_video(silent_video)
@@ -217,6 +275,8 @@ class LongformWorker:
                 f"파일이 손상됐거나 모든 씬 클립이 비정상일 가능성 있음."
             )
             raise RuntimeError("concat 단계에서 재생 가능한 영상을 만들지 못했습니다.")
+        if not can_reuse_silent:
+            clip_manifest_path.write_text(json.dumps(clip_manifest, ensure_ascii=False), encoding="utf-8")
 
         # Kling은 5초 클립만 반환한다. 어떤 씬이 짧게 끝나도 최종 -shortest가
         # 나레이션을 자르지 않도록 마지막 프레임을 복제해 오디오 길이를 보장한다.
@@ -252,6 +312,9 @@ class LongformWorker:
 
         # 5. 음성 + BGM + 자막 합성
         merge_stage_t0 = time.time()
+        assembly_stage_path = str(temp_dir / "final.partial.mp4")
+        if os.path.exists(assembly_stage_path):
+            os.remove(assembly_stage_path)
         font_available = os.path.exists(NANUM_BOLD) or os.path.exists(NANUM_REGULAR)
         ass_exists = os.path.exists(ass_path) and os.path.getsize(ass_path) > 200
         audio_exists = os.path.exists(audio_path) and os.path.getsize(audio_path) > 0
@@ -276,7 +339,7 @@ class LongformWorker:
                     f'{vcodec} '
                     f'-map 0:v -map "[master]" '
                     f'-c:a aac -b:a 192k -movflags +faststart -shortest '
-                    f'-y "{output_path}" -loglevel error'
+                    f'-y "{assembly_stage_path}" -loglevel error'
                 )
                 logger.info(f"BGM 믹싱 적용: 나레이션 + BGM(volume={bgm_volume})")
             else:
@@ -287,7 +350,7 @@ class LongformWorker:
                     f'{vcodec} '
                     f'-map 0:v -map "[master]" '
                     f'-c:a aac -b:a 192k -movflags +faststart -shortest '
-                    f'-y "{output_path}" -loglevel error'
+                    f'-y "{assembly_stage_path}" -loglevel error'
                 )
         else:
             if font_available and ass_exists:
@@ -295,28 +358,42 @@ class LongformWorker:
                     f'ffmpeg -i "{silent_video}" '
                     f'-vf "ass=\'{ass_path}\'" '
                     f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
-                    f'-y "{output_path}" -loglevel error'
+                    f'-y "{assembly_stage_path}" -loglevel error'
                 )
             else:
-                merge_cmd = f'cp "{silent_video}" "{output_path}"'
+                merge_cmd = None
 
-        ret = _run_subprocess(merge_cmd, job_id)
-        if ret != 0:
+        if merge_cmd is None:
+            shutil.copy2(silent_video, assembly_stage_path)
+            ret = 0
+        else:
+            ret = _run_subprocess(merge_cmd, job_id)
+        if ret != 0 or not _verify_video(assembly_stage_path):
+            if os.path.exists(assembly_stage_path):
+                os.remove(assembly_stage_path)
             logger.error("자막/BGM 합성 실패, 폴백")
             if audio_exists:
-                _run_subprocess(
+                fallback_ret = _run_subprocess(
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
                     f'-map 0:v -map 1:a '
                     f'-c:v copy -c:a aac -shortest '
-                    f'-y "{output_path}" -loglevel error',
+                    f'-y "{assembly_stage_path}" -loglevel error',
                     job_id
                 )
+                if fallback_ret != 0 or not _verify_video(assembly_stage_path):
+                    raise RuntimeError("자막/BGM 조립 및 안전한 오디오 폴백이 모두 실패했습니다.")
             else:
-                _run_subprocess(f'cp "{silent_video}" "{output_path}"', job_id)
+                shutil.copy2(silent_video, assembly_stage_path)
+                if not _verify_video(assembly_stage_path):
+                    raise RuntimeError("최종 영상 임시 파일 검증에 실패했습니다.")
+
+        if not _verify_video(assembly_stage_path):
+            raise RuntimeError("최종 영상 임시 파일이 재생 가능한 상태가 아닙니다.")
+        os.replace(assembly_stage_path, output_path)
 
         logger.info(f"자막/BGM 합성 완료, 소요={time.time() - merge_stage_t0:.1f}s")
 
-        if not os.path.exists(output_path):
+        if not _verify_video(output_path):
             raise RuntimeError("롱폼 영상 생성 실패")
 
         probe = os.popen(
@@ -391,6 +468,11 @@ class LongformWorker:
         raw_dur = scene.get("duration")
         duration = float(raw_dur) if raw_dur is not None else 15.0
         clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
+        if not _verify_image(img_path):
+            raise RuntimeError(f"scene {i} image is missing or corrupt: {img_path}")
+        if _verify_video(clip_path) and abs(_probe_duration(clip_path) - duration) <= 0.15:
+            logger.info("Reusing completed scene clip %s", i)
+            return i, clip_path
         section = scene.get("section", "default")
         bg_color = {
             "intro": "1a1a2e", "background": "16213e",
@@ -402,7 +484,7 @@ class LongformWorker:
             # 초반 씬만 Kling AI 움짤, 나머지는 zoompan 효과
             if video_provider and use_kling:
                 try:
-                    logger.info(f"씬 {i} Kling AI 움짤 생성 (초반 {intro_kling_count}씬)")
+                    logger.info(f"씬 {i} Kling AI 움짤 생성")
 
                     # image-to-video는 이미지에 이미 있는 내용(캐릭터 생김새, 배경,
                     # 구도)을 다시 설명하면 안 되고 "무엇이 어떻게 움직이는가"만
@@ -446,8 +528,15 @@ class LongformWorker:
                                 except Exception:
                                     pass
 
-                        logger.info(f"씬 {i} Kling AI 움짤 완성 (표준 규격 변환 완료)")
-                        return i, clip_path
+                        if _verify_video(clip_path) and abs(_probe_duration(clip_path) - duration) <= 0.15:
+                            if _requires_verified_index_card(scene) and not _requires_verified_market_chart(scene) and not _apply_verified_index_card(scene, clip_path, temp_dir, i, duration, job_id):
+                                raise RuntimeError(f"scene {i} verified index card overlay failed")
+                            if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
+                                raise RuntimeError(f"scene {i} verified market chart overlay failed")
+                            record_cost(job_id, "kling")
+                            logger.info(f"씬 {i} Kling AI 움짤 완성 (표준 규격 변환 완료)")
+                            return i, clip_path
+                        raise RuntimeError("Kling 표준화 클립 검증 실패")
                 except Exception as e:
                     logger.warning(f"씬 {i} Kling AI 생성 실패, zoompan 폴백: {e}")
 
@@ -455,12 +544,15 @@ class LongformWorker:
             if os.path.exists(img_path):
                 _ffmpeg_static_image(img_path, clip_path, duration, bg_color, job_id)
             else:
-                _run_subprocess(
-                    f'ffmpeg -f lavfi -i "color=c={bg_color}:s=1920x1080:r=30" '
-                    f'-t {duration:.3f} -c:v libx264 -pix_fmt yuv420p '
-                    f'-y "{clip_path}" -loglevel error',
-                    job_id
-                )
+                raise RuntimeError(f"scene {i} image disappeared during assembly")
+            if not _verify_video(clip_path):
+                raise RuntimeError(f"scene {i} clip failed validation after rendering")
+            if _requires_verified_index_card(scene) and not _requires_verified_market_chart(scene) and not _apply_verified_index_card(scene, clip_path, temp_dir, i, duration, job_id):
+                raise RuntimeError(f"scene {i} verified index card overlay failed")
+            if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
+                raise RuntimeError(f"scene {i} verified market chart overlay failed")
+            if not _verify_video(clip_path):
+                raise RuntimeError(f"scene {i} clip failed validation after overlay")
             return i, clip_path
 
         except Exception as e:
@@ -630,7 +722,7 @@ def _get_max_workers(scene_count: int) -> int:
     Kling/Fal.ai API 동시 요청 한도를 함께 고려해 정한 보수적인 값입니다.
     CPU 코어가 넉넉하고 API 동시 처리 한도가 높다면 6~8까지 올려도 됩니다.)
     """
-    default = 4
+    default = 6
     try:
         configured = runtime_config.value("longform_scene_max_workers")
     except Exception:
@@ -652,7 +744,9 @@ def _verify_video(video_path: str) -> bool:
     """
     if not video_path or not os.path.exists(video_path):
         return False
-    if os.path.getsize(video_path) < 10000:  # 10KB 미만은 사실상 빈 파일
+    # Very short valid clips can be smaller than 10KB; ffprobe duration is
+    # the authoritative decodability check, with 1KB as the truncation floor.
+    if os.path.getsize(video_path) < 1000:
         return False
     probe = os.popen(
         f'ffprobe -v error -show_entries format=duration '
@@ -662,6 +756,24 @@ def _verify_video(video_path: str) -> bool:
         duration = float(probe)
         return duration > 0.0
     except (ValueError, TypeError):
+        return False
+
+
+def _verify_image(image_path: str) -> bool:
+    """Return true only for a non-trivial, decodable image file."""
+    if not image_path or not os.path.exists(image_path):
+        return False
+    try:
+        # Tiny files are usually empty/truncated; valid flat-color PNGs from
+        # the mock provider can legitimately be below the image worker's
+        # 15KB cache threshold, so assembly uses a lower safety floor.
+        if os.path.getsize(image_path) <= 1000:
+            return False
+        from PIL import Image
+        with Image.open(image_path) as image:
+            image.verify()
+        return True
+    except (OSError, ValueError):
         return False
 
 
@@ -676,7 +788,112 @@ def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_colo
         f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
         f'-y "{clip_path}" -loglevel error'
     )
-    _run_subprocess(cmd, job_id)
+    ret = _run_subprocess(cmd, job_id)
+    if ret != 0 or not _verify_video(clip_path):
+        raise RuntimeError(f"static image clip render failed: {img_path}")
+
+
+def _requires_verified_index_card(scene: dict) -> bool:
+    payload = scene.get("index_data") or scene.get("overlay_data")
+    return isinstance(payload, dict) and payload.get("verified") is True
+
+
+def _apply_verified_index_card(scene: dict, clip_path: str, temp_dir: Path, index: int, duration: float, job_id: int) -> bool:
+    """Overlay a card only when a scene carries explicitly verified values."""
+    payload = scene.get("index_data") or scene.get("overlay_data")
+    if not isinstance(payload, dict) or payload.get("verified") is not True:
+        return False
+    try:
+        source = str(payload.get("source") or payload.get("data_source") or "").strip()
+        if not source:
+            return False
+        data = IndexData(
+            name=str(payload["name"]),
+            value=float(payload["value"]),
+            change=float(payload["change"]),
+            change_pct=float(payload["change_pct"]),
+            market=Market(str(payload.get("market", "kr")).lower()),
+        )
+        card_path = str(temp_dir / f"index_card_{index:03d}.png")
+        render_index_card(data, card_path, scale=2)
+        placement = scene.get("overlay_placement") or {}
+        mode = str(placement.get("mode") or "anchor").lower()
+        margin = max(0, int(placement.get("margin", 40)))
+        xy = None
+        anchor = Anchor.TOP_RIGHT
+        if mode == "pixel":
+            xy = (int(placement.get("x", 0)), int(placement.get("y", 0)))
+        else:
+            anchor = Anchor(str(placement.get("anchor", "top_right")).lower())
+        filt = overlay_filter(1920, 1080, 0, 0, anchor=anchor, margin=margin, xy=xy)
+        staged = clip_path + ".index-card.mp4"
+        cmd = (
+            f'ffmpeg -i "{clip_path}" -loop 1 -i "{card_path}" '
+            f'-filter_complex "[0:v][1:v]{filt}:format=auto[v]" '
+            f'-map "[v]" -t {duration:.3f} -an -c:v libx264 -preset fast -crf 18 '
+            f'-pix_fmt yuv420p -y "{staged}" -loglevel error'
+        )
+        ret = _run_subprocess(cmd, job_id)
+        if ret != 0 or not _verify_video(staged):
+            if os.path.exists(staged):
+                os.remove(staged)
+            return False
+        os.replace(staged, clip_path)
+        logger.info("scene %s verified index card overlay applied (source=%s, mode=%s)", index, source, mode)
+        return True
+    except (KeyError, TypeError, ValueError, OSError) as exc:
+        logger.warning("scene %s verified index card overlay skipped: %s", index, exc)
+        return False
+
+
+def _requires_verified_market_chart(scene: dict) -> bool:
+    payload = scene.get("market_chart")
+    return (
+        isinstance(payload, dict)
+        and payload.get("verified") is True
+        and isinstance(payload.get("points"), list)
+        and len(payload["points"]) >= 5
+        and bool(payload.get("source"))
+    )
+
+
+def _apply_verified_market_chart(scene: dict, clip_path: str, temp_dir: Path, index: int, duration: float, job_id: int) -> bool:
+    """Render and overlay a collected price series; never ask the image model for a factual chart."""
+    payload = scene.get("market_chart")
+    if not _requires_verified_market_chart(scene):
+        return False
+    chart_path = str(temp_dir / f"market_chart_{index:03d}.png")
+    try:
+        resolved_surface = _resolve_market_chart_surface(
+            (scene.get("art_direction") or {}).get("data_surface"),
+            str(scene.get("image_path") or scene.get("path") or ""),
+        )
+        render_payload = dict(payload)
+        render_payload["render_surface"] = {
+            "width": resolved_surface["width"],
+            "height": resolved_surface["height"],
+        }
+        if not render_market_chart(render_payload, chart_path):
+            logger.warning("scene %s market chart renderer returned no valid file", index)
+            return False
+        if not os.path.exists(chart_path) or os.path.getsize(chart_path) < 4_000:
+            return False
+        ok = _apply_market_chart_overlay(
+            clip_path,
+            chart_path,
+            duration,
+            job_id,
+            resolved_surface,
+        )
+        if ok:
+            logger.info(
+                "scene %s verified market chart overlay applied (series=%s source=%s)",
+                index, payload.get("series_key"), payload.get("source"),
+            )
+        return ok
+    except (TypeError, ValueError, OSError) as exc:
+        logger.warning("scene %s verified market chart overlay failed: %s", index, exc)
+        return False
 
 
 def _apply_data_card_overlay(clip_path: str, card_path: str, duration: float, job_id: int) -> bool:
@@ -700,14 +917,50 @@ def _apply_data_card_overlay(clip_path: str, card_path: str, duration: float, jo
     return True
 
 
-def _apply_market_chart_overlay(clip_path: str, chart_path: str, duration: float, job_id: int) -> bool:
-    """Place a real market-series chart beside the textual data card."""
+def _resolve_market_chart_surface(surface: dict | None, source_image_path: str = "") -> dict[str, int]:
+    """Return the actual 1920×1080 safe rectangle for both renderer and FFmpeg."""
+    surface = surface if isinstance(surface, dict) else {}
+    resolved = {
+        "x": int(surface.get("x", 1120)), "y": int(surface.get("y", 65)),
+        "width": int(surface.get("width", 720)), "height": int(surface.get("height", 390)),
+    }
+    detected = locate_data_surface(source_image_path, surface)
+    if not detected:
+        return resolved
+    try:
+        from PIL import Image
+        with Image.open(source_image_path) as source:
+            source_w, source_h = source.size
+        resolved = {
+            "x": round(detected["x"] * 1920 / source_w),
+            "y": round(detected["y"] * 1080 / source_h),
+            "width": round(detected["width"] * 1920 / source_w),
+            "height": round(detected["height"] * 1080 / source_h),
+        }
+        logger.info("detected data surface: %s", resolved)
+    except (OSError, ValueError, ZeroDivisionError):
+        pass
+    return resolved
+
+
+def _apply_market_chart_overlay(
+    clip_path: str,
+    chart_path: str,
+    duration: float,
+    job_id: int,
+    surface: dict | None = None,
+) -> bool:
+    """Center a real chart within the detected in-world panel, not fixed pixels."""
     if not chart_path or not os.path.exists(chart_path) or not _verify_video(clip_path):
         return False
     staged = clip_path + ".chart.mp4"
+    surface = surface if isinstance(surface, dict) else {}
+    x = int(surface.get("x", 1120)); y = int(surface.get("y", 65))
+    width = int(surface.get("width", 720)); height = int(surface.get("height", 390))
     cmd = (
         f'ffmpeg -i "{clip_path}" -loop 1 -i "{chart_path}" '
-        f'-filter_complex "[0:v][1:v]overlay=1120:65:format=auto[v]" '
+        f'-filter_complex "[1:v]scale={width}:{height}:force_original_aspect_ratio=decrease[chart];'
+        f'[0:v][chart]overlay={x}+({width}-w)/2:{y}+({height}-h)/2:format=auto[v]" '
         f'-map "[v]" -t {duration:.3f} -an '
         f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
         f'-y "{staged}" -loglevel error'

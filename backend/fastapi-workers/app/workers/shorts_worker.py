@@ -90,7 +90,7 @@ class ShortsWorker:
             logger.info("Shorts timeline capped at %.0fs", MAX_SHORT_DURATION)
         return capped
 
-    def _prepare_segments_for_cut(self, source_path: str, segments: list) -> list:
+    def _prepare_segments_for_cut(self, source_path: str, segments: list, *, merge_adjacent: bool = False) -> list:
         """Expand short Whisper sentence matches instead of dropping them.
 
         Keyword matching is sentence-level (often 1--5 seconds), but a Shorts
@@ -98,7 +98,7 @@ class ShortsWorker:
         symmetrically to ``MIN_CLIP`` within the source-video bounds.
         """
         source_duration = self._get_duration(source_path)
-        prepared = []
+        candidates = []
         for position, raw_segment in enumerate(segments):
             segment = dict(raw_segment)
             try:
@@ -114,6 +114,31 @@ class ShortsWorker:
             if source_duration > 0:
                 start = min(start, source_duration)
                 end = min(end, source_duration)
+            if end - start < 0.05:
+                logger.warning("Skipping Shorts segment %s with insufficient duration", position)
+                continue
+            segment.update({"start": round(start, 3), "end": round(end, 3)})
+            candidates.append(segment)
+
+        coalesced = candidates
+        if merge_adjacent:
+            # A merged scenario commonly selects adjacent subtitle chunks.
+            # Treat that as one continuous source range before applying the
+            # 10-second minimum, while preserving individual clips unchanged.
+            coalesced = []
+            for segment in sorted(candidates, key=lambda item: item["start"]):
+                # Forced alignment can leave up to ~2 seconds of natural pause
+                # between sentences in one narration passage.
+                if coalesced and segment["start"] <= coalesced[-1]["end"] + 2.5:
+                    coalesced[-1]["end"] = max(coalesced[-1]["end"], segment["end"])
+                    if segment.get("text"):
+                        coalesced[-1]["text"] = " ".join(filter(None, [coalesced[-1].get("text", ""), segment["text"]]))
+                else:
+                    coalesced.append(segment)
+
+        prepared = []
+        for position, segment in enumerate(coalesced):
+            start, end = segment["start"], segment["end"]
             duration = end - start
             if duration < MIN_CLIP and source_duration > duration:
                 required = min(MIN_CLIP, source_duration)
@@ -127,9 +152,6 @@ class ShortsWorker:
                         start = max(0.0, source_duration - required)
                 logger.info("Expanded short transcript segment %s to %.1fs", position, end - start)
 
-            if end - start < 0.05:
-                logger.warning("Skipping Shorts segment %s with insufficient duration", position)
-                continue
             segment.update({"start": round(start, 3), "end": round(end, 3)})
             prepared.append(segment)
         return prepared
@@ -616,7 +638,7 @@ class ShortsWorker:
         
         logger.info(f"쇼츠 병합 컷팅 시작: segments_count={len(segments)}")
         segments = self._cap_segments_to_short_limit(
-            self._prepare_segments_for_cut(source_path, segments)
+            self._prepare_segments_for_cut(source_path, segments, merge_adjacent=True)
         )
         tmp_clips = []
         rendered_duration = 0.0

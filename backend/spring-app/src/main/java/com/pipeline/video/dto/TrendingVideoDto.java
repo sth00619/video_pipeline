@@ -22,4 +22,16 @@ public class TrendingVideoDto {
     private Long channelAvgViews;
     private String publishedAt;
     private Double hoursSincePublish;
+    private String channelId;
+    private Long likes;
+    private Long comments;
+    private Boolean likesAvailable;
+    private Boolean commentsAvailable;
+    private Double durationSeconds;
+    private Double averageViewDurationSeconds;
+    private Double averageViewPercentage;
+    private Boolean retentionAvailable;
+    private String statisticsAsOf;
+    private Boolean channelAvgViewsIsSample;
+    private Boolean subscriberCountAvailable;
 }

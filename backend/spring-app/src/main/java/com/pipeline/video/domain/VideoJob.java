@@ -65,6 +65,17 @@ public class VideoJob {
     @Column(name = "channel_id", length = 50)
     private String channelId;
 
+    /** null이면 channel profile의 기본 캐릭터를 상속한다. */
+    @Column(name = "character_override", length = 100)
+    private String characterOverride;
+
+    @Builder.Default
+    private boolean dataVisualsEnabled = true;
+
+    /** GUIDED 작업에서 TTS 생성 전에 사용자가 선택한 목소리. */
+    @Column(name = "tts_voice_id", length = 100)
+    private String ttsVoiceId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

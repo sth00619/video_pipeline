@@ -1,6 +1,6 @@
 import { Filter, Search } from 'lucide-react'
 import {
-  CATEGORY_LIST, CATEGORY_LABEL, MODE_LIST, STATUS_LIST, STATUS_LABEL,
+  CATEGORY_LIST, CATEGORY_LABEL, MODE_LIST, STATUS_LIST, STATUS_LABEL, formatAutonomy,
 } from '../constants/jobStatus'
 
 /**
@@ -55,7 +55,7 @@ export default function JobFilterBar({
         <select value={mode} onChange={e => onModeChange(e.target.value)} className={selectClass}>
           <option value="ALL">모드: 전체</option>
           {MODE_LIST.filter(m => m !== 'ALL').map(m => (
-            <option key={m} value={m}>{m}</option>
+            <option key={m} value={m}>{formatAutonomy(m)}</option>
           ))}
         </select>
 

@@ -36,6 +36,7 @@ from app import runtime_config
 from app.config import ELEVENLABS_TTS_MODEL
 from app.utils.quality_gate import extract_narration, sanitize_narration, assess_subtitles, persist_quality_report
 from app.utils.korean_tts import normalize_korean_numbers_for_tts
+from app.utils.sentence_splitter import split_sentences
 
 logger = logging.getLogger(__name__)
 
@@ -260,7 +261,7 @@ class TtsWorker:
 
         # 긴 텍스트: 분할 생성 후 concat
         parts = []
-        sentences = re.split(r'(?<=[.!?。])\s+', text.strip())
+        sentences = split_sentences(text)
         current = ""
         for sent in sentences:
             if len(current) + len(sent) <= MAX_CHARS:
@@ -421,7 +422,7 @@ class TtsWorker:
             # 800자 단위 분할 (문장 경계 기준)
             parts = []
             current = ""
-            for sent in re.split(r'(?<=[.!?])\s+', text):
+            for sent in split_sentences(text):
                 if len(current) + len(sent) <= MAX_CHARS:
                     current = (current + " " + sent).strip()
                 else:
@@ -713,6 +714,10 @@ class TtsWorker:
             clean_script
         )
         raw_sentences = [s.strip() for s in raw_sentences if s.strip()]
+        # Keep decimal values (for example, 16.5 and 100.81) intact before
+        # applying caption-width wrapping. This shared segmentation is the
+        # source of truth for TTS chunking, captions, and timestamp mapping.
+        raw_sentences = split_sentences(clean_script)
         
         text_chunks = []
         for sent in raw_sentences:

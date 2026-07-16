@@ -45,6 +45,14 @@ public class VideoPipelineActivitiesImpl implements VideoPipelineActivities {
     }
 
     @Override
+    public boolean isGuided(Long jobId) {
+        return jobRepository.findById(jobId)
+                .map(job -> job.getAutonomy() == com.pipeline.video.domain.Autonomy.GUIDED
+                        || job.getAutonomy() == com.pipeline.video.domain.Autonomy.MANUAL)
+                .orElse(false);
+    }
+
+    @Override
     public void generateTts(Long jobId) {
         log.info("[Temporal Activity] TTS 생성 시작: jobId={}", jobId);
         ttsService.generate(jobId, "gtts_whisper_ko", "AUTO");

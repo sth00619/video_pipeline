@@ -7,7 +7,7 @@ import JobFilterBar from '../components/JobFilterBar'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
 import apiClient from '../api/client'
-import { isCompleted } from '../constants/jobStatus'
+import { formatAutonomy, formatCategory, isCompleted } from '../constants/jobStatus'
 
 export default function Admin() {
   const navigate = useNavigate()
@@ -23,21 +23,29 @@ export default function Admin() {
 
   const [editedVoices, setEditedVoices] = useState({})
   const [characterDescriptions, setCharacterDescriptions] = useState({})
+  const [characterKeys, setCharacterKeys] = useState({})
+  const [newChannel, setNewChannel] = useState({ channelId: '', channelName: '', characterKey: '', characterStylePrompt: '', voiceId: '' })
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['admin-jobs'],
     queryFn: () => apiClient.get('/jobs').then(r => r.data),
   })
 
-  const { data: channels = [], refetch: refetchChannels } = useQuery({
+  const { data: channels = [], error: channelsError, refetch: refetchChannels } = useQuery({
     queryKey: ['admin-channels'],
     queryFn: () => apiClient.get('/channels').then(r => r.data),
   })
 
-  const { data: voices = [] } = useQuery({
+  const { data: voices = [], error: voicesError } = useQuery({
     queryKey: ['voices'],
     queryFn: () => apiClient.get('/channels/voices').then(r => r.data),
     staleTime: Infinity,
+  })
+
+  const { data: integrations = {} } = useQuery({
+    queryKey: ['integration-status'],
+    queryFn: () => apiClient.get('/integrations/status').then(r => r.data),
+    retry: false,
   })
 
   const { data: characterLibraries = {} } = useQuery({
@@ -65,6 +73,15 @@ export default function Admin() {
     onError: (err) => {
       alert('채널 설정 저장 실패: ' + (err.response?.data?.message || err.message))
     }
+  })
+
+  const createChannelMutation = useMutation({
+    mutationFn: () => apiClient.post('/channels', newChannel).then(r => r.data),
+    onSuccess: () => {
+      setNewChannel({ channelId: '', channelName: '', characterKey: '', characterStylePrompt: '', voiceId: '' })
+      qc.invalidateQueries({ queryKey: ['admin-channels'] })
+    },
+    onError: (err) => alert('채널 생성 실패: ' + (err.response?.data?.message || err.message)),
   })
 
   const characterLibraryMutation = useMutation({
@@ -156,6 +173,16 @@ export default function Admin() {
         </div>
       </div>
 
+      <div className="mb-6 bg-navy-800 border border-navy-700 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3"><div><h2 className="font-semibold text-white">외부 API 연결 상태</h2><p className="text-[11px] text-gray-500 mt-1">키가 없으면 키워드 후보는 제한되며, 화면의 ‘unavailable’ 값은 추정하지 않고 그대로 표시합니다.</p></div><span className="text-[11px] text-gray-500">현재 서버 환경 기준</span></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <ProviderBadge label="YouTube Data API v3" configured={integrations.youtube?.configured} />
+          <ProviderBadge label="ElevenLabs" configured={integrations.elevenlabs?.configured} />
+          <ProviderBadge label="Anthropic Claude" configured={integrations.anthropic?.configured} />
+        </div>
+        {integrations.youtube && !integrations.youtube.configured && <div className="mt-4 bg-navy-900/70 rounded-lg p-3 text-[11px] text-gray-400 leading-relaxed">YouTube 키 설정: Google Cloud Console → 프로젝트 생성 → <b>YouTube Data API v3</b> 활성화 → 사용자 인증 정보에서 API 키 생성 → 프로젝트 루트 `.env`의 `YOUTUBE_API_KEY=발급키`에 입력 후 `docker compose up -d --build fastapi-workers spring-app` 실행. 키는 브라우저에 노출하지 않고 FastAPI 서버에서만 사용합니다.</div>}
+      </div>
+
       <div className="flex gap-4 mb-6 border-b border-navy-700 pb-px">
         <button
           onClick={() => setActiveTab('jobs')}
@@ -225,15 +252,15 @@ export default function Admin() {
                     pageItems.map(job => (
                       <tr
                         key={job.id}
-                        onClick={() => navigate(`/jobs/${job.id}`)}
+                        onClick={() => navigate(`/longform/${job.id}`)}
                         className="hover:bg-navy-700/50 transition cursor-pointer"
                       >
                         <td className="px-6 py-3.5 text-gray-400">#{job.id}</td>
                         <td className="px-6 py-3.5 font-medium text-white truncate max-w-[280px]" title={job.title}>
                           {job.title}
                         </td>
-                        <td className="px-6 py-3.5 text-gray-400">{job.category}</td>
-                        <td className="px-6 py-3.5 text-gray-400">{job.autonomy}</td>
+                        <td className="px-6 py-3.5 text-gray-400">{formatCategory(job.category)}</td>
+                        <td className="px-6 py-3.5 text-gray-400">{formatAutonomy(job.autonomy)}</td>
                         <td className="px-6 py-3.5">
                           <StatusBadge status={job.status} small />
                         </td>
@@ -253,9 +280,23 @@ export default function Admin() {
         </>
       ) : (
         <div className="space-y-4">
+          <div className="bg-navy-800 border border-accent-cyan/30 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div><h2 className="font-semibold text-white">채널 프로필 추가</h2><p className="text-[11px] text-gray-500 mt-1">채널별 고정 캐릭터와 기본 음성을 지정하면 이후 작업이 자동으로 상속합니다.</p></div>
+              <button onClick={() => createChannelMutation.mutate()} disabled={!newChannel.channelId.trim() || !newChannel.channelName.trim() || createChannelMutation.isPending} className="bg-accent-cyan text-navy-950 rounded-lg px-4 py-2 text-xs font-semibold disabled:opacity-50">{createChannelMutation.isPending ? '저장 중…' : '채널 추가'}</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+              <input value={newChannel.channelId} onChange={e => setNewChannel({ ...newChannel, channelId: e.target.value })} placeholder="채널 ID (channel_a)" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+              <input value={newChannel.channelName} onChange={e => setNewChannel({ ...newChannel, channelName: e.target.value })} placeholder="채널명" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+              <input value={newChannel.characterKey} onChange={e => setNewChannel({ ...newChannel, characterKey: e.target.value })} placeholder="캐릭터 키 (coin_character)" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+              <input value={newChannel.characterStylePrompt} onChange={e => setNewChannel({ ...newChannel, characterStylePrompt: e.target.value })} placeholder="캐릭터 스타일 프롬프트" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+              <select value={newChannel.voiceId} onChange={e => setNewChannel({ ...newChannel, voiceId: e.target.value })} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white"><option value="">기본 음성 사용</option>{voices.map(v => <option key={v.voiceId} value={v.voiceId}>{v.name}</option>)}</select>
+            </div>
+          </div>
+          {(channelsError || voicesError) && <div className="bg-accent-red/10 border border-accent-red/30 rounded-xl p-4 text-xs text-accent-red">백엔드 API가 연결되지 않았습니다. Spring/FastAPI 컨테이너를 먼저 실행한 뒤 새로고침하세요. {channelsError?.message || voicesError?.message}</div>}
           {channels.length === 0 ? (
             <div className="bg-navy-800 border border-navy-700 rounded-xl p-8 text-center text-gray-500">
-              등록된 채널 프로필이 없습니다.
+              등록된 채널 프로필이 없습니다. 위에서 채널 A/B를 추가하세요.
             </div>
           ) : (
             channels.map(channel => {
@@ -266,6 +307,8 @@ export default function Admin() {
               const characterDescription = characterDescriptions[channel.channelId] !== undefined
                 ? characterDescriptions[channel.channelId]
                 : (channel.characterStylePrompt || '')
+              const characterKey = characterKeys[channel.channelId] !== undefined
+                ? characterKeys[channel.channelId] : (channel.characterKey || channel.channelId)
               const isGeneratingLibrary = characterLibraryMutation.isPending
                 && characterLibraryMutation.variables?.channelId === channel.channelId
 
@@ -282,6 +325,14 @@ export default function Admin() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1 font-semibold">채널 기본 캐릭터</label>
+                      <div className="flex gap-2">
+                        <input value={characterKey} onChange={e => setCharacterKeys({ ...characterKeys, [channel.channelId]: e.target.value })} placeholder="coin_character" className="flex-1 bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-sm text-white" />
+                        <button onClick={() => saveChannelMutation.mutate({ ...channel, characterKey })} className="bg-accent-gold text-navy-950 text-xs font-semibold px-3 rounded-lg">기본 저장</button>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-1">관리자/채널은 이 캐릭터를 기본으로 상속하고, 작업 생성 화면에서만 예외 override가 가능합니다.</p>
+                    </div>
                     <div>
                       <label className="block text-xs text-gray-400 mb-1 font-semibold">ElevenLabs 나레이션 목소리</label>
                       <div className="flex items-center gap-2 mt-1">
@@ -430,4 +481,9 @@ export default function Admin() {
       )}
     </Layout>
   )
+}
+
+function ProviderBadge({ label, configured }) {
+  const unavailable = configured === undefined
+  return <div className="bg-navy-900/60 border border-navy-700 rounded-lg px-3 py-2 flex items-center justify-between"><span className="text-gray-300">{label}</span><span className={unavailable ? 'text-accent-red' : configured ? 'text-accent-green' : 'text-accent-gold'}>{unavailable ? '확인 실패' : configured ? '연결됨' : '키 없음'}</span></div>
 }

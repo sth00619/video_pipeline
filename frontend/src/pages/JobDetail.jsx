@@ -11,6 +11,7 @@ import Layout from '../components/Layout'
 import { jobsApi } from '../api/jobs'
 import { authStore } from '../store/auth'
 import apiClient from '../api/client'
+import { formatAutonomy, formatCategory } from '../constants/jobStatus'
 
 const PIPELINE_STEPS = [
   { key: 'keyword', label: '키워드 탐색', pendingStatus: 'KEYWORD_PENDING', gate: 'KEYWORD',
@@ -66,10 +67,9 @@ function getStepStatus(step, job, approvals) {
 const AUTONOMY_STYLE = {
   AUTO: 'bg-accent-green/20 text-accent-green border-accent-green/30',
   GUIDED: 'bg-accent-cyan/20 text-accent-cyan border-accent-cyan/30',
-  MANUAL: 'bg-accent-gold/20 text-accent-gold border-accent-gold/30',
 }
 const AUTONOMY_DESC = {
-  AUTO: '모든 단계 자동 진행', GUIDED: '키워드·미리보기 검토 후 자동', MANUAL: '각 단계마다 수동 승인 필요',
+  AUTO: '주제·길이·키워드 입력 후 전체 자동 진행', GUIDED: '키워드·스크립트·목소리·이미지 단계별 승인',
 }
 
 /**
@@ -100,6 +100,9 @@ export default function JobDetail() {
   const [showEngPrompt, setShowEngPrompt] = useState({})
 
   const [selectedVoiceId, setSelectedVoiceId] = useState('default_ko')
+  const [previewText, setPreviewText] = useState('오늘 시장의 핵심 흐름을 빠르게 정리해 드리겠습니다.')
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   const { data: voices = [] } = useQuery({
     queryKey: ['voices'],
@@ -123,8 +126,30 @@ export default function JobDetail() {
       if (channel && channel.voiceId) {
         setSelectedVoiceId(channel.voiceId)
       }
+      if (job.ttsVoiceId) setSelectedVoiceId(job.ttsVoiceId)
     }
   }, [job, channels])
+
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+  }, [previewUrl])
+
+  const previewVoice = async () => {
+    if (selectedVoiceId === 'default_ko' || !previewText.trim() || previewText.trim().length > 100) return
+    setPreviewLoading(true)
+    try {
+      const response = await apiClient.post('/channels/voices/preview', {
+        voiceId: selectedVoiceId,
+        text: previewText.trim(),
+      }, { responseType: 'blob' })
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(URL.createObjectURL(response.data))
+    } catch (error) {
+      console.error('목소리 미리듣기 실패', error)
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
 
   const { data: approvals = [] } = useQuery({
     queryKey: ['approvals', id], queryFn: () => jobsApi.approvals(id), refetchInterval: 3000,
@@ -227,6 +252,16 @@ export default function JobDetail() {
     }
   })
 
+  const confirmKeywordMut = useMutation({
+    mutationFn: (keyword) => jobsApi.confirmKeyword(id, keyword),
+    onSuccess: () => {
+      qc.invalidateQueries(['job', id])
+      qc.invalidateQueries(['approvals', id])
+      qc.invalidateQueries(['assets', id, 'KEYWORD'])
+    },
+    onError: (err) => alert('키워드 선택 실패: ' + (err.response?.data?.message || err.message)),
+  })
+
   const regenImageMut = useMutation({
     mutationFn: ({ index, text, section, mode }) => jobsApi.updateSceneImage(id, index, text, section, mode),
     onSuccess: (data, variables) => {
@@ -291,7 +326,7 @@ export default function JobDetail() {
     mutationFn: () => jobsApi.delete(id),
     onSuccess: () => {
       alert('작업이 성공적으로 삭제되었습니다.')
-      navigate('/jobs')
+      navigate('/longform')
     },
     onError: (err) => {
       alert('작업 삭제 실패: ' + (err.response?.data?.message || err.message))
@@ -337,12 +372,31 @@ export default function JobDetail() {
     finally { setRunningStep(null) }
   }
 
+  const handleGuidedGateApprove = async (step) => {
+    setRunningStep(`${step.key}-approve`)
+    try {
+      if (step.gate === 'TTS') {
+        if (!selectedVoiceId || selectedVoiceId === 'default_ko') {
+          throw new Error('TTS 생성 전에 ElevenLabs 목소리를 선택하세요.')
+        }
+        await jobsApi.selectTtsVoice(id, selectedVoiceId)
+      }
+      await jobsApi.approve(id, step.gate, step.gate === 'TTS' ? `목소리 선택: ${selectedVoiceId}` : '')
+      qc.invalidateQueries(['job', id])
+      qc.invalidateQueries(['approvals', id])
+    } catch (e) {
+      alert('게이트 승인 실패: ' + (e.response?.data?.message || e.message))
+    } finally {
+      setRunningStep(null)
+    }
+  }
+
   if (isLoading) return <Layout><div className="flex items-center justify-center h-64"><Loader className="animate-spin text-accent-cyan" size={32}/></div></Layout>
   if (!job) return <Layout><div className="text-navy-400 p-8">작업을 찾을 수 없습니다.</div></Layout>
 
   const isAuto = job.autonomy === 'AUTO'
   const isGuided = job.autonomy === 'GUIDED'
-  const isManual = job.autonomy === 'MANUAL'
+  const isManual = false
   const isDone = ['READY','PUBLISHED'].includes(job.status)
   const isRunning = !['DRAFT', 'READY', 'PUBLISHED', 'FAILED'].includes(job.status)
   const isDeletable = ['DRAFT', 'READY', 'FAILED'].includes(job.status)
@@ -353,12 +407,12 @@ export default function JobDetail() {
       {/* 헤더 */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/jobs')} className="text-navy-400 hover:text-white transition"><ChevronLeft size={24}/></button>
+          <button onClick={() => navigate('/longform')} className="text-navy-400 hover:text-white transition"><ChevronLeft size={24}/></button>
           <div>
             <h1 className="text-2xl font-bold">{job.title}</h1>
             <div className="text-sm text-navy-400 mt-1 flex items-center gap-2 flex-wrap">
-              <span>{job.category}</span><span>·</span><span>{job.longformTargetMinutes}분</span><span>·</span>
-              <span className={`text-sm px-2.5 py-1 rounded-full border font-medium ${AUTONOMY_STYLE[job.autonomy]}`}>{job.autonomy}</span>
+              <span>{formatCategory(job.category)}</span><span>·</span><span>{job.longformTargetMinutes}분</span><span>·</span>
+              <span className={`text-sm px-2.5 py-1 rounded-full border font-medium ${AUTONOMY_STYLE[job.autonomy]}`}>{formatAutonomy(job.autonomy)}</span>
               <span className="text-navy-400 text-sm">{AUTONOMY_DESC[job.autonomy]}</span>
             </div>
           </div>
@@ -408,16 +462,10 @@ export default function JobDetail() {
         </div>
       </div>
 
-      {isManual && !isDone && (
-        <div className="bg-accent-gold/10 border border-accent-gold/30 rounded-xl px-5 py-4 mb-5 flex items-center gap-3">
-          <AlertCircle className="text-accent-gold flex-shrink-0" size={20}/>
-          <p className="text-sm text-accent-gold"><span className="font-semibold">수동 모드</span> — 각 단계마다 "실행" 후 결과를 확인하고 승인해야 다음 단계로 넘어갑니다.</p>
-        </div>
-      )}
       {isGuided && !isDone && (
         <div className="bg-accent-cyan/10 border border-accent-cyan/30 rounded-xl px-5 py-4 mb-5 flex items-center gap-3">
           <AlertCircle className="text-accent-cyan flex-shrink-0" size={20}/>
-          <p className="text-sm text-accent-cyan"><span className="font-semibold">반자동 모드</span> — 키워드 선택과 최종 미리보기만 검토하면 나머지는 자동 진행됩니다.</p>
+          <p className="text-sm text-accent-cyan"><span className="font-semibold">반자동 모드</span> — 키워드·스크립트·목소리·이미지를 검토하고 승인할 때만 다음 단계로 진행됩니다.</p>
         </div>
       )}
       {isAuto && !isDone && (
@@ -454,7 +502,7 @@ export default function JobDetail() {
                 </button>
               )}
               {['PREVIEW_PENDING', 'READY'].includes(job.status) && (
-                <a href={`/jobs/${id}/shorts`}
+                <a href={`/longform/${id}/shorts`}
                   className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 transition"
                 >
                   쇼츠 제작하기
@@ -704,8 +752,8 @@ export default function JobDetail() {
           {PIPELINE_STEPS.map((step, idx) => {
             const ss = getStepStatus(step, job, approvals)
             const approval = approvals.find(a => a.gate === step.gate)
-            const showRun = ss === 'active' && isManual && runningStep === null
-            const guidedGates = ['KEYWORD','PREVIEW']
+            const showRun = ss === 'active' && runningStep === null && (isManual || (isGuided && ['keyword', 'tts'].includes(step.key)))
+            const guidedGates = ['KEYWORD','SCRIPT','TTS','IMAGES','PREVIEW']
             const showGuidedApprove = isGuided && ss === 'active' && guidedGates.includes(step.gate)
             const showManualApprove = isManual && ss === 'active' && runningStep !== step.key
 
@@ -724,7 +772,7 @@ export default function JobDetail() {
                   <div className="flex items-center gap-2">
                     {showRun && (
                       <div className="flex items-center gap-2">
-                        {step.key === 'tts' && (
+                        {step.key === 'tts' && (showRun || (isGuided && ss === 'active')) && (
                           <div className="flex items-center gap-2">
                             <select
                               value={selectedVoiceId}
@@ -738,6 +786,27 @@ export default function JobDetail() {
                                 </option>
                               ))}
                             </select>
+                            {selectedVoiceId !== 'default_ko' && (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    value={previewText}
+                                    maxLength={100}
+                                    onChange={(e) => setPreviewText(e.target.value)}
+                                    className="w-64 bg-navy-800 border border-navy-600 rounded px-2 py-1 text-xs text-white"
+                                    aria-label="미리듣기 문장"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={previewVoice}
+                                    disabled={previewLoading || !previewText.trim() || previewText.trim().length > 100}
+                                    className="px-2 py-1 rounded bg-accent-violet/20 text-accent-violet text-xs disabled:opacity-50"
+                                  >{previewLoading ? '생성 중…' : '미리듣기'}</button>
+                                </div>
+                                <span className="text-[10px] text-navy-400">{previewText.trim().length}/100자 · 같은 문장은 7일간 캐시</span>
+                                {previewUrl && <audio src={previewUrl} controls autoPlay className="h-6 w-56" />}
+                              </div>
+                            )}
                             {selectedVoiceId !== 'default_ko' && voices.find(v => v.voiceId === selectedVoiceId) && (
                               <div className="flex flex-col gap-1">
                                 {voices.find(v => v.voiceId === selectedVoiceId).previewUrl && (
@@ -773,7 +842,10 @@ export default function JobDetail() {
                       </div>
                     )}
                     {(showManualApprove || showGuidedApprove) && (
-                      <button onClick={() => setGateModal({ gate: step.gate, step })}
+                      <button onClick={() => showGuidedApprove
+                        ? handleGuidedGateApprove(step)
+                        : setGateModal({ gate: step.gate, step })}
+                        disabled={runningStep === `${step.key}-approve` || (step.gate === 'TTS' && selectedVoiceId === 'default_ko')}
                         className="text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/30 px-4 py-2 rounded-lg hover:bg-accent-gold/30 transition">검토 / 승인</button>
                     )}
                     {ss === 'active' && isAuto && <Loader size={16} className="animate-spin text-accent-cyan"/>}
@@ -812,15 +884,46 @@ export default function JobDetail() {
                     <p className="text-sm text-navy-400 mt-3 mb-2">후보 {kwCandidates.length}개</p>
                     <div className="space-y-1.5">
                       {kwCandidates.map((c, i) => (
-                        <div key={i} className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg ${c.is_outperformer ? 'bg-accent-gold/10 border border-accent-gold/20' : 'bg-navy-700/50'}`}>
-                          <div className="flex items-center gap-2">
+                        <div key={i} className={`px-3.5 py-2.5 rounded-lg ${c.is_outperformer ? 'bg-accent-gold/10 border border-accent-gold/20' : 'bg-navy-700/50'}`}>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
                             {c.is_outperformer && <Star size={13} className="text-accent-gold fill-accent-gold"/>}
                             <span className="text-sm">{c.keyword}</span>
-                          </div>
-                          <div className="text-sm text-navy-400 flex gap-3">
+                            </div>
+                            <div className="text-sm text-navy-400 flex flex-wrap justify-end gap-3">
+                            <span>조회 {(c.views || 0).toLocaleString()}</span>
+                            <span>구독 {(c.subscribers || 0).toLocaleString()}</span>
                             <span>×{c.outperformance_index?.toFixed(1)}</span>
                             <span>{c.velocity_vph?.toFixed(0)}vph</span>
+                            <span>조회/구독 {c.engagement_ratio?.toFixed(2)}×</span>
+                            <span>좋아요 {c.likes_available === false ? '비공개' : (c.likes || 0).toLocaleString()}</span>
+                            <span>{c.duration_seconds ? `${Math.round(c.duration_seconds)}초` : '길이 없음'}</span>
+                            {isGuided && job.status === 'KEYWORD_PENDING' && (
+                              <button
+                                type="button"
+                                onClick={() => confirmKeywordMut.mutate(c.keyword)}
+                                disabled={confirmKeywordMut.isPending}
+                                className="text-accent-cyan font-semibold hover:underline disabled:opacity-50"
+                              >이 키워드 선택</button>
+                            )}
+                            </div>
                           </div>
+                          {c.source_videos?.length > 0 && (
+                            <div className="mt-1.5 pl-5 text-[11px] text-navy-400 space-y-0.5">
+                              {c.source_videos.slice(0, 2).map((video, vi) => (
+                                <a
+                                  key={video.video_id || vi}
+                                  href={video.video_id ? `https://www.youtube.com/watch?v=${video.video_id}` : undefined}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="block hover:text-accent-cyan truncate max-w-[680px]"
+                                >
+                                  ↳ {video.title} · 조회 {(video.views || 0).toLocaleString()} · 구독 {(video.subscribers || 0).toLocaleString()} · 좋아요 {video.likes_available === false ? '비공개' : (video.likes || 0).toLocaleString()}
+                                </a>
+                              ))}
+                              <span className="block text-navy-500">평균 시청시간/CTR: 공개 API로 확인 불가</span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1368,9 +1471,9 @@ export default function JobDetail() {
             <h3 className="text-base font-semibold mb-3">작업 정보</h3>
             <div className="space-y-3 text-sm">
               <InfoRow label="상태" value={<StatusBadge status={job.status} small/>}/>
-              <InfoRow label="카테고리" value={job.category}/>
+              <InfoRow label="카테고리" value={formatCategory(job.category)}/>
               <InfoRow label="목표 길이" value={`${job.longformTargetMinutes}분`}/>
-              <InfoRow label="자율성" value={<span className={`text-sm px-2.5 py-1 rounded-full border ${AUTONOMY_STYLE[job.autonomy]}`}>{job.autonomy}</span>}/>
+              <InfoRow label="진행 방식" value={<span className={`text-sm px-2.5 py-1 rounded-full border ${AUTONOMY_STYLE[job.autonomy]}`}>{formatAutonomy(job.autonomy)}</span>}/>
               {job.keyword && <InfoRow label="확정 키워드" value={<span className="text-accent-cyan text-sm">{job.keyword}</span>}/>}
             </div>
           </div>

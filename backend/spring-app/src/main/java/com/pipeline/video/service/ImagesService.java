@@ -58,14 +58,16 @@ public class ImagesService {
         String characterImagePath = null;
         String characterStylePrompt = null;
         String characterPosesDir = null;  // [S2-4] 이중 레이어 합성용 포즈 디렉토리
-        if (job.getChannelId() != null) {
-            ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
+        String characterProfileId = job.getCharacterOverride() != null && !job.getCharacterOverride().isBlank()
+                ? job.getCharacterOverride() : job.getChannelId();
+        if (characterProfileId != null) {
+            ChannelProfile profile = channelProfileRepository.findById(characterProfileId).orElse(null);
             if (profile != null) {
                 characterImagePath = profile.getCharacterImagePath();
                 characterStylePrompt = profile.getCharacterStylePrompt();
                 characterPosesDir = profile.getCharacterPosesDir();
                 log.info("채널 캐릭터 프로필 로드 완료: channelId={}, characterImagePath={}, posesDir={}",
-                        job.getChannelId(), characterImagePath, characterPosesDir);
+                        characterProfileId, characterImagePath, characterPosesDir);
             }
         }
 
@@ -224,8 +226,10 @@ public class ImagesService {
             String characterImagePath = null;
             String characterStylePrompt = null;
             String characterPosesDir = null;  // [S2-4]
-            if (job.getChannelId() != null) {
-                ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
+            String characterProfileId = job.getCharacterOverride() != null && !job.getCharacterOverride().isBlank()
+                    ? job.getCharacterOverride() : job.getChannelId();
+            if (characterProfileId != null) {
+                ChannelProfile profile = channelProfileRepository.findById(characterProfileId).orElse(null);
                 if (profile != null) {
                     characterImagePath = profile.getCharacterImagePath();
                     characterStylePrompt = profile.getCharacterStylePrompt();

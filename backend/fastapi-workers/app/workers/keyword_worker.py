@@ -38,6 +38,7 @@ from typing import Optional
 from app.providers.factory import get_trending_video_analyzer
 from app.workers.market_data_collector import MarketDataCollector
 from app.workers.news_keyword_extractor import NewsKeywordExtractor
+from app.utils.anthropic_cache import cached_system, log_cache_usage
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,20 @@ CATEGORY_LABELS = {
     "CRYPTO": "암호화폐",
     "CUSTOM": "주식시장 전반",
 }
+
+KEYWORD_SYSTEM = """당신은 한국 금융·주식 유튜브 채널의 키워드 편집장입니다.
+입력으로 제공된 뉴스, YouTube 검색 결과, 시장 데이터만 근거로 후보를 평가합니다.
+제공된 자료 밖의 종목명, 상장시장, 가격, 등락률, 거래대금, 조회수, 날짜를 절대 창작하지 않습니다.
+키워드는 원문 후보를 보존하고, 여러 원문을 임의의 새로운 사실로 합성하지 않습니다.
+후보는 시의성, 검색 의도, 20분 영상으로 확장 가능한 깊이, 금융 채널 적합성,
+경쟁 강도, 채널 규모 대비 조회 성과를 함께 고려해야 합니다.
+YouTube 통계의 의미를 혼동하지 마세요. 공개 Data API에서 확인할 수 없는
+평균 시청 시간과 CTR은 추정하거나 숫자로 만들지 말고 unavailable로 표시합니다.
+조회수/구독자수는 채널 규모를 보정하는 참고 지표일 뿐 절대적인 성공 보장이 아닙니다.
+각 후보의 근거는 입력 데이터의 video_id와 통계에 연결되어야 하며, 근거 없는 후보는 제외합니다.
+응답은 반드시 JSON 하나만 반환합니다. candidates 배열의 각 원소는 keyword, reason,
+content_angle, source(news|youtube|both), estimated_interest(high|medium|low),
+evidence_video_ids 배열을 포함해야 합니다."""
 
 
 class KeywordWorker:
@@ -111,6 +126,7 @@ class KeywordWorker:
                     news_keywords, yt_candidates, market_data,
                     category, seed, limit, api_key
                 )
+                candidates = self._attach_youtube_metrics(candidates, yt_candidates)
                 logger.info(f"Claude 순위화 완료: {len(candidates)}개 후보")
 
                 # [버그 수정] 그라운딩 검증 — 실제 데이터에 없는 수치를 지어낸
@@ -175,8 +191,12 @@ class KeywordWorker:
 
         # YouTube 후보 상위 10개
         yt_top = [
-            f"'{c['keyword']}' (YouTube 종합점수 {c['composite_score']:.2f}, "
-            f"outperformer={'예' if c.get('is_outperformer') else '아니오'})"
+            f"'{c['keyword']}' (종합점수 {c['composite_score']:.2f}, "
+            f"조회수 {c.get('source_videos', [{}])[0].get('views', 0):,}, "
+            f"구독자 대비 {c.get('engagement_ratio', 0):.3f}, "
+            f"좋아요 {c.get('likes', 0):,}, 댓글 {c.get('comments', 0):,}, "
+            f"영상길이 {c.get('duration_seconds', 0):.0f}초, "
+            f"평균시청시간=공개불가, video_id={c.get('source_videos', [{}])[0].get('video_id', '')})"
             for c in yt_candidates[:10]
         ]
 
@@ -227,7 +247,8 @@ YouTube 트렌딩 분석 기반 키워드 후보:
       "reason": "선정 이유 (시장 맥락 포함, 2-3문장)",
       "content_angle": "영상에서 다룰 핵심 관점",
       "source": "news|youtube|both",
-      "estimated_interest": "high|medium|low"
+      "estimated_interest": "high|medium|low",
+      "evidence_video_ids": ["YouTube video_id 또는 빈 배열"]
     }}
   ]
 }}"""
@@ -238,8 +259,10 @@ YouTube 트렌딩 분석 기반 키워드 후보:
             # _fallback_candidates()로만 빠지고 있었을 가능성이 높습니다.
             model="claude-sonnet-4-6",
             max_tokens=3000,
+            system=cached_system(KEYWORD_SYSTEM),
             messages=[{"role": "user", "content": prompt}],
         )
+        log_cache_usage(response, "keyword_worker")
 
         raw = response.content[0].text.strip()
         # JSON 파싱
@@ -264,6 +287,7 @@ YouTube 트렌딩 분석 기반 키워드 후보:
                 "engagement_ratio": 0.0,
                 "outperformance_index": 0.0,
                 "velocity_vph": 0.0,
+                "evidence_video_ids": c.get("evidence_video_ids", []),
                 "is_outperformer": i == 0,
                 "source_videos": [],
             })
@@ -334,6 +358,32 @@ YouTube 트렌딩 분석 기반 키워드 후보:
     # ──────────────────────────────────────────────────────────
     # YouTube 점수 계산 (기존 로직 유지)
     # ──────────────────────────────────────────────────────────
+    def _attach_youtube_metrics(self, candidates: list, yt_candidates: list) -> list:
+        """Carry real API evidence into Claude-ranked candidates."""
+        for candidate in candidates:
+            name = str(candidate.get("keyword", "")).strip().lower()
+            match = next(
+                (item for item in yt_candidates
+                 if name and (name == str(item.get("keyword", "")).strip().lower()
+                              or name in str(item.get("keyword", "")).lower()
+                              or str(item.get("keyword", "")).lower() in name)),
+                None,
+            )
+            if not match:
+                continue
+            for key in (
+                "views", "subscribers", "channel_avg_views", "engagement_ratio",
+                "outperformance_index", "velocity_vph", "likes", "comments",
+                "likes_available", "comments_available",
+                "duration_seconds", "average_view_duration_seconds",
+                "average_view_percentage", "retention_available",
+                "channel_avg_views_is_sample", "subscriber_count_available",
+                "source_videos",
+            ):
+                if key in match:
+                    candidate[key] = match[key]
+        return candidates
+
     def _score_yt_videos(self, videos: list) -> list:
         scored = []
         for v in videos:
@@ -354,17 +404,41 @@ YouTube 트렌딩 분석 기반 키워드 후보:
             scored.append({
                 "keyword": _extract_keyword(v.title),
                 "composite_score": composite_score,
+                "views": v.views,
+                "subscribers": v.subscribers,
+                "channel_avg_views": v.channel_avg_views,
                 "competition": competition,
                 "engagement_ratio": engagement_ratio,
                 "outperformance_index": outperformance_index,
                 "velocity_vph": velocity_vph,
+                "likes": v.likes,
+                "comments": v.comments,
+                "likes_available": v.likes_available,
+                "comments_available": v.comments_available,
+                "duration_seconds": v.duration_seconds,
+                "average_view_duration_seconds": v.average_view_duration_seconds,
+                "average_view_percentage": v.average_view_percentage,
+                "retention_available": v.retention_available,
+                "channel_avg_views_is_sample": v.channel_avg_views_is_sample,
+                "subscriber_count_available": v.subscriber_count_available,
                 "is_outperformer": False,
                 "source": "youtube",
                 "source_videos": [{
                     "title": v.title,
                     "channel_title": v.channel_title,
+                    "video_id": v.video_id,
                     "views": v.views,
                     "subscribers": v.subscribers,
+                    "likes": v.likes,
+                    "comments": v.comments,
+                    "likes_available": v.likes_available,
+                    "comments_available": v.comments_available,
+                    "duration_seconds": v.duration_seconds,
+                    "average_view_duration_seconds": v.average_view_duration_seconds,
+                    "average_view_percentage": v.average_view_percentage,
+                    "retention_available": v.retention_available,
+                    "channel_avg_views_is_sample": v.channel_avg_views_is_sample,
+                    "subscriber_count_available": v.subscriber_count_available,
                     "hours_since_publish": v.hours_since_publish,
                 }],
             })

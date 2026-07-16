@@ -1,283 +1,79 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Video, ChevronRight } from 'lucide-react'
+import { BarChart3, ChevronLeft, ChevronRight, Plus, Search, Youtube } from 'lucide-react'
 import Layout from '../components/Layout'
-import JobFilterBar from '../components/JobFilterBar'
-import Pagination from '../components/Pagination'
+import DailyKeywordResearch from '../components/dashboard/DailyKeywordResearch'
 import StatusBadge from '../components/StatusBadge'
 import { jobsApi } from '../api/jobs'
-import { AUTONOMY_LABEL } from '../constants/jobStatus'
-import apiClient from '../api/client'
+import { formatAutonomy, formatCategory } from '../constants/jobStatus'
 
-/**
- * 이전에는 이 파일이 CATEGORY_LIST / STATUS_LIST / STATUS_LABEL / STATUS_COLOR /
- * 필터 마크업 / 페이지네이션 마크업을 전부 자체적으로 갖고 있었고, Dashboard.jsx /
- * Admin.jsx도 거의 동일한 코드를 각자 복붙해서 갖고 있었습니다. 그 결과
- * Dashboard에만 있던 ASSOCIATED_STOCKS 카테고리가 여기엔 없는 등 세 페이지가
- * 조금씩 어긋나 있었습니다. 이제 공통 컴포넌트(JobFilterBar/Pagination/StatusBadge)와
- * 공통 상수(constants/jobStatus.js)를 가져다 쓰는 것으로 통일했습니다.
- */
+const CATEGORY_LABEL = {
+  KOSPI: '코스피', KOSDAQ: '코스닥', US_STOCKS: '미국 주식', INDIVIDUAL_STOCK: '개별 종목',
+  GLOBAL_MACRO: '글로벌 매크로', CRYPTO: '가상자산', CUSTOM: '직접 입력',
+}
+
+function isShortsSourceJob(job) {
+  return job.renderProfile === 'SHORTS_9x16' || String(job.title || '').startsWith('쇼츠:')
+}
+
 export default function Jobs() {
   const navigate = useNavigate()
-  const [showModal, setShowModal] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('ALL')
-  const [selectedMode, setSelectedMode] = useState('ALL')
-  const [selectedStatus, setSelectedStatus] = useState('ALL')
-
-  const [form, setForm] = useState({
-    title: '', category: 'KOSPI', autonomy: 'AUTO',
-    longformTargetMinutes: 20, budgetCap: 100, channelId: ''
-  })
-  const [creating, setCreating] = useState(false)
-
-  const { data: jobs = [] } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: jobsApi.list,
-    refetchInterval: 5000,
-  })
-
-  const { data: channels = [] } = useQuery({
-    queryKey: ['channels'],
-    queryFn: () => apiClient.get('/channels').then(r => r.data),
-  })
-
-  const handleCreate = async (e) => {
-    e.preventDefault()
-    setCreating(true)
-    try {
-      const job = await jobsApi.create(form)
-      setShowModal(false)
-      navigate(`/jobs/${job.id}`)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const handleResetFilters = () => {
-    setSearchQuery('')
-    setSelectedCategory('ALL')
-    setSelectedMode('ALL')
-    setSelectedStatus('ALL')
-    setCurrentPage(1)
-  }
-
-  const sortedJobs = [...jobs].sort((a, b) => b.id - a.id)
-
-  const filteredJobs = sortedJobs.filter(job => {
-    if (selectedCategory !== 'ALL' && job.category !== selectedCategory) return false
-    if (searchQuery && !job.title?.toLowerCase().includes(searchQuery.toLowerCase())) return false
-    if (selectedMode !== 'ALL' && job.autonomy !== selectedMode) return false
-    if (selectedStatus !== 'ALL' && job.status !== selectedStatus) return false
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('ALL')
+  const [mode, setMode] = useState('ALL')
+  const [page, setPage] = useState(1)
+  const { data: allJobs = [], isLoading, isError } = useQuery({ queryKey: ['jobs'], queryFn: jobsApi.list, refetchInterval: 15000 })
+  const jobs = allJobs.filter(job => !isShortsSourceJob(job)).filter(job => {
+    const term = search.trim().toLowerCase()
+    if (term && !`${job.title || ''} ${job.keyword || ''}`.toLowerCase().includes(term)) return false
+    if (category !== 'ALL' && job.category !== category) return false
+    if (mode !== 'ALL' && job.autonomy !== mode) return false
     return true
-  })
-
-  const pageItems = filteredJobs.slice((currentPage - 1) * 10, currentPage * 10)
+  }).sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
+  const totalPages = Math.max(1, Math.ceil(jobs.length / 10))
+  const pageItems = jobs.slice((page - 1) * 10, page * 10)
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [page, totalPages])
+  const resetPage = (setter) => (value) => { setter(value); setPage(1) }
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">롱폼 작업</h1>
-          <p className="text-gray-400 text-sm mt-1">{filteredJobs.length}개 작업</p>
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div><p className="text-sm font-semibold text-accent-cyan">롱폼 제작실</p><h1 className="text-2xl font-bold text-white mt-1">기획부터 재조립까지</h1><p className="text-sm text-gray-400 mt-2">키워드와 YouTube 지표를 비교한 뒤, 롱폼 작업을 생성하고 단계별로 검토합니다.</p></div>
+          <button onClick={() => navigate('/longform/new')} className="bg-accent-cyan text-navy-950 rounded-lg px-4 py-2.5 text-sm font-semibold flex items-center gap-2"><Plus size={16}/>새 롱폼 작업</button>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-accent-cyan text-navy-950 font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition"
-        >
-          <Plus size={16} />
-          새 작업
-        </button>
-      </div>
 
-      <div className="mb-6">
-        <JobFilterBar
-          searchQuery={searchQuery}
-          onSearchChange={v => { setSearchQuery(v); setCurrentPage(1) }}
-          category={selectedCategory}
-          onCategoryChange={v => { setSelectedCategory(v); setCurrentPage(1) }}
-          mode={selectedMode}
-          onModeChange={v => { setSelectedMode(v); setCurrentPage(1) }}
-          status={selectedStatus}
-          onStatusChange={v => { setSelectedStatus(v); setCurrentPage(1) }}
-          onReset={handleResetFilters}
-        />
-      </div>
-
-      <div className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
-        {filteredJobs.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <Video size={40} className="mx-auto mb-3 opacity-30" />
-            <p>조건에 맞는 작업이 없습니다.</p>
-          </div>
-        ) : (
-          <>
-            <div className="divide-y divide-navy-700">
-              {pageItems.map(job => (
-                <button
-                  key={job.id}
-                  onClick={() => navigate(`/jobs/${job.id}`)}
-                  className="w-full flex items-center justify-between px-6 py-4 hover:bg-navy-700/50 transition text-left"
-                >
-                  <div className="flex items-center gap-4 overflow-hidden mr-4">
-                    <div className="w-10 h-10 bg-navy-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Video size={18} className="text-gray-400" />
-                    </div>
-                    <div className="overflow-hidden">
-                      <div className="font-semibold text-white truncate max-w-[340px]" title={job.title}>
-                        {job.title}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
-                        <span>{job.category}</span>
-                        <span>·</span>
-                        <span>{job.longformTargetMinutes}분</span>
-                        <span>·</span>
-                        <span>{AUTONOMY_LABEL[job.autonomy] || job.autonomy}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <StatusBadge status={job.status} small />
-                    <ChevronRight size={16} className="text-gray-600" />
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <Pagination
-              total={filteredJobs.length}
-              currentPage={currentPage}
-              onChange={setCurrentPage}
-            />
-          </>
-        )}
-      </div>
-
-      {/* 새 작업 모달 (빠른 생성용 — 상세 마법사는 /jobs/new) */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-navy-800 rounded-xl p-8 w-full max-w-md border border-navy-700 shadow-2xl">
-            <h2 className="text-lg font-bold mb-6">새 롱폼 영상 만들기</h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">영상 제목</label>
-                <input
-                  value={form.title}
-                  onChange={e => setForm({ ...form, title: e.target.value })}
-                  placeholder="예: 코스피 주간 전망 분석"
-                  className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">대상 채널</label>
-                <select
-                  value={form.channelId || ''}
-                  onChange={e => setForm({ ...form, channelId: e.target.value || null })}
-                  className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                >
-                  <option value="">채널 선택 안 함 (기본)</option>
-                  {channels.map(c => (
-                    <option key={c.channelId} value={c.channelId}>
-                      {c.channelName} ({c.channelId})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">카테고리</label>
-                  <select
-                    value={form.category}
-                    onChange={e => setForm({ ...form, category: e.target.value })}
-                    className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                  >
-                    <option value="KOSPI">코스피</option>
-                    <option value="KOSDAQ">코스닥</option>
-                    <option value="US_STOCKS">미국 주식</option>
-                    <option value="INDIVIDUAL_STOCK">개별 종목</option>
-                    <option value="GLOBAL_MACRO">글로벌 매크로</option>
-                    <option value="CRYPTO">암호화폐</option>
-                    <option value="CUSTOM">기타</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">자율성 모드</label>
-                  <select
-                    value={form.autonomy}
-                    onChange={e => setForm({ ...form, autonomy: e.target.value })}
-                    className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                  >
-                    <option value="AUTO">자동 (AUTO)</option>
-                    <option value="GUIDED">반자동 (GUIDED)</option>
-                    <option value="MANUAL">수동 (MANUAL)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">목표 길이</label>
-                  <select
-                    value={form.longformTargetMinutes}
-                    onChange={e => setForm({ ...form, longformTargetMinutes: Number(e.target.value) })}
-                    className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                  >
-                    <option value={1}>1분 테스트</option>
-                    <option value={10}>10분</option>
-                    <option value={15}>15분</option>
-                    <option value={20}>20분</option>
-                    <option value={30}>30분</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">예산 ($)</label>
-                  <input
-                    type="number"
-                    value={form.budgetCap}
-                    onChange={e => setForm({ ...form, budgetCap: Number(e.target.value) })}
-                    min={1} max={1000}
-                    className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                  />
-                </div>
-              </div>
-
-              {form.autonomy !== 'AUTO' && (
-                <div className="bg-navy-700/50 rounded-lg px-4 py-3 text-xs text-gray-400">
-                  {form.autonomy === 'GUIDED'
-                    ? '반자동: 키워드 선택과 최종 미리보기만 검토하고 나머지는 자동으로 진행됩니다.'
-                    : '수동: 각 단계마다 검토 후 승인해야 다음 단계로 진행됩니다.'}
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 bg-navy-700 text-gray-300 rounded-lg py-2.5 text-sm hover:bg-navy-600 transition"
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="flex-1 bg-accent-cyan text-navy-950 font-semibold rounded-lg py-2.5 text-sm hover:opacity-90 transition disabled:opacity-50"
-                >
-                  {creating ? '생성 중...' : '작업 시작'}
-                </button>
-              </div>
-            </form>
-          </div>
+        <div className="grid md:grid-cols-3 gap-4">
+          <ActionCard icon={<BarChart3 size={20}/>} title="키워드 · 주제 탐색" text="매일 오전 9시 갱신되는 후보와 직접 키워드를 비교합니다." action="아래 후보 보기" onClick={() => document.getElementById('keyword-research')?.scrollIntoView({ behavior: 'smooth' })} />
+          <ActionCard icon={<Youtube size={20}/>} title="YouTube 비교 지표" text="조회수, 구독자 대비 조회수, 좋아요, 자체 스냅샷 기반 증가량을 확인합니다." action="후보 지표 보기" onClick={() => document.getElementById('keyword-research')?.scrollIntoView({ behavior: 'smooth' })} />
+          <ActionCard icon={<Plus size={20}/>} title="롱폼 생성" text="길이·자동/반자동·채널·캐릭터·데이터 시각화를 설정하고 제작을 시작합니다." action="상세 설정 열기" onClick={() => navigate('/longform/new')} />
         </div>
-      )}
+
+        <div id="keyword-research"><DailyKeywordResearch onUseKeyword={(keyword) => navigate(`/longform/new?topic=${encodeURIComponent(keyword)}`)} /></div>
+
+        <section className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
+          <div className="p-5 border-b border-navy-700 flex flex-wrap gap-3 items-center justify-between"><div><h2 className="font-semibold text-white">롱폼 작업 목록</h2><p className="text-xs text-gray-500 mt-1">작업을 열어 스크립트 검토, TTS, 이미지 수정, 재조립 또는 쇼츠 전환을 이어서 진행하세요.</p></div><div className="flex flex-wrap gap-2"><label className="relative"><Search size={15} className="absolute left-3 top-2.5 text-gray-500"/><input value={search} onChange={e => resetPage(setSearch)(e.target.value)} placeholder="제목·키워드 검색" className="bg-navy-900 border border-navy-600 rounded-lg pl-8 pr-3 py-2 text-xs text-white"/></label><select value={category} onChange={e => resetPage(setCategory)(e.target.value)} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white"><option value="ALL">주제 전체</option>{Object.entries(CATEGORY_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><select value={mode} onChange={e => resetPage(setMode)(e.target.value)} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white"><option value="ALL">모드 전체</option><option value="AUTO">자동</option><option value="GUIDED">반자동</option></select></div></div>
+          {isError && <div className="px-5 py-4 text-sm text-accent-red">롱폼 목록을 불러오지 못했습니다. 백엔드 연결을 확인해 주세요.</div>}
+          <div className="divide-y divide-navy-700">{isLoading && <div className="px-5 py-12 text-center text-gray-500">목록을 불러오는 중입니다.</div>}{!isLoading && jobs.length === 0 && <div className="px-5 py-12 text-center text-gray-500">조건에 맞는 롱폼 작업이 없습니다.</div>}{pageItems.map(job => <button key={job.id} onClick={() => navigate(`/longform/${job.id}`)} className="w-full px-5 py-4 flex items-center justify-between gap-4 hover:bg-navy-700/40 text-left transition"><div className="min-w-0"><div className="font-semibold text-white truncate">{job.title}</div><div className="text-xs text-gray-500 mt-1 truncate">{job.keyword || '키워드 미선택'} · {formatCategory(job.category)} · {job.longformTargetMinutes || 0}분 · {formatAutonomy(job.autonomy)}</div></div><div className="flex items-center gap-3 shrink-0"><span className="text-xs text-gray-400">${(Number(job.costAccumulated) || 0).toFixed(2)}</span><StatusBadge status={job.status} small/><ChevronRight size={16} className="text-gray-500"/></div></button>)}</div>
+          {jobs.length > 10 && <Pagination page={page} totalPages={totalPages} total={jobs.length} onChange={setPage}/>}
+        </section>
+      </div>
     </Layout>
   )
+}
+
+function ActionCard({ icon, title, text, action, onClick }) {
+  return <button onClick={onClick} className="text-left rounded-xl border border-navy-700 bg-navy-800 hover:border-accent-cyan/60 p-5 transition"><div className="text-accent-cyan">{icon}</div><h2 className="font-semibold text-white mt-4">{title}</h2><p className="text-sm text-gray-400 leading-6 mt-2">{text}</p><span className="inline-block mt-4 text-sm font-semibold text-accent-cyan">{action} →</span></button>
+}
+
+function Pagination({ page, totalPages, total, onChange }) {
+  const numbers = pageNumbers(page, totalPages)
+  return <div className="px-5 py-3 border-t border-navy-700 flex items-center justify-between text-xs"><span className="text-gray-500">{total}개 중 {(page - 1) * 10 + 1}–{Math.min(page * 10, total)}</span><div className="flex items-center gap-1"><button aria-label="이전 페이지" disabled={page === 1} onClick={() => onChange(page - 1)} className="border border-navy-600 p-1.5 rounded disabled:opacity-40"><ChevronLeft size={14}/></button>{numbers.map((number, index) => number === '…' ? <span key={`ellipsis-${index}`} className="px-1.5 text-gray-500">…</span> : <button key={number} onClick={() => onChange(number)} className={`min-w-7 h-7 rounded ${number === page ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-gray-400 hover:bg-navy-700'}`}>{number}</button>)}<button aria-label="다음 페이지" disabled={page === totalPages} onClick={() => onChange(page + 1)} className="border border-navy-600 p-1.5 rounded disabled:opacity-40"><ChevronRight size={14}/></button></div></div>
+}
+
+function pageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1)
+  const middle = [current - 1, current, current + 1].filter(number => number > 1 && number < total)
+  return [1, ...(middle[0] > 2 ? ['…'] : []), ...middle, ...(middle.at(-1) < total - 1 ? ['…'] : []), total]
 }

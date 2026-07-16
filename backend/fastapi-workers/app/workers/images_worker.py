@@ -12,9 +12,12 @@
 비용: Fal.ai/Gemini API 콜 비용 + FFmpeg 로컬 코딩
 """
 import os
+import json
+import hashlib
 import logging
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from app.utils.process_manager import is_job_stopped
 from app import runtime_config
@@ -25,6 +28,8 @@ from app.utils import gemini_batch
 from app.pipeline.scene_director import SceneDirector, SceneSpec
 from app.providers.real.prompt_builder import build_prompt
 from app.postprocess.text_overlay import add_headline
+from app.utils.budget import plan_preflight, record_cost, write_preflight
+from app.utils.gemini_pressure import gemini_pressure
 
 logger = logging.getLogger(__name__)
 
@@ -144,11 +149,28 @@ class ImagesWorker:
                 enrich_scene_plan(scene, i, len(scenes_meta))
                 for i, scene in enumerate(scenes_meta)
             ])
+        budget_preflight = None
         if scenes_meta:
+            # Cost is planned before the first image call.  A high Pro limit
+            # is reduced to Flash coverage rather than rejecting a whole job.
+            budget_preflight = plan_preflight(
+                len(scenes_meta),
+                str(runtime_config.value("image_quality_tier")),
+                int(runtime_config.value("pro_image_max_scenes")),
+                int(runtime_config.value("intro_kling_max_clips")),
+            )
+            write_preflight(job_id, budget_preflight)
+            if not budget_preflight["allowed"]:
+                raise RuntimeError(
+                    f"Budget preflight blocked this job: expected ₩{budget_preflight['estimated_cost_krw']:,} "
+                    f"> limit ₩{budget_preflight['budget_limit_krw']:,} ({budget_preflight['reason']})"
+                )
+            if budget_preflight["actions"]:
+                logger.warning("Budget preflight degraded optional quality: %s", budget_preflight["actions"])
             scenes_meta = plan_image_quality_tiers(
                 scenes_meta,
                 runtime_config.value("image_quality_tier"),
-                runtime_config.value("pro_image_max_scenes"),
+                int(budget_preflight["pro_scene_count"]),
             )
 
         # Visual direction is deliberately separate from script writing. One
@@ -242,6 +264,29 @@ class ImagesWorker:
             batch_scenes = [build_batch_scene(scene, i) for i, scene in enumerate(scenes_meta)]
             logger.info("Gemini Pro Batch submit: job=%s scenes=%s", job_id, len(batch_scenes))
             return gemini_batch.submit(job_id, batch_scenes, character_reference_paths)
+
+        # Direct and character-composite renders use scene-specific files, so
+        # both can safely share the same bounded worker pool.
+        if (
+            ai_provider
+            and len(scenes_meta) > 1
+            and bool(runtime_config.value("gemini_parallel_enabled"))
+        ):
+            return self._generate_parallel_scenes(
+                scenes_meta=scenes_meta,
+                directed_specs=directed_specs,
+                market_snapshot=market_snapshot,
+                character_reference_paths=character_reference_paths,
+                character_style_prompt=character_style_prompt,
+                lora_model_id=lora_model_id,
+                lora_trigger_word=lora_trigger_word,
+                lora_scale=lora_scale,
+                ai_provider=ai_provider,
+                job_dir=job_dir,
+                job_id=job_id,
+                use_composite=use_composite,
+                character_poses_dir=character_poses_dir,
+            )
 
         generated = []
         # Keep direct Pro 2K rendering interactive, but do not burst a long
@@ -479,6 +524,269 @@ class ImagesWorker:
             "quality_report": {"images": image_quality},
         }
 
+    def _generate_parallel_scenes(
+        self, scenes_meta, directed_specs, market_snapshot,
+        character_reference_paths, character_style_prompt,
+        lora_model_id, lora_trigger_word, lora_scale,
+        ai_provider, job_dir, job_id, use_composite=False, character_poses_dir=None,
+    ) -> dict:
+        """Render independent direct-AI scenes with bounded concurrency.
+
+        Each task writes to a scene-specific raw file and only publishes the
+        final path after validating a decodable image. A failed task never
+        becomes a scene entry, and the method raises before quality/assembly
+        when any scene failed. Re-running the job reuses validated outputs.
+        """
+        import shutil
+
+        def valid_image(path: str) -> bool:
+            try:
+                if not os.path.exists(path) or os.path.getsize(path) <= 15000:
+                    return False
+                try:
+                    from PIL import Image
+                    with Image.open(path) as image:
+                        image.verify()
+                except ImportError:
+                    pass
+                return True
+            except (OSError, ValueError):
+                return False
+
+        def make_context(original: dict, index: int) -> dict:
+            scene = enrich_scene_plan(original, index, len(scenes_meta))
+            narration = scene.get("content") or scene.get("text") or ""
+            spec = directed_specs.get(index)
+            base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
+            prompt_en = build_prompt(spec) if spec else compile_editorial_prompt(scene, base_prompt)
+            image_profile = scene.get("image_profile") or {}
+            return {
+                "index": index,
+                "section": scene.get("section", f"scene_{index}"),
+                "prompt_en": prompt_en,
+                "prompt_ko": scene.get("prompt_ko") or narration or scene.get("title") or "",
+                "pose": scene.get("pose", "neutral"),
+                "visual_type": scene.get("visual_type"),
+                "visual_plan": scene.get("visual_plan"),
+                "art_direction": scene.get("art_direction") or {},
+                "style_profile": scene.get("style_profile", "editorial_comic_2d"),
+                "image_profile": image_profile,
+                "market_snapshot": scene.get("market_snapshot") or market_snapshot,
+                "text": narration,
+                "headline": spec.headline if spec else scene.get("headline", ""),
+                "headline_mood": spec.mood if spec else "neutral",
+                "scene_spec": spec.to_dict() if spec else scene.get("scene_spec"),
+                "spec": spec,
+            }
+
+        contexts = [make_context(scene, index) for index, scene in enumerate(scenes_meta)]
+        manifest_path = job_dir / "images_manifest.json"
+        try:
+            image_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if not isinstance(image_manifest, dict):
+                image_manifest = {}
+        except (OSError, ValueError, TypeError):
+            image_manifest = {}
+
+        def fingerprint(ctx: dict) -> str:
+            payload = {
+                "prompt_en": ctx["prompt_en"],
+                "image_profile": ctx["image_profile"],
+                "character_style_prompt": character_style_prompt,
+                "character_reference_paths": character_reference_paths,
+                "use_composite": use_composite,
+                "character_poses_dir": character_poses_dir,
+                "lora_model_id": lora_model_id,
+                "lora_trigger_word": lora_trigger_word,
+                "lora_scale": lora_scale,
+            }
+            return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()
+
+        def render_one(ctx: dict) -> dict:
+            index = ctx["index"]
+            img_path = str(job_dir / f"scene_{index:03d}.png")
+            raw_img_path = str(job_dir / f"scene_{index:03d}_raw.png")
+            image_profile = ctx["image_profile"]
+            tier = image_profile.get("tier", "flash")
+            scene_fingerprint = fingerprint(ctx)
+            # Legacy files without a manifest remain resumable; once a
+            # manifest exists, a changed prompt/profile forces regeneration.
+            if valid_image(img_path) and (str(index) not in image_manifest or image_manifest.get(str(index)) == scene_fingerprint):
+                return {**ctx, "image_path": img_path, "generation_method": "resumed_existing", "quality_score": 90, "_fingerprint": scene_fingerprint}
+
+            max_retries = max(1, min(int(runtime_config.value("gemini_retry_max")), 8))
+            base_backoff = max(0.25, float(runtime_config.value("gemini_pro_retry_base_seconds")))
+            last_error = None
+            for attempt in range(max_retries):
+                if is_job_stopped(job_id):
+                    raise RuntimeError(f"Job {job_id} stopped by user.")
+                try:
+                    Path(raw_img_path).unlink(missing_ok=True)
+                    if use_composite:
+                        bg_path = str(job_dir / f"scene_{index:03d}_bg.png")
+                        self._generate_background_layer(
+                            ai_provider, ctx["prompt_en"], bg_path, ctx["section"], ctx["pose"], image_profile,
+                        )
+                        if not valid_image(bg_path):
+                            raise RuntimeError("provider returned a missing, undersized, or invalid background")
+                        if ctx["art_direction"].get("character_required", True):
+                            self._composite_character(
+                                bg_path, character_poses_dir, ctx["art_direction"].get("pose_asset") or ctx["pose"],
+                                img_path, job_id, fallback_pose=ctx["pose"],
+                            )
+                        else:
+                            shutil.copy2(bg_path, img_path)
+                    else:
+                        gemini_pressure.acquire()
+                        ai_provider.generate_image(
+                        prompt=ctx["prompt_en"],
+                        output_path=raw_img_path,
+                        section=ctx["section"],
+                        keyword=ctx["prompt_en"][:30],
+                        character_image_path=character_reference_paths[0] if character_reference_paths else None,
+                        character_image_paths=character_reference_paths,
+                        character_style_prompt=character_style_prompt if ctx["art_direction"].get("character_required", True) else "none",
+                        lora_model_id=lora_model_id,
+                        lora_trigger_word=lora_trigger_word,
+                        lora_scale=lora_scale,
+                        image_provider=runtime_config.value("image_provider"),
+                        gemini_model=image_profile.get("model"),
+                        gemini_image_size=image_profile.get("image_size"),
+                        gemini_service_tier=runtime_config.value("gemini_service_tier"),
+                        # The worker owns the bounded retry budget in this
+                        # pool. Avoid multiplying it by the provider's own
+                        # long Pro retry loop (3 worker attempts × 5 provider
+                        # attempts would otherwise turn a short outage into
+                        # a very long job).
+                        gemini_max_attempts=1,
+                        gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+                        style_locked=bool(ctx["spec"]),
+                        )
+                        if not valid_image(raw_img_path):
+                            raise RuntimeError("provider returned a missing, undersized, or invalid image")
+                        # Composite scenes account for their provider call in
+                        # _generate_background_layer.  Counting it again here
+                        # would distort the adaptive error-rate calculation.
+                        gemini_pressure.outcome()
+                    if runtime_config.value("image_headline_overlay"):
+                        add_headline(img_path if use_composite else raw_img_path, img_path, ctx["headline"], ctx["headline_mood"])
+                    elif not use_composite:
+                        shutil.copy2(raw_img_path, img_path)
+                    if not valid_image(img_path):
+                        raise RuntimeError("final image validation failed")
+                    return {
+                        **ctx,
+                        "image_path": img_path,
+                        "generation_method": "flux_lora" if lora_model_id else f"{tier}_gemini",
+                        "quality_score": 95 if lora_model_id else 90,
+                        "_fingerprint": scene_fingerprint,
+                    }
+                except Exception as exc:
+                    last_error = exc
+                    gemini_pressure.outcome(str(exc))
+                    if attempt + 1 >= max_retries:
+                        break
+                    delay = min(60.0, base_backoff * (2 ** attempt) + random.uniform(0.0, 1.0))
+                    logger.warning(
+                        "Image scene %s attempt %s/%s failed; retrying in %.1fs: %s",
+                        index, attempt + 1, max_retries, delay, exc,
+                    )
+                    time.sleep(delay)
+            raise RuntimeError(f"scene {index} image generation failed after {max_retries} attempts: {last_error}")
+
+        max_workers = max(1, min(int(runtime_config.value("gemini_max_concurrency")), 32))
+        logger.info("Parallel image generation enabled: job=%s scenes=%s concurrency=%s retries=%s", job_id, len(contexts), max_workers, runtime_config.value("gemini_retry_max"))
+        results = []
+        failures = []
+        def persist_manifest() -> None:
+            staged = manifest_path.with_suffix(".tmp")
+            staged.write_text(json.dumps(image_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+            os.replace(staged, manifest_path)
+
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(contexts)), thread_name_prefix="image") as pool:
+            futures = {pool.submit(render_one, ctx): ctx["index"] for ctx in contexts}
+            for future in as_completed(futures):
+                index = futures[future]
+                try:
+                    result = future.result()
+                    image_manifest[str(index)] = result.pop("_fingerprint", "")
+                    persist_manifest()
+                    if result.get("generation_method") != "resumed_existing":
+                        tier = str((result.get("image_profile") or {}).get("tier") or "flash")
+                        record_cost(job_id, "pro" if tier == "pro" else "flash")
+                    results.append(result)
+                    logger.info("Parallel image scene complete: job=%s scene=%s", job_id, index)
+                except Exception as exc:
+                    failures.append((index, str(exc)))
+                    logger.error("Parallel image scene failed: job=%s scene=%s error=%s", job_id, index, exc)
+
+        # Do not discard hundreds of successful renders because a transient
+        # 503 exhausted one scene's local attempts.  Finish the first pass,
+        # then give only failed scenes one isolated recovery round.
+        if failures:
+            logger.warning("Image recovery round: retrying failed scenes only: %s", [index for index, _ in failures])
+            context_by_index = {ctx["index"]: ctx for ctx in contexts}
+            first_failures = failures
+            failures = []
+            with ThreadPoolExecutor(max_workers=min(max_workers, len(first_failures)), thread_name_prefix="image-recovery") as pool:
+                futures = {pool.submit(render_one, context_by_index[index]): index for index, _ in first_failures}
+                for future in as_completed(futures):
+                    index = futures[future]
+                    try:
+                        result = future.result()
+                        image_manifest[str(index)] = result.pop("_fingerprint", "")
+                        persist_manifest()
+                        tier = str((result.get("image_profile") or {}).get("tier") or "flash")
+                        record_cost(job_id, "pro" if tier == "pro" else "flash")
+                        results.append(result)
+                        logger.info("Image recovery scene complete: job=%s scene=%s", job_id, index)
+                    except Exception as exc:
+                        failures.append((index, str(exc)))
+                        logger.error("Image recovery scene failed: job=%s scene=%s error=%s", job_id, index, exc)
+
+        if failures:
+            failed_indices = ", ".join(str(index) for index, _ in sorted(failures))
+            raise RuntimeError(f"Image generation incomplete; failed scenes: {failed_indices}")
+
+        generated = []
+        for result in sorted(results, key=lambda item: item["index"]):
+            result.pop("spec", None)
+            generated.append(result)
+        image_quality = assess_images(generated)
+        semantic_quality = assess_visual_alignment(
+            generated,
+            enabled=bool(runtime_config.value("visual_qa_enabled")),
+            max_scenes=int(runtime_config.value("visual_qa_max_scenes")),
+        )
+        semantic_by_index = {item["index"]: item for item in semantic_quality.get("reviewed", [])}
+        metrics_by_index = {metric["index"]: metric for metric in image_quality.get("scene_metrics", [])}
+        for scene in generated:
+            metric = metrics_by_index.get(scene.get("index"), {})
+            scene["quality_score"] = metric.get("score", scene.get("quality_score", 0))
+            scene["quality_flags"] = metric.get("warnings", [])
+            scene["retry_recommended"] = metric.get("retry_recommended", False)
+            semantic = semantic_by_index.get(scene.get("index"))
+            if semantic:
+                scene["semantic_score"] = semantic["score"]
+                scene["semantic_reason"] = semantic["reason"]
+                scene["quality_score"] = min(scene["quality_score"], semantic["score"])
+                scene["retry_recommended"] = scene["retry_recommended"] or semantic["retry_recommended"]
+                if semantic["retry_recommended"]:
+                    scene["quality_flags"] = [*scene["quality_flags"], "semantic_review_recommended"]
+        image_quality["art_direction"] = assess_art_diversity(generated)
+        image_quality["semantic_alignment"] = semantic_quality
+        persist_quality_report(job_id, "images", image_quality)
+        logger.info("Parallel image generation complete: job=%s scenes=%s quality=%s", job_id, len(generated), image_quality["score"])
+        return {
+            "job_id": job_id,
+            "scenes": generated,
+            "scene_count": len(generated),
+            "gifs": [],
+            "gif_count": 0,
+            "quality_report": {"images": image_quality},
+            "budget_preflight": budget_preflight,
+        }
+
     # ============================
     # [S2-3] 배경 레이어 생성
     # ============================
@@ -488,6 +796,7 @@ class ImagesWorker:
         캐릭터 없는 순수 배경 이미지 생성.
         character_style_prompt="background_only" 를 전달해 캐릭터 주입을 차단.
         """
+        gemini_pressure.acquire()
         ai_provider.generate_image(
             prompt=prompt_en,
             output_path=bg_path,
@@ -497,7 +806,14 @@ class ImagesWorker:
             image_provider=runtime_config.value("image_provider"),
             gemini_model=(image_profile or {}).get("model"),
             gemini_image_size=(image_profile or {}).get("image_size"),
+            # Retries are owned by the bounded scene executor.  Keeping a
+            # single provider attempt here prevents retry multiplication when
+            # a character-composite scene is temporarily rate limited.
+            gemini_service_tier=runtime_config.value("gemini_service_tier", "standard"),
+            gemini_max_attempts=1,
+            gemini_retry_base_seconds=runtime_config.integer("gemini_retry_base_seconds", 10),
         )
+        gemini_pressure.outcome()
         logger.info(f"[배경레이어] 생성 완료: {bg_path}")
 
     # ============================

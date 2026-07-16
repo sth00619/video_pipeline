@@ -126,9 +126,18 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "character_required": character_required,
             "camera": camera,
             "lighting": LIGHTING[(index + 1) % len(LIGHTING)],
-            "character_placement": "right third" if character_required else "none",
-            "overlay_strategy": "market_chart" if section == "data" else ("headline_card" if family == "news_headline" else "none"),
+            # Data scenes are composed around a real in-world monitor.  The
+            # generator only supplies the empty surface; deterministic code
+            # fills it with the factual chart after generation.
+            "character_placement": "left third" if section == "data" and character_required else ("right third" if character_required else "none"),
+            "overlay_strategy": "integrated_market_surface" if section == "data" else ("headline_card" if family == "news_headline" else "none"),
+            "data_surface": {"x": 880, "y": 120, "width": 900, "height": 520} if section == "data" else None,
             "negative_constraints": ["no readable text", "no watermark", "no generic gold pile", "no unrelated fire or space scene"],
+            # AI가 그려내는 장식용 표지/라벨은 선택적으로 허용하되, 사실값은 항상 별도 검증 오버레이로 렌더링한다.
+            "decorative_text_allowed": bool(scene.get(
+                "decorative_text_allowed",
+                family in {"news_headline", "news_context", "comparison_board", "factory_dashboard", "data_lab"},
+            )),
         }
         scene["pose"] = pose
         scene["art_direction"] = direction
@@ -205,6 +214,36 @@ def compile_editorial_prompt(scene: dict[str, Any], base_prompt: str) -> str:
             f"wearing {direction.get('wardrobe', 'a professional analyst outfit')}, "
             f"using the {direction.get('pose_asset', 'explaining')} pose"
         )
+    text_clause = (
+        "Decorative, non-factual labels or signage may be integrated naturally into the illustration; "
+        "do not render exact prices, percentages, dates, tickers, or claims. "
+        if direction.get("decorative_text_allowed") else
+        "No readable text, no caption, no number, no logo, no watermark. "
+    )
+    data_surface_clause = ""
+    if scene.get("market_chart"):
+        visual_theme = str((scene.get("market_chart") or {}).get("visual_theme") or "chalkboard")
+        visual_kind = str((scene.get("market_chart") or {}).get("visual_kind") or "trend_dashboard")
+        surface = direction.get("data_surface") or {}
+        surface_by_theme = {
+            "chalkboard": "a blank hand-drawn charcoal chalkboard panel, with subtle chalk dust and a thick uneven white outline",
+            "paper_poster": "a blank warm-cream paper infographic poster pinned naturally to the scene, with hand-inked border and paper texture",
+            "factory_panel": "a blank painted factory control panel with bolts, warning stripes, and a clean central display area",
+        }
+        visual_by_kind = {
+            "trend_dashboard": "a wide price-trend, short bar-movement, and composition-chart layout",
+            "change_arrow": "a bold rising or falling arrow with a short factual number block",
+            "composition_pie": "one large circular composition chart with a compact legend",
+            "comparison": "two tall comparison columns with room above each for an exact value",
+        }
+        data_surface_clause = (
+            f"Build {surface_by_theme.get(visual_theme, surface_by_theme['chalkboard'])} in the {surface.get('anchor', 'right-side')}, "
+            f"with enough unobstructed space for {visual_by_kind.get(visual_kind, visual_by_kind['trend_dashboard'])}. "
+            "The blank information surface MUST be a wide landscape-oriented rectangular board, roughly 16:9 and clearly wider than tall, "
+            "mounted flat and front-facing in the upper-right third of the frame; never a circle, porthole, tall vertical frame, tilted easel, or curved screen. "
+            "The information surface must have no letters, no digits, no chart marks, "
+            "no glare, no hands, and no objects covering it; it will receive a verified Korean chart in compositing. "
+        )
     return (
         f"{base_prompt}. Editorial scene family: {direction.get('family', 'character_role')}. "
         f"Setting: {direction.get('setting', 'finance studio')}. Key props: {props}. "
@@ -212,7 +251,8 @@ def compile_editorial_prompt(scene: dict[str, Any], base_prompt: str) -> str:
         f"Color script: {palette}. Lighting: {direction.get('lighting', 'soft studio key light')}. "
         f"{EDITORIAL_COMIC_STYLE} "
         "Specific real-world business props, strong visual storytelling, saturated but controlled colors. "
-        "No readable text, no caption, no number, no logo, no watermark. "
+        f"{text_clause}"
+        f"{data_surface_clause}"
         "Reserve the lower 22 percent of the frame for separately rendered Korean subtitles."
     )
 

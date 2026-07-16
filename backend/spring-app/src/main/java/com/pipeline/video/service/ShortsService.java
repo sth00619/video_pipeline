@@ -135,7 +135,10 @@ public class ShortsService {
             Map<String, Object> m = segMaps.get(i);
             ShortsSegmentDto s = new ShortsSegmentDto();
             s.setIndex(i + 1);
-            s.setText(m.getOrDefault("label", "구간 " + (i + 1)).toString());
+            // Keep the extracted narration when present.  Labels are editable
+            // UI titles and may be English, whereas the script is useful for
+            // later scenario/keyword work and download metadata.
+            s.setText(m.getOrDefault("text", m.getOrDefault("label", "구간 " + (i + 1))).toString());
             s.setStart(((Number) m.get("start")).doubleValue());
             s.setEnd(((Number) m.get("end")).doubleValue());
             segs.add(s);
@@ -417,9 +420,12 @@ public class ShortsService {
             scene.put("index", segment.getIndex());
             scene.put("text", segment.getText() != null ? segment.getText() : "");
             scene.put("start", segment.getStart() != null ? segment.getStart() : 0.0);
-            double duration = segment.getDuration() != null
-                    ? segment.getDuration()
-                    : ((segment.getEnd() != null && segment.getStart() != null) ? segment.getEnd() - segment.getStart() : 0.0);
+            // The browser sends exact start/end ranges.  Prefer that pair over
+            // a missing or stale duration field so keyword-selected segments
+            // cannot be normalized into zero-length clips.
+            double duration = (segment.getEnd() != null && segment.getStart() != null)
+                    ? segment.getEnd() - segment.getStart()
+                    : (segment.getDuration() != null ? segment.getDuration() : 0.0);
             scene.put("duration", Math.max(0.0, duration));
             rawScenes.add(scene);
         }

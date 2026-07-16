@@ -34,6 +34,10 @@ public class ChannelProfile {
     @Column(name = "character_poses_dir", length = 500)
     private String characterPosesDir;
 
+    /** 채널의 기본 캐릭터. 모든 작업은 이 값을 상속하며 작업별 override가 우선한다. */
+    @Column(name = "character_key", length = 100)
+    private String characterKey;
+
     /** [Sprint 3] 학습 완료된 LoRA 모델 safetensors CDN URL.
      *  Fal.ai flux-lora-fast-training 학습 결과의 diffusers_lora_file.url 값.
      *  설정 시 이미지 생성에 fal-ai/flux-lora 엔드포인트 사용 → 캐릭터 일관성 극대화. */
@@ -75,4 +79,3 @@ public class ChannelProfile {
     @CreationTimestamp
     private LocalDateTime createdAt;
 }
-

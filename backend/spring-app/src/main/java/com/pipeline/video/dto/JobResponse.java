@@ -22,10 +22,13 @@ public class JobResponse {
     private BigDecimal budgetCap;
     private BigDecimal costAccumulated;
     private String createdBy;
+    private String ttsVoiceId;
     private String sourceVideoPath;
     private String outputPath;
     private String policyJson;
     private String channelId;
+    private String characterOverride;
+    private boolean dataVisualsEnabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -36,7 +39,8 @@ public class JobResponse {
         r.setKeyword(job.getKeyword());
         r.setCategory(job.getCategory());
         r.setStatus(job.getStatus());
-        r.setAutonomy(job.getAutonomy());
+        // Legacy MANUAL rows are exposed as the new GUIDED mode.
+        r.setAutonomy(job.getAutonomy() == Autonomy.MANUAL ? Autonomy.GUIDED : job.getAutonomy());
         r.setFormat(job.getFormat());
         r.setRenderProfile(job.getRenderProfile());
         r.setMakeShorts(job.isMakeShorts());
@@ -45,10 +49,13 @@ public class JobResponse {
         r.setBudgetCap(job.getBudgetCap());
         r.setCostAccumulated(job.getCostAccumulated());
         r.setCreatedBy(job.getCreatedBy());
+        r.setTtsVoiceId(job.getTtsVoiceId());
         r.setSourceVideoPath(job.getSourceVideoPath());
         r.setOutputPath(job.getOutputPath());
         r.setPolicyJson(job.getPolicyJson());
         r.setChannelId(job.getChannelId());
+        r.setCharacterOverride(job.getCharacterOverride());
+        r.setDataVisualsEnabled(job.isDataVisualsEnabled());
         r.setCreatedAt(job.getCreatedAt());
         r.setUpdatedAt(job.getUpdatedAt());
         return r;

@@ -13,7 +13,7 @@ public class CreateJobRequest {
     private String title;
     private String keyword;
     private Category category;                       // 주식 카테고리
-    private Autonomy autonomy = Autonomy.MANUAL;
+    private Autonomy autonomy = Autonomy.GUIDED;
     private Format format = Format.FACELESS_NARRATION;
     private RenderProfile renderProfile = RenderProfile.LONGFORM_16x9;
     private boolean makeShorts = false;
@@ -22,4 +22,6 @@ public class CreateJobRequest {
     private BigDecimal budgetCap;
     private String policyJson;
     private String channelId;
+    private String characterOverride;
+    private boolean dataVisualsEnabled = true;
 }

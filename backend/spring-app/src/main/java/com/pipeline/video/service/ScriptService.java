@@ -70,7 +70,7 @@ public class ScriptService {
         }
 
         ScriptGenerateResponse result = fastApiClient.generateScript(
-                jobId, job.getKeyword(), llmTargetMinutes, categoryName, marketSnapshotJson);
+                jobId, job.getKeyword(), llmTargetMinutes, categoryName, marketSnapshotJson, job.isDataVisualsEnabled());
 
         // [버그 수정] 기존에는 BigDecimal.ZERO로 하드코딩되어 있어서 스크립트 생성 비용이
         // 예산 누적에 전혀 반영되지 않았습니다 (JobDetail 비용 게이지가 항상 0으로 표시되던

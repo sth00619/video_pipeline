@@ -31,6 +31,18 @@ class TrendingVideo:
     channel_avg_views: int
     published_at: str
     hours_since_publish: float
+    channel_id: str = ""
+    likes: int = 0
+    comments: int = 0
+    likes_available: bool = True
+    comments_available: bool = True
+    duration_seconds: float = 0.0
+    average_view_duration_seconds: Optional[float] = None
+    average_view_percentage: Optional[float] = None
+    retention_available: bool = False
+    statistics_as_of: str = ""
+    channel_avg_views_is_sample: bool = False
+    subscriber_count_available: bool = True
 
 
 @dataclass

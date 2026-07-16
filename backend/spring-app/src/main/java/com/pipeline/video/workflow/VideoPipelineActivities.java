@@ -19,6 +19,10 @@ public interface VideoPipelineActivities {
     @ActivityMethod
     void generateScript(Long jobId);
 
+    /** Workflow가 GUIDED의 TTS 사전 선택 대기 분기를 결정할 때 사용합니다. */
+    @ActivityMethod
+    boolean isGuided(Long jobId);
+
     /** 스크립트 확정 후 TTS 음성 생성 */
     @ActivityMethod
     void generateTts(Long jobId);

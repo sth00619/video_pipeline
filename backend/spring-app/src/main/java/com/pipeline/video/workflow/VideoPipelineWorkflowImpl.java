@@ -94,13 +94,23 @@ public class VideoPipelineWorkflowImpl implements VideoPipelineWorkflow {
             waitForGate("SCRIPT");
             if (isRejected()) return;
 
+            // GUIDED는 TTS 생성 전에 사용자가 voice를 고르고 TTS 게이트를
+            // 승인해야 합니다. AUTO의 기존 순서는 유지합니다.
+            boolean guidedTtsSelection = activities.isGuided(jobId);
+            if (guidedTtsSelection) {
+                waitForGate("TTS");
+                if (isRejected()) return;
+            }
+
             // 4. TTS 생성
             log.info("TTS 생성 Activity 시작: jobId={}", jobId);
             activities.generateTts(jobId);
 
             // 5. TTS 게이트 승인 대기
-            waitForGate("TTS");
-            if (isRejected()) return;
+            if (!guidedTtsSelection) {
+                waitForGate("TTS");
+                if (isRejected()) return;
+            }
 
             // 6. 이미지 생성
             log.info("이미지 생성 Activity 시작: jobId={}", jobId);

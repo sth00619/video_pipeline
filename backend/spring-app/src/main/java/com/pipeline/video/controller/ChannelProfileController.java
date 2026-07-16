@@ -32,7 +32,7 @@ public class ChannelProfileController {
     @GetMapping("/voices")
     public ResponseEntity<List<ElevenLabsVoice>> getVoices() {
         List<ElevenLabsVoice> dbVoices = elevenLabsVoiceRepository.findAll();
-        if (dbVoices.isEmpty()) {
+        if (dbVoices.size() < 21) {
             List<Map<String, Object>> apiVoices = fastApiClient.getElevenLabsVoices();
             for (Map<String, Object> av : apiVoices) {
                 String voiceId = (String) av.get("voice_id");
@@ -150,6 +150,19 @@ public class ChannelProfileController {
             }
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/voices/preview")
+    public ResponseEntity<byte[]> previewVoice(@RequestBody Map<String, String> request) {
+        String voiceId = request.get("voiceId");
+        String text = request.get("text");
+        if (voiceId == null || voiceId.isBlank() || text == null || text.isBlank() || text.length() > 100) {
+            return ResponseEntity.badRequest().build();
+        }
+        byte[] audio = fastApiClient.previewTts(voiceId.trim(), text.trim());
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.parseMediaType("audio/mpeg"))
+                .body(audio);
     }
 
     @GetMapping("/voices/preview/{voiceId}")

@@ -39,12 +39,15 @@ public class JobService {
         Integer targetMinutes = request.getLongformTargetMinutes() != null
                 ? request.getLongformTargetMinutes() : 20;
 
+        Autonomy requestedAutonomy = request.getAutonomy() == Autonomy.AUTO
+                ? Autonomy.AUTO : Autonomy.GUIDED;
+
         VideoJob job = VideoJob.builder()
                 .title(request.getTitle())
                 .keyword(request.getKeyword())
                 .category(category)
                 .status(JobStatus.DRAFT)
-                .autonomy(request.getAutonomy())
+                .autonomy(requestedAutonomy)
                 .format(request.getFormat())
                 .renderProfile(request.getRenderProfile())
                 .makeShorts(request.isMakeShorts())
@@ -54,6 +57,8 @@ public class JobService {
                 .costAccumulated(BigDecimal.ZERO)
                 .policyJson(request.getPolicyJson())
                 .channelId(request.getChannelId())
+                .characterOverride(request.getCharacterOverride())
+                .dataVisualsEnabled(request.isDataVisualsEnabled())
                 .createdBy(username)
                 .build();
 

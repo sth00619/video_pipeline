@@ -30,6 +30,8 @@ export const jobsApi = {
   // TTS
   generateTts: (id, voiceId = 'default_ko') =>
     apiClient.post(`/jobs/${id}/tts/generate`, { voiceId }).then(r => r.data),
+  selectTtsVoice: (id, voiceId) =>
+    apiClient.post(`/jobs/${id}/tts/select-voice`, { voiceId }).then(r => r.data),
   confirmTts: (id) => apiClient.post(`/jobs/${id}/tts/confirm`, {}).then(r => r.data),
 
   // 이미지

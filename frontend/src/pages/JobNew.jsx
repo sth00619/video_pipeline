@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, Sparkles, Target, Sliders, DollarSign,
-  Check, Zap, Users, Hand, Loader
+  Check, Zap, Users, Loader, Search, ExternalLink
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import { jobsApi } from '../api/jobs'
@@ -41,14 +41,8 @@ const AUTONOMY_OPTIONS = [
   {
     value: 'GUIDED', label: '반자동 (GUIDED)', icon: Users,
     tag: '추천', tagColor: 'bg-accent-cyan/20 text-accent-cyan',
-    desc: '키워드 후보 선택과 최종 미리보기만 사람이 검토, 나머지는 자동.',
+    desc: '키워드·스크립트·목소리·이미지를 단계별로 검토하고 승인하면 다음 단계로 진행.',
     warning: null,
-  },
-  {
-    value: 'MANUAL', label: '수동 (MANUAL)', icon: Hand,
-    tag: '완전 제어', tagColor: 'bg-accent-gold/20 text-accent-gold',
-    desc: '단계마다 결과를 검토·수정·승인. 대본 손보고 이미지 다시 뽑고 싶을 때.',
-    warning: '가장 오래 걸리고 사람 손이 많이 갑니다.',
   },
 ]
 
@@ -63,10 +57,15 @@ const DURATION_OPTIONS = [
 
 export default function JobNew() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [step, setStep] = useState(1)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState(null)
   const [channels, setChannels] = useState([])
+  const [researchKeyword, setResearchKeyword] = useState('')
+  const [researchVideos, setResearchVideos] = useState([])
+  const [researchLoading, setResearchLoading] = useState(false)
+  const [researchError, setResearchError] = useState(null)
 
   useEffect(() => {
     apiClient.get('/channels')
@@ -82,7 +81,16 @@ export default function JobNew() {
     budgetCap: 10,
     makeShorts: true,
     shortsCount: 3,
+    dataVisualsEnabled: true,
   })
+
+  useEffect(() => {
+    const topic = searchParams.get('topic')
+    if (topic) {
+      setForm(current => current.title ? current : { ...current, title: topic })
+      setResearchKeyword(topic)
+    }
+  }, [searchParams])
 
   const canProceed = () => {
     if (step === 1) return form.title.trim().length > 0
@@ -91,20 +99,34 @@ export default function JobNew() {
     return false
   }
 
+  const searchTopicResearch = async (query = researchKeyword.trim()) => {
+    const keyword = query.trim()
+    if (query === undefined || keyword.length === 0 && query !== '') return
+    setResearchLoading(true)
+    setResearchError(null)
+    try {
+      const result = await jobsApi.trendingYoutube(keyword)
+      setResearchVideos(Array.isArray(result) ? result : (result?.videos || []))
+    } catch (err) {
+      setResearchError(err?.response?.data?.message || '주제 검색에 실패했습니다.')
+      setResearchVideos([])
+    } finally {
+      setResearchLoading(false)
+    }
+  }
+
   const handleSubmit = async () => {
     setCreating(true)
     setError(null)
     try {
       const job = await jobsApi.create(form)
       // AUTO/GUIDED는 자동으로 키워드 탐색을 즉시 시작해 대기 시간 단축
-      if (form.autonomy !== 'MANUAL') {
-        try {
-          await jobsApi.searchKeyword(job.id, form.title, 5)
-        } catch (_) {
-          // 키워드 탐색 실패해도 Job은 만들어졌으니 상세로 이동해서 사용자가 재시도 가능
-        }
+      try {
+        await jobsApi.searchKeyword(job.id, form.title, 5)
+      } catch (_) {
+        // 키워드 탐색 실패해도 Job은 만들어졌으니 상세로 이동해서 사용자가 재시도 가능
       }
-      navigate(`/jobs/${job.id}`)
+      navigate(`/longform/${job.id}`)
     } catch (err) {
       setError(err?.response?.data?.message || err.message || '작업 생성 실패')
       setCreating(false)
@@ -117,7 +139,7 @@ export default function JobNew() {
         {/* 헤더 */}
         <div className="flex items-center gap-3 mb-6">
           <button
-            onClick={() => navigate('/jobs')}
+            onClick={() => navigate('/longform')}
             className="text-gray-400 hover:text-white transition"
             title="목록으로 돌아가기"
           >
@@ -177,6 +199,65 @@ export default function JobNew() {
                 </p>
               </div>
 
+              <div className="rounded-lg border border-navy-600 bg-navy-900/70 p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Search size={16} className="text-accent-cyan" />
+                  <h3 className="text-sm font-semibold">주제 탐색 · 영상 성과 비교</h3>
+                </div>
+                <p className="text-xs text-gray-400 mb-3">현재 검색되는 관련 영상을 비교한 뒤 영상 제목을 주제로 가져올 수 있습니다.</p>
+                <div className="flex gap-2">
+                  <input
+                    value={researchKeyword}
+                    onChange={e => setResearchKeyword(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') searchTopicResearch() }}
+                    placeholder="예: 반도체 수출, 금리 인하, 삼성전자"
+                    className="flex-1 bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+                  />
+                  <button type="button" onClick={() => searchTopicResearch()} disabled={!researchKeyword.trim() || researchLoading} className="flex items-center gap-1.5 rounded-lg bg-accent-cyan px-3 py-2 text-sm font-semibold text-navy-950 disabled:opacity-50">
+                    {researchLoading ? <Loader size={14} className="animate-spin" /> : <Search size={14} />} 검색
+                  </button>
+                  <button type="button" onClick={() => searchTopicResearch('')} disabled={researchLoading} className="rounded-lg border border-navy-600 px-3 py-2 text-xs text-gray-300 hover:bg-navy-700 disabled:opacity-50">
+                    현재 트렌드
+                  </button>
+                </div>
+                {researchError && <p className="mt-2 text-xs text-accent-red">{researchError}</p>}
+                {researchVideos.length > 0 && (
+                  <div className="mt-3 space-y-2 max-h-80 overflow-y-auto">
+                    {researchVideos.slice(0, 10).map((video, index) => {
+                      const views = Number(video.views || video.viewCount || 0)
+                      const subscribers = Number(video.subscribers || video.subscriberCount || 0)
+                      const ratio = subscribers > 0 ? (views / subscribers).toFixed(2) : '-'
+                      const publishedAt = video.published_at || video.publishedAt || ''
+                      const publishedMs = Date.parse(publishedAt)
+                      const ageDays = Number.isFinite(publishedMs) ? Math.max(1, (Date.now() - publishedMs) / 86400000) : 1
+                      const dailyViews = Math.round(views / ageDays)
+                      const performance = Number(ratio) >= 5 ? 'Great' : Number(ratio) >= 2 ? 'Normal' : 'Low'
+                      const likesAvailable = video.likes_available ?? video.likesAvailable ?? true
+                      const likes = Number(video.likes || video.likeCount || 0)
+                      const title = video.title || '제목 없음'
+                      const videoId = video.video_id || video.videoId || ''
+                      return (
+                        <div key={videoId || index} className="rounded-lg border border-navy-700 bg-navy-800/70 p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-white line-clamp-2">{title}</div>
+                              <div className="text-xs text-gray-400 mt-1">{video.channel_title || video.channelTitle || '채널 미상'} · {publishedAt || '게시일 미상'}</div>
+                            </div>
+                            <button type="button" onClick={() => setForm({ ...form, title })} className="shrink-0 rounded border border-accent-cyan/60 px-2 py-1 text-xs text-accent-cyan hover:bg-accent-cyan/10">주제로 사용</button>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                            <span>조회 {views.toLocaleString()}</span><span>구독 {subscribers.toLocaleString()}</span><span>조회/구독 {ratio}×</span><span>일평균 조회 {dailyViews.toLocaleString()}</span><span>성과 {performance}</span><span>좋아요 {likesAvailable ? likes.toLocaleString() : '비공개'}</span>
+                            {video.duration_seconds > 0 && <span>길이 {Math.round(video.duration_seconds)}초</span>}
+                            {videoId && <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent-cyan hover:underline">영상 보기 <ExternalLink size={11} /></a>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                <p className="mt-2 text-[11px] text-gray-500">공개 API에서 제공되는 지표만 표시하며, 경쟁 채널의 평균 시청 시간·CTR은 제공되지 않습니다.</p>
+              </div>
+
               <div>
                 <label className="block text-sm text-gray-300 mb-1.5">대상 채널</label>
                 <select
@@ -192,6 +273,20 @@ export default function JobNew() {
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-1.5">캐릭터 (선택사항)</label>
+                <select value={form.characterOverride || ''} onChange={e => setForm({ ...form, characterOverride: e.target.value || null })} className="w-full bg-navy-700 border border-navy-600 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-accent-cyan">
+                  <option value="">채널 기본 캐릭터 상속</option>
+                  {channels.map(c => <option key={c.channelId} value={c.channelId}>{c.channelName} 캐릭터</option>)}
+                </select>
+                <p className="text-[11px] text-gray-500 mt-1">기본은 채널 캐릭터이며, 특별한 작업만 여기서 덮어쓸 수 있습니다.</p>
+              </div>
+
+              <label className="flex items-start gap-3 bg-accent-cyan/5 border border-accent-cyan/20 rounded-lg p-3 cursor-pointer">
+                <input type="checkbox" checked={form.dataVisualsEnabled} onChange={e => setForm({ ...form, dataVisualsEnabled: e.target.checked })} className="mt-1 accent-cyan-400" />
+                <span><span className="block text-sm text-white font-semibold">데이터 시각화 씬 추가</span><span className="block text-[11px] text-gray-400 mt-1">이 작업의 관련 씬에만 검증된 시장 수치·도표·원형 차트를 Gemini 이미지와 함께 구성합니다. 정확한 숫자는 별도 검증 레이어로 합성합니다.</span></span>
+              </label>
 
               <div>
                 <label className="block text-sm text-gray-300 mb-2">카테고리</label>

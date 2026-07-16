@@ -10,8 +10,7 @@ import java.util.Set;
 /**
  * 자율성 다이얼 분기 결정 헬퍼.
  *
- *  MANUAL : 모든 게이트 사람 승인
- *  GUIDED : 콘텐츠 결정 + 미리보기만 사람 (KEYWORD, PREVIEW, SHORTS_SEGMENTS, SHORTS_PREVIEW)
+ *  GUIDED : 키워드·스크립트·TTS·이미지·미리보기를 사람 승인
  *  AUTO   : 모든 게이트 자동 승인
  */
 @Service
@@ -19,6 +18,9 @@ public class AutonomyService {
 
     private static final Set<GateName> GUIDED_HUMAN_GATES = Set.of(
             GateName.KEYWORD,
+            GateName.SCRIPT,
+            GateName.TTS,
+            GateName.IMAGES,
             GateName.PREVIEW,
             GateName.SHORTS_SEGMENTS,
             GateName.SHORTS_PREVIEW
@@ -29,7 +31,8 @@ public class AutonomyService {
         if (autonomy == null) return false;
         return switch (autonomy) {
             case AUTO -> true;
-            case MANUAL -> false;
+            // Legacy rows are treated as GUIDED after the two-mode migration.
+            case MANUAL -> !GUIDED_HUMAN_GATES.contains(gate);
             case GUIDED -> !GUIDED_HUMAN_GATES.contains(gate);
         };
     }

@@ -10,6 +10,7 @@ import logging
 import anthropic
 
 from app.providers.base import LLMProvider
+from app.utils.anthropic_cache import cached_system, log_cache_usage
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +41,10 @@ class ClaudeProvider(LLMProvider):
                 model=self.model,
                 max_tokens=kwargs.get("max_tokens", 4096),
                 temperature=kwargs.get("temperature", 0.7),
-                system=system_prompt,
+                system=cached_system(system_prompt),
                 messages=[{"role": "user", "content": user_prompt}]
             )
+            log_cache_usage(response, "llm_provider")
             return response.content[0].text
         except Exception as e:
             logger.error(f"Claude API 호출 실패: {e}")

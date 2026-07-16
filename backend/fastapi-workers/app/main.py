@@ -1,11 +1,12 @@
 import os
 import json
 import logging
+import hashlib
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from app.workers.shorts_worker import ShortsWorker
@@ -106,6 +107,9 @@ def health():
 @app.get("/providers/status")
 def provider_status():
     return {
+        "youtube": {"configured": bool(os.environ.get("YOUTUBE_API_KEY", "").strip()), "provider": "YouTube Data API v3"},
+        "anthropic": {"configured": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())},
+        "elevenlabs": {"configured": bool(os.environ.get("ELEVENLABS_API_KEY", "").strip())},
         "gemini": {
             "image_model": "gemini-3-pro-image",
             "quality_tier": runtime_config.value("image_quality_tier"),
@@ -138,6 +142,12 @@ class PipelineConfigUpdate(BaseModel):
     gemini_pro_max_attempts: Optional[int] = None
     gemini_pro_retry_base_seconds: Optional[float] = None
     gemini_pro_request_delay_seconds: Optional[float] = None
+    gemini_parallel_enabled: Optional[bool] = None
+    gemini_max_concurrency: Optional[int] = None
+    gemini_retry_max: Optional[int] = None
+    gemini_rpm_soft_cap: Optional[int] = None
+    gemini_adaptive_backoff_enabled: Optional[bool] = None
+    longform_scene_max_workers: Optional[int] = None
     visual_qa_enabled: Optional[bool] = None
     visual_qa_max_scenes: Optional[int] = None
     elevenlabs_voice_id: Optional[str] = None
@@ -152,6 +162,12 @@ class PipelineConfigUpdate(BaseModel):
     intro_kling_seconds_15min: Optional[int] = None
     intro_kling_seconds_20min: Optional[int] = None
     intro_kling_max_clips: Optional[int] = None
+    img_cost_flash_1k_usd: Optional[float] = None
+    img_cost_pro_2k_usd: Optional[float] = None
+    kling_cost_per_clip_usd: Optional[float] = None
+    usd_krw: Optional[float] = None
+    max_budget_per_video_krw: Optional[int] = None
+    budget_retry_buffer_pct: Optional[float] = None
 
 
 @app.get("/pipeline/config")
@@ -338,7 +354,7 @@ def keyword_search(request: KeywordSearchRequest):
 
 
 class TrendingRequest(BaseModel):
-    keyword: str
+    keyword: str = ""
     limit: int = 10
 
 @app.post("/workers/trending/youtube")
@@ -352,6 +368,48 @@ def trending_youtube(request: TrendingRequest):
         raise HTTPException(500, f"트렌딩 비디오 검색 실패: {str(e)}")
 
 
+@app.post("/workers/overlay/preview")
+async def overlay_preview(
+    image: UploadFile = File(...),
+    name: str = Form("코스피"),
+    value: float = Form(...),
+    change: float = Form(...),
+    change_pct: float = Form(...),
+    market: str = Form("kr"),
+    placement_mode: str = Form("anchor"),
+    anchor: str = Form("top_right"),
+    margin: int = Form(40),
+    x: int = Form(0),
+    y: int = Form(0),
+):
+    """Render a verified data card over a supplied image for local QA."""
+    from app.utils.stock_overlay import Anchor, IndexData, Market, compose_on_image, render_index_card
+
+    raw = await image.read()
+    if len(raw) > 20 * 1024 * 1024:
+        raise HTTPException(413, "image is larger than 20MB")
+    preview_dir = DATA_DIR / "overlay_previews"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    token = hashlib.sha256(raw).hexdigest()[:16]
+    base_path = preview_dir / f"{token}_base.png"
+    card_path = preview_dir / f"{token}_card.png"
+    output_path = preview_dir / f"{token}_composited.png"
+    base_path.write_bytes(raw)
+    try:
+        data = IndexData(name=name, value=value, change=change, change_pct=change_pct, market=Market(market.lower()))
+        render_index_card(data, str(card_path), scale=2)
+        if placement_mode.lower() == "pixel":
+            compose_on_image(str(base_path), str(card_path), str(output_path), xy=(x, y))
+        else:
+            compose_on_image(
+                str(base_path), str(card_path), str(output_path),
+                anchor=Anchor(anchor.lower()), margin=max(0, margin),
+            )
+        return FileResponse(str(output_path), media_type="image/png", filename="overlay_preview.png")
+    except (ValueError, OSError) as exc:
+        raise HTTPException(400, f"overlay preview failed: {exc}") from exc
+
+
 # ============================
 # Phase 3-2 — 스크립트
 # ============================
@@ -362,6 +420,8 @@ class ScriptGenerateRequest(BaseModel):
     job_id: Optional[int] = 0
     market_data: Optional[dict] = None  # KeywordWorker에서 전달된 market_snapshot
 
+    data_visuals_enabled: bool = True
+
 @app.post("/workers/script/generate")
 def script_generate(request: ScriptGenerateRequest):
     try:
@@ -371,6 +431,7 @@ def script_generate(request: ScriptGenerateRequest):
             category=request.category,
             market_data=request.market_data,
             job_id=request.job_id or 0,
+            data_visuals_enabled=request.data_visuals_enabled,
         )
     except Exception as e:
         raise HTTPException(500, f"스크립트 생성 실패: {str(e)}")
@@ -384,6 +445,11 @@ class TtsGenerateRequest(BaseModel):
     voice_id: str = "default_ko"
     job_id: Optional[int] = 0
     tts_speed: Optional[float] = None  # 생략 시 runtime_config의 현재 기본값 사용
+
+
+class TtsPreviewRequest(BaseModel):
+    voice_id: str
+    text: str
 
 @app.post("/workers/tts/generate")
 def tts_generate(request: TtsGenerateRequest):
@@ -404,14 +470,33 @@ def download_tts(path: str):
 @app.get("/workers/tts/voices")
 def get_elevenlabs_voices():
     """ElevenLabs 계정에서 사용 가능한 모든 성우 목소리 목록 조회"""
+    # Keep a stable 21-voice catalog visible in the UI even before an API key is configured.
+    fallback = [
+        {"voice_id": "21m00Tcm4TlvDq8ikWAM", "name": "Rachel (여성 · 차분한 설명)", "category": "premade"},
+        {"voice_id": "AZnzlk1XvdvUeBnXmlld", "name": "Domi (여성 · 자신감 있는 진행)", "category": "premade"},
+        {"voice_id": "EXAVITQu4vr4xnSDxMaL", "name": "Bella (여성 · 따뜻한 내레이션)", "category": "premade"},
+        {"voice_id": "MF3mGyEYCl7XYWbV9V6O", "name": "Elli (여성 · 친근한 교육)", "category": "premade"},
+        {"voice_id": "ThT5KcBeYPX3keUQqHPh", "name": "Dorothy (여성 · 밝은 뉴스)", "category": "premade"},
+        {"voice_id": "XrExE9yKIg1WjnnlVkGX", "name": "Matilda (여성 · 안정적인 해설)", "category": "premade"},
+        {"voice_id": "jBpfuIE2acCO8z3wKNLl", "name": "Gigi (여성 · 활기찬 진행)", "category": "premade"},
+        {"voice_id": "jsCqWAovK2LkecY7zXl4", "name": "Freya (여성 · 부드러운 시사)", "category": "premade"},
+        {"voice_id": "ErXwobaYiN019PkySvjV", "name": "Antoni (남성 · 신뢰감 있는 해설)", "category": "premade"},
+        {"voice_id": "TxGEqnHWrfWFTfGW9XjX", "name": "Josh (남성 · 깊은 저음)", "category": "premade"},
+        {"voice_id": "VR6AewLTigWG4xSOukaG", "name": "Arnold (남성 · 다큐멘터리)", "category": "premade"},
+        {"voice_id": "pNInz6obpgDQGcFmaJgB", "name": "Adam (남성 · 금융 뉴스)", "category": "premade"},
+        {"voice_id": "yoZ06aMxZJJ28mfd3POQ", "name": "Sam (남성 · 차분한 분석)", "category": "premade"},
+        {"voice_id": "flq6f7yk4E4fJM5XTYuZ", "name": "Michael (남성 · 전문 해설)", "category": "premade"},
+        {"voice_id": "onwK4e9ZLuTAKqWW03F9", "name": "Daniel (남성 · 영국식 뉴스)", "category": "premade"},
+        {"voice_id": "N2lVS1w4EtoT3dr4eOWO", "name": "Callum (남성 · 시사 토론)", "category": "premade"},
+        {"voice_id": "IKne3meq5aSn9XLyUdCD", "name": "Charlie (남성 · 선명한 전달)", "category": "premade"},
+        {"voice_id": "SAz9YHcvj6GT2YYXdXww", "name": "River (중성 · 차분한 정보)", "category": "premade"},
+        {"voice_id": "JBFqnCBsd6RMkjVDRZzb", "name": "George (남성 · 따뜻한 스토리텔러)", "category": "premade"},
+        {"voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice (여성 · 몰입감 있는 교육)", "category": "premade"},
+        {"voice_id": "pFZP5JQG7iQjIQuC4Bku", "name": "Liam (남성 · 또렷한 금융 해설)", "category": "premade"},
+    ]
     api_key = os.environ.get("ELEVENLABS_API_KEY", "")
     if not api_key:
-        return [
-            {"voice_id": "JBFqnCBsd6RMkjVDRZzb", "name": "George (Warm Storyteller - Default)"},
-            {"voice_id": "IKne3meq5aSn9XLyUdCD", "name": "Charlie (Deep Male)"},
-            {"voice_id": "SAz9YHcvj6GT2YYXdXww", "name": "River (Calm Informative)"},
-            {"voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice (Engaging Educator)"}
-        ]
+        return fallback
     try:
         import requests
         resp = requests.get(
@@ -434,20 +519,73 @@ def get_elevenlabs_voices():
             ]
         else:
             logger.warning(f"ElevenLabs Voices API 실패: {resp.status_code} {resp.text}")
-            return [
-                {"voice_id": "JBFqnCBsd6RMkjVDRZzb", "name": "George (Warm Storyteller - Default)"},
-                {"voice_id": "IKne3meq5aSn9XLyUdCD", "name": "Charlie (Deep Male)"},
-                {"voice_id": "SAz9YHcvj6GT2YYXdXww", "name": "River (Calm Informative)"},
-                {"voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice (Engaging Educator)"}
-            ]
+            return fallback
     except Exception as e:
         logger.error(f"ElevenLabs 목소리 조회 중 오류: {e}")
-        return [
-            {"voice_id": "JBFqnCBsd6RMkjVDRZzb", "name": "George (Warm Storyteller - Default)"},
-            {"voice_id": "IKne3meq5aSn9XLyUdCD", "name": "Charlie (Deep Male)"},
-            {"voice_id": "SAz9YHcvj6GT2YYXdXww", "name": "River (Calm Informative)"},
-            {"voice_id": "Xb7hH8MSUJpSbSDYk0k2", "name": "Alice (Engaging Educator)"}
-        ]
+        return fallback
+
+
+@app.post("/workers/tts/preview")
+def preview_elevenlabs_voice(request: TtsPreviewRequest):
+    """Render one short audition sentence, cached by voice and exact text."""
+    text = (request.text or "").strip()
+    voice_id = (request.voice_id or "").strip()
+    if not voice_id or voice_id in {"default_ko", "gtts_ko", "default"}:
+        raise HTTPException(400, "ElevenLabs voice_id가 필요합니다")
+    if not text:
+        raise HTTPException(400, "미리듣기 문장을 입력하세요")
+    if len(text) > 100:
+        raise HTTPException(422, "미리듣기는 100자 이내만 가능합니다")
+
+    api_key = os.environ.get("ELEVENLABS_API_KEY", "")
+    if not api_key:
+        raise HTTPException(503, "ELEVENLABS_API_KEY가 설정되지 않았습니다")
+
+    digest = hashlib.sha256(f"{voice_id}\0{text}".encode("utf-8")).hexdigest()
+    cache_key = f"tts:preview:v1:{digest}"
+    redis_client = None
+    try:
+        import redis
+        redis_client = redis.Redis(
+            host=os.getenv("REDIS_HOST", "redis"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+        )
+        cached = redis_client.get(cache_key)
+        if cached:
+            logger.info("TTS preview cache hit: voice_id=%s hash=%s", voice_id, digest[:12])
+            return Response(content=cached, media_type="audio/mpeg", headers={"X-Preview-Cache": "HIT"})
+    except Exception as exc:
+        logger.warning("TTS preview Redis unavailable; rendering uncached: %s", exc)
+
+    import requests
+    from app.config import ELEVENLABS_TTS_MODEL
+    response = requests.post(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+        headers={"xi-api-key": api_key, "Content-Type": "application/json", "Accept": "audio/mpeg"},
+        json={
+            "text": text,
+            "model_id": ELEVENLABS_TTS_MODEL,
+            "language_code": "ko",
+            "voice_settings": {
+                "stability": runtime_config.value("elevenlabs_stability"),
+                "similarity_boost": runtime_config.value("elevenlabs_similarity_boost"),
+                "style": 0.0,
+                "use_speaker_boost": True,
+            },
+            "apply_text_normalization": "off",
+        },
+        timeout=40,
+    )
+    if response.status_code != 200:
+        logger.warning("TTS preview failed: voice_id=%s status=%s", voice_id, response.status_code)
+        raise HTTPException(response.status_code, "ElevenLabs 미리듣기 생성에 실패했습니다")
+    if redis_client is not None:
+        try:
+            redis_client.setex(cache_key, 7 * 24 * 60 * 60, response.content)
+            logger.info("TTS preview cache write: voice_id=%s hash=%s", voice_id, digest[:12])
+        except Exception as exc:
+            logger.warning("TTS preview cache write failed: %s", exc)
+    return Response(content=response.content, media_type="audio/mpeg", headers={"X-Preview-Cache": "MISS"})
 
 
 # ============================
@@ -837,33 +975,26 @@ async def generate_youtube_metadata(request: YoutubeMetadataRequest):
 
     try:
         from anthropic import Anthropic
+        from app.utils.anthropic_cache import cached_system, log_cache_usage
         client = Anthropic(api_key=api_key)
-        
-        prompt = f"""You are a YouTube SEO and financial content expert. Based on the video script below, please generate optimized metadata:
-        
-        <script>
-        {request.script_text}
-        </script>
-        
-        Please produce:
-        1. 3 Title candidates (catchy, click-through-rate optimized, high impact)
-        2. 1 Video description (with summary, brief breakdown, and hashtags/tags)
-        3. A list of 5-8 search tags/keywords
-        
-        Format your response EXACTLY as a valid JSON object matching this structure:
-        {{
-          "titles": ["Title 1", "Title 2", "Title 3"],
-          "description": "Video description...",
-          "tags": ["tag1", "tag2", "tag3"]
-        }}
-        
-        Only return the raw JSON object. Do not include markdown formatting or backticks around it."""
+
+        system_prompt = """You are a YouTube SEO and financial content editor.
+Create accurate Korean metadata from the supplied script only. Do not invent
+market facts, prices, percentages, dates, companies, or guarantees. Produce
+three distinct but faithful title candidates, one useful description with a
+brief summary and hashtags, and 5-8 search tags. Avoid misleading investment
+advice, guaranteed returns, or claims not present in the script. Return only
+valid JSON with exactly these keys: titles (array of 3 strings), description
+(string), tags (array of strings)."""
+        prompt = f"<script>\n{request.script_text}\n</script>"
 
         response = client.messages.create(
             model=CLAUDE_MODEL,
             max_tokens=1000,
+            system=cached_system(system_prompt),
             messages=[{"role": "user", "content": prompt}]
         )
+        log_cache_usage(response, "youtube_metadata")
         content_text = response.content[0].text.strip()
         
         # Clean potential markdown wrapping

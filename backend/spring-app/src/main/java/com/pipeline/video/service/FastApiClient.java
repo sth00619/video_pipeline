@@ -179,13 +179,14 @@ public class FastApiClient {
 
     // Phase 3-2 — 스크립트
     public ScriptGenerateResponse generateScript(Long jobId, String keyword, int targetMinutes,
-                                                  String category, String marketSnapshotJson) {
+                                                  String category, String marketSnapshotJson, boolean dataVisualsEnabled) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
             bodyMap.put("keyword", keyword);
             bodyMap.put("target_minutes", targetMinutes);
             bodyMap.put("category", category != null ? category : "CUSTOM");
+            bodyMap.put("data_visuals_enabled", dataVisualsEnabled);
             
             if (marketSnapshotJson != null && !marketSnapshotJson.isBlank()) {
                 try {
@@ -548,6 +549,37 @@ public class FastApiClient {
         } catch (Exception e) {
             log.error("ElevenLabs 목소리 목록 조회 실패: {}", e.getMessage());
             return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getProviderStatus() {
+        try {
+            return restTemplate.getForObject(fastApiUrl + "/providers/status", Map.class);
+        } catch (Exception e) {
+            log.warn("Provider status 조회 실패: {}", e.getMessage());
+            return Map.of("youtube", Map.of("configured", false), "elevenlabs", Map.of("configured", false));
+        }
+    }
+
+    public byte[] previewTts(String voiceId, String text) {
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("voice_id", voiceId);
+            body.put("text", text);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<byte[]> response = restTemplate.exchange(
+                    fastApiUrl + "/workers/tts/preview",
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    byte[].class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new RuntimeException("FastAPI TTS preview failed: " + response.getStatusCode());
+            }
+            return response.getBody();
+        } catch (Exception e) {
+            throw new RuntimeException("TTS 미리듣기 생성 오류: " + e.getMessage(), e);
         }
     }
 
