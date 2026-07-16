@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, ChevronLeft, ChevronRight, Plus, Search, Youtube } from 'lucide-react'
+import { BarChart3, ChevronRight, Plus, Search, Youtube } from 'lucide-react'
 import Layout from '../components/Layout'
+import Pagination from '../components/Pagination'
 import DailyKeywordResearch from '../components/dashboard/DailyKeywordResearch'
 import StatusBadge from '../components/StatusBadge'
 import { jobsApi } from '../api/jobs'
@@ -38,7 +39,7 @@ export default function Jobs() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full max-w-none space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div><p className="text-sm font-semibold text-accent-cyan">롱폼 제작실</p><h1 className="text-2xl font-bold text-white mt-1">기획부터 재조립까지</h1><p className="text-sm text-gray-400 mt-2">키워드와 YouTube 지표를 비교한 뒤, 롱폼 작업을 생성하고 단계별로 검토합니다.</p></div>
           <button onClick={() => navigate('/longform/new')} className="bg-accent-cyan text-navy-950 rounded-lg px-4 py-2.5 text-sm font-semibold flex items-center gap-2"><Plus size={16}/>새 롱폼 작업</button>
@@ -56,7 +57,7 @@ export default function Jobs() {
           <div className="p-5 border-b border-navy-700 flex flex-wrap gap-3 items-center justify-between"><div><h2 className="font-semibold text-white">롱폼 작업 목록</h2><p className="text-xs text-gray-500 mt-1">작업을 열어 스크립트 검토, TTS, 이미지 수정, 재조립 또는 쇼츠 전환을 이어서 진행하세요.</p></div><div className="flex flex-wrap gap-2"><label className="relative"><Search size={15} className="absolute left-3 top-2.5 text-gray-500"/><input value={search} onChange={e => resetPage(setSearch)(e.target.value)} placeholder="제목·키워드 검색" className="bg-navy-900 border border-navy-600 rounded-lg pl-8 pr-3 py-2 text-xs text-white"/></label><select value={category} onChange={e => resetPage(setCategory)(e.target.value)} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white"><option value="ALL">주제 전체</option>{Object.entries(CATEGORY_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><select value={mode} onChange={e => resetPage(setMode)(e.target.value)} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white"><option value="ALL">모드 전체</option><option value="AUTO">자동</option><option value="GUIDED">반자동</option></select></div></div>
           {isError && <div className="px-5 py-4 text-sm text-accent-red">롱폼 목록을 불러오지 못했습니다. 백엔드 연결을 확인해 주세요.</div>}
           <div className="divide-y divide-navy-700">{isLoading && <div className="px-5 py-12 text-center text-gray-500">목록을 불러오는 중입니다.</div>}{!isLoading && jobs.length === 0 && <div className="px-5 py-12 text-center text-gray-500">조건에 맞는 롱폼 작업이 없습니다.</div>}{pageItems.map(job => <button key={job.id} onClick={() => navigate(`/longform/${job.id}`)} className="w-full px-5 py-4 flex items-center justify-between gap-4 hover:bg-navy-700/40 text-left transition"><div className="min-w-0"><div className="font-semibold text-white truncate">{job.title}</div><div className="text-xs text-gray-500 mt-1 truncate">{job.keyword || '키워드 미선택'} · {formatCategory(job.category)} · {job.longformTargetMinutes || 0}분 · {formatAutonomy(job.autonomy)}</div></div><div className="flex items-center gap-3 shrink-0"><span className="text-xs text-gray-400">${(Number(job.costAccumulated) || 0).toFixed(2)}</span><StatusBadge status={job.status} small/><ChevronRight size={16} className="text-gray-500"/></div></button>)}</div>
-          {jobs.length > 10 && <Pagination page={page} totalPages={totalPages} total={jobs.length} onChange={setPage}/>}
+          <Pagination total={jobs.length} currentPage={page} onChange={setPage}/>
         </section>
       </div>
     </Layout>
@@ -65,15 +66,4 @@ export default function Jobs() {
 
 function ActionCard({ icon, title, text, action, onClick }) {
   return <button onClick={onClick} className="text-left rounded-xl border border-navy-700 bg-navy-800 hover:border-accent-cyan/60 p-5 transition"><div className="text-accent-cyan">{icon}</div><h2 className="font-semibold text-white mt-4">{title}</h2><p className="text-sm text-gray-400 leading-6 mt-2">{text}</p><span className="inline-block mt-4 text-sm font-semibold text-accent-cyan">{action} →</span></button>
-}
-
-function Pagination({ page, totalPages, total, onChange }) {
-  const numbers = pageNumbers(page, totalPages)
-  return <div className="px-5 py-3 border-t border-navy-700 flex items-center justify-between text-xs"><span className="text-gray-500">{total}개 중 {(page - 1) * 10 + 1}–{Math.min(page * 10, total)}</span><div className="flex items-center gap-1"><button aria-label="이전 페이지" disabled={page === 1} onClick={() => onChange(page - 1)} className="border border-navy-600 p-1.5 rounded disabled:opacity-40"><ChevronLeft size={14}/></button>{numbers.map((number, index) => number === '…' ? <span key={`ellipsis-${index}`} className="px-1.5 text-gray-500">…</span> : <button key={number} onClick={() => onChange(number)} className={`min-w-7 h-7 rounded ${number === page ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-gray-400 hover:bg-navy-700'}`}>{number}</button>)}<button aria-label="다음 페이지" disabled={page === totalPages} onClick={() => onChange(page + 1)} className="border border-navy-600 p-1.5 rounded disabled:opacity-40"><ChevronRight size={14}/></button></div></div>
-}
-
-function pageNumbers(current, total) {
-  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1)
-  const middle = [current - 1, current, current + 1].filter(number => number > 1 && number < total)
-  return [1, ...(middle[0] > 2 ? ['…'] : []), ...middle, ...(middle.at(-1) < total - 1 ? ['…'] : []), total]
 }

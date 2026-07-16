@@ -5,6 +5,7 @@ import {
   Check, Zap, Users, Loader, Search, ExternalLink
 } from 'lucide-react'
 import Layout from '../components/Layout'
+import Pagination from '../components/Pagination'
 import { jobsApi } from '../api/jobs'
 import apiClient from '../api/client'
 
@@ -54,6 +55,7 @@ const DURATION_OPTIONS = [
   { value: 20, label: '20분', hint: '풀 리포트. 인트로 60초 움짤' },
   { value: 30, label: '30분', hint: '롱폼 최대. 예산 여유 필요' },
 ]
+const RESEARCH_PAGE_SIZE = 10
 
 export default function JobNew() {
   const navigate = useNavigate()
@@ -64,6 +66,7 @@ export default function JobNew() {
   const [channels, setChannels] = useState([])
   const [researchKeyword, setResearchKeyword] = useState('')
   const [researchVideos, setResearchVideos] = useState([])
+  const [researchPage, setResearchPage] = useState(1)
   const [researchLoading, setResearchLoading] = useState(false)
   const [researchError, setResearchError] = useState(null)
 
@@ -107,13 +110,19 @@ export default function JobNew() {
     try {
       const result = await jobsApi.trendingYoutube(keyword)
       setResearchVideos(Array.isArray(result) ? result : (result?.videos || []))
+      setResearchPage(1)
     } catch (err) {
       setResearchError(err?.response?.data?.message || '주제 검색에 실패했습니다.')
       setResearchVideos([])
+      setResearchPage(1)
     } finally {
       setResearchLoading(false)
     }
   }
+
+  const researchTotalPages = Math.max(1, Math.ceil(researchVideos.length / RESEARCH_PAGE_SIZE))
+  const researchPageItems = researchVideos.slice((researchPage - 1) * RESEARCH_PAGE_SIZE, researchPage * RESEARCH_PAGE_SIZE)
+  useEffect(() => { if (researchPage > researchTotalPages) setResearchPage(researchTotalPages) }, [researchPage, researchTotalPages])
 
   const handleSubmit = async () => {
     setCreating(true)
@@ -223,7 +232,7 @@ export default function JobNew() {
                 {researchError && <p className="mt-2 text-xs text-accent-red">{researchError}</p>}
                 {researchVideos.length > 0 && (
                   <div className="mt-3 space-y-2 max-h-80 overflow-y-auto">
-                    {researchVideos.slice(0, 10).map((video, index) => {
+                    {researchPageItems.map((video, index) => {
                       const views = Number(video.views || video.viewCount || 0)
                       const subscribers = Number(video.subscribers || video.subscriberCount || 0)
                       const ratio = subscribers > 0 ? (views / subscribers).toFixed(2) : '-'
@@ -255,6 +264,7 @@ export default function JobNew() {
                     })}
                   </div>
                 )}
+                <Pagination total={researchVideos.length} currentPage={researchPage} onChange={setResearchPage} pageSize={RESEARCH_PAGE_SIZE}/>
                 <p className="mt-2 text-[11px] text-gray-500">공개 API에서 제공되는 지표만 표시하며, 경쟁 채널의 평균 시청 시간·CTR은 제공되지 않습니다.</p>
               </div>
 

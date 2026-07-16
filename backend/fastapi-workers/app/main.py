@@ -421,6 +421,9 @@ class ScriptGenerateRequest(BaseModel):
     market_data: Optional[dict] = None  # KeywordWorker에서 전달된 market_snapshot
 
     data_visuals_enabled: bool = True
+    # Uses the product's original house style.  Named-channel imitation is not
+    # accepted as a profile; future approved profiles remain opt-in here.
+    storytelling_profile: str = "original_finance_storyteller_v1"
 
 @app.post("/workers/script/generate")
 def script_generate(request: ScriptGenerateRequest):
@@ -432,6 +435,7 @@ def script_generate(request: ScriptGenerateRequest):
             market_data=request.market_data,
             job_id=request.job_id or 0,
             data_visuals_enabled=request.data_visuals_enabled,
+            storytelling_profile=request.storytelling_profile,
         )
     except Exception as e:
         raise HTTPException(500, f"스크립트 생성 실패: {str(e)}")

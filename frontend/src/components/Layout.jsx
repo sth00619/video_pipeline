@@ -16,8 +16,8 @@ export default function Layout({ children }) {
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
 
   return (
-    <div className="min-h-screen flex bg-navy-950 text-slate-900">
-      <aside className="hidden lg:flex w-64 shrink-0 bg-white border-r border-navy-700 flex-col">
+    <div className="min-h-screen bg-navy-950 text-slate-900">
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-navy-700 flex-col overflow-y-auto">
         <Link to="/dashboard" className="flex items-center gap-3 px-6 py-6 border-b border-navy-700">
           <span className="w-9 h-9 rounded-xl bg-accent-cyan text-white flex items-center justify-center shadow-glow-cyan"><Clapperboard size={19}/></span>
           <span className="font-bold text-[15px] text-slate-900">롱폼 제작실</span>
@@ -31,7 +31,7 @@ export default function Layout({ children }) {
           <div className="rounded-xl bg-slate-50 border border-navy-700 px-3 py-3 flex items-center justify-between"><div><div className="text-sm font-semibold text-slate-900">{user?.username || '사용자'}</div><div className="text-xs text-slate-500 mt-0.5">{user?.role || 'MEMBER'}</div></div><button onClick={() => { authStore.clearToken(); navigate('/login') }} className="text-slate-400 hover:text-accent-red p-1.5" title="로그아웃"><LogOut size={17}/></button></div>
         </div>
       </aside>
-      <main className="flex-1 min-w-0 overflow-auto">
+      <main className="min-w-0 min-h-screen lg:ml-64">
         <div className="lg:hidden bg-white border-b border-navy-700 px-4 py-3 flex items-center justify-between"><Link to="/dashboard" className="flex items-center gap-2 font-semibold"><TrendingUp className="text-accent-cyan" size={19}/>롱폼 제작실</Link><Link to="/longform/new" className="text-sm rounded-lg bg-accent-cyan text-white px-3 py-2">새 작업</Link></div>
         <div className="p-4 md:p-8">{children}</div>
       </main>

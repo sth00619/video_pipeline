@@ -947,6 +947,16 @@ export default function JobDetail() {
                         </span>
                       </div>
 
+                      {scriptData.quality_report?.storytelling && (
+                        <div className="rounded-lg border border-accent-cyan/25 bg-accent-cyan/5 px-3 py-1.5 text-xs text-navy-300">
+                          <span className="font-semibold text-accent-cyan">오리지널 금융 스토리텔링</span>
+                          <span className="ml-2">편집 리듬 {scriptData.quality_report.storytelling.score}점</span>
+                          {scriptData.quality_report.storytelling.suggestions?.length > 0 && (
+                            <span className="ml-2 text-navy-400">· {scriptData.quality_report.storytelling.suggestions[0]}</span>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2 flex-wrap">
                         <div className="flex bg-navy-700 rounded p-1 text-xs">
                           <button onClick={() => setScriptViewMode('paragraphs')}

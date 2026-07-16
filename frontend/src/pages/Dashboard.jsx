@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, DollarSign, Film, ListFilter, Plus, Search, Video } from 'lucide-react'
 import Layout from '../components/Layout'
+import Pagination from '../components/Pagination'
 import { jobsApi } from '../api/jobs'
 import apiClient from '../api/client'
 import { formatAutonomy, formatCategory, formatStatus } from '../constants/jobStatus'
@@ -108,10 +109,11 @@ export default function Dashboard() {
   const shortsCount = assets.filter(item => item.type === 'SHORTS').length
 
   const update = (setter) => (value) => { setter(value); setPage(1) }
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [page, totalPages])
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full max-w-none space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-accent-cyan">작업 아카이브</p>
@@ -161,7 +163,7 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-          {filtered.length > 10 && <div className="flex items-center justify-between px-5 py-4 border-t border-navy-700"><span className="text-xs text-gray-500">{filtered.length}개 중 {(page - 1) * 10 + 1}–{Math.min(page * 10, filtered.length)}</span><div className="flex gap-2"><button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-3 py-1.5 border border-navy-600 rounded text-xs disabled:opacity-40">이전</button><button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="px-3 py-1.5 border border-navy-600 rounded text-xs disabled:opacity-40">다음</button></div></div>}
+          <Pagination total={filtered.length} currentPage={page} onChange={setPage} />
         </section>
 
         <div className="grid md:grid-cols-2 gap-4">

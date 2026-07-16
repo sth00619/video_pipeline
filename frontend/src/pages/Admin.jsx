@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Shield, DollarSign, Video, Settings, Save, ImagePlus, RefreshCw } from 'lucide-react'
@@ -134,6 +134,8 @@ export default function Admin() {
   }
 
   const pageItems = filteredJobs.slice((currentPage - 1) * 10, currentPage * 10)
+  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / 10))
+  useEffect(() => { if (currentPage > totalPages) setCurrentPage(totalPages) }, [currentPage, totalPages])
 
   return (
     <Layout>
