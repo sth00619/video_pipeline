@@ -1,0 +1,11 @@
+{
+  "generated_voice_id": "dOWSFiL7npW5rUAJ3gIx",
+  "preview_index": 1,
+  "raw_path": "artifacts/extra_low_preview_1.mp3",
+  "mastered_path": "artifacts/original_extra_low_clean_fast_audition.mp3",
+  "duration_secs": 12.03,
+  "median_f0_hz_estimate": 123.1,
+  "cer": 0.0,
+  "cer_threshold": 0.08,
+  "description": "Original, non-identifying Korean male finance narrator with distinctly low mature baritone, strong chest resonance, dark warm lower register, clear diction, natural pauses, and brisk conversational pacing. No celebrity or identifiable-person imitation."
+}

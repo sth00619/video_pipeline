@@ -1,0 +1,59 @@
+import os
+
+from app.workers.script_worker import (
+    ScriptWorker,
+    _cap_dialogue_to_target,
+    _validate_unit_usage,
+    clean_script_commas_and_pct,
+)
+
+
+def test_percentage_normalization_and_all_thousands_commas():
+    result = clean_script_commas_and_pct("하락률 6.37퍼센트, 거래대금 29,800,000원, 등락률 1.2%")
+    assert "6.37퍼센트" in result
+    assert "1.2퍼센트" in result
+    assert "6.37포인트" not in result
+    assert "29800000원" in result
+
+
+def test_unit_validation_allows_correct_point_and_percentage_sentence():
+    result = _validate_unit_usage("코스피가 463포인트, 하락률은 6.37퍼센트 하락했습니다.")
+    assert result["passed"], result
+
+
+def test_unit_validation_rejects_rate_label_with_point_value():
+    result = _validate_unit_usage("하락률은 4.53포인트였습니다.")
+    assert not result["passed"]
+    assert "포인트" in result["errors"][0]
+
+
+def test_unit_validation_rejects_percent_symbol_before_tts():
+    result = _validate_unit_usage("등락률은 1.2%입니다.")
+    assert not result["passed"]
+    assert "%" in result["errors"][0]
+
+
+def test_sentence_safe_cap_never_cuts_decimal_or_large_number():
+    script = """## 씬 1: 수치
+[대사] 하락률은 6.37퍼센트이고 거래대금은 29,800,000원입니다. 다음 문장은 예산 때문에 제외되어야 합니다.
+[비주얼 설명] 차트
+"""
+    capped = _cap_dialogue_to_target(script, target_chars=10)
+    assert "6.37퍼센트" in capped
+    assert "29,800,000원" in capped
+    assert "다음 문장은" not in capped
+
+
+def test_mock_response_matches_script_response_contract(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    result = ScriptWorker()._mock_generate("삼성전자", "코스피", 1, 999)
+    required = {
+        "job_id", "keyword", "script", "sections", "char_count", "length_contract",
+        "keyword_validation", "unit_validation", "verified_facts", "fact_check_rounds",
+        "fact_check_log", "market_snapshot_used", "market_snapshot", "used_real_llm",
+        "requires_manual_review", "quality_report", "youtube_metadata",
+    }
+    assert required.issubset(result)
+    assert result["requires_manual_review"] is True
+    assert result["script"] and result["sections"]

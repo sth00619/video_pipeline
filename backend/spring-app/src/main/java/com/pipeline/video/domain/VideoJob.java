@@ -26,6 +26,10 @@ public class VideoJob {
 
     private String keyword;
 
+    /** 선택한 다중 키워드 기획안의 추적 ID. 성과 피드백 루프에서 원인을 연결한다. */
+    @Column(name = "keyword_plan_id", length = 64)
+    private String keywordPlanId;
+
     @Enumerated(EnumType.STRING)
     private Category category;
 

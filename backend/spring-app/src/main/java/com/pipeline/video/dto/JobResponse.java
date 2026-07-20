@@ -11,6 +11,7 @@ public class JobResponse {
     private Long id;
     private String title;
     private String keyword;
+    private String keywordPlanId;
     private Category category;
     private JobStatus status;
     private Autonomy autonomy;
@@ -37,6 +38,7 @@ public class JobResponse {
         r.setId(job.getId());
         r.setTitle(job.getTitle());
         r.setKeyword(job.getKeyword());
+        r.setKeywordPlanId(job.getKeywordPlanId());
         r.setCategory(job.getCategory());
         r.setStatus(job.getStatus());
         // Legacy MANUAL rows are exposed as the new GUIDED mode.

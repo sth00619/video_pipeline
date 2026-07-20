@@ -3,9 +3,11 @@ package com.pipeline.video.domain;
 public enum JobStatus {
     DRAFT,
     KEYWORD_PENDING,
+    TOPIC_EVIDENCE_REQUIRED,
     SCRIPT_PENDING,
     TTS_PENDING,
     IMAGES_PENDING,
+    IMAGES_RETRY_REQUIRED,
     ASSEMBLING,
     PREVIEW_PENDING,
     SHORTS_SEGMENTS_PENDING,

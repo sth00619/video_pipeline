@@ -3,7 +3,7 @@ import json
 import logging
 import hashlib
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import FileResponse, Response
@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from app.workers.shorts_worker import ShortsWorker
 from app.workers.keyword_worker import KeywordWorker
-from app.workers.script_worker import ScriptWorker
+from app.workers.script_worker import ScriptWorker, ScriptResearchRequiredError
 from app.workers.tts_worker import TtsWorker
 from app.workers.images_worker import ImagesWorker
 from app.workers.longform_worker import LongformWorker
@@ -21,6 +21,7 @@ from app.workers.pronunciation_manager import PronunciationManager
 from app.config import APP_MODE, CLAUDE_MODEL
 from app import runtime_config
 from app.utils.fal_billing import get_fal_credit_status
+from app.utils.art_direction import compile_editorial_prompt
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -154,13 +155,19 @@ class PipelineConfigUpdate(BaseModel):
     elevenlabs_stability: Optional[float] = None
     elevenlabs_similarity_boost: Optional[float] = None
     elevenlabs_style: Optional[float] = None
+    tts_model_intro: Optional[str] = None
+    tts_model_body: Optional[str] = None
+    tts_stability_intro: Optional[float] = None
+    tts_stability_body: Optional[float] = None
+    tts_cer_threshold: Optional[float] = None
+    tts_max_retries: Optional[int] = None
+    tts_postprocess_enabled: Optional[bool] = None
+    tts_sentence_pause_ms: Optional[int] = None
+    tts_paragraph_pause_ms: Optional[int] = None
     bgm_volume: Optional[float] = None
-    zoompan_speed: Optional[float] = None
-    zoompan_max_zoom: Optional[float] = None
-    intro_kling_seconds_5min: Optional[int] = None
-    intro_kling_seconds_10min: Optional[int] = None
-    intro_kling_seconds_15min: Optional[int] = None
-    intro_kling_seconds_20min: Optional[int] = None
+    intro_motion_seconds_short: Optional[float] = None
+    intro_motion_seconds_long: Optional[float] = None
+    intro_motion_short_threshold: Optional[float] = None
     intro_kling_max_clips: Optional[int] = None
     img_cost_flash_1k_usd: Optional[float] = None
     img_cost_pro_2k_usd: Optional[float] = None
@@ -168,6 +175,12 @@ class PipelineConfigUpdate(BaseModel):
     usd_krw: Optional[float] = None
     max_budget_per_video_krw: Optional[int] = None
     budget_retry_buffer_pct: Optional[float] = None
+    keyword_score_weight_multiple: Optional[float] = None
+    keyword_score_weight_velocity: Optional[float] = None
+    keyword_score_weight_like: Optional[float] = None
+    keyword_score_weight_comment: Optional[float] = None
+    keyword_like_rate_benchmark: Optional[float] = None
+    keyword_comment_rate_benchmark: Optional[float] = None
 
 
 @app.get("/pipeline/config")
@@ -356,16 +369,84 @@ def keyword_search(request: KeywordSearchRequest):
 class TrendingRequest(BaseModel):
     keyword: str = ""
     limit: int = 10
+    recent_hours: Optional[int] = None
 
 @app.post("/workers/trending/youtube")
 def trending_youtube(request: TrendingRequest):
     try:
         from app.providers.factory import get_trending_video_analyzer
         analyzer = get_trending_video_analyzer()
-        videos = analyzer.collect(category="", seed=request.keyword, limit=request.limit)
+        videos = analyzer.collect(category="", seed=request.keyword, limit=request.limit, recent_hours=request.recent_hours)
         return {"videos": [v.__dict__ for v in videos]}
     except Exception as e:
         raise HTTPException(500, f"트렌딩 비디오 검색 실패: {str(e)}")
+
+
+class ManualKeywordContextRequest(BaseModel):
+    keyword: str
+    recent_hours: int = 2
+
+
+@app.post("/workers/keyword/manual-context")
+def manual_keyword_context(request: ManualKeywordContextRequest):
+    """Fresh public evidence that lets an operator validate a manual topic."""
+    keyword = request.keyword.strip()
+    if not keyword:
+        raise HTTPException(400, "keyword is required")
+    hours = max(1, min(request.recent_hours, 24))
+    try:
+        from app.providers.factory import get_trending_video_analyzer
+        from app.workers.news_keyword_extractor import NewsKeywordExtractor
+
+        videos = get_trending_video_analyzer().collect(category="", seed=keyword, limit=12, recent_hours=hours)
+        recent_videos = [video.__dict__ for video in videos if (video.hours_since_publish or 999) <= hours]
+        news = NewsKeywordExtractor().search_recent_news(keyword, max_age_hours=hours)
+        return {
+            "keyword": keyword,
+            "windowHours": hours,
+            "recentNews": news,
+            "recentVideos": recent_videos,
+            "evidenceStatus": "confirmed" if news or recent_videos else "not_found",
+            "disclaimer": "뉴스와 공개 영상은 최신성 확인용 근거이며, 특정 뉴스가 시장 움직임을 유발했다는 인과관계는 표시하지 않습니다.",
+        }
+    except Exception as e:
+        raise HTTPException(500, f"수동 키워드 최신 근거 조회 실패: {str(e)}")
+
+
+class KeywordMindMapRequest(BaseModel):
+    keyword: str
+    videos: List[Dict[str, Any]] = []
+
+
+class KeywordPlanRequest(BaseModel):
+    mode: str = "MANUAL"
+    keywords: List[str]
+    metrics: List[Dict[str, Any]] = []
+    market: str = "KR"
+
+
+@app.post("/ai/keyword-mindmap")
+def keyword_mindmap(request: KeywordMindMapRequest):
+    """태그·제목 기반 1차 링과 캐시된 Claude 확장 2차 링을 돌려준다."""
+    try:
+        from app.workers.keyword_planning import build_mindmap
+        return build_mindmap(request.keyword, request.videos)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(500, f"키워드 마인드맵 생성 실패: {str(exc)}")
+
+
+@app.post("/ai/keyword-plan")
+def keyword_plan(request: KeywordPlanRequest):
+    """선택 키워드와 원본 지표를 토대로 정확히 3개의 기획안을 반환한다."""
+    try:
+        from app.workers.keyword_planning import build_keyword_plans
+        return build_keyword_plans(request.mode, request.keywords, request.metrics, request.market)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(500, f"키워드 기획 생성 실패: {str(exc)}")
 
 
 @app.post("/workers/overlay/preview")
@@ -418,6 +499,7 @@ class ScriptGenerateRequest(BaseModel):
     target_minutes: int = 20
     category: str = "CUSTOM"
     job_id: Optional[int] = 0
+    voice_id: Optional[str] = None
     market_data: Optional[dict] = None  # KeywordWorker에서 전달된 market_snapshot
 
     data_visuals_enabled: bool = True
@@ -436,7 +518,10 @@ def script_generate(request: ScriptGenerateRequest):
             job_id=request.job_id or 0,
             data_visuals_enabled=request.data_visuals_enabled,
             storytelling_profile=request.storytelling_profile,
+            voice_id=request.voice_id,
         )
+    except ScriptResearchRequiredError as exc:
+        raise HTTPException(422, str(exc)) from exc
     except Exception as e:
         raise HTTPException(500, f"스크립트 생성 실패: {str(e)}")
 
@@ -449,6 +534,7 @@ class TtsGenerateRequest(BaseModel):
     voice_id: str = "default_ko"
     job_id: Optional[int] = 0
     tts_speed: Optional[float] = None  # 생략 시 runtime_config의 현재 기본값 사용
+    target_seconds: Optional[float] = None
 
 
 class TtsPreviewRequest(BaseModel):
@@ -461,6 +547,7 @@ def tts_generate(request: TtsGenerateRequest):
         return get_tts_worker().synthesize(
             request.script, request.voice_id, request.job_id or 0,
             tts_speed=request.tts_speed,
+            target_seconds=request.target_seconds,
         )
     except Exception as e:
         raise HTTPException(500, f"TTS 생성 실패: {str(e)}")
@@ -682,7 +769,11 @@ def download_longform(path: str):
 
 class SingleImageGenerateRequest(BaseModel):
     index: int
-    text: str
+    # text remains for older Spring containers. New requests keep the Korean
+    # source sentence and the reviewed English image prompt separate.
+    text: Optional[str] = None
+    source_text: Optional[str] = None
+    prompt_en: Optional[str] = None
     section: str
     job_id: int
     character_image_path: Optional[str] = None
@@ -697,6 +788,29 @@ async def generate_single_image(request: SingleImageGenerateRequest):
         img_path = str(job_dir / f"scene_{request.index:03d}.png")
 
         images_worker = get_images_worker()
+        source_text = (request.source_text or request.text or "").strip()
+        if not source_text:
+            raise HTTPException(422, "source_text is required")
+        prompt_en = (request.prompt_en or "").strip()
+        if not prompt_en:
+            # The source sentence is preserved inside an otherwise-English
+            # editorial prompt. This keeps the model grounded in the Korean
+            # narration while giving the UI a stable prompt to review/reuse.
+            prompt_en = compile_editorial_prompt(
+                {
+                    "content": source_text,
+                    "section": request.section,
+                    "art_direction": {
+                        "family": "character_role",
+                        "setting": "Korean finance editorial scene",
+                        "camera": "wide 16:9 editorial composition",
+                        "palette": {"colors": "clear teal, warm gold, and confident coral accents"},
+                        "lighting": "clean broadcast-studio lighting",
+                        "character_required": True,
+                    },
+                },
+                f'Visually explain this Korean financial narration: "{source_text}"',
+            )
 
         # [S2-3] 이중 레이어 합성 모드 (poses_dir 제공 시)
         if request.character_poses_dir and Path(request.character_poses_dir).exists():
@@ -709,12 +823,13 @@ async def generate_single_image(request: SingleImageGenerateRequest):
             if ai_provider:
                 bg_path = str(job_dir / f"scene_{request.index:03d}_bg.png")
                 images_worker._generate_background_layer(
-                    ai_provider, request.text, bg_path, request.section, "neutral"
+                    ai_provider, prompt_en, bg_path, request.section, "neutral"
                 )
                 images_worker._composite_character(
                     bg_path, request.character_poses_dir, "neutral", img_path, request.job_id
                 )
-                return {"status": "ok", "image_path": img_path}
+                return {"status": "ok", "index": request.index, "image_path": img_path,
+                        "prompt_en": prompt_en, "prompt_ko": source_text}
 
         # AI 이미지 생성 시도 (일러스트 모드)
         ai_provider = None
@@ -727,10 +842,10 @@ async def generate_single_image(request: SingleImageGenerateRequest):
         if ai_provider:
             try:
                 ai_provider.generate_image(
-                    prompt=request.text,
+                    prompt=prompt_en,
                     output_path=img_path,
                     section=request.section,
-                    keyword=request.text[:30],
+                    keyword=source_text[:30],
                     character_image_path=request.character_image_path,
                     character_style_prompt=request.character_style_prompt,
                     image_provider=runtime_config.value("image_provider"),
@@ -739,9 +854,10 @@ async def generate_single_image(request: SingleImageGenerateRequest):
                     gemini_service_tier=runtime_config.value("gemini_service_tier"),
                     gemini_max_attempts=runtime_config.value("gemini_pro_max_attempts"),
                     gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
-                    style_locked=False,
+                    style_locked=True,
                 )
-                return {"status": "ok", "image_path": img_path}
+                return {"status": "ok", "index": request.index, "image_path": img_path,
+                        "prompt_en": prompt_en, "prompt_ko": source_text}
             except Exception as e:
                 logger.warning(f"단일 AI 이미지 생성 실패, Matplotlib 폴백: {e}")
 
@@ -749,8 +865,9 @@ async def generate_single_image(request: SingleImageGenerateRequest):
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        images_worker._render_section(request.section, request.text, img_path, plt)
-        return {"status": "ok", "image_path": img_path}
+        images_worker._render_section(request.section, source_text, img_path, plt)
+        return {"status": "ok", "index": request.index, "image_path": img_path,
+                "prompt_en": prompt_en, "prompt_ko": source_text}
     except Exception as e:
         logger.exception("단일 이미지 생성 실패")
         raise HTTPException(500, f"단일 이미지 생성 실패: {str(e)}")

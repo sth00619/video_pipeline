@@ -177,7 +177,8 @@ class KlingProvider(VideoProvider):
             except Exception as e:
                 logger.warning(f"Kling text2video API 호출 실패, FFmpeg 모션 폴백: {e}")
 
-        # 3. FFmpeg 줌인 모션 폴백
+        # 3. Safe static-image fallback.  No FFmpeg zoom/pan/transition is
+        # allowed because numerical cards and subtitles must not jitter.
         image_path = kwargs.get("image_path")
         self._generate_ffmpeg_fallback(output_path, duration, image_path)
         return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
@@ -368,13 +369,15 @@ class KlingProvider(VideoProvider):
 
     def _generate_ffmpeg_fallback(self, output_path: str, duration: int, image_path: str = None):
         """
-        이미지(또는 검정 배경)를 FFmpeg의 zoompan 필터로 부드러운 줌인 영상으로 변환.
+        Render a fixed image (or plain background) without camera motion.
         """
         if image_path and os.path.exists(image_path):
-            # 씬 이미지에 부드러운 줌인 효과 적용하여 동영상 클립화
+            # Keep source pixels fixed: this is the safe fallback after an
+            # image-to-video failure, not a synthetic motion effect.
             cmd = (
                 f'ffmpeg -loop 1 -i "{image_path}" -f lavfi -i anullsrc=r=44100:cl=stereo '
-                f'-filter_complex "zoompan=z=\'min(zoom+0.0015,1.15)\':d={duration*30}:s=1920x1080" '
+                f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
+                f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30" '
                 f'-t {duration} -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 128k '
                 f'-y "{output_path}" -loglevel error'
             )
@@ -386,4 +389,4 @@ class KlingProvider(VideoProvider):
                 f'-t {duration} -c:v libx264 -c:a aac "{output_path}" -y -loglevel quiet'
             )
         os.system(cmd)
-        logger.info(f"FFmpeg 모션 클립 폴백 생성 완료: {output_path}")
+        logger.info(f"FFmpeg 정지 이미지 클립 폴백 생성 완료: {output_path}")

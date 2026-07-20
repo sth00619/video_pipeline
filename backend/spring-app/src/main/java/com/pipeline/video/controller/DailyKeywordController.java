@@ -26,4 +26,27 @@ public class DailyKeywordController {
         if (keyword.isBlank()) return ResponseEntity.badRequest().build();
         return ResponseEntity.ok(service.addManual(keyword, request.get("category"), request.get("note")));
     }
+
+    @PostMapping("/manual/preview")
+    public ResponseEntity<Map<String, Object>> manualPreview(@RequestBody Map<String, Object> request) {
+        String keyword = String.valueOf(request.getOrDefault("keyword", "")).trim();
+        int recentHours = request.get("recentHours") instanceof Number number ? number.intValue() : 2;
+        if (keyword.isBlank()) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(service.previewManualKeyword(keyword, recentHours));
+    }
+
+    @PostMapping("/mindmap")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<Map<String, Object>> mindmap(@RequestBody Map<String, Object> request) {
+        String keyword = String.valueOf(request.getOrDefault("keyword", "")).trim();
+        List<Map<String, Object>> videos = request.get("videos") instanceof List<?> list
+                ? (List<Map<String, Object>>) list : List.of();
+        if (keyword.isBlank()) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(service.buildMindMap(keyword, videos));
+    }
+
+    @PostMapping("/plan")
+    public ResponseEntity<Map<String, Object>> plan(@RequestBody Map<String, Object> request) {
+        return ResponseEntity.ok(service.buildPlans(request));
+    }
 }

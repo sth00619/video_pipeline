@@ -46,9 +46,10 @@ public class ImagesController {
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal String username) {
         String text = body.get("text");
+        String subtitleText = body.get("subtitleText");
         String section = body.get("section");
-        String mode = body.get("mode"); // "image" | "text" | "both"
-        imagesService.updateScene(jobId, index, text, section, mode);
+        String mode = body.get("mode"); // caption_only | image_only | text_and_image
+        imagesService.updateScene(jobId, index, text, subtitleText, section, mode);
         return ResponseEntity.ok(Map.of("status", "OK"));
     }
 

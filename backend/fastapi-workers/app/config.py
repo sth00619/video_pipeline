@@ -35,6 +35,23 @@ CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
 ANTHROPIC_PROMPT_CACHE_ENABLED = os.getenv("ANTHROPIC_PROMPT_CACHE_ENABLED", "true").lower() in {"1", "true", "yes"}
 ANTHROPIC_PROMPT_CACHE_TTL = os.getenv("ANTHROPIC_PROMPT_CACHE_TTL", "5m")
 
+# YouTube 공개 지표 성과등급의 기본값. runtime_config를 통해 무중단으로 조정한다.
+KEYWORD_SCORE_WEIGHT_MULTIPLE = float(os.getenv("KEYWORD_SCORE_WEIGHT_MULTIPLE", "0.5"))
+KEYWORD_SCORE_WEIGHT_VELOCITY = float(os.getenv("KEYWORD_SCORE_WEIGHT_VELOCITY", "0.3"))
+KEYWORD_SCORE_WEIGHT_LIKE = float(os.getenv("KEYWORD_SCORE_WEIGHT_LIKE", "0.1"))
+KEYWORD_SCORE_WEIGHT_COMMENT = float(os.getenv("KEYWORD_SCORE_WEIGHT_COMMENT", "0.1"))
+KEYWORD_LIKE_RATE_BENCHMARK = float(os.getenv("KEYWORD_LIKE_RATE_BENCHMARK", "0.02"))
+KEYWORD_COMMENT_RATE_BENCHMARK = float(os.getenv("KEYWORD_COMMENT_RATE_BENCHMARK", "0.002"))
+# Small channels can produce a large view/subscriber multiple from a single
+# lucky upload. They do not qualify as automatic recommendation evidence.
+# 추천 근거는 "작은 채널의 우연한 한 건"을 막으면서도 일주일 안의
+# 신선한 시장 이슈를 충분히 확보해야 한다. 3천/3천 + 0.25x 조합은
+# 5천/5천 단일 하한보다 풀을 넓히되, 반응이 거의 없는 영상은 제외한다.
+KEYWORD_MIN_SOURCE_SUBSCRIBERS = int(os.getenv("KEYWORD_MIN_SOURCE_SUBSCRIBERS", "3000"))
+KEYWORD_MIN_SOURCE_VIEWS = int(os.getenv("KEYWORD_MIN_SOURCE_VIEWS", "3000"))
+KEYWORD_MIN_SOURCE_VIEWER_MULTIPLE = float(os.getenv("KEYWORD_MIN_SOURCE_VIEWER_MULTIPLE", "0.25"))
+KEYWORD_EXCLUDE_LIVE = os.getenv("KEYWORD_EXCLUDE_LIVE", "true").lower() in {"1", "true", "yes"}
+
 # ══════════════════════════════════════════════════════════
 # 파이프라인 동작 파라미터 초기값 (신규)
 #
@@ -43,11 +60,11 @@ ANTHROPIC_PROMPT_CACHE_TTL = os.getenv("ANTHROPIC_PROMPT_CACHE_TTL", "5m")
 # GET/POST /pipeline/config API(= app/runtime_config.py)를 쓰세요.
 # 그러면 Docker 재빌드 없이 다음 Job부터 즉시 반영됩니다.
 # ══════════════════════════════════════════════════════════
-# ElevenLabs Korean narration at 1.25x.  The Job 123 measurement was
-# 216 spoken characters in 38.6 seconds, so 340 non-space characters/minute
-# keeps the generated script close to the requested final duration.
-TTS_SPEED = float(os.getenv("TTS_SPEED", "1.25"))
-CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "340"))
+# Fast post-generation speed-up flattens pauses and emphasis.  Keep narration
+# close to natural speed; reduce the script target accordingly to preserve the
+# requested video duration instead of compressing the actor's performance.
+TTS_SPEED = float(os.getenv("TTS_SPEED", "1.05"))
+CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "285"))
 SCENE_DURATION_SEC = float(os.getenv("SCENE_DURATION_SEC", "5.5"))
 SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "16"))
 SUBTITLE_FONT_SIZE = int(os.getenv("SUBTITLE_FONT_SIZE", "76"))
@@ -73,8 +90,9 @@ GEMINI_PRO_REQUEST_DELAY_SECONDS = float(os.getenv("GEMINI_PRO_REQUEST_DELAY_SEC
 # Bound image API fan-out so a long job is faster without turning rate limits
 # into missing scenes.  These are runtime-tunable through /pipeline/config.
 GEMINI_PARALLEL_ENABLED = os.getenv("GEMINI_PARALLEL_ENABLED", "true").lower() in {"1", "true", "yes"}
-GEMINI_MAX_CONCURRENCY = int(os.getenv("GEMINI_MAX_CONCURRENCY", "8"))
+GEMINI_MAX_CONCURRENCY = int(os.getenv("GEMINI_MAX_CONCURRENCY", "6"))
 GEMINI_RETRY_MAX = int(os.getenv("GEMINI_RETRY_MAX", "3"))
+IMAGE_SAME_ERROR_BREAK_COUNT = int(os.getenv("IMAGE_SAME_ERROR_BREAK_COUNT", "5"))
 GEMINI_RPM_SOFT_CAP = int(os.getenv("GEMINI_RPM_SOFT_CAP", "60"))
 GEMINI_ADAPTIVE_BACKOFF_ENABLED = os.getenv("GEMINI_ADAPTIVE_BACKOFF_ENABLED", "true").lower() in {"1", "true", "yes"}
 LONGFORM_SCENE_MAX_WORKERS = int(os.getenv("LONGFORM_SCENE_MAX_WORKERS", "6"))
@@ -87,16 +105,31 @@ ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
 ELEVENLABS_STABILITY = float(os.getenv("ELEVENLABS_STABILITY", "0.62"))
 ELEVENLABS_SIMILARITY_BOOST = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.80"))
 ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.05"))
+# V3 uses a small, controlled performance range: the intro may be natural and
+# expressive, while the long-form body stays stable and repeatable.
+TTS_MODEL_INTRO = os.getenv("TTS_MODEL_INTRO", "eleven_v3")
+TTS_MODEL_BODY = os.getenv("TTS_MODEL_BODY", "eleven_v3")
+TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.5"))
+TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "1.0"))
+TTS_CER_THRESHOLD = float(os.getenv("TTS_CER_THRESHOLD", "0.08"))
+TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
+TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "true").lower() in {"1", "true", "yes"}
+# Keep a deliberate breath between completed sentences.  This is inserted into
+# the returned audio timeline (rather than by speeding text up/down), so the
+# visual and subtitle timings remain deterministic.
+TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "320"))
+TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "600"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))
-ZOOMPAN_SPEED = float(os.getenv("ZOOMPAN_SPEED", "0.0008"))
-ZOOMPAN_MAX_ZOOM = float(os.getenv("ZOOMPAN_MAX_ZOOM", "1.06"))
 
-INTRO_KLING_SECONDS_5MIN = int(os.getenv("INTRO_KLING_SECONDS_5MIN", "30"))
-INTRO_KLING_SECONDS_10MIN = int(os.getenv("INTRO_KLING_SECONDS_10MIN", "45"))
-INTRO_KLING_SECONDS_15MIN = int(os.getenv("INTRO_KLING_SECONDS_15MIN", "60"))
-INTRO_KLING_SECONDS_20MIN = int(os.getenv("INTRO_KLING_SECONDS_20MIN", "60"))
-INTRO_KLING_MAX_CLIPS = int(os.getenv("INTRO_KLING_MAX_CLIPS", "11"))
+# Image-to-video is deliberately limited to the contiguous opening hook.  All
+# later scenes are rendered as static images: no FFmpeg zoom, pan, or transition
+# effects are permitted because they can introduce visible jitter in charts,
+# captions, and aligned numerical graphics.
+INTRO_MOTION_SECONDS_SHORT = float(os.getenv("INTRO_MOTION_SECONDS_SHORT", "40"))
+INTRO_MOTION_SECONDS_LONG = float(os.getenv("INTRO_MOTION_SECONDS_LONG", "60"))
+INTRO_MOTION_SHORT_THRESHOLD = float(os.getenv("INTRO_MOTION_SHORT_THRESHOLD", "660"))
+INTRO_KLING_MAX_CLIPS = int(os.getenv("INTRO_KLING_MAX_CLIPS", "12"))
 
 # Budget values are placeholders: replace them with the current AI Studio/Fal
 # console rates before production.  The preflight never hard-codes a price.

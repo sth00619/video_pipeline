@@ -31,8 +31,86 @@ from app.utils.script_style import (
     assess_storytelling,
     get_script_style_guide,
 )
+from app.utils.script_length import make_length_contract, spoken_char_count
+from app.utils.sentence_splitter import split_sentences
+from app.workers.news_keyword_extractor import NewsKeywordExtractor
+from app.utils.keyword_aliases import normalise_terms
+from app.utils.script_delivery import annotate_sections, default_style_mix, validate_delivery
+from app.utils.elevenlabs_mapper import map_emotion_to_elevenlabs
 
 logger = logging.getLogger(__name__)
+
+
+class ScriptResearchRequiredError(RuntimeError):
+    """Raised when a user-selected topic has no grounded evidence to narrate."""
+
+
+def _selected_keyword_terms(keyword: str) -> list[str]:
+    """Preserve every user-selected term instead of treating the input as one seed."""
+    raw_terms = re.split(r"[,\n#/|]+", keyword or "")
+    terms: list[str] = []
+    for raw in raw_terms:
+        cleaned = re.sub(r"\s+", " ", raw).strip(" #,;|\t")
+        if cleaned and cleaned not in terms:
+            terms.append(cleaned)
+    return terms or [str(keyword or "").strip()]
+
+
+def _topic_terms_for_evidence(terms: list[str]) -> list[str]:
+    """Do not make broad labels such as '경제이슈' block a specific topic."""
+    generic = {"경제이슈", "경제", "주식", "증시", "시장", "이슈", "뉴스"}
+    meaningful = [term for term in terms if term.replace(" ", "") not in generic]
+    return meaningful or terms[:1]
+
+
+def _keyword_coverage_terms(terms: list[str]) -> list[str]:
+    """Turn a selected topic phrase into verifiable subject components.
+
+    A selected keyword is often one Korean phrase (for example
+    ``삼성전자 3분기 반도체 실적``).  Requiring that exact full phrase in a
+    quarter of all sentences rejects an otherwise on-topic script whenever a
+    writer naturally says "삼성전자의 3분기 실적".  We instead require every
+    distinctive entity/concept/time qualifier to appear, while still keeping a
+    meaningful share of the narration focused on the subject.
+    """
+    generic = {
+        "경제이슈", "경제", "주식", "증시", "시장", "이슈", "뉴스", "관련",
+        "핵심", "쟁점", "영향", "확인할", "지표", "투자자", "체크포인트",
+        "전망", "분석",
+    }
+    result: list[str] = []
+    for phrase in _topic_terms_for_evidence(terms):
+        chunks = re.split(r"\s+", phrase or "")
+        for raw in chunks:
+            token = re.sub(r"[^0-9A-Za-z가-힣]", "", raw).strip()
+            if token and token not in generic and token not in result:
+                result.append(token)
+    # Keep the same canonical entities/time labels used when ranking keyword
+    # candidates (삼전=삼성전자, 3분기=Q3).  This prevents a valid script from
+    # failing merely because the two stages used different spelling.
+    aliases = []
+    for phrase in terms:
+        for canonical in sorted(normalise_terms(phrase)):
+            if canonical not in aliases:
+                aliases.append(canonical)
+    return aliases or result or _topic_terms_for_evidence(terms)
+
+
+def _collect_keyword_news(terms: list[str]) -> list[dict]:
+    extractor = NewsKeywordExtractor()
+    rows: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for term in _topic_terms_for_evidence(terms):
+        # A script needs topical facts, not only the general market snapshot.
+        # Seven days is long enough for a researched long-form topic; the
+        # manual keyword UI keeps its stricter 1–2 hour freshness window.
+        for article in extractor.search_recent_news(term, max_age_hours=24 * 7, limit=6):
+            identity = (str(article.get("title", "")), str(article.get("url", "")))
+            if identity in seen:
+                continue
+            seen.add(identity)
+            rows.append({**article, "matched_keyword": term})
+    return rows[:12]
 
 CATEGORY_LABELS = {
     "KOSPI": "코스피(한국 종합주가지수)",
@@ -98,7 +176,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
   좋은 예: "코스피가 올랐어요. 무려 40포인트나요. 정말 놀라운 상승이죠."
   나쁜 예: "코스피가 40포인트나 상승하면서 투자자들의 관심이 집중되고 있습니다."
 - 각 문장은 반드시 마침표(.), 요, 다, 죠, 네 등으로 명확히 종결하세요
-- 숫자와 기호는 천단위 콤마(,)를 절대 사용하지 말고(예: 2783포인트, 6806포인트), 퍼센트(%) 기호는 스크립트 대사에서 반드시 '퍼센트' 또는 '포인트'라는 한글 단어로 풀어서 작성하세요(예: 1.2퍼센트, 1.2포인트, 2억 5800만 주).
+- 숫자와 기호는 천단위 콤마(,)를 절대 사용하지 말고(예: 2783포인트, 6806포인트), % 기호는 반드시 '퍼센트'로만 풀어 쓰세요. '포인트'는 지수·가격의 절대 변동값에만 사용합니다. 1.2퍼센트와 1.2포인트는 다른 의미입니다.
 - 문장 중간에 쉼표로 끊지 말고, 마침표로 완전히 종결하세요
 
 🎯 씬 구성 규칙 (비주얼 프롬프트 작성의 핵심!):
@@ -172,11 +250,13 @@ class ScriptWorker:
                 content_text = "".join(block.text for block in response.content if hasattr(block, "text"))
                 if content_text:
                     logger.info(f"Claude API 호출 성공 ({len(content_text)}자)")
+                    self._llm_provider_log.append({"provider": "claude", "fallback": False})
                     return content_text
             except Exception as e:
                 logger.error(f"Claude API 호출 실패: {e}. Gemini 폴백 시도합니다.")
         
         # 2. Gemini 폴백
+        self._llm_provider_log.append({"provider": "gemini", "fallback": True})
         gemini_key = os.getenv("GEMINI_API_KEY")
         if not gemini_key:
             raise RuntimeError("Claude 호출 실패 및 GEMINI_API_KEY가 설정되지 않아 진행할 수 없습니다.")
@@ -230,11 +310,23 @@ class ScriptWorker:
     def generate(self, keyword: str, category: str, target_minutes: int,
                  market_data: Optional[dict] = None, job_id: int = 0,
                  data_visuals_enabled: bool = True,
-                 storytelling_profile: str = DEFAULT_SCRIPT_STYLE_PROFILE) -> dict:
+                 storytelling_profile: str = DEFAULT_SCRIPT_STYLE_PROFILE,
+                 voice_id: Optional[str] = None) -> dict:
         category_label = CATEGORY_LABELS.get(category, "주식시장")
-        # Use the measured spoken-narration rate rather than the rich script's
-        # total character count (which also includes prompts and metadata).
-        target_chars = target_minutes * int(runtime_config.value("chars_per_minute"))
+        self._llm_provider_log: list[dict] = []
+        selected_terms = _selected_keyword_terms(keyword)
+        sections = annotate_sections(sections, int(length_contract["target_seconds"]))
+        for scene in sections:
+            scene["elevenlabs_hint"] = map_emotion_to_elevenlabs(scene["emotion_tag"], scene["phase"])
+        speed = float(runtime_config.value("tts_speed"))
+        length_contract = make_length_contract(
+            target_minutes,
+            float(runtime_config.value("chars_per_minute")),
+            speed,
+            voice_id=voice_id or runtime_config.value("elevenlabs_voice_id"),
+            model_id=runtime_config.value("tts_model_body"),
+        )
+        target_chars = int(length_contract["target_chars"])
 
         logger.info(f"스크립트 생성 v3: job_id={job_id}, keyword={keyword}, "
                     f"category={category}, target={target_minutes}분")
@@ -255,15 +347,26 @@ class ScriptWorker:
                 market_data = {}
 
         try:
+            keyword_news = _collect_keyword_news(selected_terms)
+            # A named topic must have its own evidence.  Generic index data is
+            # never allowed to replace it with an unrelated KOSPI script.
+            topic_terms = _keyword_coverage_terms(selected_terms)
+            if len(topic_terms) > 1 and not keyword_news:
+                raise ScriptResearchRequiredError(
+                    f"선택 키워드({', '.join(topic_terms)})의 검증 가능한 최신 근거를 찾지 못했습니다. "
+                    "키워드를 수정하거나 근거 자료를 추가한 뒤 다시 시도하세요."
+                )
+
             # 3-Round 팩트체크
             verified_facts, fact_check_log = self._multi_round_fact_check(
-                keyword, category_label, market_data
+                keyword, category_label, market_data, selected_terms, keyword_news
             )
 
             # 검증된 사실 기반 스크립트 생성
             full_script, sections, meta_title, meta_thumb, meta_desc, meta_shorts = self._generate_with_verified_facts(
                 keyword, category_label, target_minutes, target_chars,
-                verified_facts, market_data, storytelling_profile
+                verified_facts, market_data, storytelling_profile,
+                selected_terms, keyword_news, length_contract,
             )
             sections = direct_scenes(enrich_scene_plans(sections))
             if data_visuals_enabled:
@@ -271,6 +374,9 @@ class ScriptWorker:
                 sections = _attach_verified_market_charts(sections)
             used_real_llm = True
 
+        except ScriptResearchRequiredError:
+            # Do not hide an evidence failure behind a fabricated mock script.
+            raise
         except Exception as e:
             logger.error(f"LLM API 호출 실패: {e} — Mock으로 폴백")
             full_script, sections = self._mock_script(keyword, category_label, target_minutes)
@@ -288,27 +394,51 @@ class ScriptWorker:
 
         logger.info(f"스크립트 생성 완료: {len(full_script)}자, job_id={job_id}")
 
+        # Production metadata is derived after all factual narration and
+        # visual planning are final. It never rewrites the approved script.
+        sections = annotate_sections(sections, int(length_contract["target_seconds"]))
+        for scene in sections:
+            scene["elevenlabs_hint"] = map_emotion_to_elevenlabs(scene["emotion_tag"], scene["phase"])
+            for sentence in scene.get("sentences", []):
+                sentence["elevenlabs_hint"] = map_emotion_to_elevenlabs(sentence["emotion_tag"], scene["phase"])
+        delivery_validation = validate_delivery(sections)
         scene_quality = assess_scene_plan(sections)
         art_quality = assess_art_diversity(sections)
         storytelling_quality = assess_storytelling(sections, full_script)
+        keyword_validation = _validate_keyword_coverage(full_script, selected_terms)
+        if not keyword_validation["passed"]:
+            raise ScriptResearchRequiredError(
+                "선택 키워드 반영 검증에 실패했습니다: " + ", ".join(keyword_validation["missing_terms"])
+            )
+        unit_validation = _validate_unit_usage(full_script)
 
         return {
             "job_id": job_id,
             "keyword": keyword,
             "script": full_script,
             "sections": sections,
-            "char_count": sum(s["char_count"] for s in sections),
+            "char_count": spoken_char_count(full_script),
+            "length_contract": length_contract,
+            "keyword_validation": keyword_validation,
+            "unit_validation": unit_validation,
             "verified_facts": verified_facts,
             "fact_check_rounds": len(fact_check_log),
             "fact_check_log": fact_check_log,
             "market_snapshot_used": market_data is not None,
             "market_snapshot": market_data or {},
             "used_real_llm": used_real_llm,
+            "llm_provider_log": self._llm_provider_log,
+            "requires_manual_review": any(item.get("fallback") for item in self._llm_provider_log),
             "storytelling_profile": DEFAULT_SCRIPT_STYLE_PROFILE,
+            "style_mix_applied": default_style_mix("KOSPI"),
+            "structure": "LONGFORM_KISUNGJEONGYEOL_v1",
+            "style_mix_applied": default_style_mix(category),
+            "structure": "LONGFORM_KISUNGJEONGYEOL_v1",
             "quality_report": {
                 "scene_plan": scene_quality,
                 "art_direction": art_quality,
                 "storytelling": storytelling_quality,
+                "delivery": delivery_validation,
             },
             "youtube_metadata": {
                 "title": meta_title,
@@ -319,20 +449,29 @@ class ScriptWorker:
         }
 
     def _multi_round_fact_check(self, keyword: str, category_label: str,
-                                 market_data: dict) -> tuple[list, list]:
+                                 market_data: dict, selected_terms: list[str],
+                                 keyword_news: list[dict]) -> tuple[list, list]:
         messages = []
         fact_check_log = []
         market_json = json.dumps(market_data, ensure_ascii=False, indent=2)
+        news_json = json.dumps(keyword_news, ensure_ascii=False, indent=2)
 
-        r1_content = f"""<market_data>
+        r1_content = f"""<selected_keywords>{json.dumps(selected_terms, ensure_ascii=False)}</selected_keywords>
+<category>{category_label}</category>
+<market_data>
 {market_json}
 </market_data>
+<keyword_news_evidence>
+{news_json}
+</keyword_news_evidence>
 
 <task>
 위 실제 시장 데이터에서 '{keyword}' 관련 핵심 사실들을 가능한 많이 추출하세요.
 1. 수치, 뉴스, 매크로 동향 등 신뢰성 있는 정보 포함.
 2. 데이터 내 출처 필드명 명시.
 3. 데이터에 없는 내용 절대 금지.
+4. Every fact must directly concern at least one selected keyword. General market context may only explain a supplied keyword fact; it must never replace the selected topic.
+5. Keep point changes and percentage changes as separate, labelled values.
 형식: 번호. [출처] 사실 내용
 </task>"""
 
@@ -361,21 +500,42 @@ class ScriptWorker:
     def _generate_with_verified_facts(self, keyword: str, category_label: str,
                                        target_minutes: int, target_chars: int,
                                        verified_facts: list, market_data: dict,
-                                       storytelling_profile: str = DEFAULT_SCRIPT_STYLE_PROFILE):
+                                       storytelling_profile: str = DEFAULT_SCRIPT_STYLE_PROFILE,
+                                       selected_terms: Optional[list[str]] = None,
+                                       keyword_news: Optional[list[dict]] = None,
+                                       length_contract: Optional[dict] = None):
         facts_text = "\n".join(f"- {f['fact']} (상세 정보: {f.get('figure', 'N/A')}, 출처: {f.get('source_field', 'N/A')}, 신뢰도: {f.get('confidence', 0):.2f})" for f in verified_facts)
         market_summary = _build_market_summary_for_script(market_data)
-        num_scenes = _calc_scene_count(target_minutes)
-        chars_per_scene = target_chars // num_scenes if num_scenes > 0 else 60
+        selected_terms = selected_terms or _selected_keyword_terms(keyword)
+        keyword_news = keyword_news or []
+        style_mix = default_style_mix("US_STOCKS" if "US" in category_label.upper() else "KOSPI")
+        style_instruction = (
+            "Use 10 or more small curiosity-to-answer turns across the long-form narration."
+            if style_mix["economic_hunter"] >= 0.6 else
+            "Use concise evidence-led explanation with a transition every few scenes."
+        )
+        evidence_text = "\n".join(
+            f"- [{row.get('matched_keyword', '')}] {row.get('title', '')} ({row.get('source', '')})"
+            for row in keyword_news
+        ) or "- 없음"
 
-        user_prompt = f"""<verified_facts>{facts_text}</verified_facts>
+        user_prompt = f"""<selected_keywords>{json.dumps(selected_terms, ensure_ascii=False)}</selected_keywords>
+<category>{category_label}</category>
+<verified_facts>{facts_text}</verified_facts>
 <market_context>{market_summary}</market_context>
+<keyword_news_evidence>{evidence_text}</keyword_news_evidence>
 작성 규칙:
 - [대사], [비주얼 설명 (한국어)], [비주얼 프롬프트 (영어)], [감정] 포함
 - [대사] 블록만 합산해 공백 제외 약 {target_chars}자(±8%)로 작성. 비주얼 설명·영문 프롬프트·메타데이터는 이 분량에 포함하지 않음
-- 각 씬의 대사는 공백 제외 약 {chars_per_scene}자 내외의 짧고 완결된 생각 단위로 작성해 5~7초마다 시각 전환이 가능하게 구성
+- The selected keywords are mandatory subjects, not optional context. Every section must directly explain a selected keyword, its verified impact, or the relationship between the selected keyword and the category. Do not replace this with a generic market crash, geopolitical event, or index recap unless the supplied evidence explicitly connects it.
+- Mention every distinctive entity, concept, and time qualifier contained in the selected topic naturally at least once. The category is the analytical lens, not a substitute for the selected topic.
+- Use unit-safe facts only: percentages use '퍼센트', index or price changes use '포인트'; never call a percentage a point value.
+- Write continuous, readable narration. Image scenes are derived after narration is complete; do not pad, shorten, or duplicate narration to reach a scene count.
+- Use the four delivery phases: Hook (first 8%), Context (to 55%), Twist (to 85%), Resolution (final 15%). {style_instruction}
+- Improve only voice, pacing, transitions, and listener comprehension. Do not add, remove, substitute, or reinterpret any verified fact, number, date, company, source, or causal relationship.
 - 마지막에 ## 메타데이터 섹션 추가 ([추천 제목], [추천 썸네일], [더보기 설명], [쇼츠 대본])
 - 쇼츠 대본은 본 영상의 핵심만 30초 내외로 요약한 강렬한 문장으로 작성
-목표 씬 수: 총 {num_scenes}개 내외"""
+목표 영상 길이: {target_minutes}분 / TTS 배속: {(length_contract or {}).get('tts_speed', 1.0)}x"""
 
         full_text = self._call_llm_with_fallback(
             f"{SCRIPT_SYSTEM_PROMPT}\n\n{get_script_style_guide(storytelling_profile)}",
@@ -404,27 +564,84 @@ class ScriptWorker:
             s_match = re.search(r'\[쇼츠 대본\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
             if s_match: meta_shorts = s_match.group(1).strip()
 
-        # LLM instructions can occasionally be exceeded. Keep the spoken text
-        # within the requested video duration without touching visual prompts or
-        # metadata, so a 5-minute job cannot silently become a 9-minute TTS.
+        # A character-level truncation can turn 6.37퍼센트 into 6.3 and must
+        # never be used in finance narration. Ask the model for one concise
+        # rewrite before the sentence-boundary safety cap when the draft is
+        # materially over the agreed narration budget.
+        if _dialogue_char_count(script_body) > int(target_chars * 1.15):
+            script_body = self._rewrite_dialogue_to_target(script_body, target_chars)
+
+        # Keep the spoken text within the requested duration without touching
+        # visual prompts or metadata. The final cap preserves whole sentences.
         script_body = _cap_dialogue_to_target(script_body, target_chars)
 
-        # The LLM often returns a valid but too-coarse outline (for example,
-        # twenty 20-second scenes in a five-minute video).  Split the spoken
-        # content into short, complete thought units before images are planned.
+        # Derive visual scenes only after the narration budget is fixed.  The
+        # download/review text remains a clean narration; the sections retain
+        # Korean subtitles and English image prompts for the image-stage UI.
         sections = _split_sections_for_visual_pacing(_parse_sections(script_body))
-        return script_body, sections, meta_title, meta_thumb, meta_desc, meta_shorts
+        narration_script = _dedupe_adjacent_paragraphs(_narration_from_sections(sections))
+        return narration_script, sections, meta_title, meta_thumb, meta_desc, meta_shorts
 
     def _mock_generate(self, keyword, category_label, target_minutes, job_id):
         script_text, sections = self._mock_script(keyword, category_label, target_minutes)
+        length_contract = make_length_contract(
+            target_minutes,
+            float(runtime_config.value("chars_per_minute")),
+            float(runtime_config.value("tts_speed")),
+            voice_id=runtime_config.value("elevenlabs_voice_id"),
+            model_id=runtime_config.value("tts_model_body"),
+        )
+        selected_terms = _selected_keyword_terms(keyword)
         return {
-            "char_count": len(script_text),
+            "job_id": job_id,
+            "keyword": keyword,
+            "script": script_text,
+            "sections": sections,
+            "char_count": spoken_char_count(script_text),
+            "length_contract": length_contract,
+            "keyword_validation": _validate_keyword_coverage(script_text, selected_terms),
+            "unit_validation": _validate_unit_usage(script_text),
             "verified_facts": [],
             "fact_check_rounds": 0,
             "fact_check_log": ["ANTHROPIC_API_KEY 미설정 — Mock 모드"],
             "market_snapshot_used": False,
+            "market_snapshot": {},
             "used_real_llm": False,
+            "requires_manual_review": True,
+            "storytelling_profile": DEFAULT_SCRIPT_STYLE_PROFILE,
+            "quality_report": {
+                "scene_plan": assess_scene_plan(sections),
+                "art_direction": assess_art_diversity(sections),
+                "storytelling": assess_storytelling(sections, script_text),
+                "delivery": validate_delivery(sections),
+                "reason": "API 키 미설정 Mock 대본 — 자동 진행 금지",
+            },
+            "youtube_metadata": {
+                "title": f"{keyword} 핵심 정리",
+                "thumbnail_prompt": "Manual review required: no generated thumbnail prompt",
+                "description": "API 키 미설정 Mock 대본입니다. 검토 후 사용하세요.",
+                "shorts_script": "Mock 대본은 쇼츠 자동 생성에 사용하지 않습니다.",
+            },
         }
+
+    def _rewrite_dialogue_to_target(self, script_body: str, target_chars: int) -> str:
+        """One best-effort LLM rewrite; the deterministic cap remains safe fallback."""
+        try:
+            rewritten = self._call_llm_with_fallback(
+                "You are a Korean financial script editor.",
+                [{"role": "user", "content": f"""아래 대본의 [대사]만 줄여 공백 제외 약 {target_chars}자로 맞추세요.
+숫자, 단위, 날짜, 회사명은 절대 자르거나 바꾸지 마세요. 문장을 중간에서 자르지 마세요.
+씬 헤더와 [대사]/[비주얼 설명]/[비주얼 프롬프트]/[감정] 구조를 유지하고, 결과만 반환하세요.
+
+{script_body}"""}],
+                max_tokens=8000,
+            )
+            if rewritten and _dialogue_char_count(rewritten) < _dialogue_char_count(script_body):
+                logger.info("Narration length rewrite applied: %s -> %s chars", _dialogue_char_count(script_body), _dialogue_char_count(rewritten))
+                return rewritten
+        except Exception as exc:
+            logger.warning("Narration length rewrite unavailable; using sentence-safe cap: %s", exc)
+        return script_body
 
     def _mock_script(self, keyword, category_label, target_minutes):
         num_scenes = _calc_scene_count(target_minutes)
@@ -483,6 +700,77 @@ class ScriptWorker:
 # ──────────────────────────────────────────────────────────
 # 유틸 및 파싱 함수
 # ──────────────────────────────────────────────────────────
+def _narration_from_sections(sections: list[dict]) -> str:
+    """Keep editorial scene metadata out of the downloadable TTS script."""
+    return "\n\n".join(
+        str(section.get("content") or section.get("text") or "").strip()
+        for section in sections
+        if str(section.get("content") or section.get("text") or "").strip()
+    )
+
+
+def _dedupe_adjacent_paragraphs(text: str) -> str:
+    paragraphs: list[str] = []
+    previous_key = ""
+    for paragraph in re.split(r"\n{2,}", text or ""):
+        cleaned = re.sub(r"\s+", " ", paragraph).strip()
+        key = re.sub(r"[^0-9A-Za-z가-힣]", "", cleaned).lower()
+        if cleaned and key and key != previous_key:
+            paragraphs.append(cleaned)
+            previous_key = key
+    return "\n\n".join(paragraphs)
+
+
+def _validate_keyword_coverage(script: str, terms: list[str]) -> dict:
+    normalized_script = re.sub(r"\s+", "", script or "").lower()
+    meaningful = _keyword_coverage_terms(terms)
+    script_canonical = normalise_terms(script)
+    missing = [
+        term for term in meaningful
+        if re.sub(r"\s+", "", term).lower() not in normalized_script and term not in script_canonical
+    ]
+    # Count sentence-level topical relevance, not raw token repetition.
+    sentences = [line.strip() for line in re.split(r"(?<=[.!?。])\s*|\n+", script or "") if line.strip()]
+    related = sum(
+        1 for sentence in sentences
+        if any(re.sub(r"\s+", "", term).lower() in re.sub(r"\s+", "", sentence).lower() or term in normalise_terms(sentence) for term in meaningful)
+    )
+    ratio = related / len(sentences) if sentences else 0.0
+    return {
+        # Direct mentions are a conservative proxy for semantic relevance; the
+        # prompt/fact gate enforces the stronger every-section relationship.
+        "passed": not missing and ratio >= 0.25,
+        "selected_terms": terms,
+        "missing_terms": missing,
+        "related_sentence_ratio": round(ratio, 3),
+        "related_sentence_count": related,
+        "sentence_count": len(sentences),
+    }
+
+
+def _validate_unit_usage(script: str) -> dict:
+    """Reject common finance narration mistakes before they reach ElevenLabs."""
+    errors: list[str] = []
+    # The shared splitter keeps decimal points such as 4.53 inside a sentence.
+    sentences = [re.sub(r"\s+", " ", item).strip() for item in split_sentences(script or "")]
+    rate_labels = ("하락률", "상승률", "등락률", "수익률", "비중")
+    for compact in sentences:
+        if not compact:
+            continue
+        for label in rate_labels:
+            label_at = compact.find(label)
+            if label_at < 0:
+                continue
+            # "코스피가 463포인트, 하락률은 6.37퍼센트" is correct.
+            # Only reject a point unit in the local predicate/value span.
+            predicate_span = compact[label_at:label_at + len(label) + 20]
+            if "포인트" in predicate_span or "pt" in predicate_span.lower():
+                errors.append(f"비율 라벨 직후 포인트 단위 사용: {compact[:80]}")
+        if re.search(r"\d+(?:\.\d+)?%", compact):
+            errors.append(f"TTS 전처리 전 % 기호 잔존: {compact[:80]}")
+    return {"passed": not errors, "errors": errors}
+
+
 def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
     """Cap only [대사] content to the requested TTS duration budget.
 
@@ -500,14 +788,8 @@ def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
     if not matches:
         return script_body
 
-    def char_count(value: str) -> int:
-        return len(re.sub(r"\s+", "", value))
-
-    original_counts = [char_count(match.group(2)) for match in matches]
+    original_counts = [_visible_char_count(match.group(2)) for match in matches]
     total = sum(original_counts)
-    # Keep the narration budget exact.  The previous sentence-only truncation
-    # could leave most of each scene's allowance unused, producing a 38-second
-    # TTS for a one-minute request.
     compaction_budget = target_chars
     if total <= compaction_budget:
         return script_body
@@ -523,43 +805,25 @@ def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
 
     def shorten_dialogue(value: str, limit: int) -> str:
         text = re.sub(r"\s+", " ", value).strip()
-        if char_count(text) <= limit:
+        if _visible_char_count(text) <= limit:
             return text
         kept: list[str] = []
-        for sentence in re.split(r"(?<=[.!?。])\s*", text):
+        for sentence in split_sentences(text):
             sentence = sentence.strip()
             if not sentence:
                 continue
             candidate = " ".join([*kept, sentence]).strip()
-            if char_count(candidate) <= limit:
+            if _visible_char_count(candidate) <= limit:
                 kept.append(sentence)
-            elif not kept:
-                visible = 0
-                cut_at = 0
-                for char_index, char in enumerate(sentence):
-                    if not char.isspace():
-                        visible += 1
-                    if visible > max(1, limit - 1):
-                        break
-                    cut_at = char_index + 1
-                shortened = sentence[:cut_at].rstrip(" ,;:")
-                return (shortened + ".") if shortened else sentence[:1]
             else:
-                remaining = limit - char_count(" ".join(kept))
-                if remaining > 0:
-                    visible = 0
-                    cut_at = 0
-                    for char_index, char in enumerate(sentence):
-                        if not char.isspace():
-                            visible += 1
-                        if visible > remaining:
-                            break
-                        cut_at = char_index + 1
-                    tail = sentence[:cut_at].rstrip(" ,;:")
-                    if tail:
-                        kept.append(tail)
+                # Never cut a numeric token (or any sentence) to meet a
+                # character quota. A single over-budget sentence is safer than
+                # broadcasting a false number; the caller already attempted a
+                # one-pass LLM rewrite before reaching this deterministic cap.
+                if not kept:
+                    kept.append(sentence)
                 break
-        return " ".join(kept).strip() or text[:max(1, limit)]
+        return " ".join(kept).strip() or text
 
     cap_iter = iter(caps)
 
@@ -567,12 +831,24 @@ def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
         return match.group(1) + shorten_dialogue(match.group(2), next(cap_iter)) + "\n"
 
     compacted = pattern.sub(replace, script_body)
-    compacted_total = sum(char_count(match.group(2)) for match in pattern.finditer(compacted))
+    compacted_total = sum(_visible_char_count(match.group(2)) for match in pattern.finditer(compacted))
     logger.warning(
         "Narration capped for target duration: %s -> %s chars (target=%s, budget=%s)",
         total, compacted_total, target_chars, compaction_budget,
     )
     return compacted
+
+
+def _visible_char_count(value: str) -> int:
+    return len(re.sub(r"\s+", "", value or ""))
+
+
+def _dialogue_char_count(script_body: str) -> int:
+    pattern = re.compile(r"(?ms)\[대사\]\s*(.*?)(?=^\s*\[(?:비주얼|감정)|^\s*##|\Z)")
+    matches = list(pattern.finditer(script_body or ""))
+    if not matches:
+        return _visible_char_count(script_body)
+    return sum(_visible_char_count(match.group(1)) for match in matches)
 
 
 def _calc_scene_count(target_minutes: int) -> int:
@@ -610,11 +886,11 @@ def get_character_pose_from_text(text: str) -> str:
 def clean_script_commas_and_pct(text: str) -> str:
     if not text:
         return ""
-    # 1. 퍼센트 기호나 단어('%' 또는 '퍼센트')를 '포인트'로 일괄 치환
-    text = re.sub(r'(\d+(?:\.\d+)?)\s*%', r'\1포인트', text)
-    text = re.sub(r'(\d+(?:\.\d+)?)\s*퍼센트', r'\1포인트', text)
-    # 2. 천단위 콤마 제거 (예: 6,806 -> 6806)
-    text = re.sub(r'(\d{1,3}),(\d{3})', r'\1\2', text)
+    # % is a percentage, never an index point change.
+    text = re.sub(r'(\d+(?:\.\d+)?)\s*%', r'\1퍼센트', text)
+    # Remove all grouped thousands separators, including 29,800,000.
+    while re.search(r'\d,\d{3}', text):
+        text = re.sub(r'(\d),(\d{3})', r'\1\2', text)
     return text
 
 

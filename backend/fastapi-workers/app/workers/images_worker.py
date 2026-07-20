@@ -17,6 +17,7 @@ import hashlib
 import logging
 import random
 import time
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from app.utils.process_manager import is_job_stopped
@@ -29,11 +30,22 @@ from app.pipeline.scene_director import SceneDirector, SceneSpec
 from app.providers.real.prompt_builder import build_prompt
 from app.postprocess.text_overlay import add_headline
 from app.utils.budget import plan_preflight, record_cost, write_preflight
+from app.utils.intro_motion import infer_total_duration_seconds, select_intro_motion_scene_indices
 from app.utils.gemini_pressure import gemini_pressure
+from app.utils.image_job_lock import acquire_image_job_lock, release_image_job_lock
+from app.utils.retry_policy import classify_image_error, error_signature
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_CHARACTER_SHEET = Path("/app/assets/character/goldie_sheet_v1.png")
+
+
+class NonRetryableImageGenerationError(RuntimeError):
+    """A local code/configuration fault that must not fan out into scene retries."""
+
+
+def _is_non_retryable_image_error(exc: Exception) -> bool:
+    return not classify_image_error(exc).retryable
 
 import re
 
@@ -110,6 +122,23 @@ class ImagesWorker:
           2) 씬별 포즈 투명 PNG 로드
           3) FFmpeg overlay 필터로 합성
         """
+        lock_token = acquire_image_job_lock(job_id)
+        try:
+            return self._generate(
+                scenes_meta=scenes_meta, job_id=job_id, tts_meta_json=tts_meta_json,
+                script_meta_json=script_meta_json, character_image_path=character_image_path,
+                character_style_prompt=character_style_prompt, character_poses_dir=character_poses_dir,
+                lora_model_id=lora_model_id, lora_trigger_word=lora_trigger_word, lora_scale=lora_scale,
+            )
+        finally:
+            release_image_job_lock(job_id, lock_token)
+
+    def _generate(self, scenes_meta: list = None, job_id: int = 0,
+                  tts_meta_json: str = None, script_meta_json: str = None,
+                  character_image_path: str = None, character_style_prompt: str = None,
+                  character_poses_dir: str = None,
+                  lora_model_id: str = None, lora_trigger_word: str = None,
+                  lora_scale: float = 1.0) -> dict:
         market_snapshot = {}
         # scenes_meta가 주어지지 않은 경우 script_meta_json에서 복원
         if not scenes_meta and script_meta_json:
@@ -153,12 +182,30 @@ class ImagesWorker:
         if scenes_meta:
             # Cost is planned before the first image call.  A high Pro limit
             # is reduced to Flash coverage rather than rejecting a whole job.
+            estimated_total_duration = infer_total_duration_seconds(
+                scenes_meta,
+                float(runtime_config.value("scene_duration_sec")),
+            )
+            # Each selected scene produces one Fal/Kling request; retain the
+            # actual seconds separately for audit because the provider caps a
+            # request at five seconds.
+            intro_motion_indices, motion_target_seconds, planned_motion_seconds = select_intro_motion_scene_indices(
+                scenes_meta,
+                estimated_total_duration,
+                short_seconds=float(runtime_config.value("intro_motion_seconds_short")),
+                long_seconds=float(runtime_config.value("intro_motion_seconds_long")),
+                short_threshold=float(runtime_config.value("intro_motion_short_threshold")),
+                max_clips=max(0, int(runtime_config.value("intro_kling_max_clips"))),
+            )
             budget_preflight = plan_preflight(
                 len(scenes_meta),
                 str(runtime_config.value("image_quality_tier")),
                 int(runtime_config.value("pro_image_max_scenes")),
-                int(runtime_config.value("intro_kling_max_clips")),
+                len(intro_motion_indices),
             )
+            budget_preflight["intro_motion_target_seconds"] = motion_target_seconds
+            budget_preflight["intro_motion_planned_seconds"] = planned_motion_seconds
+            budget_preflight["intro_motion_estimated_total_seconds"] = estimated_total_duration
             write_preflight(job_id, budget_preflight)
             if not budget_preflight["allowed"]:
                 raise RuntimeError(
@@ -286,6 +333,7 @@ class ImagesWorker:
                 job_id=job_id,
                 use_composite=use_composite,
                 character_poses_dir=character_poses_dir,
+                budget_preflight=budget_preflight,
             )
 
         generated = []
@@ -529,6 +577,7 @@ class ImagesWorker:
         character_reference_paths, character_style_prompt,
         lora_model_id, lora_trigger_word, lora_scale,
         ai_provider, job_dir, job_id, use_composite=False, character_poses_dir=None,
+        budget_preflight=None,
     ) -> dict:
         """Render independent direct-AI scenes with bounded concurrency.
 
@@ -620,6 +669,7 @@ class ImagesWorker:
             for attempt in range(max_retries):
                 if is_job_stopped(job_id):
                     raise RuntimeError(f"Job {job_id} stopped by user.")
+                provider_request_started = False
                 try:
                     Path(raw_img_path).unlink(missing_ok=True)
                     if use_composite:
@@ -638,6 +688,7 @@ class ImagesWorker:
                             shutil.copy2(bg_path, img_path)
                     else:
                         gemini_pressure.acquire()
+                        provider_request_started = True
                         ai_provider.generate_image(
                         prompt=ctx["prompt_en"],
                         output_path=raw_img_path,
@@ -668,6 +719,7 @@ class ImagesWorker:
                         # _generate_background_layer.  Counting it again here
                         # would distort the adaptive error-rate calculation.
                         gemini_pressure.outcome()
+                        provider_request_started = False
                     if runtime_config.value("image_headline_overlay"):
                         add_headline(img_path if use_composite else raw_img_path, img_path, ctx["headline"], ctx["headline_mood"])
                     elif not use_composite:
@@ -683,7 +735,13 @@ class ImagesWorker:
                     }
                 except Exception as exc:
                     last_error = exc
-                    gemini_pressure.outcome(str(exc))
+                    if provider_request_started:
+                        gemini_pressure.outcome(str(exc))
+                    decision = classify_image_error(exc)
+                    if not decision.retryable:
+                        raise NonRetryableImageGenerationError(
+                            f"scene {index} stopped: non-retryable ({decision.reason}): {exc}"
+                        ) from exc
                     if attempt + 1 >= max_retries:
                         break
                     delay = min(60.0, base_backoff * (2 ** attempt) + random.uniform(0.0, 1.0))
@@ -694,10 +752,13 @@ class ImagesWorker:
                     time.sleep(delay)
             raise RuntimeError(f"scene {index} image generation failed after {max_retries} attempts: {last_error}")
 
-        max_workers = max(1, min(int(runtime_config.value("gemini_max_concurrency")), 32))
+        configured_workers = max(1, min(int(runtime_config.value("gemini_max_concurrency")), 32))
+        max_workers = gemini_pressure.recommended_concurrency(configured_workers)
         logger.info("Parallel image generation enabled: job=%s scenes=%s concurrency=%s retries=%s", job_id, len(contexts), max_workers, runtime_config.value("gemini_retry_max"))
         results = []
         failures = []
+        same_error_counts: Counter[str] = Counter()
+        break_count = max(1, int(runtime_config.value("image_same_error_break_count")))
         def persist_manifest() -> None:
             staged = manifest_path.with_suffix(".tmp")
             staged.write_text(json.dumps(image_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -719,6 +780,20 @@ class ImagesWorker:
                 except Exception as exc:
                     failures.append((index, str(exc)))
                     logger.error("Parallel image scene failed: job=%s scene=%s error=%s", job_id, index, exc)
+                    if isinstance(exc, NonRetryableImageGenerationError):
+                        for pending in futures:
+                            pending.cancel()
+                        raise RuntimeError(
+                            f"Image generation stopped before recovery: scene {index} has a local configuration/code error"
+                        ) from exc
+                    signature = error_signature(exc.__cause__ or exc)
+                    same_error_counts[signature] += 1
+                    if same_error_counts[signature] >= break_count:
+                        for pending in futures:
+                            pending.cancel()
+                        raise RuntimeError(
+                            f"Image generation circuit breaker opened after {same_error_counts[signature]} identical transient failures: {signature}"
+                        ) from exc
 
         # Do not discard hundreds of successful renders because a transient
         # 503 exhausted one scene's local attempts.  Finish the first pass,
@@ -728,7 +803,8 @@ class ImagesWorker:
             context_by_index = {ctx["index"]: ctx for ctx in contexts}
             first_failures = failures
             failures = []
-            with ThreadPoolExecutor(max_workers=min(max_workers, len(first_failures)), thread_name_prefix="image-recovery") as pool:
+            recovery_workers = min(gemini_pressure.recommended_concurrency(max_workers), len(first_failures))
+            with ThreadPoolExecutor(max_workers=max(1, recovery_workers), thread_name_prefix="image-recovery") as pool:
                 futures = {pool.submit(render_one, context_by_index[index]): index for index, _ in first_failures}
                 for future in as_completed(futures):
                     index = futures[future]
@@ -797,7 +873,8 @@ class ImagesWorker:
         character_style_prompt="background_only" 를 전달해 캐릭터 주입을 차단.
         """
         gemini_pressure.acquire()
-        ai_provider.generate_image(
+        try:
+            ai_provider.generate_image(
             prompt=prompt_en,
             output_path=bg_path,
             section=section,
@@ -809,11 +886,15 @@ class ImagesWorker:
             # Retries are owned by the bounded scene executor.  Keeping a
             # single provider attempt here prevents retry multiplication when
             # a character-composite scene is temporarily rate limited.
-            gemini_service_tier=runtime_config.value("gemini_service_tier", "standard"),
+            gemini_service_tier=runtime_config.value("gemini_service_tier"),
             gemini_max_attempts=1,
-            gemini_retry_base_seconds=runtime_config.integer("gemini_retry_base_seconds", 10),
-        )
-        gemini_pressure.outcome()
+            gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+            )
+        except Exception as exc:
+            gemini_pressure.outcome(str(exc))
+            raise
+        else:
+            gemini_pressure.outcome()
         logger.info(f"[배경레이어] 생성 완료: {bg_path}")
 
     # ============================

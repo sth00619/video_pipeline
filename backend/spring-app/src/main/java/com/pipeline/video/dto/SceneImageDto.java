@@ -31,6 +31,14 @@ public class SceneImageDto {
     @JsonProperty("text")
     private String text;
 
+    /**
+     * On-screen subtitle override.  It is intentionally separate from the
+     * Korean narration source so caption-only edits never change the image
+     * prompt or ask the TTS/image stages to run again.
+     */
+    @JsonProperty("subtitle_text")
+    private String subtitleText;
+
     @JsonProperty("start")
     private Double start;
 

@@ -14,6 +14,7 @@ import os
 import re
 import logging
 import time
+from datetime import datetime, timezone, timedelta
 from collections import Counter
 from typing import Optional
 
@@ -189,6 +190,53 @@ class NewsKeywordExtractor:
     # ─────────────────────────────────────────────────────
     # 네이버 검색 API
     # ─────────────────────────────────────────────────────
+    def search_recent_news(self, query: str, max_age_hours: int = 2, limit: int = 6) -> list[dict]:
+        """Return time-bounded Google News RSS evidence for a manual topic.
+
+        Headline evidence is deliberately kept separate from market causality:
+        the interface can confirm freshness without claiming a headline caused
+        a price movement.
+        """
+        normalized = re.sub(r"\s+", " ", query or "").strip()
+        if not normalized:
+            return []
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, min(max_age_hours, 24)))
+        try:
+            response = requests.get(
+                "https://news.google.com/rss/search",
+                params={"q": normalized, "hl": "ko", "gl": "KR", "ceid": "KR:ko"},
+                headers={"User-Agent": "Mozilla/5.0"}, timeout=8,
+            )
+            response.raise_for_status()
+            feed = feedparser.parse(response.content)
+            articles = []
+            for entry in feed.entries:
+                published = entry.get("published_parsed") or entry.get("updated_parsed")
+                if not published:
+                    continue
+                published_at = datetime(*published[:6], tzinfo=timezone.utc)
+                if published_at < cutoff:
+                    continue
+                raw_source = entry.get("source", {})
+                source_name = (
+                    raw_source.get("title", "Google 뉴스")
+                    if isinstance(raw_source, dict)
+                    else str(raw_source or "Google 뉴스")
+                )
+                articles.append({
+                    "title": re.sub(r"\s+", " ", entry.get("title", "")).strip(),
+                    "source": re.sub(r"\s+", " ", source_name).strip(),
+                    "url": entry.get("link", ""),
+                    "publishedAt": published_at.isoformat().replace("+00:00", "Z"),
+                    "hoursSincePublish": round((datetime.now(timezone.utc) - published_at).total_seconds() / 3600, 1),
+                })
+                if len(articles) >= limit:
+                    break
+            return articles
+        except Exception as exc:
+            logger.warning("최근 Google 뉴스 조회 실패(query=%s): %s", normalized, exc)
+            return []
+
     def _fetch_naver_news(self, query: str, display: int = 20) -> list[dict]:
         """네이버 뉴스 검색 API → 헤드라인 리스트"""
         url = "https://openapi.naver.com/v1/search/news.json"

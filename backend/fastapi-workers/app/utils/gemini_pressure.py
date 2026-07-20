@@ -42,5 +42,18 @@ class GeminiPressureController:
             while self._outcomes and now - self._outcomes[0][0] >= 60:
                 self._outcomes.popleft()
 
+    def recommended_concurrency(self, configured: int) -> int:
+        """Halve new/recovery fan-out after a sustained transient failure rate."""
+        with self._lock:
+            now = time.monotonic()
+            recent = [failed for at, failed in self._outcomes if now - at < 60]
+        if (
+            bool(runtime_config.value("gemini_adaptive_backoff_enabled"))
+            and len(recent) >= 10
+            and sum(recent) / len(recent) >= .30
+        ):
+            return max(1, configured // 2)
+        return configured
+
 
 gemini_pressure = GeminiPressureController()

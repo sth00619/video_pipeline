@@ -22,6 +22,44 @@ public class ChannelProfileController {
     private final FastApiClient fastApiClient;
     private final ElevenLabsVoiceRepository elevenLabsVoiceRepository;
 
+    /**
+     * Product-owned audition voices.  They are kept in the account as real
+     * ElevenLabs voices, but their reviewed audition files are also stored in
+     * the shared /app/data volume so the UI does not depend on a remote preview
+     * URL or on a second API call.
+     */
+    private void ensureProductVoices() {
+        ensureProductVoice(
+                "dlKJ5VptCbYxal4doUO5",
+                "IVC 경제 뉴스 앵커 (기본)",
+                "custom",
+                "사용자 제공 음성에서 권한 확인 후 생성한 한국어 경제 뉴스 앵커 음성",
+                "/api/channels/voices/preview/dlKJ5VptCbYxal4doUO5",
+                "/api/channels/voices/audition/dlKJ5VptCbYxal4doUO5"
+        );
+        ensureProductVoice(
+                "KEo3H2UC7XebTpHFgc3B",
+                "오리지널 금융 앵커",
+                "generated",
+                "식별 가능한 인물을 모방하지 않은 원본 금융 뉴스 내레이션 음성",
+                "/api/channels/voices/preview/KEo3H2UC7XebTpHFgc3B",
+                "/api/channels/voices/audition/KEo3H2UC7XebTpHFgc3B"
+        );
+    }
+
+    private void ensureProductVoice(String voiceId, String name, String category,
+                                    String description, String previewUrl, String auditionUrl) {
+        ElevenLabsVoice voice = elevenLabsVoiceRepository.findById(voiceId)
+                .orElseGet(ElevenLabsVoice::new);
+        voice.setVoiceId(voiceId);
+        voice.setName(name);
+        voice.setCategory(category);
+        voice.setDescription(description);
+        voice.setPreviewUrl(previewUrl);
+        voice.setAuditionUrl(auditionUrl);
+        elevenLabsVoiceRepository.save(voice);
+    }
+
     @GetMapping
     public ResponseEntity<List<ChannelProfile>> getAll() {
         return ResponseEntity.ok(channelProfileRepository.findAll());
@@ -97,7 +135,8 @@ public class ChannelProfileController {
                 dbVoices = elevenLabsVoiceRepository.findAll();
             }
         }
-        return ResponseEntity.ok(dbVoices);
+        ensureProductVoices();
+        return ResponseEntity.ok(elevenLabsVoiceRepository.findAll());
     }
 
     @PostMapping("/voices/sync")
@@ -135,6 +174,7 @@ public class ChannelProfileController {
             ev.setAuditionUrl(auditionUrl);
             elevenLabsVoiceRepository.save(ev);
         }
+        ensureProductVoices();
         return ResponseEntity.ok(elevenLabsVoiceRepository.findAll());
     }
 

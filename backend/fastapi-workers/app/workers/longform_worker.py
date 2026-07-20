@@ -2,10 +2,10 @@
 Phase 3-5 v7 — 롱폼 조립 (병렬 처리 + 인코딩 패스 축소)
 
 v6 대비 변경점 (조립 시간 단축 목적):
-  1. 씬별 클립 생성(Kling AI 움짤 / FFmpeg zoompan)을 ThreadPoolExecutor로
+  1. 씬별 클립 생성(Fal/Kling AI 움짤 / 정지 이미지 렌더)을 ThreadPoolExecutor로
      병렬 처리. 기존에는 씬을 하나씩 순차로 처리해서 총 시간이
      "씬 개수 × 씬당 처리시간"으로 선형 증가했음. Kling API 호출은
-     네트워크 I/O 대기(최대 180초 폴링)이고, zoompan은 CPU 바운드라서
+     네트워크 I/O 대기(최대 180초 폴링)와 정지 이미지 인코딩을 병렬화해
      동시 실행 시 실제 이득이 큼.
   2. concat 단계를 재인코딩(-c:v libx264) 대신 스트림 복사(-c copy)로
      우선 시도. 씬별 클립이 이미 1단계에서 동일 코덱/해상도/프레임레이트로
@@ -28,7 +28,6 @@ v6 대비 변경점 (조립 시간 단축 목적):
     최대 8로 상한을 둡니다.
 """
 import json
-import math
 import os
 import re
 import time
@@ -46,6 +45,7 @@ from app.utils.stock_overlay import Anchor, IndexData, Market, overlay_filter, r
 from app.utils.market_charts import render_market_chart
 from app.utils.data_surface_locator import locate_data_surface
 from app.utils.budget import load_preflight, record_cost
+from app.utils.intro_motion import select_intro_motion_scene_indices
 
 logger = logging.getLogger(__name__)
 
@@ -156,21 +156,29 @@ class LongformWorker:
         except Exception as e:
             logger.warning(f"Kling 비디오 프로바이더 로드 실패 (FFmpeg 폴백 사용): {e}")
 
-        # 초반 AI 움짤 대상 씬 수 계산
+        # Contiguous opening-only Fal motion.  Later scenes are deliberately
+        # static to preserve chart, caption, and numerical alignment.
         # Do not invoke any video generator unless the Fal billing preflight
         # confirms usable credit. Gemini Pro images still assemble normally.
         if not fal_status["available"]:
             video_provider = None
             logger.info("Fal motion disabled: %s", fal_status["reason"])
-        intro_kling_count = _get_intro_kling_count(total_duration, len(scenes))
+        max_clips_cap = max(0, int(runtime_config.value("intro_kling_max_clips")))
         budget_preflight = load_preflight(job_id)
         if budget_preflight:
-            intro_kling_count = min(intro_kling_count, int(budget_preflight.get("kling_clip_count", intro_kling_count)))
-            logger.info("Budget preflight applies Kling cap=%s, estimate=₩%s", intro_kling_count, budget_preflight.get("estimated_cost_krw"))
-        logger.info(f"초반 Kling AI 움짤 대상: {intro_kling_count}씬 (전체 {len(scenes)}씬 중)")
+            max_clips_cap = min(max_clips_cap, max(0, int(budget_preflight.get("kling_clip_count", max_clips_cap))))
+            logger.info("Budget preflight applies Fal motion cap=%s, estimate=₩%s", max_clips_cap, budget_preflight.get("estimated_cost_krw"))
+        intro_kling_indices, intro_motion_target, intro_motion_actual = _select_intro_kling_scenes(
+            scenes, total_duration, max_clips_cap
+        )
+        logger.info(
+            "Opening Fal motion plan: target=%.1fs, actual=%.1fs, scenes=%s/%s, indices=%s",
+            intro_motion_target, intro_motion_actual, len(intro_kling_indices), len(scenes),
+            sorted(intro_kling_indices),
+        )
         # If the editor has selected one or more scenes, use exactly those;
         # otherwise retain the safe automatic intro selection. Both paths are
-        # capped to the first minute by intro_kling_count.
+        # capped to the configured opening-motion budget.
         has_manual_kling_selection = any("use_kling" in scene for scene in scenes)
 
         # ── 2. 씬별 클립 생성 (병렬 처리) ──────────────────────────
@@ -185,7 +193,7 @@ class LongformWorker:
             futures = {
                 executor.submit(
                     self._process_scene, i, scene, video_provider,
-                    i < intro_kling_count and (
+                    i in intro_kling_indices and (
                         bool(scene.get("use_kling")) if has_manual_kling_selection else True
                     ), temp_dir, job_id
                 ): i
@@ -226,7 +234,7 @@ class LongformWorker:
             raise RuntimeError("씬 클립이 하나도 생성되지 않았습니다.")
 
         # ── 3. concat ─────────────────────────────────────────────────
-        # 안전 우선: Kling 클립과 zoompan 클립은 타임베이스/비트레이트가
+        # 안전 우선: Fal 클립과 정지 이미지 클립은 타임베이스/비트레이트가
         # 미세하게 달라 -c copy가 exit 0을 반환해도 깨진 파일을 만들 수 있음.
         # → 항상 재인코딩(-c:v libx264)으로 처리해 파일 무결성을 보장.
         # (병렬 처리로 클립 생성 시간 자체가 줄었기 때문에, concat 재인코딩
@@ -308,7 +316,7 @@ class LongformWorker:
 
         # 4. ASS 자막 생성 (경제사냥꾼 스타일)
         ass_path = str(temp_dir / "subtitles.ass")
-        self._generate_ass(chunks, ass_path)
+        self._generate_ass(chunks, ass_path, scenes)
 
         # 5. 음성 + BGM + 자막 합성
         merge_stage_t0 = time.time()
@@ -481,7 +489,8 @@ class LongformWorker:
         }.get(section, "0d1b2a")
 
         try:
-            # 초반 씬만 Kling AI 움짤, 나머지는 zoompan 효과
+            # Only planned opening scenes use Fal image-to-video.  Every other
+            # scene (including Fal failures) is rendered as a static image.
             if video_provider and use_kling:
                 try:
                     logger.info(f"씬 {i} Kling AI 움짤 생성")
@@ -489,7 +498,7 @@ class LongformWorker:
                     # image-to-video는 이미지에 이미 있는 내용(캐릭터 생김새, 배경,
                     # 구도)을 다시 설명하면 안 되고 "무엇이 어떻게 움직이는가"만
                     # 묘사해야 결과가 안정적입니다.
-                    prompt = _build_kling_motion_prompt(scene.get("text", "") or scene.get("prompt", ""))
+                    prompt = _build_kling_motion_prompt(scene)
 
                     # 로컬 이미지를 base64 data URI로 인코딩해 image_url로 전달
                     image_data_uri = _encode_image_as_data_uri(img_path)
@@ -538,7 +547,7 @@ class LongformWorker:
                             return i, clip_path
                         raise RuntimeError("Kling 표준화 클립 검증 실패")
                 except Exception as e:
-                    logger.warning(f"씬 {i} Kling AI 생성 실패, zoompan 폴백: {e}")
+                    logger.warning(f"씬 {i} Fal 모션 생성 실패, 정지 이미지 폴백: {e}")
 
             # 나머지 씬(또는 Kling 실패 시): 정적 이미지 효과 (흔들림 방지 및 화질 극대화)
             if os.path.exists(img_path):
@@ -559,7 +568,7 @@ class LongformWorker:
             logger.error(f"scene {i} processing failed; aborting job: {e}")
             raise
 
-    def _generate_ass(self, chunks: list, ass_path: str):
+    def _generate_ass(self, chunks: list, ass_path: str, scenes: list | None = None):
         """
         ASS 자막 — 경제사냥꾼 스타일
         - NanumGothicBold 72px (이전 52px → 더 큼)
@@ -607,8 +616,31 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             sec = s % 60
             return f"{h}:{m:02d}:{sec:05.2f}"
 
+        # A scene may carry subtitle_text when an editor intentionally changed
+        # only what appears on screen.  Exclude the overlapping TTS chunks and
+        # render that scene-level override instead; narration audio is left
+        # untouched. This makes the "caption only" button safe and literal.
+        overrides = []
+        for scene in scenes or []:
+            caption = str(scene.get("subtitle_text") or "").strip()
+            if not caption:
+                continue
+            start = float(scene.get("start_time", scene.get("start", 0.0)) or 0.0)
+            duration = float(scene.get("duration", 0.0) or 0.0)
+            if duration > 0:
+                overrides.append((start, start + duration, caption))
+
+        def is_overridden_chunk(chunk: dict) -> bool:
+            start = float(chunk.get("start", 0.0) or 0.0)
+            end = start + float(chunk.get("duration", 0.0) or 0.0)
+            midpoint = (start + end) / 2.0
+            return any(override_start <= midpoint < override_end
+                       for override_start, override_end, _ in overrides)
+
         lines = [header]
         for chunk in chunks:
+            if is_overridden_chunk(chunk):
+                continue
             text = chunk.get("text", "").strip()
             if not text:
                 continue
@@ -622,6 +654,12 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             start_str = to_ass_time(start_sec)
             end_str = to_ass_time(end_sec)
             lines.append(f"Dialogue: 0,{start_str},{end_str},Main,,0,0,0,,{display}")
+
+        for start_sec, end_sec, caption in overrides:
+            display = self._trim_to_limit(caption)
+            lines.append(
+                f"Dialogue: 0,{to_ass_time(start_sec)},{to_ass_time(end_sec)},Main,,0,0,0,,{display}"
+            )
 
         # UTF-8-SIG 저장
         with open(ass_path, "w", encoding="utf-8-sig") as f:
@@ -650,28 +688,50 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 # ──────────────────────────────────────────────────────────
 
 
-def _build_kling_motion_prompt(scene_text: str) -> str:
-    """
-    Kling image-to-video용 "움직임 전용" 프롬프트를 만듭니다.
-    씬 텍스트에 하락/상승 관련 표현이 있으면 손짓 뉘앙스를 거기에 맞춥니다.
-    """
-    down_keywords = ["하락", "급락", "내렸", "붕괴", "꺾", "약세", "부진", "악재"]
-    up_keywords = ["상승", "급등", "올랐", "돌파", "반등", "강세", "최고치", "호재"]
+CHARACTER_ACTION_MOTION = {
+    "pointer_up": "the character raises the pointer prop slightly toward the existing top-right chart area, then holds steady",
+    "arms_crossed": "the character keeps arms crossed with one slow concerned head tilt and minimal shoulder movement",
+    "hands_open": "the character opens hands outward in one small explanatory gesture, then returns to the reference pose",
+    "neutral": "the character gives one calm blink and one subtle nod",
+}
 
-    if scene_text and any(k in scene_text for k in down_keywords):
-        gesture = "worried facial expression, hands gesturing downward with concern"
-    elif scene_text and any(k in scene_text for k in up_keywords):
-        gesture = "cheerful facial expression, hands gesturing upward with excitement"
-    else:
-        gesture = "neutral calm expression, gentle hand gesture pointing toward the chart"
+EMOTION_FACIAL = {
+    "neutral": "calm neutral expression",
+    "highlight": "focused confident expression with a slight brow raise",
+    "surprised": "eyes slightly wider and a brief open-mouth reaction",
+    "worried": "worried expression with a gently furrowed brow",
+    "happy": "gentle smile with a cheerful expression",
+}
+
+BACKGROUND_AMBIENT = {
+    "data_overlay": "existing background chart lines pulse very softly while every number and label remains perfectly static and legible",
+    "emphasis_zoom": "a very subtle background light glow appears briefly around the character without any camera movement",
+    "scene_change": "a very subtle ambient light shift occurs in the background",
+}
+
+
+def _build_kling_motion_prompt(scene: dict) -> str:
+    """Build a locked-camera, metadata-driven Fal image-to-video prompt.
+
+    The generated image is a reference frame, not a suggestion.  Position,
+    proportions, camera framing, charts, and all text/numbers are protected to
+    reduce character drift and jitter before the frozen tail is appended.
+    """
+    action = str(scene.get("character_action") or "neutral")
+    emotion = str(scene.get("emotion_tag") or "neutral")
+    marker = str(scene.get("edit_marker") or "scene_change")
+    body_motion = CHARACTER_ACTION_MOTION.get(action, CHARACTER_ACTION_MOTION["neutral"])
+    face = EMOTION_FACIAL.get(emotion, EMOTION_FACIAL["neutral"])
+    ambient = BACKGROUND_AMBIENT.get(marker, BACKGROUND_AMBIENT["scene_change"])
 
     return (
-        f"Subtle, minimal animation of the fixed character in the image: "
-        f"{gesture}, soft blinking, slight head tilt, then settles back to "
-        f"neutral pose. Background chart elements show light ambient motion — "
-        f"data lines pulsing subtly, numbers flickering softly, then stabilizing. "
-        f"Character stays perfectly still in position, size and proportion, "
-        f"no camera movement, static shot, no zoom, no pan."
+        "Minimal, subtle animation of the fixed gold coin character in the reference image. "
+        f"{face}. {body_motion}. {ambient}. "
+        "The character's body position, size, proportions, outline, and pose remain identical to the reference image. "
+        "Absolutely no camera motion, no zoom, no pan, no dolly, no shake, and no transition. "
+        "Static locked-off camera. No morphing of facial features. No changes to clothing, colors, "
+        "background composition, charts, text, or numerical values. Duration 5 seconds, seamless-loop friendly, "
+        "and end in the neutral reference pose."
     )
 
 
@@ -696,21 +756,18 @@ def _encode_image_as_data_uri(img_path: str) -> str:
         return None
 
 
-def _get_intro_kling_count(total_duration: float, total_scenes: int) -> int:
-    """
-    사용자 요청에 따라 영상 총 길이와 상관없이 '초반부 1분(60초)' 분량에 해당하는 씬 수만 Kling으로 할당합니다.
-    """
-    if total_scenes <= 0 or total_duration <= 0:
-        return 3
-
-    intro_secs = min(60.0, total_duration)
-    secs_per_scene = total_duration / total_scenes
-    scenes_in_first_minute = max(1, math.ceil(intro_secs / max(secs_per_scene, 0.1)))
-    max_clips = max(0, int(runtime_config.value("intro_kling_max_clips")))
-    count = min(total_scenes, scenes_in_first_minute, max_clips)
-    logger.info(f"intro_kling_count 계산: 첫 60초 이내 {scenes_in_first_minute}씬 중 "
-                f"움직임 예산 {max_clips}개 → {count}씬")
-    return count
+def _select_intro_kling_scenes(
+    scenes: list[dict], total_duration: float, max_clips_cap: int
+) -> tuple[set[int], float, float]:
+    """Allocate Fal clips to a contiguous opening window in real seconds."""
+    return select_intro_motion_scene_indices(
+        scenes,
+        total_duration,
+        short_seconds=float(runtime_config.value("intro_motion_seconds_short")),
+        long_seconds=float(runtime_config.value("intro_motion_seconds_long")),
+        short_threshold=float(runtime_config.value("intro_motion_short_threshold")),
+        max_clips=max(0, int(max_clips_cap)),
+    )
 
 
 def _get_max_workers(scene_count: int) -> int:
@@ -972,41 +1029,6 @@ def _apply_market_chart_overlay(
         return False
     os.replace(staged, clip_path)
     return True
-
-
-def _ffmpeg_zoompan(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
-    """
-    정적 이미지에 FFmpeg zoompan 필터로 은은한 줌인 효과를 적용하여 생동감을 부여합니다.
-    줌 속도/최대 줌 배율은 runtime_config로 조정 가능 (기본: 1.0 → 1.06, 6% 줌인).
-    """
-    frames = int(duration * 30)  # 30fps 기준 프레임 수
-    zoom_speed = runtime_config.value("zoompan_speed")
-    max_zoom = runtime_config.value("zoompan_max_zoom")
-
-    cmd = (
-        f'ffmpeg -loop 1 -i "{img_path}" '
-        f'-filter_complex '
-        f'"[0:v]scale=3840:2160,'
-        f'zoompan=z=\'min(zoom+{zoom_speed},{max_zoom})\''
-        f':x=\'iw/2-(iw/zoom/2)\''
-        f':y=\'ih/2-(ih/zoom/2)\''
-        f':d={frames}:s=3840x2160:fps=30,'
-        f'scale=1920:1080,setsar=1[v]" '
-        f'-map "[v]" -t {duration:.3f} '
-        f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
-        f'-y "{clip_path}" -loglevel error'
-    )
-    ret = _run_subprocess(cmd, job_id)
-    if ret != 0:
-        logger.warning(f"zoompan 실패, 단순 정적 이미지로 폴백: {img_path}")
-        _run_subprocess(
-            f'ffmpeg -loop 1 -i "{img_path}" '
-            f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
-            f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,fps=30" '
-            f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
-            f'-y "{clip_path}" -loglevel error',
-            job_id
-        )
 
 
 def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_duration: float):

@@ -1,0 +1,12 @@
+{
+  "generated_voice_id": "SwP6F0ZvrTIXYAZ9oZqq",
+  "preview_index": 1,
+  "raw_path": "artifacts/natural_low_preview_1.mp3",
+  "mastered_path": "artifacts/original_natural_low_breath_audition.mp3",
+  "duration_secs": 14.08,
+  "median_f0_hz_estimate": 130.1,
+  "cer": 0.0127,
+  "cer_threshold": 0.08,
+  "postprocess": "gentle high-pass, light compression, loudness normalization, 1.02x tempo",
+  "description": "Original non-identifying Korean male finance narrator with a low mature baritone, subtle natural inhalations and breath release, varied timing and melody, clear diction, and restrained processing. No celebrity or identifiable-person imitation."
+}

@@ -35,7 +35,7 @@ public class ScriptController {
             @PathVariable Long jobId,
             @RequestBody ScriptConfirmRequest request,
             @AuthenticationPrincipal String username) {
-        scriptService.confirm(jobId, request.getFinalScript(), username);
+        scriptService.confirm(jobId, request.getFinalScript(), request.getSections(), username);
         return ResponseEntity.ok(Map.of(
                 "status", "OK",
                 "char_count", request.getFinalScript().length()

@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -34,4 +35,10 @@ public class TrendingVideoDto {
     private String statisticsAsOf;
     private Boolean channelAvgViewsIsSample;
     private Boolean subscriberCountAvailable;
+    private Boolean isLive;
+    private List<String> tags;
+    private String categoryId;
+    private Double performanceScore;
+    private String performanceGrade;
+    private List<String> topComments;
 }

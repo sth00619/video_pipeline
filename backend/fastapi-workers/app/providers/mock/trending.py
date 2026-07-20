@@ -11,7 +11,7 @@ from app.domain.stock_keywords import get_category_data
 
 class MockTrendingVideoAnalyzer(TrendingVideoAnalyzer):
 
-    def collect(self, category: str, seed: str, limit: int = 30) -> list[TrendingVideo]:
+    def collect(self, category: str, seed: str, limit: int = 30, recent_hours: int | None = None) -> list[TrendingVideo]:
         cat_data = get_category_data(category)
         patterns = cat_data["title_patterns"]
         channels = cat_data["common_channels"]
@@ -31,10 +31,10 @@ class MockTrendingVideoAnalyzer(TrendingVideoAnalyzer):
             title = title_template.format(seed=actual_seed)
 
             channel_title = rng.choice(channels)
-            subscribers = rng.randint(5_000, 500_000)
+            subscribers = rng.randint(10_000, 500_000)
 
             # 시간당 조회수 = 채널 영향력 × 영상 매력도 × 노출도
-            hours_since = rng.uniform(2.0, 168.0)  # 2시간 ~ 1주일
+            hours_since = rng.uniform(0.2, max(0.3, recent_hours or 168.0))
             video_attractiveness = rng.uniform(0.3, 8.0)
             views_per_hour = (subscribers / 1000) * video_attractiveness
             views = max(100, int(views_per_hour * hours_since))

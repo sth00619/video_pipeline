@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import com.pipeline.video.dto.SceneImageDto;
-import com.pipeline.video.dto.TtsChunkDto;
 import com.pipeline.video.dto.TtsGenerateResponse;
 
 /**
@@ -97,15 +96,22 @@ public class LongformService {
 
         // TTS Asset 로드 (audio_path + chunks)
         String ttsMetaJson = loadAssetMeta(jobId, AssetType.TTS_AUDIO);
-        // SCENE_IMAGE Asset 목록 로드
+        // SCENE_IMAGE Asset 목록 로드 — index 오름차순 정렬 필수
+        // (씬 편집/분할 후 DB 삽입 순서와 index 순서가 달라질 수 있음)
         List<Asset> sceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+        sceneAssets.sort(Comparator.comparingInt(a -> {
+            try {
+                SceneImageDto dto = objectMapper.readValue(a.getMetaJson(), SceneImageDto.class);
+                return dto.getIndex() != null ? dto.getIndex() : Integer.MAX_VALUE;
+            } catch (Exception e) { return Integer.MAX_VALUE; }
+        }));
         // GIF_CLIP Asset 목록 로드
         List<Asset> gifAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.GIF_CLIP);
 
         log.info("롱폼 조립 시작: jobId={}, scenes={}, gifs={}, autonomy={}",
                 jobId, sceneAssets.size(), gifAssets.size(), job.getAutonomy());
 
-        // scenes와 gifs의 metaJson 목록 전송
+        // scenes와 gifs의 metaJson 목록 전송 (정렬된 순서 그대로)
         String scenesJson = safeJson(sceneAssets.stream()
                 .map(Asset::getMetaJson).toList());
         String gifsJson = safeJson(gifAssets.stream()
@@ -272,6 +278,22 @@ public class LongformService {
         }
         scenes.sort(Comparator.comparing(SceneImageDto::getIndex));
 
+        // [사전 검증] 씬 인덱스가 0부터 연속적인지 확인 (FastAPI도 같은 검증을 함)
+        // DB에서 인덱스 충돌/구멍이 있으면 여기서 명확한 메시지로 중단시킴
+        java.util.List<Integer> actualIndices = scenes.stream()
+                .map(SceneImageDto::getIndex)
+                .collect(java.util.stream.Collectors.toList());
+        java.util.Set<Integer> expectedIndices = new java.util.HashSet<>();
+        for (int i = 0; i < scenes.size(); i++) expectedIndices.add(i);
+        java.util.Set<Integer> actualSet = new java.util.HashSet<>(actualIndices);
+        if (!actualSet.equals(expectedIndices) || actualIndices.size() != actualSet.size()) {
+            throw new IllegalStateException(
+                String.format("씬 인덱스가 연속적이지 않습니다 (중복 또는 구멍 존재). " +
+                    "expected=0..%d, actual=%s. splitScene() 버그로 인한 인덱스 오염 가능성 있음.",
+                    scenes.size() - 1, actualIndices.subList(0, Math.min(20, actualIndices.size())))
+            );
+        }
+
         // [하위 호환성 복구] 만약 기존 씬의 text가 null인 경우 SCRIPT 에셋의 sections를 기반으로 복구
         try {
             java.util.Optional<Asset> scriptAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
@@ -349,15 +371,11 @@ public class LongformService {
         assetRepository.save(finalScriptAsset);
 
         // 4. TTS 재생성 — 채널 프로필의 목소리를 사용해서 초기 생성과 톤 일관성 유지
-        // [버그 수정 완료] 기존엔 "default_ko"로 고정되어 있어서, 씬을 편집하고
-        // 재조립할 때마다 채널에서 지정한 ElevenLabs 목소리가 기본 목소리로
-        // 되돌아가 버렸습니다. 이제 TtsService.generate()와 동일한 규칙으로
-        // channelId → ChannelProfile.voiceId를 조회합니다.
         String finalVoiceId = resolveVoiceId(job);
         log.info("재조립을 위한 TTS 재생성 시작: jobId={}, scriptLength={}자, voice={}",
                 jobId, newScript.length(), finalVoiceId);
         TtsGenerateResponse ttsResult = fastApiClient.generateTts(jobId, newScript, finalVoiceId);
-        
+
         // TTS Asset 저장
         Asset ttsAsset = Asset.builder()
                 .jobId(jobId)
@@ -367,72 +385,19 @@ public class LongformService {
                 .build();
         assetRepository.save(ttsAsset);
 
-        // 5. [핵심 알고리즘] 새로운 TTS chunks 타이밍 정보를 바탕으로 각 씬의 start, duration 동적 매칭!
-        List<TtsChunkDto> chunks = ttsResult.getChunks();
-        if (chunks != null && !chunks.isEmpty()) {
-            int chunkIdx = 0;
-            double currentStart = 0.0;
-            
-            for (int i = 0; i < scenes.size(); i++) {
-                SceneImageDto scene = scenes.get(i);
-                String pText = scene.getText() != null ? scene.getText() : (scene.getPrompt() != null ? scene.getPrompt() : "");
-                String cleanPrompt = pText.replaceAll("[\\s\\p{Punct}]+", "");
-                
-                String cleanNextPrompt = "";
-                if (i + 1 < scenes.size()) {
-                    String nextPText = scenes.get(i + 1).getText() != null ? scenes.get(i + 1).getText() : (scenes.get(i + 1).getPrompt() != null ? scenes.get(i + 1).getPrompt() : "");
-                    cleanNextPrompt = nextPText.replaceAll("[\\s\\p{Punct}]+", "");
-                }
-                
-                double sceneDuration = 0.0;
-                boolean foundFirst = false;
-                
-                while (chunkIdx < chunks.size()) {
-                    TtsChunkDto chunk = chunks.get(chunkIdx);
-                    String cleanChunkText = chunk.getText().replaceAll("[\\s\\p{Punct}]+", "");
-                    
-                    if (cleanChunkText.isEmpty()) {
-                        chunkIdx++;
-                        continue;
-                    }
-                    
-                    // 다음 씬의 스크립트와 매칭되면 현재 씬 매칭 종료
-                    if (!cleanNextPrompt.isEmpty() && cleanNextPrompt.contains(cleanChunkText)) {
-                        break;
-                    }
-                    
-                    if (!foundFirst) {
-                        scene.setStart(chunk.getStart());
-                        foundFirst = true;
-                    }
-                    sceneDuration += chunk.getDuration();
-                    chunkIdx++;
-                }
-                
-                if (!foundFirst) {
-                    scene.setStart(currentStart);
-                    scene.setDuration(15.0); // fallback
-                } else {
-                    scene.setDuration(sceneDuration);
-                }
-                
-                currentStart = scene.getStart() + scene.getDuration();
-                
-                // 해당 SCENE_IMAGE 에셋 DB 업데이트
-                for (Asset a : sceneAssets) {
-                    try {
-                        SceneImageDto dto = objectMapper.readValue(a.getMetaJson(), SceneImageDto.class);
-                        if (dto.getIndex().equals(scene.getIndex())) {
-                            a.setMetaJson(safeJson(scene));
-                            assetRepository.save(a);
-                            break;
-                        }
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                }
-            }
-        }
+        // 5. TTS-씬 타이밍 매칭은 FastAPI의 _assign_scene_durations_from_chunks()에 위임.
+        //
+        // [이전 문제] Spring에서 TTS 청크 텍스트가 '다음 씬 텍스트에 포함'되는지
+        // contains()로 검사하던 방식은 짧은 단어 청크가 여러 씬에 걸쳐 나타날 때
+        // 잘못된 씬에 배정되어 특정 씬의 duration=0 또는 15.0 폴백이 발생했음.
+        //
+        // [수정] FastAPI longform_worker의 _assign_scene_durations_from_chunks()는
+        // 문자 수 비례 기반의 안정적인 알고리즘을 사용하므로 여기서 중복 계산하지 않음.
+        // sceneAssets DB에는 기존 start/duration을 유지하고, FastAPI 조립 시 TTS meta와
+        // 함께 전달되면 longform_worker가 최종 타이밍을 결정함.
+        log.info("TTS 타이밍 매칭을 FastAPI에 위임: jobId={}, scenes={}, chunks={}",
+                jobId, scenes.size(), ttsResult.getChunks() != null ? ttsResult.getChunks().size() : 0);
+
 
         // 6. 롱폼 영상 재조립 (FastAPI 호출)
         log.info("재조립을 위한 롱폼 인코딩 시작: jobId={}", jobId);

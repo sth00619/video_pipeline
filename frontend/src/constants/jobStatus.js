@@ -47,7 +47,7 @@ export const AUTONOMY_STYLE = {
 
 // Job 상태 - Spring Boot JobStatus enum과 1:1 매핑되어야 함
 export const STATUS_LIST = [
-  'ALL', 'DRAFT', 'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING', 'IMAGES_PENDING',
+  'ALL', 'DRAFT', 'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING', 'IMAGES_PENDING', 'IMAGES_RETRY_REQUIRED',
   'ASSEMBLING', 'PREVIEW_PENDING', 'SHORTS_SEGMENTS_PENDING', 'SHORTS_GENERATING',
   'SHORTS_PREVIEW_PENDING', 'READY', 'PUBLISHED', 'BUDGET_BLOCKED', 'FAILED',
 ]
@@ -59,6 +59,7 @@ export const STATUS_LABEL = {
   SCRIPT_PENDING: '스크립트 생성중',
   TTS_PENDING: 'TTS 생성중',
   IMAGES_PENDING: '이미지 생성중',
+  IMAGES_RETRY_REQUIRED: '이미지 재시도 필요',
   ASSEMBLING: '영상 조립중',
   PREVIEW_PENDING: '미리보기 대기',
   SHORTS_SEGMENTS_PENDING: '쇼츠 구간 검토',
@@ -77,6 +78,7 @@ export const STATUS_COLOR = {
   SCRIPT_PENDING: 'bg-accent-violet/10 text-accent-violet',
   TTS_PENDING: 'bg-accent-amber/10 text-accent-amber',
   IMAGES_PENDING: 'bg-accent-cyan/10 text-accent-cyan',
+  IMAGES_RETRY_REQUIRED: 'bg-accent-amber/20 text-accent-amber',
   ASSEMBLING: 'bg-accent-violet/20 text-accent-violet',
   PREVIEW_PENDING: 'bg-accent-gold/20 text-accent-gold',
   SHORTS_SEGMENTS_PENDING: 'bg-accent-amber/10 text-accent-amber',
@@ -95,7 +97,7 @@ export const IN_PROGRESS_STATUSES = [
   'SHORTS_GENERATING', 'SHORTS_PREVIEW_PENDING',
 ]
 export const COMPLETED_STATUSES = ['READY', 'PUBLISHED']
-export const ERROR_STATUSES = ['FAILED', 'BUDGET_BLOCKED']
+export const ERROR_STATUSES = ['FAILED', 'BUDGET_BLOCKED', 'IMAGES_RETRY_REQUIRED']
 
 export function isInProgress(status) { return IN_PROGRESS_STATUSES.includes(status) }
 export function isCompleted(status) { return COMPLETED_STATUSES.includes(status) }
@@ -112,6 +114,7 @@ export const KOREAN_STATUS_LABEL = {
   ALL: '전체', DRAFT: '초안', KEYWORD_PENDING: '키워드 선택 대기',
   SCRIPT_PENDING: '스크립트 생성·검토', TTS_PENDING: '음성 선택·생성',
   IMAGES_PENDING: '이미지 생성·검토', ASSEMBLING: '영상 조립 중',
+  IMAGES_RETRY_REQUIRED: '이미지 생성 재시도 필요',
   PREVIEW_PENDING: '미리보기 검토', SHORTS_SEGMENTS_PENDING: '쇼츠 구간 선택',
   SHORTS_GENERATING: '쇼츠 생성 중', SHORTS_PREVIEW_PENDING: '쇼츠 미리보기 검토',
   EDITING: '편집 중', READY: '완료', PUBLISHED: '게시 완료',

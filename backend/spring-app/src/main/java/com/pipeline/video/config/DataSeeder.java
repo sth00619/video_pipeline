@@ -81,12 +81,27 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedChannelProfiles() {
-        if (channelProfileRepository.count() > 0) return;
+        if (channelProfileRepository.count() > 0) {
+            // Existing installations used a premade voice for the main channel.
+            // Migrate that one-time default only; a later administrator choice
+            // must never be overwritten on restart.
+            channelProfileRepository.findById("finance_hunter").ifPresent(profile -> {
+                String current = profile.getVoiceId();
+                if (current == null || current.isBlank()
+                        || "FGY2WhTYpPnrIDTdsKH5".equals(current)
+                        || "JBFqnCBsd6RMkjVDRZzb".equals(current)) {
+                    profile.setVoiceId("dlKJ5VptCbYxal4doUO5");
+                    channelProfileRepository.save(profile);
+                }
+            });
+            return;
+        }
         channelProfileRepository.save(ChannelProfile.builder()
                 .channelId("channel_a").channelName("채널 A · 동전 캐릭터")
                 .characterKey("coin_character")
                 .characterStylePrompt("friendly Korean finance educator, green coin mascot, editorial 2D comic style")
-                .voiceId("JBFqnCBsd6RMkjVDRZzb").build());
+                // Channel A 기본 음성: 검증된 IVC 경제 뉴스 앵커
+                .voiceId("dlKJ5VptCbYxal4doUO5").build());
         channelProfileRepository.save(ChannelProfile.builder()
                 .channelId("channel_b").channelName("채널 B · 돈뭉치 캐릭터")
                 .characterKey("money_bundle_character")

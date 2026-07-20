@@ -39,6 +39,8 @@ from app.providers.factory import get_trending_video_analyzer
 from app.workers.market_data_collector import MarketDataCollector
 from app.workers.news_keyword_extractor import NewsKeywordExtractor
 from app.utils.anthropic_cache import cached_system, log_cache_usage
+from app.utils.keyword_time_context import resolve_keyword_time_context
+from app.utils.keyword_aliases import seed_match, seed_overlap
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +82,15 @@ class KeywordWorker:
 
     def search(self, category: str, seed: str, limit: int = 5,
                outperformer_count: int = 1, job_id: int = 0) -> dict:
+
+        time_context = resolve_keyword_time_context(seed)
+        if time_context["requires_evidence"]:
+            return {
+                "job_id": job_id, "seed": seed, "category": category,
+                "candidates": [_seed_candidate(seed, time_context["message"], "근거 확인이 필요한 시간 조건")],
+                "market_snapshot": {}, "news_keyword_count": 0, "yt_candidate_count": 0,
+                "time_interpretation": time_context, "topic_evidence_required": True,
+            }
 
         logger.info(f"키워드 탐색 v2: category={category}, seed={seed}, "
                     f"limit={limit}, job_id={job_id}")
@@ -156,6 +167,18 @@ class KeywordWorker:
                 news_keywords, yt_candidates, outperformer_count, limit
             )
 
+        # The operator's supplied keyword is the editorial brief, not just a
+        # hint for a broad category search.  In particular, a KOSPI category
+        # must never replace "삼성전자 3분기 반도체 실적" with a generic
+        # "코스피" topic simply because the generic topic appeared more often
+        # in today's news.  Keep only seed-related Claude/news candidates and
+        # fill any gap with clearly-labelled, non-factual editorial angles.
+        candidates = self._enforce_seed_priority(candidates, seed, limit)
+        for candidate in candidates:
+            evidence_text = " ".join(str(candidate.get(key, "")) for key in ("keyword", "reason", "content_angle"))
+            candidate["seed_overlap_terms"] = seed_overlap(seed, evidence_text)
+            candidate["seed_overlap_count"] = len(candidate["seed_overlap_terms"])
+
         logger.info(f"키워드 탐색 완료: {len(candidates)}개 최종 후보")
 
         return {
@@ -166,6 +189,8 @@ class KeywordWorker:
             "market_snapshot": market_data,   # ScriptWorker에 재활용
             "news_keyword_count": len(news_keywords),
             "yt_candidate_count": len(yt_candidates),
+            "time_interpretation": time_context,
+            "topic_evidence_required": False,
         }
 
     # ──────────────────────────────────────────────────────────
@@ -219,6 +244,17 @@ YouTube 트렌딩 분석 기반 키워드 후보:
 </youtube_trending>
 
 위 뉴스 키워드와 YouTube 후보를 종합하여, {category_label} 분야에서 오늘 유튜브 영상 콘텐츠로 만들기 가장 좋은 키워드 {limit}개를 선정하세요.
+
+【입력 주제 우선 규칙 — 최우선】
+- 검색 시드가 비어 있지 않으면, 그것은 작업자가 확정한 편집 브리프입니다.
+  카테고리는 분석의 렌즈일 뿐, 검색 시드를 일반적인 "코스피", "증시", "시장" 주제로
+  대체하면 안 됩니다.
+- 검색 시드가 있을 때 후보 1번 keyword는 검색 시드를 그대로 사용하세요.
+- 나머지 후보도 검색 시드의 구체 명사/핵심어를 최소 두 개 이상 유지한 세부 관점만
+  제안하세요. 예: "삼성전자 3분기 반도체 실적"이면 삼성전자·반도체·실적을 중심으로
+  하며, 단순 "코스피 글로벌 바로미터" 같은 일반 시장 주제는 금지합니다.
+- 입력 데이터가 부족하면 일반 시장 뉴스로 바꾸지 말고, 제공된 사실 범위에서
+  "핵심 쟁점", "시장 영향", "확인할 지표"처럼 사실을 추가하지 않는 관점만 사용하세요.
 
 선정 기준:
 1. 오늘 실제 시장 상황과 관련성이 높은가?
@@ -401,8 +437,10 @@ YouTube 트렌딩 분석 기반 키워드 후보:
                 "MEDIUM" if composite_score >= 2.5 else "LOW"
             )
 
+            extracted_keyword, keyword_is_raw_title = _extract_keyword(v.title)
             scored.append({
-                "keyword": _extract_keyword(v.title),
+                "keyword": extracted_keyword,
+                "keyword_is_raw_title": keyword_is_raw_title,
                 "composite_score": composite_score,
                 "views": v.views,
                 "subscribers": v.subscribers,
@@ -489,12 +527,138 @@ YouTube 트렌딩 분석 기반 키워드 후보:
 
         return result[:limit]
 
+    def _enforce_seed_priority(self, candidates: list, seed: str, limit: int) -> list:
+        """Make a non-empty request seed a hard editorial constraint.
+
+        Ranking can legitimately find broad market headlines, but they are
+        not valid replacements for an explicitly requested company/topic.
+        This guard runs after both Claude ranking and the no-LLM fallback so
+        quota exhaustion cannot silently change the subject of a job.
+        """
+        normalized_seed = re.sub(r"\s+", " ", seed or "").strip()
+        if not normalized_seed:
+            return candidates[:limit]
+
+        terms = _seed_specific_terms(normalized_seed)
+        related = [
+            candidate for candidate in candidates
+            if _candidate_matches_seed(candidate, terms)
+        ]
+
+        # The exact requested topic is always the first candidate.  It has no
+        # invented metric or factual claim and is therefore safe even when the
+        # YouTube quota is exhausted or current news has not indexed yet.
+        primary = _seed_candidate(
+            normalized_seed,
+            "입력 키워드 우선 후보입니다. 카테고리는 분석 범위로만 사용하며, "
+            "이 주제를 다른 일반 시장 이슈로 대체하지 않습니다.",
+            "입력 주제의 핵심 사실과 시장 영향을 검증된 자료 범위에서 정리합니다.",
+        )
+
+        result = [primary]
+        seen = {normalized_seed.casefold()}
+        for candidate in related:
+            keyword = str(candidate.get("keyword", "")).strip()
+            if not keyword or keyword.casefold() in seen:
+                continue
+            candidate["is_outperformer"] = False
+            result.append(candidate)
+            seen.add(keyword.casefold())
+            if len(result) >= limit:
+                return result
+
+        # Do not refill a seed-driven search with unrelated KOSPI news.  These
+        # are neutral editorial angles, not fabricated news titles or data.
+        for suffix, angle in (
+            ("핵심 쟁점", "실적에 영향을 주는 핵심 변수를 분리해 봅니다."),
+            ("시장 영향", "카테고리 시장과 연관 종목에 미칠 수 있는 영향을 점검합니다."),
+            ("확인할 지표", "영상에서 검증해야 할 실적·수요·시장 지표를 정리합니다."),
+            ("투자자 체크포인트", "확정 사실과 불확실한 정보를 구분해 체크포인트로 제시합니다."),
+        ):
+            if len(result) >= limit:
+                break
+            keyword = f"{normalized_seed} {suffix}"
+            if keyword.casefold() in seen:
+                continue
+            result.append(_seed_candidate(
+                keyword,
+                "입력 키워드를 벗어나지 않는 세부 영상 관점입니다. "
+                "공개 YouTube 지표가 없으면 수치 우위를 추정하지 않습니다.",
+                angle,
+            ))
+            seen.add(keyword.casefold())
+
+        result[0]["is_outperformer"] = True
+        return result[:limit]
+
 
 # ──────────────────────────────────────────────────────────
 # 유틸 함수
 # ──────────────────────────────────────────────────────────
-def _extract_keyword(title: str) -> str:
-    return title.strip()
+def _extract_keyword(title: str) -> tuple[str, bool]:
+    """Return a usable topic phrase, never an entire clickbait title by default."""
+    cleaned = re.sub(r"[\[\(].*?[\]\)]", " ", title or "")
+    cleaned = re.sub(r"[#|｜].*$", " ", cleaned)
+    cleaned = re.sub(r"(긴급|속보|충격|반드시|지금|왜|이유|전망|분석|공개)", " ", cleaned, flags=re.I)
+    tokens = [token for token in re.findall(r"[A-Za-z0-9가-힣]+", cleaned) if len(token) >= 2]
+    phrase = " ".join(tokens[:4]).strip()
+    # Very short/empty titles are safer to display as-is than to invent a
+    # normalised phrase. The flag lets UI/API consumers disclose that case.
+    return (phrase or (title or "").strip(), not bool(phrase))
+
+
+def _seed_specific_terms(seed: str) -> list[str]:
+    """Extract terms that distinguish a user brief from a broad category."""
+    stop_words = {
+        "코스피", "코스닥", "주식", "증시", "시장", "경제", "이슈", "뉴스",
+        "관련", "분석", "전망", "영향", "주가", "오늘", "최근",
+    }
+    terms = []
+    for raw in re.split(r"\s+", seed):
+        token = re.sub(r"[^0-9A-Za-z가-힣]", "", raw).strip()
+        if not token or token in stop_words or token.isdigit():
+            continue
+        if token not in terms:
+            terms.append(token)
+    return terms
+
+
+def _candidate_matches_seed(candidate: dict, terms: list[str]) -> bool:
+    """Require meaningful overlap before a ranked candidate can be reused."""
+    if not terms:
+        return True
+    text = " ".join(str(candidate.get(key, "")) for key in ("keyword", "reason", "content_angle"))
+    # Canonical aliases (삼전→삼성전자, 3분기→Q3, etc.) take precedence over
+    # literal substring matching so the discovery and script stages agree.
+    if seed_match(" ".join(terms), text):
+        return True
+    normalized = re.sub(r"\s+", "", text).casefold()
+    matches = [term for term in terms if term.casefold() in normalized]
+    # A multi-word brief needs at least two core terms; a one-word brief needs
+    # its one term.  This prevents a lone generic word such as "실적" from
+    # pulling a Samsung-specific job toward an unrelated index story.
+    required = 1 if len(terms) == 1 else 2
+    return len(matches) >= required
+
+
+def _seed_candidate(keyword: str, reason: str, content_angle: str) -> dict:
+    return {
+        "keyword": keyword,
+        "search_volume": 0,
+        "competition": "UNAVAILABLE",
+        "reason": reason,
+        "content_angle": content_angle,
+        "source": "input",
+        "estimated_interest": "medium",
+        "engagement_ratio": 0.0,
+        "outperformance_index": 0.0,
+        "velocity_vph": 0.0,
+        "evidence_video_ids": [],
+        "is_outperformer": False,
+        "source_videos": [],
+        "seed_priority": True,
+        "metrics_available": False,
+    }
 
 
 def _build_market_summary(market_data: dict) -> str:

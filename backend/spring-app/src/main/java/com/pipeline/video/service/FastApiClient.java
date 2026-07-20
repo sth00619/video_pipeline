@@ -179,7 +179,8 @@ public class FastApiClient {
 
     // Phase 3-2 — 스크립트
     public ScriptGenerateResponse generateScript(Long jobId, String keyword, int targetMinutes,
-                                                  String category, String marketSnapshotJson, boolean dataVisualsEnabled) {
+                                                  String category, String marketSnapshotJson, boolean dataVisualsEnabled,
+                                                  String voiceId) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -187,6 +188,9 @@ public class FastApiClient {
             bodyMap.put("target_minutes", targetMinutes);
             bodyMap.put("category", category != null ? category : "CUSTOM");
             bodyMap.put("data_visuals_enabled", dataVisualsEnabled);
+            if (voiceId != null && !voiceId.isBlank()) {
+                bodyMap.put("voice_id", voiceId);
+            }
             
             if (marketSnapshotJson != null && !marketSnapshotJson.isBlank()) {
                 try {
@@ -207,7 +211,7 @@ public class FastApiClient {
 
     // Phase 3-3 — TTS
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId) {
-        return generateTts(jobId, script, voiceId, null);
+        return generateTts(jobId, script, voiceId, null, null);
     }
 
     /**
@@ -218,6 +222,11 @@ public class FastApiClient {
      * /pipeline/config API로 전역 기본값을 낮추면 됩니다.
      */
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId, Double ttsSpeed) {
+        return generateTts(jobId, script, voiceId, ttsSpeed, null);
+    }
+
+    public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId, Double ttsSpeed,
+                                           Integer targetMinutes) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -225,6 +234,9 @@ public class FastApiClient {
             bodyMap.put("voice_id", voiceId);
             if (ttsSpeed != null) {
                 bodyMap.put("tts_speed", ttsSpeed);
+            }
+            if (targetMinutes != null && targetMinutes > 0) {
+                bodyMap.put("target_seconds", targetMinutes * 60.0);
             }
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/tts/generate", bodyMap),
@@ -332,6 +344,36 @@ public class FastApiClient {
     }
 
     // Phase 3-5 — 롱폼
+    /**
+     * Regenerates a scene and returns the resulting image metadata. A caller
+     * supplies promptEn only when it deliberately wants the exact existing
+     * English prompt reused; otherwise the worker compiles a new one from the
+     * Korean source sentence.
+     */
+    public SceneImageDto regenerateSceneImage(Long jobId, int index, String sourceText,
+                                              String promptEn, String section,
+                                              String characterImagePath, String characterStylePrompt,
+                                              String characterPosesDir) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("job_id", jobId);
+            bodyMap.put("index", index);
+            bodyMap.put("source_text", sourceText);
+            bodyMap.put("prompt_en", promptEn);
+            bodyMap.put("section", section);
+            bodyMap.put("character_image_path", characterImagePath);
+            bodyMap.put("character_style_prompt", characterStylePrompt);
+            if (characterPosesDir != null && !characterPosesDir.isBlank()) {
+                bodyMap.put("character_poses_dir", characterPosesDir);
+            }
+            return objectMapper.readValue(
+                    postJson(fastApiUrl + "/workers/images/generate-single", bodyMap),
+                    SceneImageDto.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Scene image regeneration failed: " + e.getMessage(), e);
+        }
+    }
+
     public LongformGenerateResponse generateLongform(Long jobId, String ttsMetaJson,
                                                        String scenesJson, String gifsJson) {
         try {
@@ -382,6 +424,39 @@ public class FastApiClient {
             return videos;
         } catch (Exception e) {
             throw new RuntimeException("트렌딩 비디오 검색 오류: " + e.getMessage(), e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getManualKeywordContext(String keyword, int recentHours) {
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("keyword", keyword);
+            body.put("recent_hours", recentHours);
+            return objectMapper.readValue(postJson(fastApiUrl + "/workers/keyword/manual-context", body), Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("수동 키워드 최신 근거 조회 오류: " + e.getMessage(), e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> buildKeywordMindMap(String keyword, List<Map<String, Object>> videos) {
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("keyword", keyword);
+            body.put("videos", videos != null ? videos : List.of());
+            return objectMapper.readValue(postJson(fastApiUrl + "/ai/keyword-mindmap", body), Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("키워드 마인드맵 생성 오류: " + e.getMessage(), e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> buildKeywordPlans(Map<String, Object> request) {
+        try {
+            return objectMapper.readValue(postJson(fastApiUrl + "/ai/keyword-plan", request), Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("키워드 기획 생성 오류: " + e.getMessage(), e);
         }
     }
 
@@ -567,17 +642,31 @@ public class FastApiClient {
             Map<String, Object> body = new HashMap<>();
             body.put("voice_id", voiceId);
             body.put("text", text);
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            ResponseEntity<byte[]> response = restTemplate.exchange(
-                    fastApiUrl + "/workers/tts/preview",
-                    HttpMethod.POST,
-                    new HttpEntity<>(body, headers),
-                    byte[].class);
-            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                throw new RuntimeException("FastAPI TTS preview failed: " + response.getStatusCode());
+            // Keep this request on the explicit UTF-8 transport used by the
+            // other FastAPI calls. RestTemplate's byte[] converter can omit
+            // the JSON body here, which FastAPI reports as HTTP 422.
+            byte[] requestBytes = objectMapper.writeValueAsString(body).getBytes(StandardCharsets.UTF_8);
+            URL url = new URL(fastApiUrl + "/workers/tts/preview");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(60_000);
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            conn.setRequestProperty("Accept", "audio/mpeg");
+            conn.setFixedLengthStreamingMode(requestBytes.length);
+            try (OutputStream output = conn.getOutputStream()) {
+                output.write(requestBytes);
             }
-            return response.getBody();
+            int code = conn.getResponseCode();
+            InputStream stream = code >= 200 && code < 300
+                    ? conn.getInputStream() : conn.getErrorStream();
+            byte[] responseBytes = stream != null ? stream.readAllBytes() : new byte[0];
+            if (code < 200 || code >= 300) {
+                throw new RuntimeException("FastAPI TTS preview failed: " + code + " "
+                        + new String(responseBytes, StandardCharsets.UTF_8));
+            }
+            return responseBytes;
         } catch (Exception e) {
             throw new RuntimeException("TTS 미리듣기 생성 오류: " + e.getMessage(), e);
         }

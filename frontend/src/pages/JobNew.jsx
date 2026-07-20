@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, Sparkles, Target, Sliders, DollarSign,
   Check, Zap, Users, Loader, Search, ExternalLink
@@ -59,6 +59,7 @@ const RESEARCH_PAGE_SIZE = 10
 
 export default function JobNew() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const [step, setStep] = useState(1)
   const [creating, setCreating] = useState(false)
@@ -89,11 +90,19 @@ export default function JobNew() {
 
   useEffect(() => {
     const topic = searchParams.get('topic')
+    const planId = searchParams.get('planId')
+    const keywordList = searchParams.get('keywords')?.split('|').map(item => item.trim()).filter(Boolean).slice(0, 5) || location.state?.keywordPlan?.usedKeywords?.slice(0, 5) || []
     if (topic) {
-      setForm(current => current.title ? current : { ...current, title: topic })
+      setForm(current => current.title ? current : {
+        ...current,
+        title: topic,
+        keyword: keywordList.length ? keywordList.join(', ') : topic,
+        keywordPlanId: planId || current.keywordPlanId,
+        policyJson: JSON.stringify({ source: 'daily_keyword_research', planId, selectedKeywords: keywordList }),
+      })
       setResearchKeyword(topic)
     }
-  }, [searchParams])
+  }, [searchParams, location.state])
 
   const canProceed = () => {
     if (step === 1) return form.title.trim().length > 0
@@ -132,10 +141,13 @@ export default function JobNew() {
       // AUTO/GUIDED는 자동으로 키워드 탐색을 즉시 시작해 대기 시간 단축
       try {
         await jobsApi.searchKeyword(job.id, form.title, 5)
+        if (form.keywordPlanId && form.keyword) {
+          await jobsApi.confirmKeyword(job.id, form.keyword)
+        }
       } catch (_) {
         // 키워드 탐색 실패해도 Job은 만들어졌으니 상세로 이동해서 사용자가 재시도 가능
       }
-      navigate(`/longform/${job.id}`)
+      navigate(`/longform/${job.id}${form.keywordPlanId ? '?stage=script' : ''}`)
     } catch (err) {
       setError(err?.response?.data?.message || err.message || '작업 생성 실패')
       setCreating(false)

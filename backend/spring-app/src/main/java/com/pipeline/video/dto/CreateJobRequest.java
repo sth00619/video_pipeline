@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 public class CreateJobRequest {
     private String title;
     private String keyword;
+    private String keywordPlanId;
     private Category category;                       // 주식 카테고리
     private Autonomy autonomy = Autonomy.GUIDED;
     private Format format = Format.FACELESS_NARRATION;

@@ -31,6 +31,15 @@ public class ScriptGenerateResponse {
     @JsonProperty("char_count")
     private Integer charCount;
 
+    @JsonProperty("length_contract")
+    private Map<String, Object> lengthContract;
+
+    @JsonProperty("keyword_validation")
+    private Map<String, Object> keywordValidation;
+
+    @JsonProperty("unit_validation")
+    private Map<String, Object> unitValidation;
+
     // v3 팩트체크 결과
     @JsonProperty("verified_facts")
     private List<Map<String, Object>> verifiedFacts;
@@ -46,6 +55,13 @@ public class ScriptGenerateResponse {
 
     @JsonProperty("used_real_llm")
     private Boolean usedRealLlm;
+
+    /** Mock output or a provider fallback must be reviewed before AUTO can continue. */
+    @JsonProperty("requires_manual_review")
+    private Boolean requiresManualReview;
+
+    @JsonProperty("llm_provider_log")
+    private List<java.util.Map<String, Object>> llmProviderLog;
 
     @JsonProperty("market_snapshot")
     private Map<String, Object> marketSnapshot;

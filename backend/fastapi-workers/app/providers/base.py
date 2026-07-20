@@ -43,6 +43,18 @@ class TrendingVideo:
     statistics_as_of: str = ""
     channel_avg_views_is_sample: bool = False
     subscriber_count_available: bool = True
+    # 라이브/라이브 다시보기는 일반 업로드와 시청 패턴이 달라 자동 주제
+    # 근거에서 제외한다. YouTube의 liveStreamingDetails로 판별한 값이다.
+    is_live: bool = False
+    # 공개 videos.list snippet/contentDetails에서 가져오는 정보다. 이 값들은
+    # 마인드맵·쇼츠/롱폼 분리·뉴스 클립 표시에 사용하며 LLM이 만들지 않는다.
+    tags: list[str] | None = None
+    category_id: str = ""
+    performance_score: float = 0.0
+    performance_grade: str = "C"
+    # Only collected for S-grade videos, with a separate per-day quota cap.
+    # These are public comments, never private Analytics data.
+    top_comments: list[str] | None = None
 
 
 @dataclass
@@ -90,5 +102,5 @@ class TrendingVideoAnalyzer(ABC):
     Phase 2 (Real): YouTube Data API v3 (search.list + videos.list + channels.list)
     """
     @abstractmethod
-    def collect(self, category: str, seed: str, limit: int = 30) -> list[TrendingVideo]:
+    def collect(self, category: str, seed: str, limit: int = 30, recent_hours: Optional[int] = None) -> list[TrendingVideo]:
         pass

@@ -25,4 +25,19 @@ public class KeywordSearchResponse {
     // v2 실시간 시장 지표 스냅샷
     @JsonProperty("market_snapshot")
     private Map<String, Object> marketSnapshot;
+
+    @JsonProperty("selection_path")
+    private String selectionPath;
+
+    @JsonProperty("selected_keyword")
+    private String selectedKeyword;
+
+    @JsonProperty("selection_reason")
+    private String selectionReason;
+
+    @JsonProperty("time_interpretation")
+    private Map<String, Object> timeInterpretation;
+
+    @JsonProperty("topic_evidence_required")
+    private Boolean topicEvidenceRequired;
 }

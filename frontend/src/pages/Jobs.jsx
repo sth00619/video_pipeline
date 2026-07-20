@@ -51,7 +51,9 @@ export default function Jobs() {
           <ActionCard icon={<Plus size={20}/>} title="롱폼 생성" text="길이·자동/반자동·채널·캐릭터·데이터 시각화를 설정하고 제작을 시작합니다." action="상세 설정 열기" onClick={() => navigate('/longform/new')} />
         </div>
 
-        <div id="keyword-research"><DailyKeywordResearch onUseKeyword={(keyword) => navigate(`/longform/new?topic=${encodeURIComponent(keyword)}`)} /></div>
+        <div id="keyword-research"><DailyKeywordResearch
+          onUseKeyword={(keyword) => navigate(`/longform/new?topic=${encodeURIComponent(keyword)}`)}
+        /></div>
 
         <section className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
           <div className="p-5 border-b border-navy-700 flex flex-wrap gap-3 items-center justify-between"><div><h2 className="font-semibold text-white">롱폼 작업 목록</h2><p className="text-xs text-gray-500 mt-1">작업을 열어 스크립트 검토, TTS, 이미지 수정, 재조립 또는 쇼츠 전환을 이어서 진행하세요.</p></div><div className="flex flex-wrap gap-2"><label className="relative"><Search size={15} className="absolute left-3 top-2.5 text-gray-500"/><input value={search} onChange={e => resetPage(setSearch)(e.target.value)} placeholder="제목·키워드 검색" className="bg-navy-900 border border-navy-600 rounded-lg pl-8 pr-3 py-2 text-xs text-white"/></label><select value={category} onChange={e => resetPage(setCategory)(e.target.value)} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white"><option value="ALL">주제 전체</option>{Object.entries(CATEGORY_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><select value={mode} onChange={e => resetPage(setMode)(e.target.value)} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white"><option value="ALL">모드 전체</option><option value="AUTO">자동</option><option value="GUIDED">반자동</option></select></div></div>

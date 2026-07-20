@@ -45,6 +45,7 @@ public class JobService {
         VideoJob job = VideoJob.builder()
                 .title(request.getTitle())
                 .keyword(request.getKeyword())
+                .keywordPlanId(request.getKeywordPlanId())
                 .category(category)
                 .status(JobStatus.DRAFT)
                 .autonomy(requestedAutonomy)

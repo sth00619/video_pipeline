@@ -5,7 +5,7 @@ import {
   ChevronLeft, Download, CheckCircle, Loader,
   ThumbsUp, ThumbsDown, Zap, Star, AlertCircle,
   FileText, Image as ImageIcon, Music, ChevronDown, ChevronUp,
-  Clock, Edit, Save, Printer, Scissors, Copy, ExternalLink, Youtube
+  Clock, Edit, Save, Printer, Scissors, Copy, ExternalLink, Youtube, Info
 } from 'lucide-react'
 import Layout from '../components/Layout'
 import { jobsApi } from '../api/jobs'
@@ -51,13 +51,14 @@ const STEP_PROGRESS_INFO = {
 
 const STATUS_ORDER = [
   'DRAFT', 'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING',
-  'IMAGES_PENDING', 'ASSEMBLING', 'PREVIEW_PENDING', 'READY', 'PUBLISHED', 'FAILED'
+  'IMAGES_PENDING', 'IMAGES_RETRY_REQUIRED', 'ASSEMBLING', 'PREVIEW_PENDING', 'READY', 'PUBLISHED', 'FAILED'
 ]
 
 function getStepStatus(step, job, approvals) {
   if (approvals.find(a => a.gate === step.gate)) return 'done'
   if (['READY','PUBLISHED'].includes(job.status)) return 'done'
   if (job.status === step.pendingStatus) return 'active'
+  if (job.status === 'IMAGES_RETRY_REQUIRED' && step.key === 'images') return 'active'
   if (job.status === 'ASSEMBLING' && step.key === 'longform') return 'active'
   const ji = STATUS_ORDER.indexOf(job.status)
   const si = STATUS_ORDER.indexOf(step.pendingStatus)
@@ -70,6 +71,21 @@ const AUTONOMY_STYLE = {
 }
 const AUTONOMY_DESC = {
   AUTO: '주제·길이·키워드 입력 후 전체 자동 진행', GUIDED: '키워드·스크립트·목소리·이미지 단계별 승인',
+}
+
+const hasYoutubeMetrics = (candidate) => Array.isArray(candidate?.source_videos) && candidate.source_videos.length > 0
+const metricNumber = (value, digits = 0) => Number.isFinite(Number(value)) ? Number(value).toLocaleString('ko-KR', { maximumFractionDigits: digits }) : '—'
+
+function KeywordMetricGuide() {
+  return <details className="mt-3 rounded-lg border border-navy-700 bg-navy-900/40 px-3 py-2 text-xs text-navy-400">
+    <summary className="flex cursor-pointer items-center gap-1.5 font-semibold text-gray-200"><Info size={14} className="text-accent-cyan" />후보 지표 안내</summary>
+    <div className="mt-2 grid gap-1.5 leading-relaxed md:grid-cols-2">
+      <p><b className="text-gray-200">구독자 대비 조회</b> = 조회수 ÷ 구독자 수입니다. 채널 규모 대비 반응을 봅니다.</p>
+      <p><b className="text-gray-200">채널 평균 대비</b> = 조회수 ÷ 해당 채널의 표본 평균 조회수입니다. 평소보다 얼마나 높은지 봅니다.</p>
+      <p><b className="text-gray-200">시간당 조회</b> = 게시 후 현재까지의 평균 조회 속도입니다.</p>
+      <p><b className="text-gray-200">—</b> 표시는 뉴스 후보이거나 공개 YouTube 지표를 수집하지 못한 경우입니다. 0으로 추정하지 않습니다.</p>
+    </div>
+  </details>
 }
 
 /**
@@ -94,13 +110,15 @@ export default function JobDetail() {
   const [scriptViewMode, setScriptViewMode] = useState('paragraphs')
   const [editingSceneIndex, setEditingSceneIndex] = useState(null)
   const [editingSceneText, setEditingSceneText] = useState('')
-  const [editingImagePrompt, setEditingImagePrompt] = useState('')
+  const [editingSubtitleText, setEditingSubtitleText] = useState('')
+  const [activeSceneActionIndex, setActiveSceneActionIndex] = useState(null)
+  const [scenePage, setScenePage] = useState(1)
   const [imageSalt, setImageSalt] = useState(0)
   const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
   const [showEngPrompt, setShowEngPrompt] = useState({})
 
   const [selectedVoiceId, setSelectedVoiceId] = useState('default_ko')
-  const [previewText, setPreviewText] = useState('오늘 시장의 핵심 흐름을 빠르게 정리해 드리겠습니다.')
+  const [previewText, setPreviewText] = useState('오늘 코스피가 올랐다고요? 숫자만 보고 뛰어들면, 시장은 늘 한 발 먼저 웃습니다.')
   const [previewUrl, setPreviewUrl] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
 
@@ -119,6 +137,11 @@ export default function JobDetail() {
   const { data: job, isLoading } = useQuery({
     queryKey: ['job', id], queryFn: () => jobsApi.get(id), refetchInterval: 3000,
   })
+  // 자동 모드에서는 상태뿐 아니라 방금 생성된 산출물도 함께 다시 읽어야
+  // 다음 단계와 이전 단계 결과가 새로고침 없이 동시에 보인다.
+  const autoRefreshInterval = job?.autonomy === 'AUTO' && !['READY', 'PUBLISHED', 'FAILED', 'IMAGES_RETRY_REQUIRED'].includes(job?.status)
+    ? 3000
+    : false
 
   useEffect(() => {
     if (job && channels.length > 0) {
@@ -172,19 +195,19 @@ export default function JobDetail() {
   // }, [job, approvals, runningStep, isLoading]);
 
   const { data: kwAssets = [] } = useQuery({
-    queryKey: ['assets', id, 'KEYWORD'], queryFn: () => jobsApi.assets(id, 'KEYWORD'), enabled: !!job,
+    queryKey: ['assets', id, 'KEYWORD'], queryFn: () => jobsApi.assets(id, 'KEYWORD'), enabled: !!job, refetchInterval: autoRefreshInterval,
   })
   const { data: scriptAssets = [] } = useQuery({
-    queryKey: ['assets', id, 'SCRIPT'], queryFn: () => jobsApi.assets(id, 'SCRIPT'), enabled: !!job,
+    queryKey: ['assets', id, 'SCRIPT'], queryFn: () => jobsApi.assets(id, 'SCRIPT'), enabled: !!job, refetchInterval: autoRefreshInterval,
   })
   const { data: imageAssets = [] } = useQuery({
-    queryKey: ['assets', id, 'SCENE_IMAGE'], queryFn: () => jobsApi.assets(id, 'SCENE_IMAGE'), enabled: !!job,
+    queryKey: ['assets', id, 'SCENE_IMAGE'], queryFn: () => jobsApi.assets(id, 'SCENE_IMAGE'), enabled: !!job, refetchInterval: autoRefreshInterval,
   })
   const { data: ttsAssets = [] } = useQuery({
-    queryKey: ['assets', id, 'TTS_AUDIO'], queryFn: () => jobsApi.assets(id, 'TTS_AUDIO'), enabled: !!job,
+    queryKey: ['assets', id, 'TTS_AUDIO'], queryFn: () => jobsApi.assets(id, 'TTS_AUDIO'), enabled: !!job, refetchInterval: autoRefreshInterval,
   })
   const { data: youtubeMetadataAssets = [] } = useQuery({
-    queryKey: ['assets', id, 'YOUTUBE_METADATA'], queryFn: () => jobsApi.assets(id, 'YOUTUBE_METADATA'), enabled: !!job,
+    queryKey: ['assets', id, 'YOUTUBE_METADATA'], queryFn: () => jobsApi.assets(id, 'YOUTUBE_METADATA'), enabled: !!job, refetchInterval: autoRefreshInterval,
   })
 
   const youtubePackage = useMemo(() => {
@@ -226,6 +249,18 @@ export default function JobDetail() {
     return [...imageList].sort((a, b) => (a.index || 0) - (b.index || 0))
   }, [imageList])
 
+  // Large 20-minute jobs can have 200+ scenes. Keep the editor responsive by
+  // rendering ten review cards at a time.
+  const scenePageCount = Math.max(1, Math.ceil(sortedImageList.length / 10))
+  const pagedImageList = useMemo(() => {
+    const start = (scenePage - 1) * 10
+    return sortedImageList.slice(start, start + 10)
+  }, [scenePage, sortedImageList])
+
+  useEffect(() => {
+    if (scenePage > scenePageCount) setScenePage(scenePageCount)
+  }, [scenePage, scenePageCount])
+
   const ttsInfo = useMemo(() => {
     if (!ttsAssets.length) return null
     try { return JSON.parse(ttsAssets[ttsAssets.length - 1].metaJson || '{}') } catch { return null }
@@ -241,7 +276,7 @@ export default function JobDetail() {
   })
 
   const saveScriptMut = useMutation({
-    mutationFn: (text) => jobsApi.confirmScript(id, text),
+    mutationFn: (text) => jobsApi.confirmScript(id, text, scriptData?.sections || []),
     onSuccess: () => {
       qc.invalidateQueries(['job', id])
       qc.invalidateQueries(['assets', id, 'SCRIPT'])
@@ -263,17 +298,28 @@ export default function JobDetail() {
   })
 
   const regenImageMut = useMutation({
-    mutationFn: ({ index, text, section, mode }) => jobsApi.updateSceneImage(id, index, text, section, mode),
+    mutationFn: ({ index, text, subtitleText, section, mode }) => jobsApi.updateSceneImage(id, index, {
+      text,
+      subtitleText,
+      section,
+      mode,
+    }),
     onSuccess: (data, variables) => {
       qc.invalidateQueries(['assets', id, 'SCENE_IMAGE'])
       setEditingSceneIndex(null)
+      setActiveSceneActionIndex(null)
       setImageSalt(prev => prev + 1)
-      const modeStr = variables.mode === 'image' ? '이미지만' : variables.mode === 'text' ? '텍스트만' : '텍스트와 이미지 모두';
-      alert(`${modeStr} 수정이 성공적으로 반영되었습니다. 자막/음성을 비디오 파일에 완전히 적용하려면 우측 상단의 '동영상 재조립' 버튼을 꼭 클릭해 주세요.`);
+      const modeStr = variables.mode === 'caption_only'
+        ? '자막만'
+        : variables.mode === 'image_only'
+          ? '이미지만'
+          : '원문과 이미지';
+      alert(`${modeStr} 변경이 저장되었습니다. 최종 영상에는 '동영상 재조립'을 실행한 뒤 반영됩니다.`);
     },
     onError: (err) => {
       alert('수정 실패: ' + (err.response?.data?.message || err.message))
-    }
+    },
+    onSettled: () => setActiveSceneActionIndex(null),
   })
 
   const splitSceneMut = useMutation({
@@ -473,7 +519,7 @@ export default function JobDetail() {
           <Zap className="text-accent-green flex-shrink-0" size={20}/>
           <div>
             <p className="text-sm text-accent-green"><span className="font-semibold">완전 자동 모드</span> — 백엔드 서버가 모든 단계를 자율적으로 실행합니다.</p>
-            <p className="text-sm text-accent-green/70 mt-1">브라우저를 닫으셔도 진행됩니다. 이 페이지에서 실시간 진행 현황을 모니터링할 수 있습니다.</p>
+            <p className="text-sm text-accent-green/70 mt-1">상태와 단계별 산출물은 3초마다 자동 갱신됩니다. 이전 단계의 후보·스크립트·음성·이미지도 이 화면에 유지됩니다.</p>
           </div>
         </div>
       )}
@@ -873,7 +919,7 @@ export default function JobDetail() {
                     {isAuto && (
                       <div className="pt-2.5 border-t border-navy-700/40 flex items-center gap-2 text-accent-cyan text-sm">
                         <Loader size={12} className="animate-spin"/>
-                        <span>자동 모드가 실행 중입니다. 브라우저 창을 켜둔 채 잠시만 기다려 주세요.</span>
+                        <span>자동 모드가 실행 중입니다. 완료되면 다음 단계와 생성 결과가 자동으로 갱신되며, 이전 단계 결과도 계속 확인할 수 있습니다.</span>
                       </div>
                     )}
                   </div>
@@ -882,22 +928,29 @@ export default function JobDetail() {
                 {step.key === 'keyword' && kwCandidates.length > 0 && (
                   <div className="px-5 pb-4 border-t border-navy-700">
                     <p className="text-sm text-navy-400 mt-3 mb-2">후보 {kwCandidates.length}개</p>
+                    <KeywordMetricGuide />
                     <div className="space-y-1.5">
-                      {kwCandidates.map((c, i) => (
+                      {kwCandidates.map((c, i) => {
+                        const hasPublicMetrics = hasYoutubeMetrics(c)
+                        const wasAutoSelected = isAuto && job.keyword === c.keyword
+                        return (
                         <div key={i} className={`px-3.5 py-2.5 rounded-lg ${c.is_outperformer ? 'bg-accent-gold/10 border border-accent-gold/20' : 'bg-navy-700/50'}`}>
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
                             {c.is_outperformer && <Star size={13} className="text-accent-gold fill-accent-gold"/>}
                             <span className="text-sm">{c.keyword}</span>
+                            {wasAutoSelected && <span className="rounded bg-accent-green/20 px-2 py-0.5 text-xs font-semibold text-accent-green">자동 선택됨</span>}
                             </div>
                             <div className="text-sm text-navy-400 flex flex-wrap justify-end gap-3">
-                            <span>조회 {(c.views || 0).toLocaleString()}</span>
-                            <span>구독 {(c.subscribers || 0).toLocaleString()}</span>
-                            <span>×{c.outperformance_index?.toFixed(1)}</span>
-                            <span>{c.velocity_vph?.toFixed(0)}vph</span>
-                            <span>조회/구독 {c.engagement_ratio?.toFixed(2)}×</span>
-                            <span>좋아요 {c.likes_available === false ? '비공개' : (c.likes || 0).toLocaleString()}</span>
-                            <span>{c.duration_seconds ? `${Math.round(c.duration_seconds)}초` : '길이 없음'}</span>
+                            {hasPublicMetrics ? <>
+                              <span>조회 {metricNumber(c.views)}</span>
+                              <span>구독 {metricNumber(c.subscribers)}</span>
+                              <span>구독자 대비 조회 {metricNumber(c.engagement_ratio, 2)}×</span>
+                              <span>채널 평균 대비 {metricNumber(c.outperformance_index, 2)}×</span>
+                              <span>시간당 조회 {metricNumber(c.velocity_vph)}</span>
+                              <span>좋아요 {c.likes_available === false ? '비공개' : metricNumber(c.likes)}</span>
+                              <span>{c.duration_seconds ? `${Math.round(c.duration_seconds)}초` : '길이 없음'}</span>
+                            </> : <span className="text-navy-500">공개 YouTube 지표 수집 없음</span>}
                             {isGuided && job.status === 'KEYWORD_PENDING' && (
                               <button
                                 type="button"
@@ -908,6 +961,14 @@ export default function JobDetail() {
                             )}
                             </div>
                           </div>
+                          {(wasAutoSelected || c.reason) && (
+                            <div className={`mt-2 rounded-md border px-3 py-2 text-xs leading-relaxed ${wasAutoSelected ? 'border-accent-green/30 bg-accent-green/10 text-accent-green' : 'border-navy-700 bg-navy-900/30 text-navy-400'}`}>
+                              <span className="font-semibold">{wasAutoSelected ? '자동 선택 이유' : '후보 근거'}: </span>
+                              {wasAutoSelected
+                                ? <>자동 모드는 작업 요청에 전달된 키워드가 있으면 그 키워드를 우선 확정하고, 없으면 후보 우선순위 1위를 선택합니다. {hasPublicMetrics ? '후보 우선순위는 채널 평균 대비 40% · 구독자 대비 조회 30% · 시간당 조회 30%를 반영합니다.' : '공개 YouTube 지표가 없을 때에는 수집된 뉴스·후보 근거 순위를 반영합니다.'} {c.reason || ''}</>
+                                : c.reason}
+                            </div>
+                          )}
                           {c.source_videos?.length > 0 && (
                             <div className="mt-1.5 pl-5 text-[11px] text-navy-400 space-y-0.5">
                               {c.source_videos.slice(0, 2).map((video, vi) => (
@@ -925,7 +986,8 @@ export default function JobDetail() {
                             </div>
                           )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                     {job.keyword && <div className="mt-2 text-sm text-navy-400">✓ 확정: <span className="text-accent-cyan">{job.keyword}</span></div>}
                   </div>
@@ -945,6 +1007,16 @@ export default function JobDetail() {
                             <span className="ml-2 text-accent-green">✓ LLM 생성</span>
                           )}
                         </span>
+                        {scriptData.length_contract && (
+                          <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                            목표 {Math.round((scriptData.length_contract.target_seconds || 0) / 60)}분 ·
+                            {scriptData.length_contract.tts_speed}배속 ·
+                            내레이션 {scriptData.length_contract.target_chars?.toLocaleString()}자
+                          </span>
+                        )}
+                        {scriptData.keyword_validation?.passed && (
+                          <span className="text-xs font-medium text-emerald-700">✓ 선택 키워드 반영 검증</span>
+                        )}
                       </div>
 
                       {scriptData.quality_report?.storytelling && (
@@ -1261,9 +1333,9 @@ export default function JobDetail() {
                     </div>
 
                     <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-3 border border-navy-700/50">
-                      {sortedImageList.map((img, i) => {
+                      {pagedImageList.map((img, i) => {
                         const isEditingThis = editingSceneIndex === img.index;
-                        const isRegeneratingThis = regenImageMut.isPending && editingSceneIndex === img.index;
+                        const isRegeneratingThis = regenImageMut.isPending;
                         const qualityScore = img.qualityScore ?? img.quality_score;
                         const qualityFlags = img.qualityFlags ?? img.quality_flags ?? [];
                         const retryRecommended = img.retryRecommended ?? img.retry_recommended;
@@ -1315,7 +1387,7 @@ export default function JobDetail() {
                                 <div className="mt-2.5">
                                   {isEditingThis ? (
                                     <div className="space-y-2">
-                                      <label className="block text-[11px] text-gray-400">씬 대사 / 자막 / 재조립용 텍스트</label>
+                                      <label className="block text-[11px] text-gray-400">원본 한국어 문장 · 텍스트 반영 이미지 재생성에 사용</label>
                                       <textarea
                                         id={`scene-edit-${img.index}`}
                                         value={editingSceneText}
@@ -1323,21 +1395,29 @@ export default function JobDetail() {
                                         className="w-full bg-navy-700 border border-navy-600 rounded p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
                                         rows={2}
                                       />
-                                      <label className="block text-[11px] text-gray-400">이미지 재생성 지시 (이미지만 수정 시 사용)</label>
+                                      <label className="block text-[11px] text-gray-400">화면 자막 · 자막만 저장을 눌러도 이미지와 음성은 바뀌지 않음</label>
                                       <textarea
-                                        value={editingImagePrompt}
-                                        onChange={e => setEditingImagePrompt(e.target.value)}
+                                        value={editingSubtitleText}
+                                        onChange={e => setEditingSubtitleText(e.target.value)}
                                         className="w-full bg-navy-900 border border-navy-600 rounded p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
                                         rows={2}
                                       />
+                                      <div>
+                                        <div className="text-[11px] font-semibold text-navy-400 mb-1">현재 생성된 영어 이미지 프롬프트</div>
+                                        <p className="max-h-24 overflow-y-auto rounded border border-navy-700 bg-navy-950/40 p-2 text-xs leading-relaxed text-navy-300 font-mono">
+                                          {img.prompt_en || img.prompt || '아직 생성된 영어 프롬프트가 없습니다.'}
+                                        </p>
+                                      </div>
                                     </div>
                                   ) : (
                                     <div className="space-y-1.5">
+                                      <div className="text-[11px] font-semibold text-navy-400">원본 한국어 문장</div>
                                       <p className="text-sm text-gray-200 leading-relaxed text-justify line-clamp-3">
-                                        {img.prompt_ko || img.text || img.prompt || '(내용 없음)'}
+                                        {img.text || img.prompt_ko || img.prompt || '(내용 없음)'}
                                       </p>
                                       {img.prompt_en && (
                                         <div className="mt-1">
+                                          <div className="text-[11px] font-semibold text-navy-400 mb-1">생성된 영어 이미지 프롬프트</div>
                                           <button
                                             onClick={() => setShowEngPrompt(prev => ({ ...prev, [img.index]: !prev[img.index] }))}
                                             className="text-xs text-accent-cyan hover:underline flex items-center gap-1"
@@ -1407,59 +1487,78 @@ export default function JobDetail() {
                                     <button
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
-                                        text: editingImagePrompt,
+                                        text: editingSceneText,
+                                        subtitleText: editingSubtitleText,
                                         section: img.section,
-                                        mode: 'image'
+                                        mode: 'image_only'
                                       })}
                                       disabled={isRegeneratingThis || splitSceneMut.isPending}
                                       className="flex items-center gap-1 bg-accent-cyan text-navy-950 text-xs font-semibold px-2.5 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
-                                      title="대사를 유지한 채 캐릭터 이미지만 다시 생성합니다."
+                                      title="원본 문장과 검토한 영문 프롬프트를 그대로 유지하고 이미지만 다시 생성합니다."
                                     >
                                       {isRegeneratingThis ? <Loader size={12} className="animate-spin"/> : <Save size={12}/>}
-                                      이미지만 수정
+                                      이미지만 재생성
                                     </button>
                                     <button
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
                                         text: editingSceneText,
+                                        subtitleText: editingSubtitleText,
                                         section: img.section,
-                                        mode: 'text'
+                                        mode: 'caption_only'
                                       })}
                                       disabled={isRegeneratingThis}
                                       className="flex items-center gap-1 bg-accent-gold text-navy-950 text-xs font-semibold px-2.5 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
-                                      title="이미지는 유지하고 자막/대사 텍스트만 업데이트합니다. (동영상 재조립 시 음성도 자동 반영됩니다.)"
+                                      title="이미지와 음성은 유지하고 최종 영상에 표시되는 자막만 저장합니다."
                                     >
                                       {isRegeneratingThis ? <Loader size={12} className="animate-spin"/> : <Save size={12}/>}
-                                      텍스트만 수정
+                                      자막만 저장
                                     </button>
                                     <button
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
                                         text: editingSceneText,
+                                        subtitleText: editingSubtitleText,
                                         section: img.section,
-                                        mode: 'both'
+                                        mode: 'text_and_image'
                                       })}
                                       disabled={isRegeneratingThis}
                                       className="flex items-center gap-1 bg-accent-green text-navy-950 text-xs font-semibold px-2.5 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
-                                      title="대사 텍스트를 수정하고 이미지도 새로 생성합니다."
+                                      title="수정한 원본 한국어 문장으로 새 영문 이미지 프롬프트를 만들고 이미지를 재생성합니다."
                                     >
                                       {isRegeneratingThis ? <Loader size={12} className="animate-spin"/> : <Save size={12}/>}
-                                      텍스트+이미지 수정
+                                      텍스트 반영 이미지 재생성
                                     </button>
                                   </>
                                 ) : (
                                   ['IMAGES_PENDING', 'PREVIEW_PENDING', 'READY'].includes(job.status) && (
-                                    <button
-                                      onClick={() => {
-                                        setEditingSceneIndex(img.index);
-                                        setEditingSceneText(img.prompt_ko || img.text || img.prompt || '');
-                                        setEditingImagePrompt(img.prompt_en || img.prompt_ko || img.prompt || img.text || '');
-                                      }}
-                                      className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-white border border-navy-600 px-2.5 py-1.5 rounded transition"
-                                    >
-                                      <Edit size={12}/>
-                                      텍스트 수정 / 재생성
-                                    </button>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => regenImageMut.mutate({
+                                          index: img.index,
+                                          text: img.text || img.prompt_ko || '',
+                                          subtitleText: img.subtitle_text || img.subtitleText || '',
+                                          section: img.section,
+                                          mode: 'image_only',
+                                        })}
+                                        disabled={isRegeneratingThis}
+                                        className="flex items-center gap-1 text-xs bg-accent-cyan text-navy-950 font-semibold px-2.5 py-1.5 rounded transition disabled:opacity-50"
+                                        title="검토한 영문 프롬프트와 원본 문장은 유지하고 이미지만 다시 생성합니다."
+                                      >
+                                        {isRegeneratingThis ? <Loader size={12} className="animate-spin"/> : <ImageIcon size={12}/>} 이미지만 재생성
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditingSceneIndex(img.index);
+                                          setEditingSceneText(img.text || img.prompt_ko || img.prompt || '');
+                                          setEditingSubtitleText(img.subtitle_text || img.subtitleText || img.text || img.prompt_ko || '');
+                                        }}
+                                        className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-white border border-navy-600 px-2.5 py-1.5 rounded transition"
+                                      >
+                                        <Edit size={12}/>
+                                        자막 · 원문 편집
+                                      </button>
+                                    </div>
                                   )
                                 )}
                               </div>
@@ -1467,6 +1566,23 @@ export default function JobDetail() {
                           </div>
                         );
                       })}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3 text-xs text-navy-400">
+                      <span>씬 {((scenePage - 1) * 10) + 1}–{Math.min(scenePage * 10, sortedImageList.length)} / {sortedImageList.length}</span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setScenePage(1)} disabled={scenePage === 1} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">«</button>
+                        <button onClick={() => setScenePage(p => Math.max(1, p - 1))} disabled={scenePage === 1} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">‹</button>
+                        {Array.from({ length: scenePageCount }, (_, i) => i + 1)
+                          .filter(page => page === 1 || page === scenePageCount || Math.abs(page - scenePage) <= 1)
+                          .map((page, index, pages) => (
+                            <span key={page} className="flex items-center gap-1">
+                              {index > 0 && page - pages[index - 1] > 1 && <span className="px-1">…</span>}
+                              <button onClick={() => setScenePage(page)} className={`min-w-7 px-2 py-1 rounded border ${page === scenePage ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold' : 'border-navy-600 hover:text-white'}`}>{page}</button>
+                            </span>
+                          ))}
+                        <button onClick={() => setScenePage(p => Math.min(scenePageCount, p + 1))} disabled={scenePage === scenePageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">›</button>
+                        <button onClick={() => setScenePage(scenePageCount)} disabled={scenePage === scenePageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">»</button>
+                      </div>
                     </div>
                   </div>
                 )}

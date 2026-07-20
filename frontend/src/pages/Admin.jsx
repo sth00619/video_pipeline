@@ -22,6 +22,9 @@ export default function Admin() {
   const [selectedStatus, setSelectedStatus] = useState('ALL')
 
   const [editedVoices, setEditedVoices] = useState({})
+  const [channelPreviewText, setChannelPreviewText] = useState({})
+  const [channelPreviewUrls, setChannelPreviewUrls] = useState({})
+  const [channelPreviewLoading, setChannelPreviewLoading] = useState({})
   const [characterDescriptions, setCharacterDescriptions] = useState({})
   const [characterKeys, setCharacterKeys] = useState({})
   const [newChannel, setNewChannel] = useState({ channelId: '', channelName: '', characterKey: '', characterStylePrompt: '', voiceId: '' })
@@ -100,6 +103,24 @@ export default function Admin() {
       alert('캐릭터 포즈 생성 실패: ' + (err.response?.data?.message || err.message))
     },
   })
+
+  const previewChannelVoice = async (channelId, voiceId) => {
+    const text = (channelPreviewText[channelId] || '오늘 시장의 핵심 숫자와 외국인 수급의 방향을 차분하게 확인해보겠습니다.').trim()
+    if (!voiceId || !text || text.length > 100) return
+    setChannelPreviewLoading(prev => ({ ...prev, [channelId]: true }))
+    try {
+      const response = await apiClient.post('/channels/voices/preview', { voiceId, text }, { responseType: 'blob' })
+      const url = URL.createObjectURL(response.data)
+      setChannelPreviewUrls(prev => {
+        if (prev[channelId]) URL.revokeObjectURL(prev[channelId])
+        return { ...prev, [channelId]: url }
+      })
+    } catch (error) {
+      alert('음성 미리듣기 생성에 실패했습니다. ElevenLabs 연결 상태를 확인하세요.')
+    } finally {
+      setChannelPreviewLoading(prev => ({ ...prev, [channelId]: false }))
+    }
+  }
 
   const totalCost = jobs.reduce((sum, j) => sum + (parseFloat(j.costAccumulated) || 0), 0)
   const completedJobs = jobs.filter(j => isCompleted(j.status))
@@ -386,6 +407,26 @@ export default function Admin() {
                               />
                             </div>
                           )}
+                        </div>
+                      )}
+                      {currentVoiceId && (
+                        <div className="mt-2 rounded-lg border border-accent-cyan/20 bg-accent-cyan/5 p-2.5 space-y-2">
+                          <div className="text-[11px] font-semibold text-accent-cyan">기본 예시 문장 미리듣기</div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={channelPreviewText[channel.channelId] || '오늘 시장의 핵심 숫자와 외국인 수급의 방향을 차분하게 확인해보겠습니다.'}
+                              maxLength={100}
+                              onChange={e => setChannelPreviewText({ ...channelPreviewText, [channel.channelId]: e.target.value })}
+                              className="flex-1 bg-navy-900 border border-navy-600 rounded px-2 py-1.5 text-xs text-white"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => previewChannelVoice(channel.channelId, currentVoiceId)}
+                              disabled={channelPreviewLoading[channel.channelId]}
+                              className="px-2.5 py-1.5 rounded bg-accent-cyan/20 text-accent-cyan text-xs font-semibold disabled:opacity-50"
+                            >{channelPreviewLoading[channel.channelId] ? '생성 중…' : '미리듣기'}</button>
+                          </div>
+                          {channelPreviewUrls[channel.channelId] && <audio src={channelPreviewUrls[channel.channelId]} controls autoPlay className="h-7 w-full" />}
                         </div>
                       )}
                       <p className="text-[11px] text-gray-500 mt-1.5">

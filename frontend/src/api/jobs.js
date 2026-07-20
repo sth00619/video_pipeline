@@ -24,8 +24,8 @@ export const jobsApi = {
 
   // 스크립트
   generateScript: (id) => apiClient.post(`/jobs/${id}/script/generate`).then(r => r.data),
-  confirmScript: (id, script) =>
-    apiClient.post(`/jobs/${id}/script/confirm`, { finalScript: script }).then(r => r.data),
+  confirmScript: (id, script, sections = []) =>
+    apiClient.post(`/jobs/${id}/script/confirm`, { finalScript: script, sections }).then(r => r.data),
 
   // TTS
   generateTts: (id, voiceId = 'default_ko') =>
@@ -37,8 +37,8 @@ export const jobsApi = {
   // 이미지
   generateImages: (id) => apiClient.post(`/jobs/${id}/images/generate`).then(r => r.data),
   confirmImages: (id) => apiClient.post(`/jobs/${id}/images/confirm`, {}).then(r => r.data),
-  updateSceneImage: (id, index, text, section = 'default', mode = 'both') =>
-    apiClient.post(`/jobs/${id}/images/scenes/${index}`, { text, section, mode }).then(r => r.data),
+  updateSceneImage: (id, index, payload) =>
+    apiClient.post(`/jobs/${id}/images/scenes/${index}`, payload).then(r => r.data),
   splitScene: (id, index, part1, part2) =>
     apiClient.post(`/jobs/${id}/images/scenes/${index}/split`, { part1, part2 }).then(r => r.data),
   setSceneKling: (id, index, enabled) =>

@@ -16,15 +16,33 @@ body {
 }
 
 /* 기존 화면의 토큰 클래스를 밝은 A안의 읽기 좋은 본문색으로 전환합니다. */
-.text-white { color: #1d1d1f; }
+.text-white { color: #1f2937; }
+.text-gray-50,
+.text-gray-100,
+.text-gray-200 { color: #334155; }
 .text-gray-300 { color: #475569; }
-.text-gray-400 { color: #64748b; }
+.text-gray-400,
 .text-gray-500 { color: #64748b; }
+.text-navy-400 { color: #475569; }
+.text-navy-500 { color: #64748b; }
+
+/* Legacy navy cards now render on a white base: keep form values readable. */
+input,
+textarea,
+select { color: #1f2937; }
 
 .bg-accent-cyan.text-white,
 .bg-accent-green.text-white,
 .bg-accent-red.text-white,
-.bg-accent-violet.text-white { color: #ffffff; }
+.bg-accent-violet.text-white,
+.bg-red-500.text-white,
+.bg-red-600.text-white,
+.bg-purple-500.text-white,
+.bg-purple-600.text-white,
+.bg-violet-500.text-white,
+.bg-violet-600.text-white,
+.bg-black\/70.text-white,
+.bg-black\/80.text-white { color: #ffffff; }
 
 input::placeholder,
 textarea::placeholder { color: #94a3b8; }

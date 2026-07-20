@@ -69,8 +69,8 @@ services:
 
   spring-app:
     build:
-      context: ./backend/spring-app
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: spring-app/Dockerfile
     container_name: pipeline_spring
     restart: unless-stopped
     ports:
@@ -97,8 +97,8 @@ services:
       - fastapi_data:/app/data   # FastAPI 생성 파일 공유 (다운로드 프록시용)
   fastapi-workers:
     build:
-      context: ./backend/fastapi-workers
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: fastapi-workers/Dockerfile
     container_name: pipeline_fastapi
     restart: unless-stopped
     ports:
@@ -109,6 +109,10 @@ services:
       REDIS_PORT: 6379
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      KEYWORD_MIN_SOURCE_SUBSCRIBERS: ${KEYWORD_MIN_SOURCE_SUBSCRIBERS:-3000}
+      KEYWORD_MIN_SOURCE_VIEWS: ${KEYWORD_MIN_SOURCE_VIEWS:-3000}
+      KEYWORD_MIN_SOURCE_VIEWER_MULTIPLE: ${KEYWORD_MIN_SOURCE_VIEWER_MULTIPLE:-0.25}
+      KEYWORD_EXCLUDE_LIVE: ${KEYWORD_EXCLUDE_LIVE:-true}
       FINNHUB_API_KEY: ${FINNHUB_API_KEY:-d951j4pr01qq8ms6uaa0d951j4pr01qq8ms6uaag}
       FRED_API_KEY: ${FRED_API_KEY:-}
       DART_API_KEY: ${DART_API_KEY:-}
@@ -127,6 +131,7 @@ services:
       GEMINI_PARALLEL_ENABLED: ${GEMINI_PARALLEL_ENABLED:-true}
       GEMINI_MAX_CONCURRENCY: ${GEMINI_MAX_CONCURRENCY:-6}
       GEMINI_RETRY_MAX: ${GEMINI_RETRY_MAX:-3}
+      IMAGE_SAME_ERROR_BREAK_COUNT: ${IMAGE_SAME_ERROR_BREAK_COUNT:-5}
       LONGFORM_SCENE_MAX_WORKERS: ${LONGFORM_SCENE_MAX_WORKERS:-6}
       ANTHROPIC_PROMPT_CACHE_ENABLED: ${ANTHROPIC_PROMPT_CACHE_ENABLED:-true}
       ANTHROPIC_PROMPT_CACHE_TTL: ${ANTHROPIC_PROMPT_CACHE_TTL:-5m}
@@ -138,6 +143,7 @@ services:
       - minio
     volumes:
       - fastapi_data:/app/data
+    mem_limit: 4g
   frontend:
     build:
       context: ./frontend

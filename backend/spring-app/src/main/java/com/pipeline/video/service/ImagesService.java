@@ -48,6 +48,12 @@ public class ImagesService {
         if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING || job.getStatus() == JobStatus.SCRIPT_PENDING || job.getStatus() == JobStatus.TTS_PENDING) {
             throw new IllegalStateException("TTS 확정 전에는 이미지를 생성할 수 없습니다. 현재: " + job.getStatus());
         }
+        if (job.getStatus() == JobStatus.IMAGES_RETRY_REQUIRED) {
+            // Keep approved keyword/script/TTS assets; only the image gate is
+            // reopened after a terminal provider batch error.
+            job.setStatus(JobStatus.IMAGES_PENDING);
+            jobRepository.save(job);
+        }
 
         // TTS chunks 로드
         String ttsMetaJson = loadAssetMeta(jobId, AssetType.TTS_AUDIO);
@@ -168,6 +174,29 @@ public class ImagesService {
         log.info("Gemini Pro Batch completed: jobId={}, scenes={}", jobId, result.getSceneCount());
     }
 
+    /**
+     * Retire a terminal Gemini batch failure.  Leaving IMAGE_BATCH behind
+     * would make the scheduler poll the same failed remote batch forever.
+     */
+    @Transactional
+    public void failBatch(Long jobId, Long batchAssetId, String reason) {
+        assetRepository.findById(batchAssetId).ifPresent(asset -> {
+            asset.setMetaJson(safeJson(Map.of(
+                    "status", "BATCH_FAILED",
+                    "batchJobName", asset.getLocalPath() == null ? "" : asset.getLocalPath(),
+                    "error", reason == null ? "unknown batch failure" : reason
+            )));
+            assetRepository.save(asset);
+        });
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        if (job.getStatus() == JobStatus.IMAGES_PENDING) {
+            job.setStatus(JobStatus.IMAGES_RETRY_REQUIRED);
+            jobRepository.save(job);
+        }
+        log.error("Gemini Pro Batch marked retry-required after terminal failure: jobId={}, reason={}", jobId, reason);
+    }
+
     @Transactional
     public void confirm(Long jobId, String username) {
         VideoJob job = jobRepository.findById(jobId)
@@ -186,7 +215,13 @@ public class ImagesService {
     }
 
     @Transactional
-    public void updateScene(Long jobId, int index, String text, String section, String mode) {
+    public void updateScene(Long jobId, int index, String text, String subtitleText, String section, String mode) {
+        if ("caption_only".equalsIgnoreCase(mode)
+                || "image_only".equalsIgnoreCase(mode)
+                || "text_and_image".equalsIgnoreCase(mode)) {
+            updateSceneV2(jobId, index, text, subtitleText, section, mode);
+            return;
+        }
         // 1. SCENE_IMAGE 타입의 에셋 전체 조회
         List<Asset> assets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
         Asset target = null;
@@ -250,6 +285,88 @@ public class ImagesService {
         }
     }
 
+    /**
+     * Three deliberately separate editor actions:
+     * - caption_only updates only the rendered subtitle override;
+     * - image_only reuses the stored English prompt unchanged;
+     * - text_and_image makes a fresh English prompt from the Korean source and
+     *   then redraws the image.
+     */
+    private void updateSceneV2(Long jobId, int index, String text, String subtitleText,
+                               String section, String mode) {
+        Asset target = null;
+        SceneImageDto scene = null;
+        for (Asset asset : assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE)) {
+            try {
+                SceneImageDto parsed = objectMapper.readValue(asset.getMetaJson(), SceneImageDto.class);
+                if (parsed.getIndex() != null && parsed.getIndex() == index) {
+                    target = asset;
+                    scene = parsed;
+                    break;
+                }
+            } catch (Exception ignored) {
+                // Keep looking through legacy/malformed scene records.
+            }
+        }
+        if (target == null || scene == null) {
+            throw new IllegalArgumentException("Scene image not found: index=" + index);
+        }
+
+        if ("caption_only".equalsIgnoreCase(mode)) {
+            if (subtitleText == null || subtitleText.isBlank()) {
+                throw new IllegalArgumentException("Subtitle text is required.");
+            }
+            scene.setSubtitleText(subtitleText.trim());
+            target.setMetaJson(safeJson(scene));
+            assetRepository.save(target);
+            log.info("Scene subtitle updated without image regeneration: jobId={}, index={}", jobId, index);
+            return;
+        }
+
+        if ("text_and_image".equalsIgnoreCase(mode)) {
+            if (text == null || text.isBlank()) {
+                throw new IllegalArgumentException("Korean source text is required.");
+            }
+            scene.setText(text.trim());
+            scene.setPromptKo(text.trim());
+        }
+        if (section != null && !section.isBlank()) {
+            scene.setSection(section);
+        }
+
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        String characterImagePath = null;
+        String characterStylePrompt = null;
+        String characterPosesDir = null;
+        String profileId = job.getCharacterOverride() != null && !job.getCharacterOverride().isBlank()
+                ? job.getCharacterOverride() : job.getChannelId();
+        if (profileId != null) {
+            ChannelProfile profile = channelProfileRepository.findById(profileId).orElse(null);
+            if (profile != null) {
+                characterImagePath = profile.getCharacterImagePath();
+                characterStylePrompt = profile.getCharacterStylePrompt();
+                characterPosesDir = profile.getCharacterPosesDir();
+            }
+        }
+
+        String approvedEnglishPrompt = "image_only".equalsIgnoreCase(mode) ? scene.getPromptEn() : null;
+        SceneImageDto rendered = fastApiClient.regenerateSceneImage(
+                jobId, index, scene.getText(), approvedEnglishPrompt, scene.getSection(),
+                characterImagePath, characterStylePrompt, characterPosesDir);
+        if (rendered.getImagePath() != null && !rendered.getImagePath().isBlank()) {
+            scene.setImagePath(rendered.getImagePath());
+            target.setLocalPath(rendered.getImagePath());
+        }
+        if (rendered.getPromptEn() != null && !rendered.getPromptEn().isBlank()) {
+            scene.setPromptEn(rendered.getPromptEn());
+            scene.setPrompt(rendered.getPromptEn());
+        }
+        target.setMetaJson(safeJson(scene));
+        assetRepository.save(target);
+        log.info("Scene image updated: jobId={}, index={}, mode={}", jobId, index, mode);
+    }
+
     @Transactional
     public void splitScene(Long jobId, int index, String part1, String part2) {
         List<Asset> assets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
@@ -284,33 +401,55 @@ public class ImagesService {
             throw new IllegalArgumentException("Cannot find scene to split: index=" + index);
         }
         
-        // Shift indices of all assets with index > targetIndex by 1
+        // [BUG FIX] Shift indices of all assets with index > targetIndex by 1.
+        // MUST iterate in DESCENDING order so that e.g. index=3 becomes 4 BEFORE
+        // index=2 becomes 3; otherwise the former index=3 and the newly-shifted
+        // former index=2 both land on 3 at the same time, creating a duplicate.
+        java.util.List<Asset> shiftTargets = new java.util.ArrayList<>();
         for (Asset asset : sortedAssets) {
             try {
                 SceneImageDto dto = objectMapper.readValue(asset.getMetaJson(), SceneImageDto.class);
-                if (dto.getIndex() > index) {
-                    dto.setIndex(dto.getIndex() + 1);
-                    asset.setMetaJson(objectMapper.writeValueAsString(dto));
-                    assetRepository.save(asset);
+                if (dto.getIndex() != null && dto.getIndex() > index) {
+                    shiftTargets.add(asset);
                 }
             } catch (Exception e) {
                 // ignore
             }
         }
-        
+        // Reverse so we shift highest indices first, avoiding transient duplicates.
+        java.util.Collections.sort(shiftTargets, (a, b) -> {
+            try {
+                SceneImageDto dtoA = objectMapper.readValue(a.getMetaJson(), SceneImageDto.class);
+                SceneImageDto dtoB = objectMapper.readValue(b.getMetaJson(), SceneImageDto.class);
+                return Integer.compare(dtoB.getIndex(), dtoA.getIndex()); // descending
+            } catch (Exception e) { return 0; }
+        });
+        for (Asset asset : shiftTargets) {
+            try {
+                SceneImageDto dto = objectMapper.readValue(asset.getMetaJson(), SceneImageDto.class);
+                dto.setIndex(dto.getIndex() + 1);
+                asset.setMetaJson(objectMapper.writeValueAsString(dto));
+                assetRepository.save(asset);
+            } catch (Exception e) {
+                log.warn("씬 인덱스 시프트 중 오류: {}", e.getMessage());
+            }
+        }
+
         // Update target asset (part 1)
         targetDto.setPrompt(part1);
+        targetDto.setText(part1);   // keep text in sync so rebuild() can reconstruct the script
         double origDuration = targetDto.getDuration() != null ? targetDto.getDuration() : 10.0;
         double origStart = targetDto.getStart() != null ? targetDto.getStart() : 0.0;
-        
+
         targetDto.setDuration(origDuration / 2.0);
         targetAsset.setMetaJson(safeJson(targetDto));
         assetRepository.save(targetAsset);
-        
+
         // Create new asset (part 2) at index + 1
         SceneImageDto newDto = new SceneImageDto();
         newDto.setIndex(index + 1);
         newDto.setPrompt(part2);
+        newDto.setText(part2);      // populate text so rebuild() sees correct narration
         newDto.setSection(targetDto.getSection());
         newDto.setImagePath(targetDto.getImagePath()); // Copy image path to maintain character profile
         newDto.setDuration(origDuration / 2.0);

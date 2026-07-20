@@ -54,7 +54,8 @@ def plan_preflight(scene_count: int, quality_tier: str, requested_pro: int, requ
             estimated = _estimate(scene_count, pro_count, kling_count, cfg)
 
     # Motion is optional as well. Never reduce below three when it was
-    # requested; below that, static zoompan is the completion-safe fallback.
+    # requested; below that, deterministic static-image rendering remains the
+    # completion-safe fallback.
     if estimated > max_budget and kling_count:
         minimum = min(3, kling_count)
         while kling_count > minimum and estimated > max_budget:

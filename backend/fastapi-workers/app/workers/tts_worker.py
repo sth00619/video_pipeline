@@ -30,13 +30,14 @@ import re
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from app.utils.process_manager import is_job_stopped, register_process, unregister_process
 from app import runtime_config
 from app.config import ELEVENLABS_TTS_MODEL
 from app.utils.quality_gate import extract_narration, sanitize_narration, assess_subtitles, persist_quality_report
 from app.utils.korean_tts import normalize_korean_numbers_for_tts
 from app.utils.sentence_splitter import split_sentences
+from app.utils.script_length import spoken_char_count, update_calibration
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class TtsWorker:
         return self._whisper_model
 
     def synthesize(self, script: str, voice_id: str, job_id: int = 0,
-                   tts_speed: float = None) -> dict:
+                   tts_speed: float = None, target_seconds: float = None) -> dict:
         if not script or not script.strip():
             raise ValueError("스크립트가 비어있습니다.")
 
@@ -138,10 +139,17 @@ class TtsWorker:
         # 2. 음성 생성 (ElevenLabs v3 → gTTS → 무음 폴백)
         used_tts = False
         tts_engine = "silent"
+        # The /with-timestamps endpoint returns timing at the exact moment the
+        # audio is synthesized.  Keep it in memory so the video timeline can
+        # use first-party timing rather than re-transcribing its own narration.
+        elevenlabs_characters: List[Dict] = []
         try:
             if os.getenv("ELEVENLABS_API_KEY"):
                 logger.info("ELEVENLABS_API_KEY 감지 → ElevenLabs v3 AI 성우 + 발음 사전 적용")
-                used_tts = self._generate_elevenlabs(preprocessed, mp3_path, voice_id, job_id, tts_speed=speed)
+                used_tts, elevenlabs_characters = self._generate_elevenlabs(
+                    preprocessed, mp3_path, voice_id, job_id, tts_speed=speed,
+                    seed=max(1, job_id * 10 + 1),
+                )
                 if used_tts:
                     tts_engine = "elevenlabs"
             
@@ -153,6 +161,33 @@ class TtsWorker:
         except Exception as e:
             logger.error(f"TTS 생성 실패: {e}")
 
+        tts_verification = {"passed": None, "cer": None, "attempts": 0}
+        if used_tts and tts_engine == "elevenlabs":
+            max_retries = runtime_config.value("tts_max_retries")
+            for attempt in range(1, max_retries + 1):
+                tts_verification = self._verify_tts_narration(mp3_path, preprocessed, attempt)
+                if tts_verification["passed"]:
+                    break
+                if attempt < max_retries:
+                    logger.warning("TTS CER quality gate retrying generation (%s/%s)", attempt + 1, max_retries)
+                    used_tts, elevenlabs_characters = self._generate_elevenlabs(
+                        preprocessed, mp3_path, voice_id, job_id, tts_speed=speed,
+                        seed=max(1, job_id * 10 + attempt + 1),
+                    )
+                    if not used_tts:
+                        break
+
+            if not tts_verification["passed"]:
+                raise RuntimeError(
+                    "TTS quality gate failed after retries; keep the job at TTS review instead of assembling a low-confidence video."
+                )
+
+        # A configured ElevenLabs job must never silently become a different
+        # narrator.  Let the job retry from its gate instead of publishing a
+        # gTTS or silent replacement under an ElevenLabs label.
+        if os.getenv("ELEVENLABS_API_KEY") and tts_engine != "elevenlabs":
+            raise RuntimeError("ElevenLabs narration could not be generated; retry the TTS gate instead of using a voice fallback.")
+
         if not used_tts or not os.path.exists(mp3_path):
             logger.warning("TTS 실패 → 무음 폴백")
             estimated = len(clean_script) / 5.0
@@ -163,6 +198,7 @@ class TtsWorker:
                 job_id
             )
         # 오디오 가속 적용 (atempo 필터) — ElevenLabs는 네이티브 배속 우선, 범위 이탈분이나 폴백용만 FFmpeg 처리
+        alignment_time_scale = 1.0
         if os.path.exists(mp3_path):
             apply_ffmpeg_speed = speed
             if tts_engine == "elevenlabs":
@@ -180,27 +216,69 @@ class TtsWorker:
                 ret = self._run_subprocess(f'ffmpeg -i "{mp3_path}" -filter:a "atempo={apply_ffmpeg_speed}" -c:a libmp3lame -b:a 128k -y "{temp_mp3}" -loglevel error', job_id)
                 if ret == 0 and os.path.exists(temp_mp3):
                     os.replace(temp_mp3, mp3_path)
+                    # The timestamp response describes the pre-atempo audio.
+                    # A 1.25x speed-up makes every timestamp 1/1.25 earlier.
+                    alignment_time_scale = 1.0 / apply_ffmpeg_speed
                     logger.info(f"음성 배속({apply_ffmpeg_speed:.3f}x) 적용 성공")
                 else:
                     logger.error(f"음성 배속 적용 실패 (exit code: {ret})")
 
+        if tts_engine == "elevenlabs" and runtime_config.value("tts_postprocess_enabled"):
+            self._postprocess_audio(mp3_path, job_id)
+
         # 실제 MP3 길이 측정
         actual_duration = self._probe_duration(mp3_path) or len(clean_script) / 5.0
         logger.info(f"음성 길이 ({speed}x 배속 후): {actual_duration:.1f}초")
+        calibration = None
+        if tts_engine == "elevenlabs":
+            calibration = update_calibration(
+                clean_script,
+                actual_duration,
+                voice_id,
+                runtime_config.value("tts_model_body"),
+                speed,
+            )
+        duration_validation = {
+            "target_seconds": round(float(target_seconds), 2) if target_seconds else None,
+            "actual_seconds": round(actual_duration, 2),
+            "delta_seconds": round(actual_duration - float(target_seconds), 2) if target_seconds else None,
+            "within_tolerance": (
+                abs(actual_duration - float(target_seconds)) <= float(target_seconds) * 0.08
+                if target_seconds else None
+            ),
+            "spoken_char_count": spoken_char_count(clean_script),
+            "calibration": calibration,
+        }
 
         # 3. 자막 타임스탬프 추출 (Forced Alignment → stable-ts → Whisper → 글자수 비례)
         chunks = []
         if used_tts:
-            # 3a. ElevenLabs Forced Alignment 시도 (가장 정확)
+            # 3a. The TTS response itself is the authoritative timing source.
+            # It avoids a second API call and prevents STT/FA drift on Korean
+            # numbers, tickers, and pronunciation aliases.
             if tts_engine == "elevenlabs":
                 try:
+                    chunks = self._extract_timestamps_from_elevenlabs_response(
+                        clean_script,
+                        elevenlabs_characters,
+                        subtitle_max_chars,
+                        time_scale=alignment_time_scale,
+                    )
+                    logger.info(f"ElevenLabs 생성 타임스탬프 추출: {len(chunks)}개 세그먼트")
+                except Exception as e:
+                    logger.warning(f"ElevenLabs 생성 타임스탬프 사용 실패, Forced Alignment 폴백: {e}")
+                    chunks = []
+
+            # 3b. Forced Alignment is now a validation/fallback path only.
+            if tts_engine == "elevenlabs" and not chunks:
+                try:
                     chunks = self._extract_timestamps_with_forced_alignment(mp3_path, clean_script, subtitle_max_chars)
-                    logger.info(f"Forced Alignment 타임스탬프 추출: {len(chunks)}개 세그먼트")
+                    logger.info(f"Forced Alignment 폴백 타임스탬프 추출: {len(chunks)}개 세그먼트")
                 except Exception as e:
                     logger.warning(f"Forced Alignment 실패, stable-ts 폴백: {e}")
                     chunks = []
 
-            # 3b. stable-ts 폴백 (ElevenLabs Forced Alignment 실패 또는 gTTS 엔진)
+            # 3c. stable-ts 폴백 (ElevenLabs timing/FA 실패 또는 gTTS 엔진)
             if not chunks:
                 try:
                     chunks = self._extract_timestamps_with_stable_ts(mp3_path, clean_script, subtitle_max_chars)
@@ -209,7 +287,7 @@ class TtsWorker:
                     logger.warning(f"stable-ts 타임스탬프 추출 실패, Whisper 폴백: {e}")
                     chunks = []
 
-            # 3c. faster-whisper 폴백 (stable-ts 실패 시)
+            # 3d. faster-whisper 폴백 (stable-ts 실패 시)
             if not chunks:
                 try:
                     chunks = self._extract_timestamps_with_whisper(mp3_path, clean_script, subtitle_max_chars)
@@ -238,7 +316,8 @@ class TtsWorker:
             "chunks": chunks,
             "used_gtts": used_tts and (tts_engine == "gtts"),
             "used_elevenlabs": (tts_engine == "elevenlabs"),
-            "quality_report": {"subtitles": subtitle_quality},
+            "duration_validation": duration_validation,
+            "quality_report": {"subtitles": subtitle_quality, "tts_verification": tts_verification},
         }
 
     # ============================
@@ -302,7 +381,8 @@ class TtsWorker:
 
         return os.path.exists(output_path)
 
-    def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str, job_id: int = 0, tts_speed: float = None) -> bool:
+    def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str, job_id: int = 0,
+                             tts_speed: float = None, seed: int = None) -> Tuple[bool, List[Dict]]:
         """
         ElevenLabs v3 + 발음 사전 기반 한국어 AI 성우 음성 생성.
         원본 스크립트 텍스트를 그대로 전달하고, 발음 사전이 금융 용어 발음을 교정합니다.
@@ -313,7 +393,7 @@ class TtsWorker:
 
         api_key = os.getenv("ELEVENLABS_API_KEY")
         if not api_key:
-            return False
+            return False, []
 
         # Sprint 1 (S1-4): ElevenLabs 쿼터 사전 체크
         try:
@@ -331,7 +411,7 @@ class TtsWorker:
                 logger.info(f"ElevenLabs 쿼터 정보: limit={char_limit}, count={char_count}, remaining={remaining}, required={required_chars}")
                 if remaining < required_chars * 1.1:
                     logger.warning(f"ElevenLabs 잔여 쿼터 부족 ({remaining} < {required_chars * 1.1:.0f}) -> 즉시 gTTS 폴백")
-                    return False
+                    return False, []
             else:
                 logger.warning(f"ElevenLabs 쿼터 조회 API 실패 (status: {quota_resp.status_code}) -> 일단 API 호출 시도")
         except Exception as e:
@@ -345,11 +425,12 @@ class TtsWorker:
             voice_id = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
             
         # [공식 권장] apply_text_normalization=off 쿼리 파라미터 전달 및 이중 가속/배속 파라미터
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?apply_text_normalization=off"
+        # One response contains both the audio and its character-level timing.
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/with-timestamps?apply_text_normalization=off"
         headers = {
             "xi-api-key": api_key,
             "Content-Type": "application/json",
-            "Accept": "audio/mpeg"
+            "Accept": "application/json"
         }
 
         # 네이티브 배속 설정 (0.7~1.2 범위 우선 적용)
@@ -365,25 +446,67 @@ class TtsWorker:
         # 발음 사전 로케이터 (금융 용어 발음 교정)
         pron_mgr = PronunciationManager.get_instance()
         pron_locators = pron_mgr.get_locators()
+
+        def _write_timed_response(response, destination: str, offset: float = 0.0) -> Tuple[bool, List[Dict]]:
+            """Persist audio and normalize the endpoint's character timings."""
+            import base64
+
+            try:
+                body = response.json()
+                encoded_audio = body.get("audio_base64")
+                alignment = body.get("alignment") or body.get("normalized_alignment") or {}
+                chars = alignment.get("characters", [])
+                starts = alignment.get("character_start_times_seconds", [])
+                ends = alignment.get("character_end_times_seconds", [])
+                if not encoded_audio or not (len(chars) == len(starts) == len(ends)):
+                    logger.warning("ElevenLabs with-timestamps response missing valid audio/alignment")
+                    return False, []
+                with open(destination, "wb") as audio_file:
+                    audio_file.write(base64.b64decode(encoded_audio))
+                timed_characters = [
+                    {"text": str(char), "start": float(start) + offset, "end": float(end) + offset}
+                    for char, start, end in zip(chars, starts, ends)
+                ]
+                # ElevenLabs v3 can race through sentence boundaries even
+                # when punctuation is present.  Add measured silence after
+                # completed sentences, then shift the native timing array by
+                # exactly the same offsets so subtitles/scenes stay in sync.
+                return True, self._insert_sentence_pauses(destination, timed_characters, job_id, offset)
+            except (ValueError, TypeError, KeyError, base64.binascii.Error) as exc:
+                logger.warning("ElevenLabs with-timestamps response parse failed: %s", exc)
+                return False, []
         
-        def _build_payload(chunk_text: str, prev_text: str = "", next_text_val: str = "") -> dict:
+        def _build_payload(chunk_text: str, prev_text: str = "", next_text_val: str = "", is_intro: bool = False) -> dict:
+            model_id = runtime_config.value("tts_model_intro" if is_intro else "tts_model_body")
+            is_v3 = model_id.startswith("eleven_v3")
+            stability = runtime_config.value("tts_stability_intro" if is_intro else "tts_stability_body")
+            if is_v3 and stability not in {0.0, 0.5, 1.0}:
+                raise ValueError("Eleven v3 stability must be 0.0, 0.5, or 1.0")
+            # Tags are deliberately limited to the opening.  The body remains
+            # Robust so a finance narration does not sound like a performance.
+            tts_text = f"[curious] {chunk_text}" if is_intro and is_v3 else chunk_text
+            voice_settings = {
+                "stability": stability,
+                "similarity_boost": runtime_config.value("elevenlabs_similarity_boost"),
+                "speed": native_speed,
+            }
+            # Speaker boost is unsupported by v3.  Omitting it prevents a
+            # model switch from failing an otherwise valid narration request.
+            if not is_v3:
+                voice_settings["use_speaker_boost"] = True
             payload = {
-                "text": chunk_text,
-                "model_id": ELEVENLABS_TTS_MODEL,
+                "text": tts_text,
+                "model_id": model_id,
                 "language_code": "ko",
-                "voice_settings": {
-                    "stability": runtime_config.value("elevenlabs_stability"),
-                    "similarity_boost": runtime_config.value("elevenlabs_similarity_boost"),
-                    "style": runtime_config.value("elevenlabs_style"),
-                    "use_speaker_boost": True,
-                    "speed": native_speed
-                },
+                "voice_settings": voice_settings,
                 # [공식 가이드] Root level에도 normalization 끄기 설정 명시
                 "apply_text_normalization": "off"
             }
+            if seed is not None:
+                payload["seed"] = seed
             # eleven_v3 rejects previous_text/next_text with a 400 response.
             # A single rejected chunk used to downgrade the entire video to gTTS.
-            supports_context = not ELEVENLABS_TTS_MODEL.startswith("eleven_v3")
+            supports_context = not is_v3
             if prev_text and supports_context:
                 payload["previous_text"] = prev_text
             if next_text_val and supports_context:
@@ -394,30 +517,30 @@ class TtsWorker:
         
         MAX_CHARS = 800
         if len(text) <= MAX_CHARS:
-            payload = _build_payload(text)
+            payload = _build_payload(text, is_intro=True)
             success = False
             for retry in range(2):
                 try:
                     logger.info(f"ElevenLabs API 요청 (단일): URL={url}, model_id={payload.get('model_id')}, text_len={len(payload.get('text', ''))}")
-                    resp = requests.post(url, json=payload, headers=headers, timeout=40)
+                    resp = requests.post(url, json=payload, headers=headers, timeout=180)
                     if resp.status_code == 200:
-                        with open(output_path, "wb") as f:
-                            f.write(resp.content)
+                        saved, timed_chars = _write_timed_response(resp, output_path)
+                        if not saved:
+                            continue
                         logger.info(f"ElevenLabs v3 + 발음 사전 음성 생성 성공 (단일 요청, 시도 {retry+1})")
-                        success = True
-                        break
+                        return True, timed_chars
                     else:
                         logger.warning(f"ElevenLabs API 시도 {retry+1} 실패: {resp.status_code}, 응답: {resp.text}")
                 except Exception as e:
                     logger.warning(f"ElevenLabs API 시도 {retry+1} 예외: {e}")
             
             if success:
-                return True
+                return True, []
             else:
                 # Let the caller perform the fallback so it can truthfully mark
                 # the resulting asset as gTTS rather than ElevenLabs audio.
                 logger.warning("ElevenLabs 단일 요청 실패 -> caller fallback")
-                return False
+                return False, []
         else:
             # 800자 단위 분할 (문장 경계 기준)
             parts = []
@@ -431,9 +554,17 @@ class TtsWorker:
                     current = sent
             if current:
                 parts.append(current)
+
+            # v3 is less reliable with very short prompts. Keep a short tail
+            # with the preceding paragraph whenever the 800-char ceiling allows.
+            if len(parts) > 1 and len(parts[-1]) < 250 and len(parts[-2]) + len(parts[-1]) + 1 <= MAX_CHARS:
+                parts[-2] = f"{parts[-2]} {parts[-1]}"
+                parts.pop()
                 
             tmp_files = []
+            combined_timed_chars: List[Dict] = []
             elevenlabs_success_count = 0
+            timeline_offset = 0.0
             for idx, part in enumerate(parts):
                 if is_job_stopped(job_id):
                     raise RuntimeError(f"Job {job_id} stopped by user.")
@@ -443,18 +574,24 @@ class TtsWorker:
                 prev_p = parts[idx - 1] if idx > 0 else ""
                 next_p = parts[idx + 1] if idx + 1 < len(parts) else ""
                 
-                payload = _build_payload(part, prev_text=prev_p, next_text_val=next_p)
+                payload = _build_payload(part, prev_text=prev_p, next_text_val=next_p, is_intro=(idx == 0))
                 chunk_success = False
                 
                 # 2회 재시도 루프
                 for retry in range(2):
                     try:
                         logger.info(f"ElevenLabs API 요청: URL={url}, model_id={payload.get('model_id')}, text_len={len(payload.get('text', ''))}")
-                        resp = requests.post(url, json=payload, headers=headers, timeout=40)
+                        resp = requests.post(url, json=payload, headers=headers, timeout=180)
                         if resp.status_code == 200:
-                            with open(tmp, "wb") as f:
-                                f.write(resp.content)
+                            saved, timed_chars = _write_timed_response(resp, tmp, offset=timeline_offset)
+                            if not saved:
+                                continue
                             tmp_files.append(tmp)
+                            combined_timed_chars.extend(timed_chars)
+                            local_duration = self._probe_duration(tmp)
+                            if local_duration is None:
+                                local_duration = (timed_chars[-1]["end"] - timeline_offset) if timed_chars else 0.0
+                            timeline_offset += local_duration
                             logger.info(f"ElevenLabs 분할 {idx+1}/{len(parts)} 성공 (시도 {retry+1})")
                             chunk_success = True
                             elevenlabs_success_count += 1
@@ -466,6 +603,13 @@ class TtsWorker:
                 
                 # 청크 레벨 폴백: ElevenLabs 실패 시 gTTS로 해당 청크 대체
                 if not chunk_success:
+                    # Never combine an ElevenLabs narration with a fallback
+                    # voice: a single failed chunk should not change the
+                    # narrator half-way through a finished video.
+                    for temp_file in tmp_files:
+                        if os.path.exists(temp_file):
+                            os.remove(temp_file)
+                    return False, []
                     logger.warning(f"ElevenLabs 분할 {idx+1} 최종 실패 -> gTTS 폴백 적용")
                     try:
                         from gtts import gTTS
@@ -488,7 +632,7 @@ class TtsWorker:
                 logger.warning("ElevenLabs 모든 분할 청크 요청 실패 -> gTTS 전체 폴백 시도")
                 for t in tmp_files:
                     if os.path.exists(t): os.remove(t)
-                return False
+                return False, []
                     
             list_file = tf.mktemp(suffix=".txt")
             with open(list_file, "w", encoding="utf-8") as f:
@@ -505,11 +649,233 @@ class TtsWorker:
             if os.path.exists(list_file): os.remove(list_file)
             
             logger.info(f"음성 생성 및 병합 완료 ({len(parts)}개 조각, 하이브리드 모드)")
-            return os.path.exists(output_path)
+            return os.path.exists(output_path), combined_timed_chars
 
     # ============================
     # ElevenLabs Forced Alignment → 정밀 자막 타이밍
     # ============================
+    def _strip_audio_tag_timings(self, characters: List[Dict]) -> List[Dict]:
+        """Remove v3 control tags from timing without touching spoken text.
+
+        ElevenLabs returns alignment relative to the exact input.  A tag such
+        as ``[curious] `` is not subtitle text and would otherwise shift every
+        following character.  This keeps canonical subtitle text and timing in
+        the same coordinate system.
+        """
+        filtered: List[Dict] = []
+        index = 0
+        while index < len(characters):
+            if characters[index].get("text") == "[":
+                close = index + 1
+                while close < len(characters) and close - index <= 40 and characters[close].get("text") != "]":
+                    close += 1
+                if close < len(characters) and characters[close].get("text") == "]":
+                    index = close + 1
+                    if index < len(characters) and str(characters[index].get("text", "")).isspace():
+                        index += 1
+                    continue
+            filtered.append(characters[index])
+            index += 1
+        return filtered
+
+    @staticmethod
+    def _char_error_rate(reference: str, hypothesis: str) -> float:
+        """Dependency-free CER, normalized for Korean narration comparison."""
+        def normalize(value: str) -> str:
+            # v3 audio tags (for example, [calm]) guide delivery but are not
+            # spoken words.  They must not cause a false CER retry.
+            value = re.sub(r"\[[A-Za-z][A-Za-z _-]{0,40}\]", "", value)
+            return re.sub(r"[\s\W_]+", "", value).lower()
+        a, b = normalize(reference), normalize(hypothesis)
+        if not a:
+            return 0.0 if not b else 1.0
+        previous = list(range(len(b) + 1))
+        for i, char_a in enumerate(a, 1):
+            current = [i]
+            for j, char_b in enumerate(b, 1):
+                current.append(min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (char_a != char_b)))
+            previous = current
+        return previous[-1] / len(a)
+
+    def _verify_tts_narration(self, mp3_path: str, reference_text: str, attempt: int) -> Dict:
+        """Round-trip v3 audio through local Whisper before accepting it."""
+        try:
+            model = self._get_whisper_model()
+            segments, _ = model.transcribe(mp3_path, language="ko", beam_size=1, best_of=1, temperature=0)
+            transcript = " ".join(segment.text.strip() for segment in segments).strip()
+            # Whisper frequently writes a spoken Korean number back as digits
+            # (e.g. "삼점이퍼센트" -> "3.2%"). Compare both sides after the
+            # same financial reading normalization to avoid false retries.
+            cer = self._char_error_rate(
+                self._preprocess_for_tts(reference_text),
+                self._preprocess_for_tts(transcript),
+            )
+            passed = bool(transcript) and cer <= runtime_config.value("tts_cer_threshold")
+            logger.info("TTS CER validation attempt=%s cer=%.4f passed=%s", attempt, cer, passed)
+            return {"passed": passed, "cer": round(cer, 4), "attempts": attempt, "transcript": transcript[:500]}
+        except Exception as exc:
+            logger.warning("TTS CER validation unavailable on attempt %s: %s", attempt, exc)
+            return {"passed": False, "cer": None, "attempts": attempt, "error": str(exc)}
+
+    @staticmethod
+    def _sentence_pause_points(characters: List[Dict]) -> List[Tuple[float, float]]:
+        """Find native-timing sentence boundaries and their required pauses.
+
+        The input is the character-level alignment returned by ElevenLabs.  A
+        pause follows only a terminal mark with more spoken text after it; a
+        period inside a decimal or a run of ``...`` therefore cannot create a
+        series of artificial gaps.
+        """
+        terminal_marks = {".", "!", "?", "…"}
+        pauses: List[Tuple[float, float]] = []
+        for index, item in enumerate(characters):
+            if str(item.get("text", "")) not in terminal_marks:
+                continue
+            if index + 1 < len(characters) and str(characters[index + 1].get("text", "")) in terminal_marks:
+                continue
+
+            next_index = index + 1
+            whitespace = ""
+            while next_index < len(characters) and str(characters[next_index].get("text", "")).isspace():
+                whitespace += str(characters[next_index].get("text", ""))
+                next_index += 1
+            if next_index >= len(characters):
+                continue
+
+            pause_ms = runtime_config.value("tts_paragraph_pause_ms") if "\n\n" in whitespace else runtime_config.value("tts_sentence_pause_ms")
+            pause_seconds = max(0.0, float(pause_ms) / 1000.0)
+            if pause_seconds:
+                pauses.append((float(item["end"]), pause_seconds))
+        return pauses
+
+    @staticmethod
+    def _shift_character_timings_for_pauses(characters: List[Dict], pauses: List[Tuple[float, float]]) -> List[Dict]:
+        """Shift native timing by exactly the silence inserted into the MP3."""
+        shifted: List[Dict] = []
+        ordered_pauses = sorted(pauses, key=lambda item: item[0])
+        for item in characters:
+            start = float(item["start"])
+            offset = sum(duration for boundary, duration in ordered_pauses if boundary <= start + 1e-6)
+            shifted.append({**item, "start": start + offset, "end": float(item["end"]) + offset})
+        return shifted
+
+    def _insert_sentence_pauses(self, audio_path: str, characters: List[Dict], job_id: int, timeline_offset: float = 0.0) -> List[Dict]:
+        """Insert short silent breaths without losing ElevenLabs timestamp sync.
+
+        ElevenLabs still generates the narration as one continuous performance.
+        We splice audio at its own character timings, place the silence after
+        each completed sentence, and apply the same time shift to the native
+        alignment.  If FFmpeg cannot complete the splice, the untouched audio
+        and original alignment are retained.
+        """
+        pauses = self._sentence_pause_points(characters)
+        if not pauses or not os.path.exists(audio_path):
+            return characters
+
+        source_duration = self._probe_duration(audio_path)
+        if not source_duration or source_duration <= 0:
+            return characters
+
+        local_pauses: List[Tuple[float, float, float]] = []
+        previous_end = 0.0
+        for absolute_boundary, pause_seconds in pauses:
+            local_boundary = min(source_duration, max(0.0, absolute_boundary - timeline_offset))
+            if local_boundary <= previous_end + 0.02 or local_boundary >= source_duration - 0.02:
+                continue
+            local_pauses.append((local_boundary, pause_seconds, absolute_boundary))
+            previous_end = local_boundary
+        if not local_pauses:
+            return characters
+
+        filters: List[str] = []
+        inputs: List[str] = []
+        cursor = 0.0
+        label_index = 0
+        for boundary, pause_seconds, _ in local_pauses:
+            segment_label = f"s{label_index}"
+            filters.append(
+                f"[0:a]atrim=start={cursor:.6f}:end={boundary:.6f},asetpts=PTS-STARTPTS,"
+                f"aformat=sample_rates=44100:channel_layouts=stereo[{segment_label}]"
+            )
+            inputs.append(f"[{segment_label}]")
+            pause_label = f"p{label_index}"
+            filters.append(
+                f"anullsrc=r=44100:cl=stereo,atrim=duration={pause_seconds:.6f},asetpts=PTS-STARTPTS[{pause_label}]"
+            )
+            inputs.append(f"[{pause_label}]")
+            cursor = boundary
+            label_index += 1
+
+        final_label = f"s{label_index}"
+        filters.append(
+            f"[0:a]atrim=start={cursor:.6f}:end={source_duration:.6f},asetpts=PTS-STARTPTS,"
+            f"aformat=sample_rates=44100:channel_layouts=stereo[{final_label}]"
+        )
+        inputs.append(f"[{final_label}]")
+        filters.append(f"{''.join(inputs)}concat=n={len(inputs)}:v=0:a=1[outa]")
+
+        paused_path = f"{audio_path}.paused.mp3"
+        command = (
+            f'ffmpeg -i "{audio_path}" -filter_complex "{";".join(filters)}" '
+            f'-map "[outa]" -c:a libmp3lame -b:a 128k -y "{paused_path}" -loglevel error'
+        )
+        ret = self._run_subprocess(command, job_id)
+        if ret != 0 or not os.path.exists(paused_path):
+            logger.warning("Sentence pause insertion failed; retaining native ElevenLabs timing")
+            if os.path.exists(paused_path):
+                os.remove(paused_path)
+            return characters
+
+        os.replace(paused_path, audio_path)
+        logger.info("Inserted %s narration sentence pauses", len(local_pauses))
+        return self._shift_character_timings_for_pauses(
+            characters,
+            [(absolute_boundary, pause_seconds) for _, pause_seconds, absolute_boundary in local_pauses],
+        )
+
+    def _postprocess_audio(self, mp3_path: str, job_id: int) -> None:
+        """Apply duration-preserving narration mastering before video assembly."""
+        if not os.path.exists(mp3_path):
+            return
+        temp_path = f"{mp3_path}.mastered.mp3"
+        filters = "highpass=f=80,acompressor=threshold=-18dB:ratio=3:attack=10:release=200,loudnorm=I=-14:TP=-1.5:LRA=11"
+        ret = self._run_subprocess(
+            f'ffmpeg -i "{mp3_path}" -af "{filters}" -c:a libmp3lame -b:a 128k -y "{temp_path}" -loglevel error',
+            job_id,
+        )
+        if ret == 0 and os.path.exists(temp_path):
+            os.replace(temp_path, mp3_path)
+            logger.info("TTS post-processing complete: high-pass, compression, loudness normalization")
+        elif os.path.exists(temp_path):
+            os.remove(temp_path)
+
+    def _extract_timestamps_from_elevenlabs_response(self, original_script: str,
+                                                      characters: List[Dict],
+                                                      subtitle_max_chars: int = 22,
+                                                      time_scale: float = 1.0) -> List[dict]:
+        """Map native ElevenLabs character timings to readable subtitle rows.
+
+        The alignment belongs to the generated audio, unlike an STT estimate.
+        ``time_scale`` is only non-1 when FFmpeg intentionally changes the
+        final audio speed after synthesis.
+        """
+        text_chunks = self._split_script_into_chunks(original_script, max_chars=subtitle_max_chars)
+        if not text_chunks or not characters:
+            return []
+        scaled_characters = [
+            {
+                "text": item.get("text", ""),
+                "start": float(item.get("start", 0.0)) * time_scale,
+                "end": float(item.get("end", 0.0)) * time_scale,
+            }
+            for item in characters
+        ]
+        scaled_characters = self._strip_audio_tag_timings(scaled_characters)
+        chunks = self._map_timestamps_by_character_alignment(text_chunks, scaled_characters)
+        if chunks:
+            logger.info("Using native ElevenLabs character timing for %s subtitle chunks", len(chunks))
+        return chunks
+
     def _extract_timestamps_with_forced_alignment(self, mp3_path: str, original_script: str,
                                                     subtitle_max_chars: int = 22) -> list[dict]:
         """
