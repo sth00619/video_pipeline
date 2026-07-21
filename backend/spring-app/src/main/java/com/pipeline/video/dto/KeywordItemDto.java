@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -75,6 +76,27 @@ public class KeywordItemDto {
 
     @JsonProperty("is_outperformer")
     private Boolean isOutperformer;
+
+    @JsonProperty("score")
+    private Integer score;
+
+    @JsonProperty("news_score")
+    private Integer newsScore;
+
+    @JsonProperty("market_data_score")
+    private Integer marketDataScore;
+
+    @JsonProperty("category_score")
+    private Integer categoryScore;
+
+    @JsonProperty("youtube_score")
+    private Integer youtubeScore;
+
+    @JsonProperty("auto_confirm_eligible")
+    private Boolean autoConfirmEligible;
+
+    @JsonProperty("evidence")
+    private Map<String, Object> evidence;
 
     // 키워드가 추출된 원본 영상들의 메타 정보
     @JsonProperty("source_videos")

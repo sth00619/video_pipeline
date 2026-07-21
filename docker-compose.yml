@@ -89,10 +89,14 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_NAMESPACE: default
     depends_on:
-      - postgres
-      - redis
-      - fastapi-workers
-      - temporal
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      fastapi-workers:
+        condition: service_healthy
+      temporal:
+        condition: service_started
     volumes:
       - fastapi_data:/app/data   # FastAPI 생성 파일 공유 (다운로드 프록시용)
   fastapi-workers:
@@ -119,6 +123,7 @@ services:
       NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
       NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-dlKJ5VptCbYxal4doUO5}
       ELEVENLABS_TTS_MODEL: ${ELEVENLABS_TTS_MODEL:-eleven_v3}
       KLING_API_KEY: ${KLING_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -132,11 +137,13 @@ services:
       GEMINI_MAX_CONCURRENCY: ${GEMINI_MAX_CONCURRENCY:-6}
       GEMINI_RETRY_MAX: ${GEMINI_RETRY_MAX:-3}
       IMAGE_SAME_ERROR_BREAK_COUNT: ${IMAGE_SAME_ERROR_BREAK_COUNT:-5}
-      LONGFORM_SCENE_MAX_WORKERS: ${LONGFORM_SCENE_MAX_WORKERS:-6}
+      LONGFORM_SCENE_MAX_WORKERS: ${LONGFORM_SCENE_MAX_WORKERS:-2}
       ANTHROPIC_PROMPT_CACHE_ENABLED: ${ANTHROPIC_PROMPT_CACHE_ENABLED:-true}
       ANTHROPIC_PROMPT_CACHE_TTL: ${ANTHROPIC_PROMPT_CACHE_TTL:-5m}
-      TTS_SPEED: ${TTS_SPEED:-1.25}
-      CHARS_PER_MINUTE: ${CHARS_PER_MINUTE:-340}
+      TTS_SPEED: ${TTS_SPEED:-1.0}
+      TTS_SENTENCE_PAUSE_MS: ${TTS_SENTENCE_PAUSE_MS:-350}
+      TTS_PARAGRAPH_PAUSE_MS: ${TTS_PARAGRAPH_PAUSE_MS:-400}
+      CHARS_PER_MINUTE: ${CHARS_PER_MINUTE:-400}
       FAL_KEY: ${FAL_KEY:-}
     depends_on:
       - redis
@@ -144,6 +151,12 @@ services:
     volumes:
       - fastapi_data:/app/data
     mem_limit: 4g
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
   frontend:
     build:
       context: ./frontend

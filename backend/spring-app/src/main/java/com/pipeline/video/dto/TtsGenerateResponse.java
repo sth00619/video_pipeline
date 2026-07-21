@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * TTS 생성 응답 DTO.
@@ -39,4 +40,16 @@ public class TtsGenerateResponse {
 
     @JsonProperty("used_elevenlabs")
     private Boolean usedElevenlabs;
+
+    @JsonProperty("duration_validation")
+    private Map<String, Object> durationValidation;
+
+    @JsonProperty("provider_request")
+    private Map<String, Object> providerRequest;
+
+    @JsonProperty("leading_silence_seconds")
+    private Double leadingSilenceSeconds;
+
+    @JsonProperty("quality_report")
+    private Map<String, Object> qualityReport;
 }

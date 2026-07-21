@@ -19,7 +19,7 @@ KLING_MOTION_TEMPLATES = {
         "0-1s: the coin mascot leans toward the chart. "
         "1-3s: eyes widen, mouth opens in surprise, small hop backward. "
         "3-5s: the red candlestick line on the screen pulses with a soft glow, "
-        "tiny sparkle particles drift upward. Camera: static, very slow push-in."
+        "tiny sparkle particles drift upward. Camera: locked, no movement."
     ),
     "pointing_explain": (  # 지표/보드 설명
         "0-2s: the mascot raises the pointer stick toward the board. "
@@ -30,17 +30,17 @@ KLING_MOTION_TEMPLATES = {
     "thinking_desk": (
         "0-2s: the mascot rests chin on hand, eyes glance at the laptop screen. "
         "2-4s: blinks twice, subtle breathing motion of the body. "
-        "4-5s: raises one eyebrow. Screen chart glows softly. Camera: static."
+        "4-5s: raises one eyebrow. Screen chart glows softly. Camera: locked, no movement."
     ),
     "walking_intro": (  # 오프닝 등장
         "0-3s: the mascot walks toward camera with a light bounce in each step. "
         "3-5s: stops, waves one hand, warm smile. "
-        "Background particles drift slowly. Camera: static, slight slow zoom-in."
+        "Background particles drift slowly. Camera: locked, no movement."
     ),
     "celebration": (
         "0-2s: the mascot raises both arms. 2-4s: small joyful jump, "
         "gold coin sparkles burst gently around. 4-5s: lands, thumbs up. "
-        "Camera: static."
+        "Camera: locked, no movement."
     ),
 }
 

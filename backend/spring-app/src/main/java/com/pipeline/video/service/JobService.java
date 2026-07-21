@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -69,6 +71,46 @@ public class JobService {
     public List<JobResponse> getMyJobs(String username) {
         return jobRepository.findByCreatedByOrderByCreatedAtDesc(username)
                 .stream().map(JobResponse::from).collect(Collectors.toList());
+    }
+
+    /** Resume a job that failed before any script asset was produced.
+     *
+     * The keyword selection remains valid, so the restarted workflow receives
+     * the KEYWORD signal and resumes at GenerateScript rather than repeating
+     * discovery or creating a second job.
+     */
+    @Transactional
+    public JobResponse retryFromScript(Long jobId) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        if (job.getStatus() != JobStatus.FAILED) {
+            throw new IllegalStateException("Only failed jobs can be resumed. Current status: " + job.getStatus());
+        }
+        if (job.getKeyword() == null || job.getKeyword().isBlank()) {
+            throw new IllegalStateException("A selected keyword is required before retrying the script.");
+        }
+        if (!assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCRIPT).isEmpty()) {
+            throw new IllegalStateException("A script already exists; resume from its current review stage instead.");
+        }
+
+        job.setStatus(JobStatus.SCRIPT_PENDING);
+        VideoJob saved = jobRepository.save(job);
+        Runnable resume = () -> {
+            workflowOrchestrator.startPipeline(jobId);
+            workflowOrchestrator.sendApproveSignal(jobId, GateName.KEYWORD.name());
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    resume.run();
+                }
+            });
+        } else {
+            resume.run();
+        }
+        log.info("Restarting failed job from script generation: jobId={}", jobId);
+        return JobResponse.from(saved);
     }
 
     public JobResponse getJob(Long id) {

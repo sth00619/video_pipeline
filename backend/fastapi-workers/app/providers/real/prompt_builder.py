@@ -29,8 +29,8 @@ def build_prompt(spec: SceneSpec, market_chart: dict | None = None) -> str:
     if market_chart:
         data_surface_clause = (
             " The mascot character stands entirely within the LEFT third of the frame."
-            " The RIGHT half of the frame contains a large blank cream-colored circular"
-            " panel with a dark teal riveted metal frame, completely empty inside,"
+            " The RIGHT half of the frame contains a large blank warm-cream"
+            " landscape information board with a dark teal riveted metal frame, completely empty inside,"
             " no text, no numbers, no chart, no character parts overlapping the panel."
         )
         

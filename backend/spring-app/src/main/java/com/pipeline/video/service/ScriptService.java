@@ -100,6 +100,37 @@ public class ScriptService {
         return result;
     }
 
+    /**
+     * Temporal uses this variant so an evidence-validation 422 returns the
+     * job to keyword selection instead of failing the entire workflow.
+     */
+    @Transactional
+    public String generateRecoverably(Long jobId, String username) {
+        try {
+            generate(jobId, username);
+            return "OK";
+        } catch (ScriptResearchRequiredException evidenceFailure) {
+            VideoJob job = jobRepository.findById(jobId)
+                    .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+            job.setStatus(JobStatus.TOPIC_EVIDENCE_REQUIRED);
+            jobRepository.save(job);
+            assetRepository.save(Asset.builder()
+                    .jobId(jobId)
+                    .assetType(AssetType.KEYWORD)
+                    .metaJson(safeJson(Map.of(
+                            "script_research_required", true,
+                            "error_code", "SCRIPT_RESEARCH_REQUIRED",
+                            "message", evidenceFailure.getMessage(),
+                            "missing_terms", evidenceFailure.getMissingTerms(),
+                            "recoverable", true
+                    )))
+                    .build());
+            log.warn("Script evidence missing; returning to keyword selection: jobId={}, missingTerms={}",
+                    jobId, evidenceFailure.getMissingTerms());
+            return "RESEARCH_REQUIRED";
+        }
+    }
+
     @Transactional
     public void confirm(Long jobId, String finalScript, String username) {
         confirm(jobId, finalScript, null, username);

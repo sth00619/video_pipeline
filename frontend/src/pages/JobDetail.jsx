@@ -224,6 +224,15 @@ export default function JobDetail() {
     }
     return []
   }, [kwAssets])
+  const keywordSelection = useMemo(() => {
+    for (let i = kwAssets.length - 1; i >= 0; i--) {
+      try {
+        const meta = JSON.parse(kwAssets[i].metaJson || '{}')
+        if (meta.selection_path || meta.error_code) return meta
+      } catch {}
+    }
+    return {}
+  }, [kwAssets])
 
   const scriptData = useMemo(() => {
     if (!scriptAssets.length) return null
@@ -413,6 +422,24 @@ export default function JobDetail() {
       alert('유튜브 업로드 실패: ' + (err.response?.data?.message || err.message))
     }
   })
+  const { data: qcAssets = [] } = useQuery({
+    queryKey: ['assets', id, 'QC_REPORT'], queryFn: () => jobsApi.assets(id, 'QC_REPORT'), enabled: !!job, refetchInterval: autoRefreshInterval,
+  })
+
+  const outputQc = useMemo(() => {
+    if (!qcAssets.length) return null
+    try { return JSON.parse(qcAssets[qcAssets.length - 1].metaJson || '{}') } catch { return null }
+  }, [qcAssets])
+
+  const retryScriptMut = useMutation({
+    mutationFn: () => jobsApi.retryFromScript(id),
+    onSuccess: () => {
+      qc.invalidateQueries(['job', id])
+      qc.invalidateQueries(['approvals', id])
+      qc.invalidateQueries(['assets', id])
+    },
+    onError: (err) => alert('스크립트 재시작 실패: ' + (err.response?.data?.message || err.message)),
+  })
 
   const handleRun = async (step) => {
     setRunningStep(step.key)
@@ -532,6 +559,28 @@ export default function JobDetail() {
             <p className="text-sm text-accent-green"><span className="font-semibold">완전 자동 모드</span> — 백엔드 서버가 모든 단계를 자율적으로 실행합니다.</p>
             <p className="text-sm text-accent-green/70 mt-1">상태와 단계별 산출물은 3초마다 자동 갱신됩니다. 이전 단계의 후보·스크립트·음성·이미지도 이 화면에 유지됩니다.</p>
           </div>
+        </div>
+      )}
+      {job.status === 'TOPIC_EVIDENCE_REQUIRED' && (
+        <div className="mb-5 rounded-xl border border-accent-gold/40 bg-accent-gold/10 px-5 py-4 text-sm text-accent-gold">
+          <div className="font-semibold">선택 후보의 최신 직접 근거가 부족합니다.</div>
+          <div className="mt-1 text-navy-300">아래 근거 점수를 비교해 후보를 직접 선택하거나, 키워드를 수정해 다시 검색하세요.</div>
+          {Array.isArray(keywordSelection.missing_terms) && keywordSelection.missing_terms.length > 0 && (
+            <div className="mt-1 text-xs text-navy-400">부족한 검증 항목: {keywordSelection.missing_terms.join(', ')}</div>
+          )}
+        </div>
+      )}
+
+      {job.status === 'FAILED' && !scriptData && (
+        <div className="bg-accent-gold/10 border border-accent-gold/30 rounded-xl px-5 py-4 mb-5 flex items-center justify-between gap-4">
+          <p className="text-sm text-accent-gold">스크립트 생성 전 오류가 발생했습니다. 선택한 키워드를 유지한 채 스크립트 단계부터 다시 시작할 수 있습니다.</p>
+          <button
+            onClick={() => retryScriptMut.mutate()}
+            disabled={retryScriptMut.isPending}
+            className="shrink-0 flex items-center gap-1.5 bg-accent-gold text-navy-950 text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+          >
+            {retryScriptMut.isPending ? <Loader size={14} className="animate-spin"/> : <Zap size={14}/>}스크립트 재시도
+          </button>
         </div>
       )}
 
@@ -945,11 +994,12 @@ export default function JobDetail() {
                         const hasPublicMetrics = hasYoutubeMetrics(c)
                         const wasAutoSelected = isAuto && job.keyword === c.keyword
                         return (
-                        <div key={i} className={`px-3.5 py-2.5 rounded-lg ${c.is_outperformer ? 'bg-accent-gold/10 border border-accent-gold/20' : 'bg-navy-700/50'}`}>
+                        <div key={i} className={`px-3.5 py-2.5 rounded-lg ${Number.isFinite(Number(c.score)) && i === 0 ? 'bg-accent-gold/10 border border-accent-gold/20' : 'bg-navy-700/50'}`}>
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
-                            {c.is_outperformer && <Star size={13} className="text-accent-gold fill-accent-gold"/>}
+                            {Number.isFinite(Number(c.score)) && i === 0 && <Star size={13} className="text-accent-gold fill-accent-gold"/>}
                             <span className="text-sm">{c.keyword}</span>
+                            {Number.isFinite(Number(c.score)) && i === 0 && <span className="rounded bg-accent-gold/20 px-2 py-0.5 text-xs font-semibold text-accent-gold">증거 점수 1위 · {c.score}점</span>}
                             {wasAutoSelected && <span className="rounded bg-accent-green/20 px-2 py-0.5 text-xs font-semibold text-accent-green">자동 선택됨</span>}
                             </div>
                             <div className="text-sm text-navy-400 flex flex-wrap justify-end gap-3">
@@ -962,7 +1012,7 @@ export default function JobDetail() {
                               <span>좋아요 {c.likes_available === false ? '비공개' : metricNumber(c.likes)}</span>
                               <span>{c.duration_seconds ? `${Math.round(c.duration_seconds)}초` : '길이 없음'}</span>
                             </> : <span className="text-navy-500">공개 YouTube 지표 수집 없음</span>}
-                            {isGuided && job.status === 'KEYWORD_PENDING' && (
+                            {(isGuided || job.status === 'TOPIC_EVIDENCE_REQUIRED') && ['KEYWORD_PENDING', 'TOPIC_EVIDENCE_REQUIRED'].includes(job.status) && (
                               <button
                                 type="button"
                                 onClick={() => confirmKeywordMut.mutate(c.keyword)}
@@ -978,6 +1028,12 @@ export default function JobDetail() {
                               {wasAutoSelected
                                 ? <>자동 모드는 작업 요청에 전달된 키워드가 있으면 그 키워드를 우선 확정하고, 없으면 후보 우선순위 1위를 선택합니다. {hasPublicMetrics ? '후보 우선순위는 채널 평균 대비 40% · 구독자 대비 조회 30% · 시간당 조회 30%를 반영합니다.' : '공개 YouTube 지표가 없을 때에는 수집된 뉴스·후보 근거 순위를 반영합니다.'} {c.reason || ''}</>
                                 : c.reason}
+                            </div>
+                          )}
+                          {Number.isFinite(Number(c.score)) && (
+                            <div className="mt-2 grid grid-cols-2 gap-1 text-xs text-navy-400 sm:grid-cols-4">
+                              <span>총점 {c.score}</span><span>뉴스 {c.news_score ?? 0}</span><span>수치 {c.market_data_score ?? 0}</span><span>카테고리 {c.category_score ?? 0}</span>
+                              <span className="col-span-2 sm:col-span-4">YouTube {c.youtube_score == null ? '데이터 없음 · 가중치 재배분' : c.youtube_score} · 뉴스 {c.evidence?.news_count ?? 0}건 · 수치 검증 {c.evidence?.numeric_claims_verified === null ? '해당 없음' : c.evidence?.numeric_claims_verified ? '완료' : '실패'}</span>
                             </div>
                           )}
                           {c.source_videos?.length > 0 && (
@@ -1324,6 +1380,27 @@ export default function JobDetail() {
                         <source src={`/api/files/download?path=${encodeURIComponent(ttsInfo.audio_path)}&token=${token}`} type="audio/mpeg"/>
                       </audio>
                     )}
+                  </div>
+                )}
+
+                {step.key === 'longform' && outputQc && (
+                  <div className="px-5 pb-4 border-t border-navy-700">
+                    <div className="mt-3 rounded-lg border border-navy-700 bg-navy-900/40 p-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-white">최종 출력 QC</span>
+                        <span className={`text-xs px-2.5 py-1 rounded-full ${outputQc.passed ? 'bg-accent-green/10 text-accent-green' : 'bg-red-500/10 text-red-300'}`}>
+                          {outputQc.passed ? '통과' : '검토 필요'} · {outputQc.score ?? 0}점
+                        </span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-navy-400">
+                        {Object.entries(outputQc.checks || {}).map(([name, check]) => (
+                          <div key={name} className="rounded bg-navy-800/70 px-2.5 py-2">
+                            <span className={check.passed ? 'text-accent-green' : 'text-red-300'}>{check.passed ? '✓' : '✕'}</span>
+                            <span className="ml-1.5">{name.replaceAll('_', ' ')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 

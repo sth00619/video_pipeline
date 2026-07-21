@@ -2,7 +2,7 @@
 
 The image model supplies a blank *landscape* prop.  This module owns every
 visible number and renders at twice the final pixel size, so typography and
-composition do not drift when FFmpeg places the transparent graphic.
+composition do not drift when FFmpeg places the final opaque graphic.
 """
 from __future__ import annotations
 
@@ -78,9 +78,9 @@ def extract_market_chart(scene: dict[str, Any]) -> dict[str, Any] | None:
 
 def _theme(chart: dict[str, Any]) -> dict[str, str]:
     return {
-        "chalkboard": {"text": "#f9f4e8", "note": "#d8e6ef", "edge": "#1c2a38", "up": "#ff5b6e", "down": "#49a9f8", "grid": "#d8e6ef"},
-        "paper_poster": {"text": "#3c3026", "note": "#785f4c", "edge": "#34291f", "up": "#d84b42", "down": "#277fba", "grid": "#785f4c"},
-        "factory_panel": {"text": "#f7f5df", "note": "#91a08d", "edge": "#1b2f2c", "up": "#ffce4b", "down": "#58bdf2", "grid": "#91a08d"},
+        "chalkboard": {"background": "#142b35", "text": "#f9f4e8", "note": "#d8e6ef", "edge": "#1c2a38", "up": "#ff5b6e", "down": "#49a9f8", "grid": "#d8e6ef"},
+        "paper_poster": {"background": "#f3e5c7", "text": "#3c3026", "note": "#785f4c", "edge": "#34291f", "up": "#d84b42", "down": "#277fba", "grid": "#785f4c"},
+        "factory_panel": {"background": "#1d3937", "text": "#f7f5df", "note": "#91a08d", "edge": "#1b2f2c", "up": "#ffce4b", "down": "#58bdf2", "grid": "#91a08d"},
     }.get(str(chart.get("visual_theme") or "chalkboard"), {})
 
 
@@ -95,7 +95,11 @@ def _make_canvas(chart: dict[str, Any]):
     width, height = _surface_size(chart)
     scale, dpi = 2, 200
     fig = plt.figure(figsize=(width / 100, height / 100), dpi=dpi)
-    fig.patch.set_alpha(0)
+    # Kling may invent decorative lines inside the requested blank panel.  An
+    # opaque renderer background fully replaces those generated marks so only
+    # collected, verified data remains visible in the delivered frame.
+    fig.patch.set_facecolor(_theme(chart)["background"])
+    fig.patch.set_alpha(1)
 
     def font(height_fraction: float, minimum_px: float = 14, maximum_px: float = 42) -> float:
         # The surface proportion chooses the size, while screen-pixel caps
@@ -110,7 +114,7 @@ def _make_canvas(chart: dict[str, Any]):
 def _save(fig, output_path: str) -> bool:
     # No bbox_inches='tight': every renderer preserves the exact canvas that
     # the FFmpeg surface calculation supplied.
-    fig.savefig(output_path, transparent=True, pad_inches=0)
+    fig.savefig(output_path, transparent=False, pad_inches=0)
     import matplotlib.pyplot as plt
     plt.close(fig)
     return Path(output_path).exists() and Path(output_path).stat().st_size > 4_000
@@ -168,6 +172,7 @@ def _render_trend_dashboard(chart: dict[str, Any], output_path: str) -> bool:
     fig.text(.92, .91, f"{sign}{chart['change_pct']:.2f}%", color=accent, fontsize=font(.075, 22, 36), ha="right", fontproperties=bold)
     if bars:
         bar_ax = fig.add_axes([.08, .12, .84, .14])
+        bar_ax.set_facecolor(theme["background"])
         vals = [float(item["value"]) for item in bars]
         bars_artist = bar_ax.bar(range(len(vals)), vals, width=.64, color=[theme["up"] if value >= 0 else theme["down"] for value in vals], edgecolor=theme["edge"], linewidth=1.4)
         for bar in bars_artist: bar.set_hatch("//"); bar.set_sketch_params(1.0, 70, 1.2)

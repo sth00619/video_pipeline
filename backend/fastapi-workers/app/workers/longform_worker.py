@@ -31,6 +31,8 @@ import json
 import os
 import re
 import time
+import hashlib
+import math
 import logging
 import subprocess
 import concurrent.futures
@@ -46,10 +48,19 @@ from app.utils.market_charts import render_market_chart
 from app.utils.data_surface_locator import locate_data_surface
 from app.utils.budget import load_preflight, record_cost
 from app.utils.intro_motion import select_intro_motion_scene_indices
+from app.utils.output_qc import build_output_qc_report
 from app.services.kling_prompt_builder import build_kling_motion_prompt
+from app.services.bubble_overlay import write_speech_bubble_overlay
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+
+# Final-frame editorial policy. Verified market charts remain enabled, while
+# floating index cards and generated speech bubbles are intentionally omitted.
+# Bottom ASS subtitles are assembled separately and are unaffected.
+RENDER_VERIFIED_INDEX_CARDS = False
+RENDER_SPEECH_BUBBLES = False
+OVERLAY_POLICY_VERSION = 3
 
 def _run_subprocess(cmd: str, job_id: int) -> int:
     """FFmpeg 등의 명령어를 subprocess.Popen으로 실행하고 중지 트래킹 등록"""
@@ -84,10 +95,11 @@ def _probe_duration(media_path: str) -> float:
 
 class LongformWorker:
 
-    def _resolve_clip_count(self, budget_remaining_krw: int) -> int:
+    def _resolve_clip_count(self, budget_remaining_krw: int, requested_max: int) -> int:
         usd_krw = float(runtime_config.value("usd_krw") or 1400.0)
-        kling_cost_per_clip = 5 * 0.07 * usd_krw  # ≈ ₩490
-        for count in [13, 8, 5, 1]:
+        kling_cost_per_clip = float(runtime_config.value("kling_cost_per_clip_usd")) * usd_krw
+        candidates = sorted({max(0, requested_max), min(8, requested_max), min(5, requested_max), 1}, reverse=True)
+        for count in candidates:
             if kling_cost_per_clip * count <= budget_remaining_krw * 0.25:
                 # Kling이 남은 예산의 25% 이하 차지하도록 제약
                 return count
@@ -118,6 +130,47 @@ class LongformWorker:
         temp_dir.mkdir(exist_ok=True)
 
         output_path = str(job_dir / "final.mp4")
+        result_cache_path = job_dir / "result.json"
+
+        # A Temporal retry can arrive after FFmpeg finished but before Spring
+        # received the HTTP response (for example during a container restart).
+        # Reuse that verified final artifact instead of starting Fal/Kling or
+        # re-encoding the same job a second time.  Include source file state so
+        # an explicit scene/TTS regeneration correctly invalidates the cache.
+        def source_state(path: str) -> dict:
+            try:
+                stat = os.stat(path)
+                return {"path": path, "size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
+            except OSError:
+                return {"path": path, "missing": True}
+
+        assembly_fingerprint = hashlib.sha256(json.dumps({
+            "assembly_contract": "integrated-data-motion-v5",
+            "tts": tts_meta_json,
+            "scenes": scenes_meta_json,
+            "gifs": gifs_meta_json,
+            "audio": source_state(audio_path),
+            "images": [source_state(str(scene.get("image_path", ""))) for scene in scenes],
+            "motion_policy": {
+                "enabled": bool(runtime_config.value("intro_motion_enabled")),
+                "clip_count": int(runtime_config.value("intro_motion_clip_count")),
+                "clip_seconds": int(runtime_config.value("intro_motion_clip_seconds")),
+                "manual_values": [scene.get("use_kling") for scene in scenes],
+            },
+            "overlay_policy": {
+                "version": OVERLAY_POLICY_VERSION,
+                "verified_index_cards": RENDER_VERIFIED_INDEX_CARDS,
+                "speech_bubbles": RENDER_SPEECH_BUBBLES,
+                "market_charts": True,
+            },
+        }, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+        try:
+            cached = json.loads(result_cache_path.read_text(encoding="utf-8"))
+            if cached.get("input_fingerprint") == assembly_fingerprint and _verify_video(output_path):
+                logger.info("Reusing verified completed longform result for job %s", job_id)
+                return cached["result"]
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
 
         # Do not assemble a partial video. Validate the full scene set before
         # starting FFmpeg; this is critical for 200+ scene jobs.
@@ -145,7 +198,9 @@ class LongformWorker:
         # receive a deterministic card in _process_scene.
         data_card_count = sum(
             1 for scene in scenes
-            if isinstance(scene.get("index_data"), dict) and scene["index_data"].get("verified") is True
+            if RENDER_VERIFIED_INDEX_CARDS
+            and isinstance(scene.get("index_data"), dict)
+            and scene["index_data"].get("verified") is True
         )
         market_chart_count = sum(
             1 for scene in scenes
@@ -171,10 +226,13 @@ class LongformWorker:
         # static to preserve chart, caption, and numerical alignment.
         # Do not invoke any video generator unless the Fal billing preflight
         # confirms usable credit. Gemini Pro images still assemble normally.
-        if not fal_status["available"]:
+        if not fal_status["available"] or not bool(runtime_config.value("intro_motion_enabled")):
             video_provider = None
-            logger.info("Fal motion disabled: %s", fal_status["reason"])
-        max_clips_cap = max(0, int(runtime_config.value("intro_kling_max_clips")))
+            logger.info("Fal motion disabled: %s", "configuration" if fal_status["available"] else fal_status["reason"])
+        max_clips_cap = (
+            max(0, int(runtime_config.value("intro_motion_clip_count")))
+            if bool(runtime_config.value("intro_motion_enabled")) else 0
+        )
         if bool(runtime_config.value("intro_motion_test_mode")):
             max_clips_cap = min(max_clips_cap, 2)
             logger.info("intro_motion_test_mode is active. Kling clip count capped to 2.")
@@ -192,13 +250,15 @@ class LongformWorker:
             non_kling_cost = float(budget_preflight.get("estimated_cost_krw", 0)) - planned_kling_cost
             budget_remaining_krw = max(0, max_budget_krw - non_kling_cost)
 
-        resolved_cap = self._resolve_clip_count(budget_remaining_krw)
+        resolved_cap = self._resolve_clip_count(budget_remaining_krw, max_clips_cap)
         max_clips_cap = min(max_clips_cap, resolved_cap)
         logger.info(f"Budget auto-downgrade check: remaining={budget_remaining_krw} -> cap={max_clips_cap}")
 
         if budget_preflight:
             max_clips_cap = min(max_clips_cap, max(0, int(budget_preflight.get("kling_clip_count", max_clips_cap))))
             logger.info("Budget preflight applies Fal motion cap=%s, estimate=₩%s", max_clips_cap, budget_preflight.get("estimated_cost_krw"))
+
+        max_clips_cap = _cap_intro_motion_for_short_video(total_duration, max_clips_cap)
 
         intro_kling_indices, intro_motion_target, intro_motion_actual = _select_intro_kling_scenes(
             scenes, total_duration, max_clips_cap
@@ -211,7 +271,10 @@ class LongformWorker:
         # If the editor has selected one or more scenes, use exactly those;
         # otherwise retain the safe automatic intro selection. Both paths are
         # capped to the configured opening-motion budget.
-        has_manual_kling_selection = any("use_kling" in scene for scene in scenes)
+        # Java DTOs serialize optional Boolean fields as explicit null.  A
+        # null is not an editor choice and must not disable the automatic
+        # opening-motion plan for every scene.
+        has_manual_kling_selection = _has_manual_kling_selection(scenes)
 
         # ── 2. 씬별 클립 생성 (병렬 처리) ──────────────────────────
         scene_stage_t0 = time.time()
@@ -219,6 +282,8 @@ class LongformWorker:
         logger.info(f"씬 클립 생성 병렬 처리 시작: max_workers={max_workers}")
 
         clip_paths_map: dict[int, str] = {}
+        clip_modes: dict[int, str] = {}
+        clip_failures: dict[int, str] = {}
         stopped_error = None
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -234,8 +299,11 @@ class LongformWorker:
             for future in concurrent.futures.as_completed(futures):
                 i = futures[future]
                 try:
-                    idx, clip_path = future.result()
+                    idx, clip_path, clip_mode, failure_reason = future.result()
                     clip_paths_map[idx] = clip_path
+                    clip_modes[idx] = clip_mode
+                    if failure_reason:
+                        clip_failures[idx] = failure_reason
                 except Exception as e:
                     stopped_error = e
                     if "stopped by user" in str(e):
@@ -257,6 +325,21 @@ class LongformWorker:
             missing_clips = sorted(expected_indices - set(clip_paths_map))
             raise RuntimeError(f"씬 클립이 누락되어 조립을 중단합니다: {missing_clips[:20]}")
         clip_paths = [clip_paths_map[i] for i in sorted(clip_paths_map)]
+        requested_motion_indices = {
+            i for i in intro_kling_indices
+            if not has_manual_kling_selection or bool(scenes[i].get("use_kling"))
+        }
+        actual_kling_count = sum(
+            1 for i in requested_motion_indices if clip_modes.get(i) == "kling"
+        )
+        minimum_kling_count = _minimum_motion_delivery(len(requested_motion_indices))
+        if actual_kling_count < minimum_kling_count:
+            raise RuntimeError(
+                "Fal/Kling opening-motion delivery gate failed: "
+                f"requested={len(requested_motion_indices)}, actual={actual_kling_count}, "
+                f"required={minimum_kling_count}, failures={json.dumps(clip_failures, ensure_ascii=False)}. "
+                "Refusing to deliver a silently static video."
+            )
         logger.info(
             f"씬 클립 생성 완료: {len(clip_paths)}/{len(scenes)}개 성공, "
             f"소요={time.time() - scene_stage_t0:.1f}s"
@@ -378,7 +461,7 @@ class LongformWorker:
                     f'{vf_filter}'
                     f'{vcodec} '
                     f'-map 0:v -map "[master]" '
-                    f'-c:a aac -b:a 192k -movflags +faststart -shortest '
+                    f'-c:a aac -b:a 192k -ar 44100 -ac 2 -movflags +faststart -shortest '
                     f'-y "{assembly_stage_path}" -loglevel error'
                 )
                 logger.info(f"BGM 믹싱 적용: 나레이션 + BGM(volume={bgm_volume})")
@@ -389,7 +472,7 @@ class LongformWorker:
                     f'{vf_filter}'
                     f'{vcodec} '
                     f'-map 0:v -map "[master]" '
-                    f'-c:a aac -b:a 192k -movflags +faststart -shortest '
+                    f'-c:a aac -b:a 192k -ar 44100 -ac 2 -movflags +faststart -shortest '
                     f'-y "{assembly_stage_path}" -loglevel error'
                 )
         else:
@@ -416,7 +499,7 @@ class LongformWorker:
                 fallback_ret = _run_subprocess(
                     f'ffmpeg -i "{silent_video}" -i "{audio_path}" '
                     f'-map 0:v -map 1:a '
-                    f'-c:v copy -c:a aac -shortest '
+                    f'-c:v copy -c:a aac -ar 44100 -ac 2 -shortest '
                     f'-y "{assembly_stage_path}" -loglevel error',
                     job_id
                 )
@@ -460,7 +543,34 @@ class LongformWorker:
             "has_subtitles": has_subtitles,
             "data_card_count": data_card_count,
             "market_chart_count": market_chart_count,
+            "verified_data_cards_expected": data_card_count,
+            "verified_data_cards_rendered": data_card_count,
+            "verified_market_charts_expected": market_chart_count,
+            "verified_market_charts_rendered": market_chart_count,
+            "planned_kling_clip_count": len(requested_motion_indices),
+            "kling_clip_count": actual_kling_count,
+            "motion_delivery_ok": actual_kling_count >= minimum_kling_count,
         }
+        output_qc = build_output_qc_report(
+            job_id=job_id,
+            output_path=output_path,
+            audio_path=audio_path,
+            tts_meta=tts_meta,
+            scenes=scenes,
+            expected_data_cards=data_card_count,
+            rendered_data_cards=data_card_count,
+            expected_market_charts=market_chart_count,
+            rendered_market_charts=market_chart_count,
+            planned_kling=len(requested_motion_indices),
+            actual_kling=actual_kling_count,
+            fal_failures=clip_failures,
+        )
+        quality_report["output_qc"] = output_qc
+        logger.info(
+            "Verified overlay delivery cards=%s/%s charts=%s/%s; output_qc=%s",
+            data_card_count, data_card_count, market_chart_count, market_chart_count,
+            output_qc["passed"],
+        )
         persist_quality_report(job_id, "longform", quality_report)
         total_elapsed = time.time() - stage_t0
         logger.info(
@@ -470,13 +580,15 @@ class LongformWorker:
             f"(씬생성={time.time() - scene_stage_t0:.1f}s 포함 아님, 위 로그 참고)"
         )
 
-        for cp in clip_paths:
-            if os.path.exists(cp):
-                os.remove(cp)
+        # Kling clips are billed artifacts and must survive a successful
+        # assembly.  Temporal retries and QC-only reassemblies can then reuse
+        # the exact motion output instead of charging Fal again.  Static clips
+        # are cheap and remain disposable.
+        _cleanup_scene_clips(clip_paths, clip_modes)
         if os.path.exists(silent_video):
             os.remove(silent_video)
 
-        return {
+        result = {
             "job_id": job_id,
             "video_path": output_path,
             "duration_seconds": round(actual_duration, 1),
@@ -484,10 +596,19 @@ class LongformWorker:
             "gif_count": len(gifs),
             "data_card_count": data_card_count,
             "market_chart_count": market_chart_count,
+            "planned_kling_clip_count": len(requested_motion_indices),
+            "kling_clip_count": actual_kling_count,
             "has_subtitles": has_subtitles,
             "resolution": "1920x1080",
             "quality_report": quality_report,
         }
+        cache_tmp = result_cache_path.with_suffix(".tmp")
+        cache_tmp.write_text(
+            json.dumps({"input_fingerprint": assembly_fingerprint, "result": result}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        os.replace(cache_tmp, result_cache_path)
+        return result
 
     # ============================
     # 씬 1개를 클립(mp4)으로 변환 — 병렬 실행 단위
@@ -510,9 +631,20 @@ class LongformWorker:
         clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
         if not _verify_image(img_path):
             raise RuntimeError(f"scene {i} image is missing or corrupt: {img_path}")
-        if _verify_video(clip_path) and abs(_probe_duration(clip_path) - duration) <= 0.15:
-            logger.info("Reusing completed scene clip %s", i)
-            return i, clip_path
+        # An interrupted assembly can leave a valid *static* clip behind.  It
+        # must never satisfy a later request for an opening Kling scene.
+        motion_requested = bool(video_provider and use_kling)
+        expected_source_type = "kling" if motion_requested else "static"
+        clip_fingerprint = _scene_clip_fingerprint(scene, img_path, duration, expected_source_type)
+        if _can_reuse_scene_clip(
+            clip_path,
+            duration,
+            motion_requested=motion_requested,
+            expected_source_type=expected_source_type,
+            expected_fingerprint=clip_fingerprint,
+        ):
+            logger.info("Reusing completed %s scene clip %s", expected_source_type, i)
+            return i, clip_path, expected_source_type, None
         section = scene.get("section", "default")
         bg_color = {
             "intro": "1a1a2e", "background": "16213e",
@@ -534,7 +666,10 @@ class LongformWorker:
                     prompt = prompt_dict["prompt"]
                     negative_prompt = prompt_dict["negative_prompt"]
 
-                    motion_duration = min(max(int(duration), 1), 5)
+                    motion_duration = min(
+                        max(int(duration), 1),
+                        max(1, min(int(runtime_config.value("intro_motion_clip_seconds")), 5)),
+                    )
 
                     # 로컬 이미지를 Fal CDN에 업로드하고 공개 URL 확보
                     # Fal.ai v2.6 image-to-video의 start_image_url은 인터넷에서 접근 가능한
@@ -583,6 +718,8 @@ class LongformWorker:
                                 raise RuntimeError(f"scene {i} verified index card overlay failed")
                             if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
                                 raise RuntimeError(f"scene {i} verified market chart overlay failed")
+                            if not _apply_speech_bubble_overlay(scene, clip_path, temp_dir, i, duration, job_id):
+                                raise RuntimeError(f"scene {i} speech bubble overlay failed")
                             record_cost(job_id, "kling")
                             
                             # Write Kling audit params for reproducibility
@@ -596,7 +733,8 @@ class LongformWorker:
                             })
                             
                             logger.info(f"씬 {i} Kling AI 움짤 완성 (표준 규격 변환 완료)")
-                            return i, clip_path
+                            _write_scene_clip_meta(clip_path, "kling", clip_fingerprint)
+                            return i, clip_path, "kling", None
                         raise RuntimeError("Kling 표준화 클립 검증 실패")
                 except Exception as e:
                     logger.warning(f"씬 {i} Fal 모션 생성 실패, 정지 이미지 + 크로스페이드 페이드 필터 폴백: {e}")
@@ -607,9 +745,12 @@ class LongformWorker:
                                 raise RuntimeError(f"scene {i} verified index card overlay failed")
                             if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
                                 raise RuntimeError(f"scene {i} verified market chart overlay failed")
+                            if not _apply_speech_bubble_overlay(scene, clip_path, temp_dir, i, duration, job_id):
+                                raise RuntimeError(f"scene {i} speech bubble overlay failed")
                             if _verify_video(clip_path):
                                 logger.info(f"씬 {i} Fal 모션 실패 페이드 폴백 완료")
-                                return i, clip_path
+                                _write_scene_clip_meta(clip_path, "fal_fallback_static", clip_fingerprint)
+                                return i, clip_path, "fal_fallback_static", str(e)
                         except Exception as fallback_err:
                             logger.error(f"씬 {i} 페이드 폴백 실패, 일반 정적 복구 시도: {fallback_err}")
 
@@ -624,9 +765,12 @@ class LongformWorker:
                 raise RuntimeError(f"scene {i} verified index card overlay failed")
             if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
                 raise RuntimeError(f"scene {i} verified market chart overlay failed")
+            if not _apply_speech_bubble_overlay(scene, clip_path, temp_dir, i, duration, job_id):
+                raise RuntimeError(f"scene {i} speech bubble overlay failed")
             if not _verify_video(clip_path):
                 raise RuntimeError(f"scene {i} clip failed validation after overlay")
-            return i, clip_path
+            _write_scene_clip_meta(clip_path, "static", clip_fingerprint)
+            return i, clip_path, "static", None
 
         except Exception as e:
             logger.error(f"scene {i} processing failed; aborting job: {e}")
@@ -839,7 +983,22 @@ def _select_intro_kling_scenes(
         long_seconds=float(runtime_config.value("intro_motion_seconds_long")),
         short_threshold=float(runtime_config.value("intro_motion_short_threshold")),
         max_clips=max(0, int(max_clips_cap)),
+        clip_seconds=float(runtime_config.value("intro_motion_clip_seconds")),
     )
+
+
+def _cap_intro_motion_for_short_video(total_duration: float, max_clips_cap: int) -> int:
+    """Keep a one-minute proof visibly animated without spending on 40 seconds."""
+    cap = max(0, int(max_clips_cap))
+    if 0 < float(total_duration) <= 90:
+        capped = min(cap, 4)
+        if capped != cap:
+            logger.info(
+                "Short-video Fal policy: duration=%.1fs, clip cap reduced %s -> %s",
+                total_duration, cap, capped,
+            )
+        return capped
+    return cap
 
 
 def _get_max_workers(scene_count: int) -> int:
@@ -886,6 +1045,97 @@ def _verify_video(video_path: str) -> bool:
         return duration > 0.0
     except (ValueError, TypeError):
         return False
+
+
+def _can_reuse_scene_clip(
+    clip_path: str,
+    duration: float,
+    *,
+    motion_requested: bool,
+    expected_source_type: str | None = None,
+    expected_fingerprint: str | None = None,
+) -> bool:
+    """Reuse only a clip whose sidecar proves its origin and exact inputs."""
+    if expected_source_type is None or expected_fingerprint is None:
+        return False
+    meta_path = Path(f"{clip_path}.meta.json")
+    try:
+        metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return False
+    if metadata.get("source_type") != expected_source_type:
+        return False
+    if metadata.get("input_fingerprint") != expected_fingerprint:
+        return False
+    return _verify_video(clip_path) and abs(_probe_duration(clip_path) - duration) <= 0.15
+
+
+def _scene_clip_fingerprint(
+    scene: dict, image_path: str, duration: float, source_type: str
+) -> str:
+    """Hash every input that can change a rendered scene clip."""
+    try:
+        stat = os.stat(image_path)
+        image_identity = {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
+    except OSError:
+        image_identity = {"size": None, "mtime_ns": None}
+    contract = {
+        "schema": 3,
+        "source_type": source_type,
+        "duration": round(float(duration), 3),
+        "image": image_identity,
+        "motion_type": scene.get("motion_type"),
+        "market_chart": scene.get("market_chart"),
+        "index_data": scene.get("index_data"),
+        "bubble_text": scene.get("bubble_text"),
+        "subtitle_text": scene.get("subtitle_text"),
+        "overlay_policy": {
+            "version": OVERLAY_POLICY_VERSION,
+            "verified_index_cards": RENDER_VERIFIED_INDEX_CARDS,
+            "speech_bubbles": RENDER_SPEECH_BUBBLES,
+            "market_charts": True,
+        },
+    }
+    encoded = json.dumps(contract, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _cleanup_scene_clips(clip_paths: list[str], clip_modes: dict[int, str]) -> None:
+    """Delete reproducible static clips, retaining every billed Kling clip."""
+    for index, clip_path in enumerate(clip_paths):
+        if clip_modes.get(index) == "kling":
+            continue
+        if os.path.exists(clip_path):
+            os.remove(clip_path)
+
+
+def _write_scene_clip_meta(clip_path: str, source_type: str, fingerprint: str) -> None:
+    meta_path = Path(f"{clip_path}.meta.json")
+    temp_path = meta_path.with_suffix(meta_path.suffix + ".tmp")
+    temp_path.write_text(
+        json.dumps(
+            {
+                "source_type": source_type,
+                "input_fingerprint": fingerprint,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    os.replace(temp_path, meta_path)
+
+
+def _has_manual_kling_selection(scenes: list[dict]) -> bool:
+    """Treat only an explicit boolean as an editor motion selection."""
+    return any(scene.get("use_kling") is not None for scene in scenes)
+
+
+def _minimum_motion_delivery(requested_count: int) -> int:
+    """Require at least 75% of the planned opening motion before delivery."""
+    if requested_count <= 0:
+        return 0
+    return max(1, math.ceil(requested_count * 0.75))
 
 
 def _verify_image(image_path: str) -> bool:
@@ -953,6 +1203,8 @@ def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_colo
 
 
 def _requires_verified_index_card(scene: dict) -> bool:
+    if not RENDER_VERIFIED_INDEX_CARDS:
+        return False
     payload = scene.get("index_data") or scene.get("overlay_data")
     return isinstance(payload, dict) and payload.get("verified") is True
 
@@ -1120,6 +1372,42 @@ def _apply_market_chart_overlay(
         f'ffmpeg -i "{clip_path}" -loop 1 -i "{chart_path}" '
         f'-filter_complex "[1:v]scale={width}:{height}:force_original_aspect_ratio=decrease[chart];'
         f'[0:v][chart]overlay={x}+({width}-w)/2:{y}+({height}-h)/2:format=auto[v]" '
+        f'-map "[v]" -t {duration:.3f} -an '
+        f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-y "{staged}" -loglevel error'
+    )
+    ret = _run_subprocess(cmd, job_id)
+    if ret != 0 or not _verify_video(staged):
+        if os.path.exists(staged):
+            os.remove(staged)
+        return False
+    os.replace(staged, clip_path)
+    return True
+
+
+def _apply_speech_bubble_overlay(
+    scene: dict,
+    clip_path: str,
+    temp_dir: Path,
+    index: int,
+    duration: float,
+    job_id: int,
+) -> bool:
+    """Place exact bubble text after all generated-video work is complete."""
+    if not RENDER_SPEECH_BUBBLES:
+        return True
+    text = str(scene.get("bubble_text") or "").strip()
+    if not text:
+        return True
+    bubble_path = str(temp_dir / f"speech_bubble_{index:03d}.png")
+    side = "left" if scene.get("market_chart") else "right"
+    if not write_speech_bubble_overlay(bubble_path, text, character_side=side):
+        logger.warning("scene %s speech bubble renderer returned no valid file", index)
+        return False
+    staged = clip_path + ".bubble.mp4"
+    cmd = (
+        f'ffmpeg -i "{clip_path}" -loop 1 -i "{bubble_path}" '
+        f'-filter_complex "[0:v][1:v]overlay=0:0:format=auto[v]" '
         f'-map "[v]" -t {duration:.3f} -an '
         f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
         f'-y "{staged}" -loglevel error'

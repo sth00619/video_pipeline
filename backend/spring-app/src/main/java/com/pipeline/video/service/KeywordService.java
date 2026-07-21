@@ -43,7 +43,8 @@ public class KeywordService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.DRAFT && job.getStatus() != JobStatus.KEYWORD_PENDING) {
+        if (job.getStatus() != JobStatus.DRAFT && job.getStatus() != JobStatus.KEYWORD_PENDING
+                && job.getStatus() != JobStatus.TOPIC_EVIDENCE_REQUIRED) {
             throw new IllegalStateException("키워드 탐색은 DRAFT/KEYWORD_PENDING 에서만 가능. 현재: " + job.getStatus());
         }
 
@@ -72,24 +73,21 @@ public class KeywordService {
         String selectionReason = null;
         if (autonomyService.isAuto(job) && result.getCandidates() != null
                 && !result.getCandidates().isEmpty()
-                && !Boolean.TRUE.equals(result.getTopicEvidenceRequired())) {
+                && Boolean.TRUE.equals(result.getAutoConfirmable())) {
             String inputKeyword = normalizeKeyword(seedKeyword);
             String existingKeyword = normalizeKeyword(job.getKeyword());
 
-            // Selection priority is intentionally independent of news volume,
-            // video metrics, and candidate ranking. A supplied input is the
-            // editor's brief and therefore always wins.
-            if (!inputKeyword.isBlank()) {
+            if (result.getCandidates().isEmpty()) {
                 selectedKeyword = inputKeyword;
-                selectionPath = "INPUT_KEYWORD";
+                selectionPath = "EVIDENCE_TOP_RANKED";
                 selectionReason = "입력 키워드가 있어 그대로 확정했습니다: " + selectedKeyword;
-            } else if (!existingKeyword.isBlank()) {
+            } else if (result.getCandidates().isEmpty()) {
                 selectedKeyword = existingKeyword;
                 selectionPath = "EXISTING_JOB_KEYWORD";
                 selectionReason = "기존에 확정된 작업 키워드를 유지했습니다: " + selectedKeyword;
             } else {
                 selectedKeyword = result.getCandidates().get(0).getKeyword();
-                selectionPath = "AUTO_DISCOVERY";
+                selectionPath = "EVIDENCE_TOP_RANKED";
                 String rankingSummary = normalizeKeyword(result.getCandidates().get(0).getReason());
                 selectionReason = "입력 키워드가 없어 후보 1위를 선택했습니다. 근거: "
                         + (rankingSummary.isBlank() ? "수집된 후보 순위" : rankingSummary);
@@ -106,6 +104,11 @@ public class KeywordService {
 
         // Asset 저장 — selection_path/reason까지 함께 남겨 화면과 감사 로그가
         // 실제 결정 경로를 재현할 수 있게 한다.
+        if (autonomyService.isAuto(job) && !Boolean.TRUE.equals(result.getAutoConfirmable())) {
+            result.setSelectionPath("EVIDENCE_INSUFFICIENT");
+            result.setSelectionReason("자동 확정 기준(증거 점수 55점 및 최신 직접 근거)을 충족한 후보가 없습니다.");
+        }
+
         Asset asset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.KEYWORD)
@@ -131,7 +134,7 @@ public class KeywordService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (job.getStatus() != JobStatus.KEYWORD_PENDING) {
+        if (job.getStatus() != JobStatus.KEYWORD_PENDING && job.getStatus() != JobStatus.TOPIC_EVIDENCE_REQUIRED) {
             throw new IllegalStateException("키워드 확정은 KEYWORD_PENDING 에서만 가능. 현재: " + job.getStatus());
         }
         if (selectedKeyword == null || selectedKeyword.isBlank()) {
@@ -141,15 +144,50 @@ public class KeywordService {
         job.setKeyword(selectedKeyword);
         jobRepository.save(job);
 
+        Map<String, Object> selectionMeta = new java.util.LinkedHashMap<>();
+        selectionMeta.put("selected", selectedKeyword);
+        selectionMeta.put("final", true);
+        selectionMeta.put("selection_path", "AUTO".equals(username) ? "EVIDENCE_TOP_RANKED" : "MANUAL");
+        selectionMeta.put("manual_override_evidence", !"AUTO".equals(username));
+        attachCandidateScore(selectionMeta, jobId, selectedKeyword);
+
         Asset selectedAsset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.KEYWORD)
-                .metaJson(safeJson(Map.of("selected", selectedKeyword, "final", true)))
+                .metaJson(safeJson(selectionMeta))
                 .build();
         assetRepository.save(selectedAsset);
 
         gateService.approve(jobId, GateName.KEYWORD, username, "선택: " + selectedKeyword);
         log.info("키워드 확정: jobId={}, keyword={}", jobId, selectedKeyword);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void attachCandidateScore(Map<String, Object> target, Long jobId, String selectedKeyword) {
+        try {
+            assetRepository.findByJobIdAndAssetType(jobId, AssetType.KEYWORD).stream()
+                    .map(Asset::getMetaJson)
+                    .filter(meta -> meta != null && meta.contains("\"candidates\""))
+                    .reduce((first, second) -> second)
+                    .ifPresent(meta -> {
+                        try {
+                            Map<String, Object> payload = objectMapper.readValue(meta, Map.class);
+                            Object rawCandidates = payload.get("candidates");
+                            if (!(rawCandidates instanceof List<?> candidates)) return;
+                            for (Object rawCandidate : candidates) {
+                                if (!(rawCandidate instanceof Map<?, ?> candidate)) continue;
+                                if (!selectedKeyword.equals(String.valueOf(candidate.get("keyword")))) continue;
+                                target.put("score", candidate.get("score"));
+                                target.put("evidence", candidate.get("evidence"));
+                                return;
+                            }
+                        } catch (Exception exception) {
+                            log.warn("Could not attach keyword selection evidence: {}", exception.getMessage());
+                        }
+                    });
+        } catch (Exception exception) {
+            log.warn("Could not load keyword candidates for audit asset: {}", exception.getMessage());
+        }
     }
 
     private String safeJson(Object obj) {

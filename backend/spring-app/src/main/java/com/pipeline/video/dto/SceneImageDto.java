@@ -1,14 +1,15 @@
 package com.pipeline.video.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.Map;
 import java.util.List;
+import java.util.LinkedHashMap;
 
 @Data
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class SceneImageDto {
     @JsonProperty("index")
     private Integer index;
@@ -63,6 +64,32 @@ public class SceneImageDto {
     @JsonProperty("market_snapshot")
     private Map<String, Object> marketSnapshot;
 
+    /** Verified post-production graphics must survive the
+     * Python -> Spring asset -> Python longform round trip. */
+    @JsonProperty("market_chart")
+    private Map<String, Object> marketChart;
+
+    @JsonProperty("index_data")
+    private Map<String, Object> indexData;
+
+    @JsonProperty("motion_type")
+    private String motionType;
+
+    @JsonProperty("bubble_text")
+    private String bubbleText;
+
+    @JsonProperty("headline")
+    private String headline;
+
+    @JsonProperty("headline_mood")
+    private String headlineMood;
+
+    @JsonProperty("style_profile")
+    private String styleProfile;
+
+    @JsonProperty("scene_spec")
+    private Map<String, Object> sceneSpec;
+
     @JsonProperty("quality_score")
     private Integer qualityScore;
 
@@ -83,4 +110,21 @@ public class SceneImageDto {
 
     @JsonProperty("semantic_reason")
     private String semanticReason;
+
+    /**
+     * Preserve metadata emitted by Python even before Spring has a strongly
+     * typed field for it. Dropping an unknown scene field here can silently
+     * remove a verified graphic or motion instruction before assembly.
+     */
+    private final Map<String, Object> passthrough = new LinkedHashMap<>();
+
+    @JsonAnySetter
+    public void putPassthrough(String name, Object value) {
+        passthrough.put(name, value);
+    }
+
+    @JsonAnyGetter
+    public Map<String, Object> getPassthrough() {
+        return passthrough;
+    }
 }

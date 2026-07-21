@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -154,14 +155,35 @@ public class TtsService {
 
         try {
             Map<String, Object> meta = objectMapper.readValue(asset.getMetaJson(), Map.class);
-            // confirm 단계에서 저장한 final=true 우선
-            Object scriptVal = meta.get("script");
-            if (scriptVal != null) return scriptVal.toString();
-            return null;
+            return narrationFromMeta(meta);
         } catch (Exception e) {
             log.error("스크립트 파싱 실패: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Build the provider copy from narration fields only.  The final SCRIPT
+     * asset intentionally contains an editor-friendly Markdown script with
+     * repeated scene headings; sending that value to ElevenLabs both speaks
+     * the headings and nearly doubles the requested duration.
+     */
+    static String narrationFromMeta(Map<String, Object> meta) {
+        Object rawSections = meta.get("sections");
+        if (rawSections instanceof List<?> sections && !sections.isEmpty()) {
+            StringBuilder narration = new StringBuilder();
+            for (Object rawSection : sections) {
+                if (!(rawSection instanceof Map<?, ?> section)) continue;
+                Object value = section.get("content") != null
+                        ? section.get("content") : section.get("text");
+                if (value == null || value.toString().isBlank()) continue;
+                if (!narration.isEmpty()) narration.append("\n\n");
+                narration.append(value.toString().trim());
+            }
+            if (!narration.isEmpty()) return narration.toString();
+        }
+        Object scriptVal = meta.get("script");
+        return scriptVal == null ? null : scriptVal.toString();
     }
 
     private String safeJson(Object obj) {

@@ -40,4 +40,10 @@ public class KeywordSearchResponse {
 
     @JsonProperty("topic_evidence_required")
     private Boolean topicEvidenceRequired;
+
+    @JsonProperty("top_candidate_keyword")
+    private String topCandidateKeyword;
+
+    @JsonProperty("auto_confirmable")
+    private Boolean autoConfirmable;
 }

@@ -70,6 +70,7 @@ def select_intro_motion_scene_indices(
     long_seconds: float,
     short_threshold: float,
     max_clips: int,
+    clip_seconds: float = MAX_MOTION_SECONDS_PER_CLIP,
 ) -> tuple[set[int], float, float]:
     """Select only the earliest complete scenes that fit the configured Fal budget.
 
@@ -92,7 +93,10 @@ def select_intro_motion_scene_indices(
     for index, scene in enumerate(scene_list):
         if len(selected) >= int(max_clips):
             break
-        slice_seconds = min(MAX_MOTION_SECONDS_PER_CLIP, scene_duration_seconds(scene))
+        slice_seconds = min(
+            max(1.0, min(float(clip_seconds), 5.0)),
+            scene_duration_seconds(scene),
+        )
         if slice_seconds <= 0 or actual + slice_seconds > target + 1e-6:
             break
         selected.add(index)

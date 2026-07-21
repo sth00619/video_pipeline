@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, JSONResponse
 from pydantic import BaseModel
 
 from app.workers.shorts_worker import ShortsWorker
@@ -521,7 +521,12 @@ def script_generate(request: ScriptGenerateRequest):
             voice_id=request.voice_id,
         )
     except ScriptResearchRequiredError as exc:
-        raise HTTPException(422, str(exc)) from exc
+        return JSONResponse(status_code=422, content={
+            "error_code": "SCRIPT_RESEARCH_REQUIRED",
+            "message": str(exc),
+            "missing_terms": exc.missing_terms,
+            "recoverable": True,
+        })
     except Exception as e:
         raise HTTPException(500, f"스크립트 생성 실패: {str(e)}")
 

@@ -61,6 +61,7 @@ _state = {
     "tts_postprocess_enabled": _cfg.TTS_POSTPROCESS_ENABLED,
     "tts_sentence_pause_ms": _cfg.TTS_SENTENCE_PAUSE_MS,
     "tts_paragraph_pause_ms": _cfg.TTS_PARAGRAPH_PAUSE_MS,
+    "tts_thought_group_pause_ms": _cfg.TTS_THOUGHT_GROUP_PAUSE_MS,
     "bgm_volume": _cfg.BGM_VOLUME,
     "intro_motion_seconds_short": _cfg.INTRO_MOTION_SECONDS_SHORT,
     "intro_motion_seconds_long": _cfg.INTRO_MOTION_SECONDS_LONG,

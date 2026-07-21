@@ -74,7 +74,9 @@ public class GateService {
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
         JobStatus expected = EXPECTED_STATUS.get(gate);
-        if (expected == null || job.getStatus() != expected) {
+        boolean keywordResearchRecovery = gate == GateName.KEYWORD
+                && job.getStatus() == JobStatus.TOPIC_EVIDENCE_REQUIRED;
+        if (expected == null || (job.getStatus() != expected && !keywordResearchRecovery)) {
             throw new IllegalStateException(String.format(
                     "Gate %s는 상태 %s에서만 승인 가능. 현재 상태: %s",
                     gate, expected, job.getStatus()));

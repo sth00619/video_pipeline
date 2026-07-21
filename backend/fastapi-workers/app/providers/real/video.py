@@ -211,7 +211,9 @@ class KlingProvider(VideoProvider):
         submit_url = f"https://queue.fal.run/{model_id}"
         payload = {
             "prompt": prompt,
-            "duration": str(duration),
+            # Fal v2.6 accepts an enum represented as a JSON string, not an
+            # arbitrary integer duration.
+            "duration": "10" if int(duration) >= 10 else "5",
             "generate_audio": False,
         }
         if negative_prompt:
@@ -223,7 +225,19 @@ class KlingProvider(VideoProvider):
         else:
             payload["aspect_ratio"] = "16:9"
 
-        logger.info(f"Fal.ai {model_id} 생성 요청 제출 시작: prompt_len={len(prompt)}")
+        masked_payload = {
+            **payload,
+            "prompt": f"<masked:{len(prompt)} chars>",
+            "start_image_url": (
+                f"{payload['start_image_url'].split('?', 1)[0][:96]}<masked>"
+                if payload.get("start_image_url") else None
+            ),
+        }
+        logger.info(
+            "Fal.ai request endpoint=%s payload=%s",
+            model_id,
+            json.dumps(masked_payload, ensure_ascii=False, sort_keys=True),
+        )
         try:
             resp = requests.post(submit_url, json=payload, headers=headers, timeout=30)
             if resp.status_code != 200:
@@ -232,6 +246,13 @@ class KlingProvider(VideoProvider):
                 
             resp_json = resp.json()
             request_id = resp_json.get("request_id")
+            logger.info(
+                "Fal.ai submit response=%s",
+                json.dumps(
+                    {"status_code": resp.status_code, "request_id": request_id},
+                    ensure_ascii=False,
+                ),
+            )
             if not request_id:
                 logger.warning(f"Fal.ai 응답에서 request_id 못찾음: {resp_json}")
                 return False, None

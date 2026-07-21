@@ -75,6 +75,22 @@ public class VideoPipelineWorkflowImpl implements VideoPipelineWorkflow {
                     .build()
     );
 
+    // Assembly is restart-safe: FastAPI persists reusable scene clips and a
+    // verified final-result manifest.  Give only this final transport step a
+    // short retry budget so a transient "connection refused" while FastAPI is
+    // restarting cannot fail an otherwise completed five-minute job.
+    private final VideoPipelineActivities assemblyActivities = Workflow.newActivityStub(
+            VideoPipelineActivities.class,
+            ActivityOptions.newBuilder()
+                    .setStartToCloseTimeout(Duration.ofHours(6))
+                    .setRetryOptions(RetryOptions.newBuilder()
+                            .setInitialInterval(Duration.ofSeconds(10))
+                            .setMaximumInterval(Duration.ofSeconds(30))
+                            .setMaximumAttempts(3)
+                            .build())
+                    .build()
+    );
+
     @Override
     public void run(Long jobId) {
         log.info("VideoPipeline Workflow 시작: jobId={}", jobId);
@@ -88,7 +104,21 @@ public class VideoPipelineWorkflowImpl implements VideoPipelineWorkflow {
 
             // 2. 스크립트 생성
             log.info("스크립트 생성 Activity 시작: jobId={}", jobId);
-            activities.generateScript(jobId);
+            int researchRetries = 0;
+            while (true) {
+                String scriptResult = activities.generateScriptV2(jobId);
+                if (!"RESEARCH_REQUIRED".equals(scriptResult)) {
+                    break;
+                }
+                if (++researchRetries > 5) {
+                    throw new RuntimeException("Keyword evidence retry limit exceeded: jobId=" + jobId);
+                }
+                // A replacement KEYWORD approval resumes the same workflow.
+                approvedGates.remove("KEYWORD");
+                log.info("Waiting for a replacement keyword: jobId={}, retry={}", jobId, researchRetries);
+                waitForGate("KEYWORD");
+                if (isRejected()) return;
+            }
 
             // 3. 스크립트 게이트 승인 대기
             waitForGate("SCRIPT");
@@ -122,7 +152,7 @@ public class VideoPipelineWorkflowImpl implements VideoPipelineWorkflow {
 
             // 8. 롱폼 조립
             log.info("롱폼 조립 Activity 시작: jobId={}", jobId);
-            activities.assembleLongform(jobId);
+            assemblyActivities.assembleLongform(jobId);
 
             // 9. 미리보기 게이트 승인 대기
             waitForGate("PREVIEW");

@@ -19,6 +19,10 @@ public interface VideoPipelineActivities {
     @ActivityMethod
     void generateScript(Long jobId);
 
+    /** Returns RESEARCH_REQUIRED for a recoverable evidence-validation failure. */
+    @ActivityMethod
+    String generateScriptV2(Long jobId);
+
     /** Workflow가 GUIDED의 TTS 사전 선택 대기 분기를 결정할 때 사용합니다. */
     @ActivityMethod
     boolean isGuided(Long jobId);

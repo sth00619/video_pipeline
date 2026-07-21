@@ -37,12 +37,20 @@ from app.workers.news_keyword_extractor import NewsKeywordExtractor
 from app.utils.keyword_aliases import normalise_terms
 from app.utils.script_delivery import annotate_sections, default_style_mix, validate_delivery
 from app.utils.elevenlabs_mapper import map_emotion_to_elevenlabs
+from app.utils.topic_evidence import is_market_level_forecast
 
 logger = logging.getLogger(__name__)
 
 
 class ScriptResearchRequiredError(RuntimeError):
     """Raised when a user-selected topic has no grounded evidence to narrate."""
+
+    def __init__(self, message: str, missing_terms: list[str] | None = None):
+        super().__init__(message)
+        inferred = re.search(r"\(([^)]*)\)", message or "")
+        self.missing_terms = missing_terms or (
+            [term.strip() for term in inferred.group(1).split(",") if term.strip()] if inferred else []
+        )
 
 
 def _selected_keyword_terms(keyword: str) -> list[str]:
@@ -80,13 +88,16 @@ def _keyword_coverage_terms(terms: list[str]) -> list[str]:
         "경제이슈", "경제", "주식", "증시", "시장", "이슈", "뉴스", "관련",
         "핵심", "쟁점", "영향", "확인할", "지표", "투자자", "체크포인트",
         "전망", "분석", "주간", "주요", "최근", "금주", "이번주", "오늘", "하루",
-        "데일리", "주말"
+        "데일리", "주말", "이후", "이전", "전후"
     }
     result: list[str] = []
     for phrase in _topic_terms_for_evidence(terms):
         chunks = re.split(r"\s+", phrase or "")
         for raw in chunks:
             token = re.sub(r"[^0-9A-Za-z가-힣]", "", raw).strip()
+            # Topic inputs are usually natural Korean phrases.  A postposition
+            # such as 반등'과' must not become a separate mandatory keyword.
+            token = re.sub(r"(으로|에서|에게|부터|까지|보다|처럼|과|와|은|는|이|가|을|를|의)$", "", token)
             if token and token not in generic and token not in result:
                 result.append(token)
     # Keep the same canonical entities/time labels used when ranking keyword
@@ -95,9 +106,31 @@ def _keyword_coverage_terms(terms: list[str]) -> list[str]:
     aliases = []
     for phrase in terms:
         for canonical in sorted(normalise_terms(phrase)):
-            if canonical not in aliases:
-                aliases.append(canonical)
+            cleaned = re.sub(r"(으로|에서|에게|부터|까지|보다|처럼|과|와|은|는|이|가|을|를|의)$", "", canonical)
+            if cleaned and cleaned not in generic and cleaned not in aliases:
+                aliases.append(cleaned)
     return aliases or result or _topic_terms_for_evidence(terms)
+
+
+def _is_market_level_forecast(terms: list[str]) -> bool:
+    """Return true for broad category outlooks, not named research topics.
+
+    A phrase such as "US stocks second-half outlook" is grounded by the
+    collected US index/macro snapshot.  Requiring a news headline to match
+    every geographic and calendar word turns that normal request into a false
+    422.  Named companies, sectors, policies, and events still require their
+    own recent article evidence.
+    """
+    broad_tokens = {
+        "미국", "한국", "국내", "해외", "글로벌", "세계", "시장", "증시", "주식",
+        "전망", "분석", "상반기", "하반기", "올해", "내년", "최근", "향후",
+    }
+    tokens = [
+        re.sub(r"[^0-9A-Za-z가-힣]", "", token).strip()
+        for phrase in terms for token in re.split(r"\s+", phrase or "")
+    ]
+    tokens = [token for token in tokens if token]
+    return bool(tokens) and all(token in broad_tokens for token in tokens)
 
 
 def _collect_keyword_news(terms: list[str]) -> list[dict]:
@@ -196,7 +229,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
   * (예시) 물가 상승 / 인플레이션 ➡️ 뜨거운 태양 아래 아이스크림처럼 녹아내리는 지폐 다발
   * (예시) 복잡한 거시경제 / 불확실성 ➡️ 빛나는 문이 여러 개 있는 짙은 안개 속의 미로
 - [비주얼 프롬프트 (영어)]에는 캐릭터 묘사를 절대 포함하지 마세요(별도의 캐릭터가 합성됩니다). 배경과 상황만 묘사하세요.
-- 배경 이미지들이 전체적으로 일관성을 갖도록 "professional 3D render, vibrant colors, comic art style, no text, no letters, no words, no UI elements" 키워드를 프롬프트 끝에 항상 포함하세요.
+- 모든 장면은 "original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements"로 통일하세요. 3D 렌더와 실사 표현을 섞지 마세요.
 - 각 헤더 아래에는 다음 여섯 개의 태그를 사용해 내용을 채우세요:
   1. [대사] : 실제 한국어로 낭독할 대사 텍스트
   2. [비주얼 설명 (한국어)] : 화면에 보여줄 구체적인 상황과 은유적 배경에 대한 설명 (한국어)
@@ -215,7 +248,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
 '사상 최대 실적'이라 적힌 모니터 화면 밖으로 붉은색 하락 화살표가 모니터를 깨고 튀어나오는 상황. 
 
 [비주얼 프롬프트 (영어)]
-giant red downward arrow smashing out of a glowing computer monitor that displays high green numbers, high-tech trading room environment, shattered glass, dynamic lighting, professional 3D render, vibrant colors, comic art style
+giant red downward arrow emerging from an unlabeled trading-room display, dramatic editorial composition, original 2D Korean finance comic, bold ink outlines, cel shading, no readable text
 
 [감정]
 surprised
@@ -235,7 +268,7 @@ chart_shock
 🎯 영상 메타데이터 (대본 작성이 모두 끝난 후 마지막에 딱 1번만 작성):
 ## 메타데이터
 [추천 제목]: 클릭을 유도하는 매력적인 유튜브 제목 (30자 내외)
-[추천 썸네일]: 썸네일용 비주얼 프롬프트 (영어, 극적이고 시선을 끄는 상황 묘사, professional 3D render)
+[추천 썸네일]: 썸네일용 비주얼 프롬프트 (영어, 극적이고 시선을 끄는 상황 묘사, original 2D Korean finance editorial comic)
 [더보기 설명]: 영상 하단에 들어갈 3줄 요약과 해시태그"""
 
 
@@ -361,7 +394,7 @@ class ScriptWorker:
             # A named topic must have its own evidence.  Generic index data is
             # never allowed to replace it with an unrelated KOSPI script.
             topic_terms = _keyword_coverage_terms(selected_terms)
-            if len(topic_terms) > 1 and not keyword_news:
+            if len(topic_terms) > 1 and not keyword_news and not is_market_level_forecast(selected_terms):
                 raise ScriptResearchRequiredError(
                     f"선택 키워드({', '.join(topic_terms)})의 검증 가능한 최신 근거를 찾지 못했습니다. "
                     "키워드를 수정하거나 근거 자료를 추가한 뒤 다시 시도하세요."
@@ -422,7 +455,8 @@ class ScriptWorker:
         keyword_validation = _validate_keyword_coverage(full_script, selected_terms)
         if not keyword_validation["passed"]:
             raise ScriptResearchRequiredError(
-                "선택 키워드 반영 검증에 실패했습니다: " + ", ".join(keyword_validation["missing_terms"])
+                "선택 키워드 반영 검증에 실패했습니다: " + ", ".join(keyword_validation["missing_terms"]),
+                keyword_validation["missing_terms"],
             )
         unit_validation = _validate_unit_usage(full_script)
 
@@ -666,7 +700,7 @@ class ScriptWorker:
                 "개인 투자자들은 자산 배분과 분할 매수를 적극 고려해 보시는 것이 권장됩니다."
             )
             prompt_ko = f"거대한 폭풍우가 몰아치는 바다 한가운데, 튼튼한 닻을 내리고 흔들리지 않는 황금 배."
-            prompt_en = "large golden ship anchoring firmly in the middle of a massive stormy ocean, huge waves, dark clouds, professional 3D render, vibrant colors, comic art style"
+            prompt_en = "large golden ship anchoring firmly in a massive stormy ocean, huge waves, dark clouds, original 2D Korean editorial comic, bold ink outlines, cel shading"
             sections.append({
                 "title": f"씬 {i+1}",
                 "content": narration,
@@ -737,15 +771,43 @@ def _validate_keyword_coverage(script: str, terms: list[str]) -> dict:
     normalized_script = re.sub(r"\s+", "", script or "").lower()
     meaningful = _keyword_coverage_terms(terms)
     script_canonical = normalise_terms(script)
+
+    # A grounded narration does not have to repeat the user's exact wording.
+    # In market copy, for example, "급락" is commonly expressed as "큰 폭으로
+    # 하락", "낙폭 확대", or "지수가 밀렸다".  The evidence gate above has
+    # already verified the underlying facts, so this final gate should test
+    # semantic coverage rather than force an unnatural keyword insertion.
+    semantic_equivalents: dict[str, tuple[str, ...]] = {
+        "급락": (
+            "급락", "폭락", "하락", "낙폭", "내려", "빠졌", "빠진", "무너",
+            "큰폭하락", "큰폭으로하락", "급격히하락", "가파르게하락", "지수가밀", "크게떨어",
+        ),
+        "반등": ("반등", "회복", "되돌림", "상승전환", "반전", "낙폭을만회", "다시올"),
+        "급등": ("급등", "큰폭상승", "큰폭으로상승", "가파르게상승", "크게올"),
+        "하락": ("하락", "내림", "떨어", "밀려", "약세", "낙폭"),
+        "상승": ("상승", "오름", "올라", "강세", "반등"),
+    }
+
+    def covered(term: str) -> bool:
+        compact = re.sub(r"\s+", "", term).lower()
+        if compact in normalized_script or term in script_canonical:
+            return True
+        return any(alias in normalized_script for alias in semantic_equivalents.get(compact, ()))
+
     missing = [
         term for term in meaningful
-        if re.sub(r"\s+", "", term).lower() not in normalized_script and term not in script_canonical
+        if not covered(term)
     ]
     # Count sentence-level topical relevance, not raw token repetition.
     sentences = [line.strip() for line in re.split(r"(?<=[.!?。])\s*|\n+", script or "") if line.strip()]
     related = sum(
         1 for sentence in sentences
-        if any(re.sub(r"\s+", "", term).lower() in re.sub(r"\s+", "", sentence).lower() or term in normalise_terms(sentence) for term in meaningful)
+        if any(
+            re.sub(r"\s+", "", term).lower() in re.sub(r"\s+", "", sentence).lower()
+            or term in normalise_terms(sentence)
+            or any(alias in re.sub(r"\s+", "", sentence).lower() for alias in semantic_equivalents.get(term, ()))
+            for term in meaningful
+        )
     )
     ratio = related / len(sentences) if sentences else 0.0
     return {
@@ -838,10 +900,38 @@ def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
                 break
         return " ".join(kept).strip() or text
 
-    cap_iter = iter(caps)
+    shortened_values = [
+        shorten_dialogue(match.group(2), cap)
+        for match, cap in zip(matches, caps)
+    ]
+    # Per-scene proportional caps can undershoot badly when every scene has
+    # two medium sentences: one fits, two exceed the local share. Fill the
+    # remaining *global* budget with whole next sentences while retaining at
+    # least one sentence from every scene.
+    lower_bound = round(target_chars * 0.92)
+    upper_bound = round(target_chars * 1.08)
+    current_total = sum(_visible_char_count(value) for value in shortened_values)
+    made_progress = True
+    while current_total < lower_bound and made_progress:
+        made_progress = False
+        for index, match in enumerate(matches):
+            original_sentences = [item.strip() for item in split_sentences(match.group(2)) if item.strip()]
+            selected_sentences = [item.strip() for item in split_sentences(shortened_values[index]) if item.strip()]
+            if len(selected_sentences) >= len(original_sentences):
+                continue
+            addition = original_sentences[len(selected_sentences)]
+            addition_size = _visible_char_count(addition)
+            if current_total + addition_size <= upper_bound:
+                shortened_values[index] = f"{shortened_values[index]} {addition}".strip()
+                current_total += addition_size
+                made_progress = True
+                if current_total >= lower_bound:
+                    break
+
+    value_iter = iter(shortened_values)
 
     def replace(match: re.Match) -> str:
-        return match.group(1) + shorten_dialogue(match.group(2), next(cap_iter)) + "\n"
+        return match.group(1) + next(value_iter) + "\n"
 
     compacted = pattern.sub(replace, script_body)
     compacted_total = sum(_visible_char_count(match.group(2)) for match in pattern.finditer(compacted))
@@ -1049,7 +1139,7 @@ def _parse_sections(full_text: str) -> list:
         section_type = _assign_section_type(idx, total)
         prompt_en = s["prompt_en"]
         if not prompt_en:
-            prompt_en = f"Abstract financial background representing {s['title']}, dark navy tone, professional 3D style"
+            prompt_en = f"Financial editorial scene representing {s['title']}, dark navy tone, original 2D Korean comic, bold ink outlines, cel shading"
 
         sections.append({
             "title": s["title"],

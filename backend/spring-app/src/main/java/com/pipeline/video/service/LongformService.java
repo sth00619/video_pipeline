@@ -168,6 +168,7 @@ public class LongformService {
                 .metaJson(safeJson(result))
                 .build();
         assetRepository.save(asset);
+        saveQcReport(jobId, result);
 
         // outputPath 업데이트
         job.setOutputPath(result.getVideoPath());
@@ -453,6 +454,7 @@ public class LongformService {
                 .metaJson(safeJson(result))
                 .build();
         assetRepository.save(videoAsset);
+        saveQcReport(jobId, result);
 
         job.setOutputPath(result.getVideoPath());
         jobRepository.save(job);
@@ -505,5 +507,17 @@ public class LongformService {
         }
 
         return result;
+    }
+
+    private void saveQcReport(Long jobId, LongformGenerateResponse result) {
+        if (result.getQualityReport() == null) return;
+        Object outputQc = result.getQualityReport().get("output_qc");
+        if (outputQc == null) return;
+        Asset qcAsset = Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.QC_REPORT)
+                .metaJson(safeJson(outputQc))
+                .build();
+        assetRepository.save(qcAsset);
     }
 }

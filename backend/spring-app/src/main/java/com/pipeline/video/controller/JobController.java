@@ -79,6 +79,13 @@ public class JobController {
         return ResponseEntity.ok(jobService.stopJob(id, username));
     }
 
+    @PostMapping("/{id}/retry/script")
+    public ResponseEntity<JobResponse> retryFromScript(
+            @PathVariable Long id,
+            @AuthenticationPrincipal String username) {
+        return ResponseEntity.ok(jobService.retryFromScript(id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteJob(
             @PathVariable Long id,

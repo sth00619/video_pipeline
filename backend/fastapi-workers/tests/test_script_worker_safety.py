@@ -3,6 +3,7 @@ import os
 from app.workers.script_worker import (
     ScriptWorker,
     _cap_dialogue_to_target,
+    _dialogue_char_count,
     _validate_unit_usage,
     clean_script_commas_and_pct,
 )
@@ -42,6 +43,21 @@ def test_sentence_safe_cap_never_cuts_decimal_or_large_number():
     assert "6.37퍼센트" in capped
     assert "29,800,000원" in capped
     assert "다음 문장은" not in capped
+
+
+def test_multi_scene_cap_fills_global_duration_budget_with_whole_sentences():
+    blocks = []
+    for index in range(10):
+        blocks.append(
+            f"## 씬 {index}: 설명\n"
+            "[대사] 코스피와 빅테크 실적의 변화를 검증된 수치로 차분하게 설명합니다. "
+            "반등의 조건과 위험 요인을 투자자가 이해하기 쉽게 하나씩 살펴봅니다.\n"
+            "[비주얼 설명] 카툰 장면\n"
+        )
+    capped = _cap_dialogue_to_target("\n".join(blocks), target_chars=445)
+    count = _dialogue_char_count(capped)
+    assert 409 <= count <= 481
+    assert capped.count("[대사]") == 10
 
 
 def test_mock_response_matches_script_response_contract(monkeypatch):

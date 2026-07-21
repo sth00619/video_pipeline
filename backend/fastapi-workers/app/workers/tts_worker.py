@@ -46,6 +46,7 @@ class TtsWorker:
 
     def __init__(self):
         self._whisper_model = None
+        self._last_provider_request = {}
 
     def _run_subprocess(self, cmd: str, job_id: int) -> int:
         """FFmpeg 등의 명령어를 subprocess.Popen으로 실행하고 중지 트래킹 등록"""
@@ -78,6 +79,7 @@ class TtsWorker:
         # (/pipeline/config API로 재빌드 없이 즉시 조정 가능)
         speed = tts_speed if tts_speed is not None else runtime_config.value("tts_speed")
         subtitle_max_chars = runtime_config.value("subtitle_max_chars")
+        provider_voice_id = self._resolve_elevenlabs_voice_id(voice_id)
 
         logger.info(f"TTS v6 시작: job_id={job_id}, length={len(script)}자, speed={speed}")
 
@@ -147,8 +149,8 @@ class TtsWorker:
             if os.getenv("ELEVENLABS_API_KEY"):
                 logger.info("ELEVENLABS_API_KEY 감지 → ElevenLabs v3 AI 성우 + 발음 사전 적용")
                 used_tts, elevenlabs_characters = self._generate_elevenlabs(
-                    preprocessed, mp3_path, voice_id, job_id, tts_speed=speed,
-                    seed=max(1, job_id * 10 + 1),
+                    self._soften_korean_delivery_cadence(preprocessed), mp3_path, provider_voice_id, job_id, tts_speed=speed,
+                    seed=max(1, job_id * 10 + 1), thought_group_delivery=True,
                 )
                 if used_tts:
                     tts_engine = "elevenlabs"
@@ -171,8 +173,8 @@ class TtsWorker:
                 if attempt < max_retries:
                     logger.warning("TTS CER quality gate retrying generation (%s/%s)", attempt + 1, max_retries)
                     used_tts, elevenlabs_characters = self._generate_elevenlabs(
-                        preprocessed, mp3_path, voice_id, job_id, tts_speed=speed,
-                        seed=max(1, job_id * 10 + attempt + 1),
+                        self._soften_korean_delivery_cadence(preprocessed), mp3_path, provider_voice_id, job_id, tts_speed=speed,
+                        seed=max(1, job_id * 10 + attempt + 1), thought_group_delivery=True,
                     )
                     if not used_tts:
                         break
@@ -226,6 +228,18 @@ class TtsWorker:
         if tts_engine == "elevenlabs" and runtime_config.value("tts_postprocess_enabled"):
             self._postprocess_audio(mp3_path, job_id)
 
+        leading_silence_seconds = 0.2 if tts_engine == "elevenlabs" else 0.0
+        if leading_silence_seconds:
+            self._prepend_leading_silence(mp3_path, leading_silence_seconds, job_id)
+            elevenlabs_characters = [
+                {
+                    **char,
+                    "start": float(char["start"]) + leading_silence_seconds,
+                    "end": float(char["end"]) + leading_silence_seconds,
+                }
+                for char in elevenlabs_characters
+            ]
+
         # 실제 MP3 길이 측정
         actual_duration = self._probe_duration(mp3_path) or len(clean_script) / 5.0
         logger.info(f"음성 길이 ({speed}x 배속 후): {actual_duration:.1f}초")
@@ -234,7 +248,7 @@ class TtsWorker:
             calibration = update_calibration(
                 clean_script,
                 actual_duration,
-                voice_id,
+                provider_voice_id,
                 runtime_config.value("tts_model_body"),
                 speed,
             )
@@ -249,6 +263,19 @@ class TtsWorker:
             "spoken_char_count": spoken_char_count(clean_script),
             "calibration": calibration,
         }
+        # A request for a five-minute video must never silently continue as a
+        # three-minute production.  The calling workflow treats this as a
+        # recoverable generation failure, before it spends image or motion
+        # credits on material that cannot fill the requested runtime.
+        if target_seconds and not duration_validation["within_tolerance"]:
+            message = (
+                "TTS duration is outside the allowed 8% range: "
+                f"requested={float(target_seconds):.1f}s, actual={actual_duration:.1f}s. "
+                "Regenerate the script using the current voice length contract."
+            )
+            logger.error(message)
+            persist_quality_report(job_id, "tts_duration", {**duration_validation, "passed": False})
+            raise RuntimeError(message)
 
         # 3. 자막 타임스탬프 추출 (Forced Alignment → stable-ts → Whisper → 글자수 비례)
         chunks = []
@@ -311,18 +338,58 @@ class TtsWorker:
         return {
             "job_id": job_id,
             "audio_path": mp3_path,
-            "voice_id": tts_engine if used_tts else "silent",
+            "voice_id": provider_voice_id if tts_engine == "elevenlabs" else (tts_engine if used_tts else "silent"),
             "total_duration": round(actual_duration, 2),
             "chunks": chunks,
             "used_gtts": used_tts and (tts_engine == "gtts"),
             "used_elevenlabs": (tts_engine == "elevenlabs"),
             "duration_validation": duration_validation,
+            "provider_request": self._last_provider_request,
+            "leading_silence_seconds": leading_silence_seconds,
             "quality_report": {"subtitles": subtitle_quality, "tts_verification": tts_verification},
         }
 
     # ============================
     # gTTS 음성 생성
     # ============================
+    @staticmethod
+    def _resolve_elevenlabs_voice_id(voice_id: str | None) -> str:
+        """Resolve UI placeholder voices to the actual billed narrator."""
+        if not voice_id or voice_id in {"gtts_ko", "default", "default_ko", "silent", "gtts_whisper_ko"}:
+            return os.getenv("ELEVENLABS_VOICE_ID") or "dlKJ5VptCbYxal4doUO5"
+        return voice_id
+
+    @staticmethod
+    def _soften_korean_delivery_cadence(text: str, group_size: int = 3) -> str:
+        """Join short Korean statements into natural three-sentence thought groups.
+
+        ElevenLabs treats every full stop as a strong final cadence.  Finance
+        narration often contains short factual sentences, so that delivery can
+        sound like a repeated sequence of endings.  Replace only intervening
+        sentence periods with commas; keep each third close, questions,
+        exclamations, decimals, and the final sentence intact.  The spoken
+        words and character count are preserved for timing/subtitle mapping.
+        """
+        if not text or group_size < 2:
+            return text
+        characters = list(text)
+        completed = 0
+        for index, character in enumerate(characters):
+            if character != ".":
+                continue
+            previous_char = characters[index - 1] if index else ""
+            next_char = characters[index + 1] if index + 1 < len(characters) else ""
+            # Decimal points such as 3.56 are not sentence boundaries.
+            if previous_char.isdigit() and next_char.isdigit():
+                continue
+            following = "".join(characters[index + 1:])
+            if not following.strip():
+                continue
+            completed += 1
+            if completed % group_size:
+                characters[index] = ","
+        return "".join(characters)
+
     def _generate_gtts(self, text: str, output_path: str, job_id: int = 0) -> bool:
         """gTTS로 한국어 음성 생성. 5000자 초과 시 분할 생성 후 concat."""
         from gtts import gTTS
@@ -381,8 +448,44 @@ class TtsWorker:
 
         return os.path.exists(output_path)
 
+    @staticmethod
+    def _prepare_elevenlabs_text(
+        text: str, model_id: str = "", mode: str = "robust"
+    ) -> str:
+        """Apply audio-tag policy to a provider copy of the narration.
+
+        Eleven v3 understands bracketed performance directions, but Robust
+        delivery and legacy models must receive plain narration.  The stored
+        script is never mutated by this function.
+        """
+        audio_tags_allowed = model_id.startswith("eleven_v3") and mode == "natural"
+        if audio_tags_allowed:
+            return text
+        return re.sub(r"\[[^\[\]\r\n]{1,40}\]\s*", "", text).lstrip()
+
+    @staticmethod
+    def _stability_mode(model_id: str, stability: float) -> str:
+        if not model_id.startswith("eleven_v3"):
+            return "legacy"
+        return {0.0: "creative", 0.5: "natural", 1.0: "robust"}.get(float(stability), "invalid")
+
+    def _prepend_leading_silence(self, audio_path: str, seconds: float, job_id: int) -> None:
+        """Prepend a deterministic safety pad without trimming narration."""
+        padded_path = f"{audio_path}.lead.mp3"
+        ret = self._run_subprocess(
+            f'ffmpeg -f lavfi -t {seconds:.3f} -i "anullsrc=r=44100:cl=stereo" '
+            f'-i "{audio_path}" -filter_complex "[0:a][1:a]concat=n=2:v=0:a=1[out]" '
+            f'-map "[out]" -ar 44100 -ac 2 -c:a libmp3lame -b:a 192k '
+            f'-y "{padded_path}" -loglevel error',
+            job_id,
+        )
+        if ret != 0 or not os.path.exists(padded_path):
+            raise RuntimeError("failed to prepend the required TTS leading silence")
+        os.replace(padded_path, audio_path)
+
     def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str, job_id: int = 0,
-                             tts_speed: float = None, seed: int = None) -> Tuple[bool, List[Dict]]:
+                             tts_speed: float = None, seed: int = None,
+                             thought_group_delivery: bool = False) -> Tuple[bool, List[Dict]]:
         """
         ElevenLabs v3 + 발음 사전 기반 한국어 AI 성우 음성 생성.
         원본 스크립트 텍스트를 그대로 전달하고, 발음 사전이 금융 용어 발음을 교정합니다.
@@ -390,6 +493,11 @@ class TtsWorker:
         import requests
         import tempfile as tf
         from app.workers.pronunciation_manager import PronunciationManager
+
+        # Each generation/retry gets its own transmission audit.  For a
+        # multi-request narration we retain the opening request, not the last
+        # body chunk.
+        self._last_provider_request = {}
 
         api_key = os.getenv("ELEVENLABS_API_KEY")
         if not api_key:
@@ -421,8 +529,7 @@ class TtsWorker:
             raise RuntimeError(f"Job {job_id} stopped by user.")
         
         # voice_id가 없거나 기본값이면 한국어 발음이 자연스러운 기본 voice_id 사용
-        if not voice_id or voice_id in ["gtts_ko", "default", "default_ko", "silent", "gtts_whisper_ko"]:
-            voice_id = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+        voice_id = self._resolve_elevenlabs_voice_id(voice_id)
             
         # [공식 권장] apply_text_normalization=off 쿼리 파라미터 전달 및 이중 가속/배속 파라미터
         # One response contains both the audio and its character-level timing.
@@ -467,11 +574,22 @@ class TtsWorker:
                     {"text": str(char), "start": float(start) + offset, "end": float(end) + offset}
                     for char, start, end in zip(chars, starts, ends)
                 ]
-                # ElevenLabs v3 can race through sentence boundaries even
-                # when punctuation is present.  Add measured silence after
-                # completed sentences, then shift the native timing array by
-                # exactly the same offsets so subtitles/scenes stay in sync.
-                return True, self._insert_sentence_pauses(destination, timed_characters, job_id, offset)
+                # Keep the provider's continuous delivery unless an operator
+                # explicitly asks for added pauses.  Injecting a fixed silence
+                # after every sentence made the Korean narration noticeably
+                # staccato and added tens of seconds to long-form jobs.
+                if (
+                    runtime_config.value("tts_sentence_pause_ms") > 0
+                    or runtime_config.value("tts_paragraph_pause_ms") > 0
+                ):
+                    timed_characters = self._insert_sentence_pauses(
+                        destination, timed_characters, job_id, offset,
+                        pause_ms_override=(
+                            int(runtime_config.value("tts_thought_group_pause_ms"))
+                            if thought_group_delivery else None
+                        ),
+                    )
+                return True, timed_characters
             except (ValueError, TypeError, KeyError, base64.binascii.Error) as exc:
                 logger.warning("ElevenLabs with-timestamps response parse failed: %s", exc)
                 return False, []
@@ -484,7 +602,29 @@ class TtsWorker:
                 raise ValueError("Eleven v3 stability must be 0.0, 0.5, or 1.0")
             # Tags are deliberately limited to the opening.  The body remains
             # Robust so a finance narration does not sound like a performance.
-            tts_text = f"[curious] {chunk_text}" if is_intro and is_v3 else chunk_text
+            # Unsupported English direction tags can be pronounced literally
+            # by a Korean v3 voice (the observed "씨유아 6월..." regression).
+            # The provider text must therefore begin with the real script.
+            mode = self._stability_mode(model_id, stability)
+            tts_text = self._prepare_elevenlabs_text(chunk_text, model_id, mode)
+            has_tag = bool(re.search(r"\[[^\[\]]{1,40}\]", tts_text))
+            if mode != "natural" and has_tag:
+                raise AssertionError("unsupported ElevenLabs audio tag survived provider-copy sanitization")
+            first_sentence = re.split(r"(?<=[.!?。！？])\s+", tts_text, maxsplit=1)[0][:160]
+            if is_intro or not self._last_provider_request:
+                self._last_provider_request = {
+                    "model_id": model_id,
+                    "mode": mode,
+                    "has_audio_tag": has_tag,
+                    "first_sentence": first_sentence,
+                    "first_30_chars": tts_text[:30],
+                    "pause_boundary_policy": "next_spoken_character",
+                    "cadence_policy": "three_sentence_thought_groups",
+                }
+            logger.info(
+                "ElevenLabs transmission model=%s mode=%s has_tag=%s first30=%r",
+                model_id, mode, has_tag, tts_text[:30],
+            )
             voice_settings = {
                 "stability": stability,
                 "similarity_boost": runtime_config.value("elevenlabs_similarity_boost"),
@@ -515,7 +655,11 @@ class TtsWorker:
                 payload["pronunciation_dictionary_locators"] = pron_locators
             return payload
         
-        MAX_CHARS = 800
+        # Eleven v3 accepts substantially longer input than the legacy model.
+        # A five-minute script should be one continuous performance so its
+        # prosody matches the reference voice instead of restarting every 800
+        # characters.  Keep the legacy ceiling for non-v3 fallbacks.
+        MAX_CHARS = 8000 if runtime_config.value("tts_model_body").startswith("eleven_v3") else 800
         if len(text) <= MAX_CHARS:
             payload = _build_payload(text, is_intro=True)
             success = False
@@ -718,7 +862,9 @@ class TtsWorker:
             return {"passed": False, "cer": None, "attempts": attempt, "error": str(exc)}
 
     @staticmethod
-    def _sentence_pause_points(characters: List[Dict]) -> List[Tuple[float, float]]:
+    def _sentence_pause_points(
+        characters: List[Dict], pause_ms_override: int | None = None
+    ) -> List[Tuple[float, float]]:
         """Find native-timing sentence boundaries and their required pauses.
 
         The input is the character-level alignment returned by ElevenLabs.  A
@@ -742,10 +888,30 @@ class TtsWorker:
             if next_index >= len(characters):
                 continue
 
-            pause_ms = runtime_config.value("tts_paragraph_pause_ms") if "\n\n" in whitespace else runtime_config.value("tts_sentence_pause_ms")
+            # Do not splice at the punctuation timestamp. ElevenLabs' visual
+            # alignment can mark the period before the Korean final syllable's
+            # acoustic release has finished. Inserting silence there detaches
+            # endings such as "였어요/밀렸습니다/겁니다" from their tail and makes
+            # them sound cut off. Preserve the provider's complete inter-
+            # sentence region and insert the extra breath immediately before
+            # the next spoken character instead.
+            next_start = float(characters[next_index]["start"])
+            terminal_end = float(item["end"])
+            if not whitespace and next_start <= terminal_end + 0.02:
+                continue
+
+            pause_ms = (
+                pause_ms_override
+                if pause_ms_override is not None
+                else (
+                    runtime_config.value("tts_paragraph_pause_ms")
+                    if "\n\n" in whitespace
+                    else runtime_config.value("tts_sentence_pause_ms")
+                )
+            )
             pause_seconds = max(0.0, float(pause_ms) / 1000.0)
             if pause_seconds:
-                pauses.append((float(item["end"]), pause_seconds))
+                pauses.append((max(terminal_end, next_start), pause_seconds))
         return pauses
 
     @staticmethod
@@ -759,7 +925,10 @@ class TtsWorker:
             shifted.append({**item, "start": start + offset, "end": float(item["end"]) + offset})
         return shifted
 
-    def _insert_sentence_pauses(self, audio_path: str, characters: List[Dict], job_id: int, timeline_offset: float = 0.0) -> List[Dict]:
+    def _insert_sentence_pauses(
+        self, audio_path: str, characters: List[Dict], job_id: int,
+        timeline_offset: float = 0.0, pause_ms_override: int | None = None,
+    ) -> List[Dict]:
         """Insert short silent breaths without losing ElevenLabs timestamp sync.
 
         ElevenLabs still generates the narration as one continuous performance.
@@ -768,7 +937,7 @@ class TtsWorker:
         alignment.  If FFmpeg cannot complete the splice, the untouched audio
         and original alignment are retained.
         """
-        pauses = self._sentence_pause_points(characters)
+        pauses = self._sentence_pause_points(characters, pause_ms_override)
         if not pauses or not os.path.exists(audio_path):
             return characters
 

@@ -108,11 +108,9 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if previous_palettes and palette_key == previous_palettes[-1] and len(candidates) > 1:
             palette_key = "neutral" if palette_key != "neutral" else "positive"
         wardrobe_key, wardrobe = WARDROBE_BY_FAMILY[family]
-        character_required = family not in {"news_headline", "news_context"}
-        if family == "data_lab":
-            character_required = False
-        elif family in {"factory_dashboard", "market_arena"}:
-            character_required = True
+        # The channel mascot is a visual narrator, not an optional decoration.
+        # Keeping it in every scene prevents generic background-only frames.
+        character_required = True
         pose = scene.get("pose") or wardrobe_key
         camera = CAMERAS[index % len(CAMERAS)]
         direction = {
@@ -238,8 +236,8 @@ def compile_editorial_prompt(scene: dict[str, Any], base_prompt: str) -> str:
         }
         data_surface_clause = (
             " The mascot character stands entirely within the LEFT third of the frame."
-            " The RIGHT half of the frame contains a large blank cream-colored circular"
-            " panel with a dark teal riveted metal frame, completely empty inside,"
+            " The RIGHT half of the frame contains a large blank warm-cream"
+            " landscape information board with a dark teal riveted metal frame, completely empty inside,"
             " no text, no numbers, no chart, no character parts overlapping the panel."
         )
     return (

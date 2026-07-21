@@ -140,14 +140,13 @@ export default function JobNew() {
       const job = await jobsApi.create(form)
       // AUTO/GUIDED는 자동으로 키워드 탐색을 즉시 시작해 대기 시간 단축
       try {
-        await jobsApi.searchKeyword(job.id, form.title, 5)
-        if (form.keywordPlanId && form.keyword) {
-          await jobsApi.confirmKeyword(job.id, form.keyword)
-        }
+        // A keyword plan supplies a search seed only. Every creation path must
+        // go through the same evidence-scored candidate selection flow.
+        await jobsApi.searchKeyword(job.id, form.keyword || form.title, 5)
       } catch (_) {
         // 키워드 탐색 실패해도 Job은 만들어졌으니 상세로 이동해서 사용자가 재시도 가능
       }
-      navigate(`/longform/${job.id}${form.keywordPlanId ? '?stage=script' : ''}`)
+      navigate(`/longform/${job.id}`)
     } catch (err) {
       setError(err?.response?.data?.message || err.message || '작업 생성 실패')
       setCreating(false)

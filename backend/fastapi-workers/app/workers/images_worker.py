@@ -34,10 +34,24 @@ from app.utils.intro_motion import infer_total_duration_seconds, select_intro_mo
 from app.utils.gemini_pressure import gemini_pressure
 from app.utils.image_job_lock import acquire_image_job_lock, release_image_job_lock
 from app.utils.retry_policy import classify_image_error, error_signature
-from app.services.data_chart_renderer import render_chart_to_overlay
-from app.services.bubble_overlay import draw_speech_bubble
 
 logger = logging.getLogger(__name__)
+
+
+def _scene_metadata_contract(source_scenes: list[dict], output_scenes: list[dict]) -> dict:
+    """Audit that every source metadata key survives image generation."""
+    source_keys = sorted({key for scene in source_scenes for key in scene})
+    output_keys = sorted({key for scene in output_scenes for key in scene})
+    missing = sorted(set(source_keys) - set(output_keys))
+    return {
+        "passed": not missing,
+        "source_keys": source_keys,
+        "output_keys": output_keys,
+        "missing_keys": missing,
+        "market_chart_count": sum(bool(scene.get("market_chart")) for scene in output_scenes),
+        "index_data_count": sum(bool(scene.get("index_data")) for scene in output_scenes),
+        "motion_type_count": sum(bool(scene.get("motion_type")) for scene in output_scenes),
+    }
 
 DEFAULT_CHARACTER_SHEET = Path("/app/assets/character/goldie_sheet_v1.png")
 
@@ -55,7 +69,7 @@ import re
 # 우하단 중앙에 위치
 CHAR_OVERLAY_X_RATIO = 0.58   # 화면 왼쪽에서 58% 지점 (1920기준 약 1114px)
 CHAR_OVERLAY_Y_RATIO = 0.08   # 상단 8% 지점
-CHAR_HEIGHT_RATIO   = 0.80   # 영상 높이의 80%로 캐릭터 크기 조정
+CHAR_HEIGHT_RATIO   = 0.72   # Keep the whole character inside a 16:9 frame.
 
 
 def _extract_market_signal(text: str) -> dict:
@@ -223,7 +237,15 @@ class ImagesWorker:
                 short_seconds=float(runtime_config.value("intro_motion_seconds_short")),
                 long_seconds=float(runtime_config.value("intro_motion_seconds_long")),
                 short_threshold=float(runtime_config.value("intro_motion_short_threshold")),
-                max_clips=2 if bool(runtime_config.value("intro_motion_test_mode")) else max(0, int(runtime_config.value("intro_kling_max_clips"))),
+                max_clips=(
+                    0
+                    if not bool(runtime_config.value("intro_motion_enabled"))
+                    else min(
+                        2 if bool(runtime_config.value("intro_motion_test_mode")) else int(runtime_config.value("intro_motion_clip_count")),
+                        int(runtime_config.value("intro_motion_clip_count")),
+                    )
+                ),
+                clip_seconds=float(runtime_config.value("intro_motion_clip_seconds")),
             )
             budget_preflight = plan_preflight(
                 len(scenes_meta),
@@ -276,7 +298,10 @@ class ImagesWorker:
                 character_reference_paths.append(path)
 
         # [S2-3] 이중 레이어 합성 모드 제어
-        use_composite = bool(character_poses_dir and Path(character_poses_dir).exists())
+        # A pose library is a reference resource, not permission to paste a
+        # separately rendered mascot over an unrelated background.  Pro 2K
+        # scenes must be generated as one integrated illustration.
+        use_composite = False
         if use_composite:
             logger.info(f"[합성모드] 이중 레이어 합성 활성화: poses_dir={character_poses_dir}")
         else:
@@ -307,6 +332,7 @@ class ImagesWorker:
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
             prompt_en = build_prompt(spec, scene.get("market_chart")) if spec else compile_editorial_prompt(scene, base_prompt)
             return {
+                **scene,
                 "index": index,
                 "section": scene.get("section", f"scene_{index}"),
                 "prompt_en": prompt_en,
@@ -319,6 +345,10 @@ class ImagesWorker:
                 "style_profile": scene.get("style_profile", "editorial_comic_2d"),
                 "image_profile": scene.get("image_profile") or {},
                 "market_snapshot": scene.get("market_snapshot") or market_snapshot,
+                "market_chart": scene.get("market_chart"),
+                "index_data": scene.get("index_data"),
+                "bubble_text": scene.get("bubble_text", ""),
+                "motion_type": scene.get("motion_type", ""),
                 "text": narration,
                 "headline": spec.headline if spec else scene.get("headline", ""),
                 "headline_mood": spec.mood if spec else "neutral",
@@ -400,6 +430,7 @@ class ImagesWorker:
             # recover from disk instead of charging the image model a second time.
             if os.path.exists(img_path) and os.path.getsize(img_path) > 15000:
                 generated.append({
+                    **scene,
                     "index": i, "section": section, "image_path": img_path,
                     "generation_method": "resumed_existing", "quality_score": 90,
                     "prompt_en": prompt_en, "prompt_ko": prompt_ko, "prompt": prompt_en,
@@ -407,6 +438,9 @@ class ImagesWorker:
                     "visual_plan": scene.get("visual_plan"), "art_direction": art_direction,
                     "style_profile": scene.get("style_profile", "editorial_comic_2d"),
                     "image_profile": image_profile, "market_snapshot": scene_market_snapshot,
+                    "market_chart": scene.get("market_chart"), "index_data": scene.get("index_data"),
+                    "bubble_text": scene.get("bubble_text", ""),
+                    "motion_type": scene.get("motion_type", ""),
                     "text": narration, "headline": spec.headline if spec else scene.get("headline", ""),
                     "headline_mood": spec.mood if spec else "neutral",
                     "scene_spec": spec.to_dict() if spec else scene.get("scene_spec"),
@@ -424,8 +458,10 @@ class ImagesWorker:
                             ai_provider, prompt_en, bg_path, section, pose, image_profile
                         )
                         # [버그 수정] 오버레이(데이터 차트 등)는 배경에 먼저 그려야 캐릭터가 패널을 가리지 않음
+                        # Keep factual numbers and labels out of the still.  They
+                        # are composited after Kling/static assembly, where they
+                        # stay crisp and cannot be regenerated by a video model.
                         self._normalize_canvas(bg_path)
-                        self._apply_chart_only(scene, bg_path)
                         
                         x_ratio = 0.02 if scene.get("market_chart") else CHAR_OVERLAY_X_RATIO
                         if character_required:
@@ -438,8 +474,6 @@ class ImagesWorker:
                             import shutil
                             shutil.copy2(bg_path, img_path)
                             
-                        self._apply_bubble_only(scene, img_path)
-                        
                         if runtime_config.value("image_headline_overlay"):
                             add_headline(img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
                     else:
@@ -516,7 +550,6 @@ class ImagesWorker:
                                         ai_provider, var_prompt, var_bg_path, section, pose, image_profile
                                     )
                                     self._normalize_canvas(var_bg_path)
-                                    self._apply_chart_only(scene, var_bg_path)
                                     
                                     x_ratio = 0.02 if scene.get("market_chart") else CHAR_OVERLAY_X_RATIO
                                     if character_required:
@@ -528,7 +561,6 @@ class ImagesWorker:
                                     else:
                                         import shutil
                                         shutil.copy2(var_bg_path, var_img_path)
-                                    self._apply_bubble_only(scene, var_img_path)
                                 else:
                                     var_raw_path = str(job_dir / f"scene_{i:03d}_raw_var_{v}.jpg")
                                     ai_provider.generate_image(
@@ -555,6 +587,7 @@ class ImagesWorker:
                                 shutil.copy2(img_path, var_img_path)
 
                     generated.append({
+                        **scene,
                         "index": i,
                         "section": section,
                         "image_path": img_path,
@@ -570,6 +603,10 @@ class ImagesWorker:
                         "style_profile": scene.get("style_profile", "editorial_comic_2d"),
                         "image_profile": image_profile,
                         "market_snapshot": scene_market_snapshot,
+                        "market_chart": scene.get("market_chart"),
+                        "index_data": scene.get("index_data"),
+                        "bubble_text": scene.get("bubble_text", ""),
+                        "motion_type": scene.get("motion_type", ""),
                         "text": narration,
                         "headline": spec.headline if spec else scene.get("headline", ""),
                         "headline_mood": spec.mood if spec else "neutral",
@@ -608,6 +645,7 @@ class ImagesWorker:
             try:
                 self._render_fallback(narration, img_path, plt)
                 generated.append({
+                    **scene,
                     "index": i,
                     "section": section,
                     "image_path": img_path,
@@ -622,6 +660,10 @@ class ImagesWorker:
                     "style_profile": scene.get("style_profile", "editorial_comic_2d"),
                     "image_profile": image_profile,
                     "market_snapshot": scene_market_snapshot,
+                    "market_chart": scene.get("market_chart"),
+                    "index_data": scene.get("index_data"),
+                    "bubble_text": scene.get("bubble_text", ""),
+                    "motion_type": scene.get("motion_type", ""),
                     "text": narration,
                 })
             except Exception as e:
@@ -653,6 +695,7 @@ class ImagesWorker:
                     scene["quality_flags"] = [*scene["quality_flags"], "semantic_review_recommended"]
         image_quality["art_direction"] = assess_art_diversity(generated)
         image_quality["semantic_alignment"] = semantic_quality
+        image_quality["scene_metadata_contract"] = _scene_metadata_contract(scenes_meta, generated)
         persist_quality_report(job_id, "images", image_quality)
         logger.info(f"이미지 생성 완료: {len(generated)}개, quality={image_quality['score']}")
         return {
@@ -702,6 +745,7 @@ class ImagesWorker:
             prompt_en = build_prompt(spec, scene.get("market_chart")) if spec else compile_editorial_prompt(scene, base_prompt)
             image_profile = scene.get("image_profile") or {}
             return {
+                **scene,
                 "index": index,
                 "section": scene.get("section", f"scene_{index}"),
                 "prompt_en": prompt_en,
@@ -720,6 +764,7 @@ class ImagesWorker:
                 "spec": spec,
                 # §7: overlay keys — must be propagated or _apply_image_overlays silently skips
                 "bubble_text": scene.get("bubble_text", ""),
+                "motion_type": scene.get("motion_type", ""),
                 "market_chart": scene.get("market_chart"),
                 "index_data": scene.get("index_data"),
             }
@@ -780,15 +825,8 @@ class ImagesWorker:
                         self._normalize_canvas(bg_path)
                         
                         # ① 차트를 배경에 먼저
-                        chart_scene = {
-                            "section": ctx.get("section"),
-                            "market_snapshot": ctx.get("market_snapshot") or market_snapshot,
-                            "market_chart": ctx.get("market_chart"),
-                            "index_data": ctx.get("index_data"),
-                            "text": ctx.get("text"),
-                        }
-                        self._apply_chart_only(chart_scene, bg_path)
-                        
+                        # The final video compositor owns verified graphics and
+                        # labels.  Do not bake them into a Kling input frame.
                         # ② 캐릭터 합성
                         x_ratio = 0.02 if ctx.get("market_chart") else CHAR_OVERLAY_X_RATIO
                         if ctx["art_direction"].get("character_required", True):
@@ -801,15 +839,6 @@ class ImagesWorker:
                             shutil.copy2(bg_path, img_path)
                             
                         # ③ 말풍선은 캐릭터 위에
-                        if ctx.get("bubble_text"):
-                            side = "left" if ctx.get("market_chart") else "right"
-                            try:
-                                draw_speech_bubble(img_path, ctx["bubble_text"], img_path, character_side=side)
-                            except TypeError:
-                                draw_speech_bubble(img_path, ctx["bubble_text"], img_path)
-                            except Exception as ex:
-                                logger.error(f"Failed to draw speech bubble: {ex}")
-                                
                         if runtime_config.value("image_headline_overlay"):
                             add_headline(img_path, img_path, ctx["headline"], ctx["headline_mood"])
                     else:
@@ -841,15 +870,7 @@ class ImagesWorker:
                         
                         shutil.copy2(raw_img_path, img_path)
                         
-                        scene_obj = {
-                            "section": ctx.get("section"),
-                            "bubble_text": ctx.get("bubble_text", ""),
-                            "market_snapshot": ctx.get("market_snapshot") or market_snapshot,
-                            "market_chart": ctx.get("market_chart"),
-                            "index_data": ctx.get("index_data"),
-                            "text": ctx.get("text"),
-                        }
-                        self._apply_image_overlays(scene_obj, img_path)
+                        self._apply_image_overlays(ctx, img_path)
                         
                         if runtime_config.value("image_headline_overlay"):
                             add_headline(img_path, img_path, ctx["headline"], ctx["headline_mood"])
@@ -981,6 +1002,7 @@ class ImagesWorker:
                     scene["quality_flags"] = [*scene["quality_flags"], "semantic_review_recommended"]
         image_quality["art_direction"] = assess_art_diversity(generated)
         image_quality["semantic_alignment"] = semantic_quality
+        image_quality["scene_metadata_contract"] = _scene_metadata_contract(scenes_meta, generated)
         persist_quality_report(job_id, "images", image_quality)
         logger.info("Parallel image generation complete: job=%s scenes=%s quality=%s", job_id, len(generated), image_quality["score"])
         return {
@@ -1068,13 +1090,39 @@ class ImagesWorker:
             return
 
         # 영상 크기
-        W, H = 1920, 1080
-        char_h = int(H * CHAR_HEIGHT_RATIO)   # 864px
-        x_offset = int(W * x_ratio)
-        y_offset = int(H * y_ratio)
+        # Crop transparent padding before measuring the pose.  Earlier code
+        # blindly overlaid a full source canvas at x=1113, so wide pose files
+        # were visibly clipped by the right edge.
+        from PIL import Image
+        trimmed_pose_file = Path(f"{output_path}.character-trim.png")
+        try:
+            with Image.open(pose_file).convert("RGBA") as pose_image:
+                alpha_bounds = pose_image.getchannel("A").getbbox()
+                if not alpha_bounds:
+                    raise ValueError("pose image has no visible pixels")
+                trimmed = pose_image.crop(alpha_bounds)
+                trimmed.save(trimmed_pose_file)
+                source_width, source_height = trimmed.size
+
+            W, H = 1920, 1080
+            is_left = x_ratio <= 0.10
+            max_width = int(W * (0.37 if is_left else 0.39))
+            max_height = min(int(H * CHAR_HEIGHT_RATIO), H - 140)
+            char_h = max(1, min(max_height, int(max_width * source_height / source_width)))
+            char_w = max(1, round(source_width * char_h / source_height))
+            side_margin = 48
+            x_offset = side_margin if is_left else W - char_w - side_margin
+            y_offset = H - char_h - 58
+        except Exception as exc:
+            logger.error("Unable to prepare character composite, using background: %s", exc)
+            import shutil
+            shutil.copy2(bg_path, output_path)
+            trimmed_pose_file.unlink(missing_ok=True)
+            return
 
         # FFmpeg overlay 명령어 (RGBA 투명 합성)
         # 순서: 배경(1920x1080) 실망 스케일 → 캐릭터 크기 조정 → overlay
+        pose_file = trimmed_pose_file
         ffmpeg_cmd = [
             "ffmpeg",
             "-i", bg_path,                       # 입력 0: 배경
@@ -1085,7 +1133,7 @@ class ImagesWorker:
                 f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease,"
                 f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2[bg];"
                 # 캐릭터를 높이 char_h px로 스케일 (비율 유지)
-                f"[1:v]scale=-1:{char_h}[char];"
+                f"[1:v]scale={char_w}:{char_h}[char];"
                 # overlay: 우하단 중앙 위치
                 f"[bg][char]overlay={x_offset}:{y_offset}[out]"
             ),
@@ -1104,6 +1152,8 @@ class ImagesWorker:
             logger.error(f"[합성] FFmpeg overlay 실패, 배경만 사용: {e}")
             import shutil
             shutil.copy2(bg_path, output_path)
+        finally:
+            trimmed_pose_file.unlink(missing_ok=True)
 
     # ============================
     # 섹션별 시각화 라우팅
@@ -1373,13 +1423,13 @@ class ImagesWorker:
                 logger.error(f"Failed to draw speech bubble: {ex}")
 
     def _apply_image_overlays(self, scene: dict, img_path: str):
-        if "market_snapshot" not in scene or not scene["market_snapshot"]:
-            scene["market_snapshot"] = getattr(self, "market_snapshot", {})
-            
+        """Normalize the generated still before final video composition.
+
+        Verified charts, speech bubbles, and subtitles deliberately belong to
+        ``LongformWorker``.  Putting factual text into this image would expose
+        it to image-to-video distortion and duplicate the later overlay.
+        """
         self._normalize_canvas(img_path)
-        
-        self._apply_chart_only(scene, img_path)
-        self._apply_bubble_only(scene, img_path)
 
     def _check_panel_blank_qc(self, img_path: str):
         """

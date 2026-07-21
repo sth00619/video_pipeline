@@ -38,3 +38,6 @@ pandas>=2.2.0
 
 # ─── 신규: 정밀 음성-자막 싱크 (cross-attention 기반) ──────
 stable-ts[fw]>=2.17.0
+
+# Keep the documented container regression-test command executable.
+pytest>=8.3.0,<9.0

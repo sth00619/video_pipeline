@@ -41,6 +41,8 @@ from app.workers.news_keyword_extractor import NewsKeywordExtractor
 from app.utils.anthropic_cache import cached_system, log_cache_usage
 from app.utils.keyword_time_context import resolve_keyword_time_context
 from app.utils.keyword_aliases import seed_match, seed_overlap
+from app.utils.candidate_scoring import score_candidates
+from app.utils.topic_evidence import specific_terms
 
 logger = logging.getLogger(__name__)
 
@@ -173,11 +175,31 @@ class KeywordWorker:
         # "코스피" topic simply because the generic topic appeared more often
         # in today's news.  Keep only seed-related Claude/news candidates and
         # fill any gap with clearly-labelled, non-factual editorial angles.
-        candidates = self._enforce_seed_priority(candidates, seed, limit)
+        # The input keyword constrains relevance. It is never a ranking
+        # override or an implicit automatic confirmation.
+        candidates = self._filter_candidates_by_seed(candidates, seed, limit)
+        normalized_seed = re.sub(r"\s+", " ", seed or "").strip()
+        if normalized_seed and not any(
+            str(candidate.get("keyword", "")).strip().casefold() == normalized_seed.casefold()
+            for candidate in candidates
+        ):
+            candidates = candidates[:max(0, limit - 1)]
+            candidates.append(_seed_candidate(
+                normalized_seed,
+                "입력 주제입니다. 최신 직접 근거가 부족하면 자동 확정하지 않습니다.",
+                "입력 주제를 최신 뉴스와 시장 데이터로 검증합니다.",
+            ))
+        candidates = score_candidates(candidates[:limit], news_keywords, market_data, category, seed, self.extractor)
+        candidates.sort(key=lambda candidate: int(candidate.get("score") or 0), reverse=True)
+        for index, candidate in enumerate(candidates):
+            candidate["is_outperformer"] = index < outperformer_count
         for candidate in candidates:
             evidence_text = " ".join(str(candidate.get(key, "")) for key in ("keyword", "reason", "content_angle"))
             candidate["seed_overlap_terms"] = seed_overlap(seed, evidence_text)
             candidate["seed_overlap_count"] = len(candidate["seed_overlap_terms"])
+
+        auto_confirmable = bool(candidates and candidates[0].get("auto_confirm_eligible"))
+        topic_evidence_required = not auto_confirmable
 
         logger.info(f"키워드 탐색 완료: {len(candidates)}개 최종 후보")
 
@@ -190,7 +212,9 @@ class KeywordWorker:
             "news_keyword_count": len(news_keywords),
             "yt_candidate_count": len(yt_candidates),
             "time_interpretation": time_context,
-            "topic_evidence_required": False,
+            "top_candidate_keyword": candidates[0].get("keyword") if candidates else None,
+            "auto_confirmable": auto_confirmable,
+            "topic_evidence_required": topic_evidence_required,
         }
 
     # ──────────────────────────────────────────────────────────
@@ -527,7 +551,7 @@ YouTube 트렌딩 분석 기반 키워드 후보:
 
         return result[:limit]
 
-    def _enforce_seed_priority(self, candidates: list, seed: str, limit: int) -> list:
+    def _filter_candidates_by_seed(self, candidates: list, seed: str, limit: int) -> list:
         """Make a non-empty request seed a hard editorial constraint.
 
         Ranking can legitimately find broad market headlines, but they are
@@ -548,6 +572,10 @@ YouTube 트렌딩 분석 기반 키워드 후보:
         # The exact requested topic is always the first candidate.  It has no
         # invented metric or factual claim and is therefore safe even when the
         # YouTube quota is exhausted or current news has not indexed yet.
+        # The caller adds the input itself as one scored candidate. Do not
+        # synthesize angles or alter the evidence-based ordering here.
+        return related[:limit]
+
         primary = _seed_candidate(
             normalized_seed,
             "입력 키워드 우선 후보입니다. 카테고리는 분석 범위로만 사용하며, "

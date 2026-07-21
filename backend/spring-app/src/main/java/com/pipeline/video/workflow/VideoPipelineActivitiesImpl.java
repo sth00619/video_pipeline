@@ -45,6 +45,14 @@ public class VideoPipelineActivitiesImpl implements VideoPipelineActivities {
     }
 
     @Override
+    public String generateScriptV2(Long jobId) {
+        log.info("[Temporal Activity] script generation v2 started: jobId={}", jobId);
+        String result = scriptService.generateRecoverably(jobId, "AUTO");
+        log.info("[Temporal Activity] script generation v2 completed: jobId={}, result={}", jobId, result);
+        return result;
+    }
+
+    @Override
     public boolean isGuided(Long jobId) {
         return jobRepository.findById(jobId)
                 .map(job -> job.getAutonomy() == com.pipeline.video.domain.Autonomy.GUIDED

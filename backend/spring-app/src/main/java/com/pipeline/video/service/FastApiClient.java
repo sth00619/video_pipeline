@@ -31,6 +31,17 @@ public class FastApiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private static final class FastApiHttpException extends RuntimeException {
+        private final int statusCode;
+        private final String responseBody;
+
+        private FastApiHttpException(int statusCode, String responseBody) {
+            super("HTTP " + statusCode + ": " + responseBody);
+            this.statusCode = statusCode;
+            this.responseBody = responseBody;
+        }
+    }
+
     // Phase 2 — 쇼츠
     public ShortsAnalyzeResponse analyzeShorts(MultipartFile file, int shortsCount, Long jobId)
             throws IOException {
@@ -201,9 +212,26 @@ public class FastApiClient {
                 }
             }
             
-            return objectMapper.readValue(
-                    postJson(fastApiUrl + "/workers/script/generate", bodyMap),
-                    ScriptGenerateResponse.class);
+            try {
+                return objectMapper.readValue(
+                        postJson(fastApiUrl + "/workers/script/generate", bodyMap),
+                        ScriptGenerateResponse.class);
+            } catch (FastApiHttpException e) {
+                if (e.statusCode == 422) {
+                    Map<String, Object> error = objectMapper.readValue(e.responseBody, Map.class);
+                    if ("SCRIPT_RESEARCH_REQUIRED".equals(error.get("error_code"))) {
+                        Object rawTerms = error.get("missing_terms");
+                        List<String> missingTerms = rawTerms instanceof List<?> list
+                                ? list.stream().map(String::valueOf).toList() : List.of();
+                        throw new ScriptResearchRequiredException(
+                                String.valueOf(error.getOrDefault("message", "Script research is required.")),
+                                missingTerms);
+                    }
+                }
+                throw e;
+            }
+        } catch (ScriptResearchRequiredException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("스크립트 생성 오류: " + e.getMessage(), e);
         }
@@ -612,6 +640,7 @@ public class FastApiClient {
         int code = conn.getResponseCode();
         InputStream is = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
         String responseBody = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        if (code < 200 || code >= 300) throw new FastApiHttpException(code, responseBody);
         log.info("FastAPI 응답: code={}, bodyLen={}", code, responseBody.length());
         if (code < 200 || code >= 300) throw new RuntimeException("FastAPI 실패: " + code + " " + responseBody);
         return responseBody;

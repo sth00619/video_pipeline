@@ -63,8 +63,12 @@ KEYWORD_EXCLUDE_LIVE = os.getenv("KEYWORD_EXCLUDE_LIVE", "true").lower() in {"1"
 # Fast post-generation speed-up flattens pauses and emphasis.  Keep narration
 # close to natural speed; reduce the script target accordingly to preserve the
 # requested video duration instead of compressing the actor's performance.
-TTS_SPEED = float(os.getenv("TTS_SPEED", "1.05"))
-CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "480"))
+TTS_SPEED = float(os.getenv("TTS_SPEED", "1.0"))
+# Measured Korean long-form narration pace for the configured channel voice.
+# This is deliberately much higher than the old generic estimate because the
+# contract counts only visible Hangul characters, while finance scripts carry
+# dates, prices and ticker-like terms that are expanded before synthesis.
+CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "400"))
 SCENE_DURATION_SEC = float(os.getenv("SCENE_DURATION_SEC", "5.5"))
 SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "16"))
 SUBTITLE_FONT_SIZE = int(os.getenv("SUBTITLE_FONT_SIZE", "76"))
@@ -74,7 +78,7 @@ IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "gemini")   # gemini | fal | auto
 # A 20-minute timeline may contain ~240 scenes.  Hybrid keeps the 2D comic
 # direction for every scene while reserving Pro/2K latency for story anchors
 # and verified data scenes; all-Pro is still available by explicit override.
-IMAGE_QUALITY_TIER = os.getenv("IMAGE_QUALITY_TIER", "flash")  # flash | hybrid | pro
+IMAGE_QUALITY_TIER = os.getenv("IMAGE_QUALITY_TIER", "pro")  # flash | hybrid | pro
 PRO_IMAGE_MAX_SCENES = int(os.getenv("PRO_IMAGE_MAX_SCENES", "48"))
 # Batch API has a 24-hour completion SLO, so it is an economy/background mode,
 # not the default path for a user waiting for a finished video.
@@ -95,13 +99,13 @@ GEMINI_RETRY_MAX = int(os.getenv("GEMINI_RETRY_MAX", "3"))
 IMAGE_SAME_ERROR_BREAK_COUNT = int(os.getenv("IMAGE_SAME_ERROR_BREAK_COUNT", "5"))
 GEMINI_RPM_SOFT_CAP = int(os.getenv("GEMINI_RPM_SOFT_CAP", "60"))
 GEMINI_ADAPTIVE_BACKOFF_ENABLED = os.getenv("GEMINI_ADAPTIVE_BACKOFF_ENABLED", "true").lower() in {"1", "true", "yes"}
-LONGFORM_SCENE_MAX_WORKERS = int(os.getenv("LONGFORM_SCENE_MAX_WORKERS", "6"))
+LONGFORM_SCENE_MAX_WORKERS = int(os.getenv("LONGFORM_SCENE_MAX_WORKERS", "2"))
 VISUAL_QA_ENABLED = os.getenv("VISUAL_QA_ENABLED", "true").lower() in {"1", "true", "yes"}
 # Vision QA is an anchor-sample review, not a second API call for every one
 # of 240 scenes. File/codec validation still covers every scene.
 VISUAL_QA_MAX_SCENES = int(os.getenv("VISUAL_QA_MAX_SCENES", "24"))
 
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "dlKJ5VptCbYxal4doUO5")
 ELEVENLABS_STABILITY = float(os.getenv("ELEVENLABS_STABILITY", "0.62"))
 ELEVENLABS_SIMILARITY_BOOST = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.80"))
 ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.05"))
@@ -110,15 +114,17 @@ ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.05"))
 TTS_MODEL_INTRO = os.getenv("TTS_MODEL_INTRO", "eleven_v3")
 TTS_MODEL_BODY = os.getenv("TTS_MODEL_BODY", "eleven_v3")
 TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.5"))
-TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "1.0"))
+TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "0.5"))
 TTS_CER_THRESHOLD = float(os.getenv("TTS_CER_THRESHOLD", "0.15"))
 TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
 TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "true").lower() in {"1", "true", "yes"}
-# Keep a deliberate breath between completed sentences.  This is inserted into
-# the returned audio timeline (rather than by speeding text up/down), so the
-# visual and subtitle timings remain deterministic.
-TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "320"))
-TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "600"))
+# ElevenLabs already supplies natural Korean sentence breaths.  Do not splice
+# extra silence at every punctuation mark; it makes narration staccato.
+TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "350"))
+TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "400"))
+# When short factual statements are joined into a thought group, use one
+# editorial beat at the group boundary instead of a stop after every sentence.
+TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "1100"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))
 
@@ -129,18 +135,18 @@ BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))
 INTRO_MOTION_SECONDS_SHORT = float(os.getenv("INTRO_MOTION_SECONDS_SHORT", "40"))
 INTRO_MOTION_SECONDS_LONG = float(os.getenv("INTRO_MOTION_SECONDS_LONG", "60"))
 INTRO_MOTION_SHORT_THRESHOLD = float(os.getenv("INTRO_MOTION_SHORT_THRESHOLD", "660"))
-INTRO_KLING_MAX_CLIPS = int(os.getenv("INTRO_KLING_MAX_CLIPS", "12"))
-INTRO_MOTION_CLIP_COUNT = int(os.getenv("INTRO_MOTION_CLIP_COUNT", "13"))
+INTRO_KLING_MAX_CLIPS = int(os.getenv("INTRO_KLING_MAX_CLIPS", "12"))  # legacy API compatibility
+INTRO_MOTION_CLIP_COUNT = int(os.getenv("INTRO_MOTION_CLIP_COUNT", "12"))
 INTRO_MOTION_CLIP_SECONDS = int(os.getenv("INTRO_MOTION_CLIP_SECONDS", "5"))
 INTRO_MOTION_ENABLED = os.getenv("INTRO_MOTION_ENABLED", "True").lower() == "true"
-INTRO_MOTION_TEST_MODE = os.getenv("INTRO_MOTION_TEST_MODE", "True").lower() == "true"
+INTRO_MOTION_TEST_MODE = os.getenv("INTRO_MOTION_TEST_MODE", "False").lower() == "true"
 MAX_IMAGE_HOLD_SECONDS = int(os.getenv("MAX_IMAGE_HOLD_SECONDS", "8"))
 
 # Budget values are placeholders: replace them with the current AI Studio/Fal
 # console rates before production.  The preflight never hard-codes a price.
 IMG_COST_FLASH_1K_USD = float(os.getenv("IMG_COST_FLASH_1K_USD", "0.045"))
 IMG_COST_PRO_2K_USD = float(os.getenv("IMG_COST_PRO_2K_USD", "0.134"))
-KLING_COST_PER_CLIP_USD = float(os.getenv("KLING_COST_PER_CLIP_USD", "0.45"))
+KLING_COST_PER_CLIP_USD = float(os.getenv("KLING_COST_PER_CLIP_USD", "0.35"))  # 5 sec × $0.07/sec, audio off
 USD_KRW = float(os.getenv("USD_KRW", "1400"))
 MAX_BUDGET_PER_VIDEO_KRW = int(os.getenv("MAX_BUDGET_PER_VIDEO_KRW", "40000"))
 BUDGET_RETRY_BUFFER_PCT = float(os.getenv("BUDGET_RETRY_BUFFER_PCT", "10"))

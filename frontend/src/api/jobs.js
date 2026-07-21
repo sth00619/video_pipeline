@@ -5,6 +5,7 @@ export const jobsApi = {
   myList: () => apiClient.get('/jobs/my').then(r => r.data),
   get: (id) => apiClient.get(`/jobs/${id}`).then(r => r.data),
   create: (data) => apiClient.post('/jobs', data).then(r => r.data),
+  retryFromScript: (id) => apiClient.post(`/jobs/${id}/retry/script`).then(r => r.data),
 
   // Assets — 페이지 재진입 시 서버 상태 복원
   assets: (id, type) => {
