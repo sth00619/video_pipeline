@@ -46,6 +46,8 @@ from app.utils.market_charts import render_market_chart
 from app.utils.data_surface_locator import locate_data_surface
 from app.utils.budget import load_preflight, record_cost
 from app.utils.intro_motion import select_intro_motion_scene_indices
+from app.services.kling_prompt_builder import build_kling_motion_prompt
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +83,15 @@ def _probe_duration(media_path: str) -> float:
 
 
 class LongformWorker:
+
+    def _resolve_clip_count(self, budget_remaining_krw: int) -> int:
+        usd_krw = float(runtime_config.value("usd_krw") or 1400.0)
+        kling_cost_per_clip = 5 * 0.07 * usd_krw  # ≈ ₩490
+        for count in [13, 8, 5, 1]:
+            if kling_cost_per_clip * count <= budget_remaining_krw * 0.25:
+                # Kling이 남은 예산의 25% 이하 차지하도록 제약
+                return count
+        return 0
 
     def assemble(self, tts_meta_json: str, scenes_meta_json: str,
                  gifs_meta_json: str, job_id: int = 0) -> dict:
@@ -164,10 +175,31 @@ class LongformWorker:
             video_provider = None
             logger.info("Fal motion disabled: %s", fal_status["reason"])
         max_clips_cap = max(0, int(runtime_config.value("intro_kling_max_clips")))
+        if bool(runtime_config.value("intro_motion_test_mode")):
+            max_clips_cap = min(max_clips_cap, 2)
+            logger.info("intro_motion_test_mode is active. Kling clip count capped to 2.")
+
+        # Dynamic budget clip auto-downgrade check
+        max_budget_krw = int(runtime_config.value("max_budget_per_video_krw") or 40000)
+        budget_remaining_krw = max_budget_krw
         budget_preflight = load_preflight(job_id)
+        if budget_preflight:
+            planned_kling = budget_preflight.get("kling_clip_count", 0)
+            usd_krw = float(runtime_config.value("usd_krw") or 1400.0)
+            kling_cost_per_clip_usd = float(runtime_config.value("kling_cost_per_clip_usd") or 0.35)
+            buffer_multiplier = 1.0 + float(budget_preflight.get("retry_buffer_pct", 10.0)) / 100.0
+            planned_kling_cost = round(planned_kling * kling_cost_per_clip_usd * usd_krw * buffer_multiplier)
+            non_kling_cost = float(budget_preflight.get("estimated_cost_krw", 0)) - planned_kling_cost
+            budget_remaining_krw = max(0, max_budget_krw - non_kling_cost)
+
+        resolved_cap = self._resolve_clip_count(budget_remaining_krw)
+        max_clips_cap = min(max_clips_cap, resolved_cap)
+        logger.info(f"Budget auto-downgrade check: remaining={budget_remaining_krw} -> cap={max_clips_cap}")
+
         if budget_preflight:
             max_clips_cap = min(max_clips_cap, max(0, int(budget_preflight.get("kling_clip_count", max_clips_cap))))
             logger.info("Budget preflight applies Fal motion cap=%s, estimate=₩%s", max_clips_cap, budget_preflight.get("estimated_cost_krw"))
+
         intro_kling_indices, intro_motion_target, intro_motion_actual = _select_intro_kling_scenes(
             scenes, total_duration, max_clips_cap
         )
@@ -498,18 +530,27 @@ class LongformWorker:
                     # image-to-video는 이미지에 이미 있는 내용(캐릭터 생김새, 배경,
                     # 구도)을 다시 설명하면 안 되고 "무엇이 어떻게 움직이는가"만
                     # 묘사해야 결과가 안정적입니다.
-                    prompt = _build_kling_motion_prompt(scene)
-
-                    # 로컬 이미지를 base64 data URI로 인코딩해 image_url로 전달
-                    image_data_uri = _encode_image_as_data_uri(img_path)
+                    prompt_dict = build_kling_motion_prompt(scene.get("motion_type"))
+                    prompt = prompt_dict["prompt"]
+                    negative_prompt = prompt_dict["negative_prompt"]
 
                     motion_duration = min(max(int(duration), 1), 5)
-                    video_provider.generate(
+
+                    # 로컬 이미지를 Fal CDN에 업로드하고 공개 URL 확보
+                    # Fal.ai v2.6 image-to-video의 start_image_url은 인터넷에서 접근 가능한
+                    # https:// URL만 허용합니다. MinIO presigned URL(minio:9000)은 Docker
+                    # 내부 네트워크 주소라 Fal 서버에서 접근 불가합니다.
+                    start_image_url = _upload_image_for_fal(img_path)
+                    if not start_image_url:
+                        raise RuntimeError(f"씬 {i}: Fal CDN 이미지 업로드 실패. 정지 이미지 폴백.")
+
+                    asset = video_provider.generate(
                         prompt=prompt,
                         duration=motion_duration,
                         output_path=clip_path,
                         image_path=img_path,
-                        image_url=image_data_uri,
+                        image_url=start_image_url,
+                        negative_prompt=negative_prompt,
                         fal_only=True,
                     )
                     if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
@@ -543,11 +584,34 @@ class LongformWorker:
                             if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
                                 raise RuntimeError(f"scene {i} verified market chart overlay failed")
                             record_cost(job_id, "kling")
+                            
+                            # Write Kling audit params for reproducibility
+                            _write_kling_audit(job_id, i, {
+                                "fal_request_id": asset.meta.get("fal_request_id") if asset and asset.meta else None,
+                                "prompt": prompt,
+                                "negative_prompt": negative_prompt,
+                                "duration": motion_duration,
+                                "start_image_url_prefix": start_image_url[:80] if start_image_url else None,
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            })
+                            
                             logger.info(f"씬 {i} Kling AI 움짤 완성 (표준 규격 변환 완료)")
                             return i, clip_path
                         raise RuntimeError("Kling 표준화 클립 검증 실패")
                 except Exception as e:
-                    logger.warning(f"씬 {i} Fal 모션 생성 실패, 정지 이미지 폴백: {e}")
+                    logger.warning(f"씬 {i} Fal 모션 생성 실패, 정지 이미지 + 크로스페이드 페이드 필터 폴백: {e}")
+                    if os.path.exists(img_path):
+                        try:
+                            _ffmpeg_static_image_with_fade(img_path, clip_path, duration, bg_color, job_id)
+                            if _requires_verified_index_card(scene) and not _requires_verified_market_chart(scene) and not _apply_verified_index_card(scene, clip_path, temp_dir, i, duration, job_id):
+                                raise RuntimeError(f"scene {i} verified index card overlay failed")
+                            if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
+                                raise RuntimeError(f"scene {i} verified market chart overlay failed")
+                            if _verify_video(clip_path):
+                                logger.info(f"씬 {i} Fal 모션 실패 페이드 폴백 완료")
+                                return i, clip_path
+                        except Exception as fallback_err:
+                            logger.error(f"씬 {i} 페이드 폴백 실패, 일반 정적 복구 시도: {fallback_err}")
 
             # 나머지 씬(또는 Kling 실패 시): 정적 이미지 효과 (흔들림 방지 및 화질 극대화)
             if os.path.exists(img_path):
@@ -735,25 +799,33 @@ def _build_kling_motion_prompt(scene: dict) -> str:
     )
 
 
-def _encode_image_as_data_uri(img_path: str) -> str:
+def _upload_image_for_fal(img_path: str) -> str | None:
     """
-    로컬 이미지 파일을 base64 data URI 문자열로 변환합니다.
-    이미지 용량이 매우 크면(예: 고해상도 4K PNG) 일부 API의 페이로드 크기
-    제한에 걸릴 수 있습니다. 이 경우 MinIO 등에 업로드 후 공개 URL을
-    발급하는 방식으로 교체하는 것을 권장합니다.
+    로컬 이미지를 Fal.ai 자체 CDN 스토리지에 업로드하고 공개 URL을 반환합니다.
+
+    [왜 fal_client.upload_file인가]
+    - Fal.ai image-to-video는 start_image_url로 인터넷에서 접근 가능한 URL 필요
+    - MinIO presigned URL은 http://minio:9000/... 형태 (Docker 내부 네트워크 호스트명)
+      → Fal.ai 서버(외부 인터넷)에서 접근 불가능 → 이미지 로드 실패 → 생성 실패
+    - fal_client.upload_file()은 파일을 Fal CDN에 올리고 공개 https:// URL을 반환
+      → Fal 서버에서 직접 접근 가능한 유일하게 신뢰할 수 있는 경로
+
+    [FAL_KEY 설정]
+    fal_client는 FAL_KEY 환경변수를 자동으로 읽습니다 (Authorization: Key <값> 헤더).
+    requirements.txt에 fal-client>=0.5.0 추가됨.
     """
-    import base64
     if not img_path or not os.path.exists(img_path):
+        logger.warning(f"이미지 파일 없음, Fal 업로드 스킵: {img_path}")
         return None
     try:
-        ext = os.path.splitext(img_path)[1].lower()
-        mime = "image/png" if ext == ".png" else "image/jpeg"
-        with open(img_path, "rb") as f:
-            b64_data = base64.b64encode(f.read()).decode("utf-8")
-        return f"data:{mime};base64,{b64_data}"
+        import fal_client  # fal-client>=0.5.0 (requirements.txt)
+        url = fal_client.upload_file(img_path)
+        logger.info(f"Fal CDN 업로드 완료: {url[:80]}...")
+        return url
     except Exception as e:
-        logger.warning(f"이미지 base64 인코딩 실패 ({img_path}): {e}")
+        logger.warning(f"Fal CDN 이미지 업로드 실패 ({img_path}): {e}")
         return None
+
 
 
 def _select_intro_kling_scenes(
@@ -832,6 +904,36 @@ def _verify_image(image_path: str) -> bool:
         return True
     except (OSError, ValueError):
         return False
+
+
+def _write_kling_audit(job_id: int, scene_idx: int, params: dict):
+    audit_file = Path(f"/app/data/jobs/{job_id}/kling_audit.jsonl")
+    try:
+        audit_file.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps({"scene_idx": scene_idx, **params}, ensure_ascii=False)
+        with open(audit_file, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except Exception as ex:
+        logger.warning(f"Failed to write Kling audit log: {ex}")
+
+
+def _ffmpeg_static_image_with_fade(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
+    """
+    정적 이미지를 페이드 인/아웃(0.5초) 효과를 추가하여 FFmpeg로 고화질 비디오 클립으로 인코딩합니다.
+    """
+    total_frames = int(duration * 30)
+    fade_out_start = max(0, total_frames - 15)
+    cmd = (
+        f'ffmpeg -loop 1 -i "{img_path}" '
+        f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
+        f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,fps=30,'
+        f'fade=in:0:15,fade=out:{fade_out_start}:15" '
+        f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-y "{clip_path}" -loglevel error'
+    )
+    ret = _run_subprocess(cmd, job_id)
+    if ret != 0 or not _verify_video(clip_path):
+        raise RuntimeError(f"static image clip with fade render failed: {img_path}")
 
 
 def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):

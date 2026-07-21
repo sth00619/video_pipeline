@@ -32,6 +32,7 @@ public class ShortsService {
     private final ShortsJobRepository shortsJobRepository;
     private final FastApiClient fastApiClient;
     private final CostService costService;
+    private final GateService gateService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ============================
@@ -175,6 +176,9 @@ public class ShortsService {
 
         List<ShortClipInfo> clips = fastApiClient.cutShorts(jobId, sourcePath, request);
         saveClips(jobId, clips, shortsJob, request);
+
+        // Record the approval
+        gateService.approve(jobId, GateName.SHORTS_SEGMENTS, username, "쇼츠 구간 확정");
 
         job.setStatus(JobStatus.READY);
         jobRepository.save(job);

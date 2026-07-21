@@ -18,6 +18,7 @@ class GeneratedAsset:
     duration: Optional[float] = None
     width: Optional[int] = None
     height: Optional[int] = None
+    meta: Optional[dict] = None
 
 
 @dataclass

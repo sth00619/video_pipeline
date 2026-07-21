@@ -149,9 +149,16 @@ class KlingProvider(VideoProvider):
         # 1. Fal.ai 연동이 있으면 최우선 실행 (image-to-video 및 text-to-video 모두 지원)
         if fal_key:
             try:
-                if self._generate_fal_api(prompt, output_path, duration, fal_key, image_url):
+                negative_prompt = kwargs.get("negative_prompt")
+                success, req_id = self._generate_fal_api(prompt, output_path, duration, fal_key, image_url, negative_prompt=negative_prompt)
+                if success:
                     logger.info(f"Fal.ai Kling 비디오 생성 성공: {output_path}")
-                    return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
+                    return GeneratedAsset(
+                        asset_type="video",
+                        local_path=output_path,
+                        duration=duration,
+                        meta={"fal_request_id": req_id}
+                    )
             except Exception as e:
                 logger.warning(f"Fal.ai Kling 비디오 생성 실패, 공식 API 폴백 시도: {e}")
 
@@ -183,14 +190,14 @@ class KlingProvider(VideoProvider):
         self._generate_ffmpeg_fallback(output_path, duration, image_path)
         return GeneratedAsset(asset_type="video", local_path=output_path, duration=duration)
 
-    def _generate_fal_api(self, prompt: str, output_path: str, duration: int, fal_key: str, image_url: str = None) -> bool:
+    def _generate_fal_api(self, prompt: str, output_path: str, duration: int, fal_key: str, image_url: str = None, negative_prompt: str = None) -> tuple[bool, str | None]:
         """
         Fal.ai HTTP Queue API를 통해 Kling 비디오 클립 생성 (비동기 폴링).
 
         [리서치 반영 - 모델 변경] 기존 kling-video/v3는 멀티샷/네이티브오디오가
         강점인 고가 모델인데, 우리는 "고정 캐릭터의 미니멀한 손짓/표정 + 배경
         가벼운 움직임" 정도만 필요해서 과한 스펙이었습니다. Fal.ai 공식 문서와
-        커뮤니티 벤치마크 기준 kling-video/v2.6/pro가 캐릭터 일관성 대비 비용이
+        커뮤어티 벤치마크 기준 kling-video/v2.6/pro가 캐릭터 일관성 대비 비용이
         가장 좋아서 (image-to-video $0.07/초, audio off) 이걸로 교체합니다.
         generate_audio는 우리가 TTS를 별도로 입히므로 명시적으로 꺼서 불필요한
         2배 과금(오디오 켜면 $0.14/초)을 방지합니다.
@@ -207,6 +214,8 @@ class KlingProvider(VideoProvider):
             "duration": str(duration),
             "generate_audio": False,
         }
+        if negative_prompt:
+            payload["negative_prompt"] = negative_prompt
         if image_url:
             # v2.6/v3 계열은 start_image_url 기준으로 aspect_ratio를 자동 추론하므로
             # 별도 지정 시 UI에서 무시됨 (공식 문서 기준) — 생략
@@ -219,13 +228,13 @@ class KlingProvider(VideoProvider):
             resp = requests.post(submit_url, json=payload, headers=headers, timeout=30)
             if resp.status_code != 200:
                 logger.warning(f"Fal.ai 제출 실패 ({resp.status_code}): {resp.text}")
-                return False
+                return False, None
                 
             resp_json = resp.json()
             request_id = resp_json.get("request_id")
             if not request_id:
                 logger.warning(f"Fal.ai 응답에서 request_id 못찾음: {resp_json}")
-                return False
+                return False, None
                 
             logger.info(f"Fal.ai 요청 성공: request_id={request_id}. 폴링을 시작합니다.")
             
@@ -254,17 +263,17 @@ class KlingProvider(VideoProvider):
                             video_bytes = requests.get(video_url, timeout=60).content
                             with open(output_path, "wb") as f:
                                 f.write(video_bytes)
-                            return True
+                            return True, request_id
                     logger.warning(f"Fal.ai 결과 조회 실패 ({res_resp.status_code})")
-                    return False
+                    return False, request_id
                 elif status in ("FAILED", "CANCELLED"):
                     logger.error(f"Fal.ai 생성 실패 상태: {status_data}")
-                    return False
+                    return False, request_id
             logger.warning("Fal.ai 폴링 시간 초과 (180초)")
-            return False
+            return False, request_id
         except Exception as e:
             logger.error(f"Fal.ai API 예외 발생: {e}")
-            return False
+            return False, None
 
     def _generate_kling_api(self, prompt: str, output_path: str, duration: int, api_key: str) -> bool:
         """

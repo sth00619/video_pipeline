@@ -237,12 +237,10 @@ def compile_editorial_prompt(scene: dict[str, Any], base_prompt: str) -> str:
             "comparison": "two tall comparison columns with room above each for an exact value",
         }
         data_surface_clause = (
-            f"Build {surface_by_theme.get(visual_theme, surface_by_theme['chalkboard'])} in the {surface.get('anchor', 'right-side')}, "
-            f"with enough unobstructed space for {visual_by_kind.get(visual_kind, visual_by_kind['trend_dashboard'])}. "
-            "The blank information surface MUST be a wide landscape-oriented rectangular board, roughly 16:9 and clearly wider than tall, "
-            "mounted flat and front-facing in the upper-right third of the frame; never a circle, porthole, tall vertical frame, tilted easel, or curved screen. "
-            "The information surface must have no letters, no digits, no chart marks, "
-            "no glare, no hands, and no objects covering it; it will receive a verified Korean chart in compositing. "
+            " The mascot character stands entirely within the LEFT third of the frame."
+            " The RIGHT half of the frame contains a large blank cream-colored circular"
+            " panel with a dark teal riveted metal frame, completely empty inside,"
+            " no text, no numbers, no chart, no character parts overlapping the panel."
         )
     return (
         f"{base_prompt}. Editorial scene family: {direction.get('family', 'character_role')}. "

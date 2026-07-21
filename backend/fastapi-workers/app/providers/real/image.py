@@ -232,9 +232,11 @@ class NanaBananaProvider(ImageProvider):
                 ):
                     logger.info(f"공식 Gemini API 이미지 생성 성공: model={gemini_model}, size={gemini_image_size}, path={output_path}")
                     return True
-            except GeminiImageGenerationError:
+            except GeminiImageGenerationError as e:
                 # Preserve the upstream response detail for all-Pro jobs.
-                raise
+                if provider_preference == "gemini" and gemini_model == "gemini-3-pro-image":
+                    raise
+                logger.warning(f"공식 Gemini API 호출 실패 (GeminiImageGenerationError): {e}")
             except Exception as e:
                 logger.warning(f"공식 Gemini API 호출 실패: {e}")
             return False
@@ -256,7 +258,7 @@ class NanaBananaProvider(ImageProvider):
         logger.info(f"이미지 공급자 선택: requested={provider_preference}, order={order}")
         for provider_name in order:
             if provider_name == "gemini" and try_gemini():
-                return True
+                return output_path
             if provider_name == "fal" and try_fal():
                 return output_path
 
@@ -604,7 +606,7 @@ class NanaBananaProvider(ImageProvider):
             # Billing caps and daily quota exhaustion are not transient. Do
             # not wait through five attempts only to hide the real cause.
             if response.status_code == 429 and (
-                "spending cap" in lower_response or "daily quota" in lower_response
+                "spending cap" in lower_response or "daily quota" in lower_response or "prepayment credits" in lower_response or "depleted" in lower_response
             ):
                 logger.error("Gemini image quota/cap reached (model=%s): %s", model, response_text)
                 raise GeminiImageGenerationError(last_failure)

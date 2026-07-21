@@ -64,7 +64,7 @@ KEYWORD_EXCLUDE_LIVE = os.getenv("KEYWORD_EXCLUDE_LIVE", "true").lower() in {"1"
 # close to natural speed; reduce the script target accordingly to preserve the
 # requested video duration instead of compressing the actor's performance.
 TTS_SPEED = float(os.getenv("TTS_SPEED", "1.05"))
-CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "285"))
+CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "480"))
 SCENE_DURATION_SEC = float(os.getenv("SCENE_DURATION_SEC", "5.5"))
 SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "16"))
 SUBTITLE_FONT_SIZE = int(os.getenv("SUBTITLE_FONT_SIZE", "76"))
@@ -74,7 +74,7 @@ IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "gemini")   # gemini | fal | auto
 # A 20-minute timeline may contain ~240 scenes.  Hybrid keeps the 2D comic
 # direction for every scene while reserving Pro/2K latency for story anchors
 # and verified data scenes; all-Pro is still available by explicit override.
-IMAGE_QUALITY_TIER = os.getenv("IMAGE_QUALITY_TIER", "hybrid")  # flash | hybrid | pro
+IMAGE_QUALITY_TIER = os.getenv("IMAGE_QUALITY_TIER", "flash")  # flash | hybrid | pro
 PRO_IMAGE_MAX_SCENES = int(os.getenv("PRO_IMAGE_MAX_SCENES", "48"))
 # Batch API has a 24-hour completion SLO, so it is an economy/background mode,
 # not the default path for a user waiting for a finished video.
@@ -111,7 +111,7 @@ TTS_MODEL_INTRO = os.getenv("TTS_MODEL_INTRO", "eleven_v3")
 TTS_MODEL_BODY = os.getenv("TTS_MODEL_BODY", "eleven_v3")
 TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.5"))
 TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "1.0"))
-TTS_CER_THRESHOLD = float(os.getenv("TTS_CER_THRESHOLD", "0.08"))
+TTS_CER_THRESHOLD = float(os.getenv("TTS_CER_THRESHOLD", "0.15"))
 TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
 TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "true").lower() in {"1", "true", "yes"}
 # Keep a deliberate breath between completed sentences.  This is inserted into
@@ -130,6 +130,11 @@ INTRO_MOTION_SECONDS_SHORT = float(os.getenv("INTRO_MOTION_SECONDS_SHORT", "40")
 INTRO_MOTION_SECONDS_LONG = float(os.getenv("INTRO_MOTION_SECONDS_LONG", "60"))
 INTRO_MOTION_SHORT_THRESHOLD = float(os.getenv("INTRO_MOTION_SHORT_THRESHOLD", "660"))
 INTRO_KLING_MAX_CLIPS = int(os.getenv("INTRO_KLING_MAX_CLIPS", "12"))
+INTRO_MOTION_CLIP_COUNT = int(os.getenv("INTRO_MOTION_CLIP_COUNT", "13"))
+INTRO_MOTION_CLIP_SECONDS = int(os.getenv("INTRO_MOTION_CLIP_SECONDS", "5"))
+INTRO_MOTION_ENABLED = os.getenv("INTRO_MOTION_ENABLED", "True").lower() == "true"
+INTRO_MOTION_TEST_MODE = os.getenv("INTRO_MOTION_TEST_MODE", "True").lower() == "true"
+MAX_IMAGE_HOLD_SECONDS = int(os.getenv("MAX_IMAGE_HOLD_SECONDS", "8"))
 
 # Budget values are placeholders: replace them with the current AI Studio/Fal
 # console rates before production.  The preflight never hard-codes a price.

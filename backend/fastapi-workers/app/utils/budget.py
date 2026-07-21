@@ -37,6 +37,7 @@ def plan_preflight(scene_count: int, quality_tier: str, requested_pro: int, requ
     cfg = runtime_config.get()
     max_budget = int(cfg["max_budget_per_video_krw"])
     pro_count = scene_count if quality_tier == "pro" else (0 if quality_tier == "flash" else min(scene_count, max(0, requested_pro)))
+    pro_count += 1  # [TASK 5] 썸네일 1장은 항상 Pro 2K로 고정 렌더링되므로 예산 견적에 +1 반영
     kling_count = max(0, requested_kling)
     actions: list[str] = []
     estimated = _estimate(scene_count, pro_count, kling_count, cfg)

@@ -9,6 +9,7 @@ ffmpeg-python==0.2.0
 boto3==1.35.0
 httpx==0.27.2
 requests==2.32.3
+fal-client>=0.5.0          # Fal.ai CDN upload + Kling inference (upload_file, subscribe)
 python-multipart==0.0.12
 gTTS==2.5.1
 anthropic==0.40.0

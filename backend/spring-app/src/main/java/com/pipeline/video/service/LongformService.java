@@ -131,19 +131,31 @@ public class LongformService {
         LongformGenerateResponse result = fastApiClient.generateLongform(
                 jobId, ttsMetaJson, scenesJson, gifsJson);
 
-        // [버그 수정] 기존 $0 하드코딩. 롱폼 조립 자체는 FFmpeg(무료)이지만,
-        // 초반 인트로 몇 씬은 Fal.ai Kling image-to-video로 유료 처리됩니다.
-        // FastAPI 워커의 _get_intro_kling_count() 규칙에 맞춰 대략적으로 계산.
-        double introSeconds;
-        double totalMin = result.getDurationSeconds() / 60.0;
-        if (totalMin <= 5) introSeconds = 30;
-        else if (totalMin <= 10) introSeconds = 45;
-        else introSeconds = 60;
+        // 인트로 Kling 움짤 비용 (Fal.ai 유료)
+        double introSeconds = 0.0;
+        if (result.getQualityReport() != null && result.getQualityReport().containsKey("kling_clip_count")) {
+            try {
+                Object clipsVal = result.getQualityReport().get("kling_clip_count");
+                if (clipsVal instanceof Number) {
+                    introSeconds = ((Number) clipsVal).intValue() * 5.0;
+                }
+            } catch (Exception ex) {
+                log.warn("Failed to parse kling_clip_count from qualityReport: {}", ex.getMessage());
+            }
+        }
+        // Fallback to estimation based on duration if kling_clip_count not found
+        if (introSeconds <= 0.0) {
+            double totalMin = result.getDurationSeconds() / 60.0;
+            if (totalMin <= 5) introSeconds = 30;
+            else if (totalMin <= 10) introSeconds = 45;
+            else introSeconds = 60;
+        }
+
         // 조립 자체는 무료 (FFmpeg)
         costService.record(jobId, "FFMPEG_ASSEMBLE", java.math.BigDecimal.ZERO, "USD",
                 String.format("롱폼 조립: %.0f초, %d씬",
                         result.getDurationSeconds(), result.getSceneCount()));
-        // 인트로 Kling 움짤 비용 (Fal.ai 유료)
+
         java.math.BigDecimal klingCost = CostEstimator.falKling(introSeconds);
         costService.record(jobId, "FAL_KLING_INTRO", klingCost, "USD",
                 String.format("인트로 움짤 %.0f초", introSeconds));

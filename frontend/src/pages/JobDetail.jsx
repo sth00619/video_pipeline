@@ -113,6 +113,7 @@ export default function JobDetail() {
   const [editingSubtitleText, setEditingSubtitleText] = useState('')
   const [activeSceneActionIndex, setActiveSceneActionIndex] = useState(null)
   const [scenePage, setScenePage] = useState(1)
+  const [longformScenePage, setLongformScenePage] = useState(1)
   const [imageSalt, setImageSalt] = useState(0)
   const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
   const [showEngPrompt, setShowEngPrompt] = useState({})
@@ -257,9 +258,19 @@ export default function JobDetail() {
     return sortedImageList.slice(start, start + 10)
   }, [scenePage, sortedImageList])
 
+  const longformScenePageCount = Math.max(1, Math.ceil(sortedImageList.length / 10))
+  const pagedLongformImageList = useMemo(() => {
+    const start = (longformScenePage - 1) * 10
+    return sortedImageList.slice(start, start + 10)
+  }, [longformScenePage, sortedImageList])
+
   useEffect(() => {
     if (scenePage > scenePageCount) setScenePage(scenePageCount)
   }, [scenePage, scenePageCount])
+
+  useEffect(() => {
+    if (longformScenePage > longformScenePageCount) setLongformScenePage(longformScenePageCount)
+  }, [longformScenePage, longformScenePageCount])
 
   const ttsInfo = useMemo(() => {
     if (!ttsAssets.length) return null
@@ -1316,7 +1327,13 @@ export default function JobDetail() {
                   </div>
                 )}
 
-                {((step.key === 'images' || step.key === 'longform') && sortedImageList.length > 0) && (
+                {((step.key === 'images' || step.key === 'longform') && sortedImageList.length > 0) && (() => {
+                  const isLongform = step.key === 'longform'
+                  const curPage = isLongform ? longformScenePage : scenePage
+                  const setCurPage = isLongform ? setLongformScenePage : setScenePage
+                  const pageCount = isLongform ? longformScenePageCount : scenePageCount
+                  const displayList = isLongform ? pagedLongformImageList : pagedImageList
+                  return (
                   <div className="px-5 pb-4 border-t border-navy-700">
                     <div className="flex items-center justify-between mt-3 mb-3">
                       <div className="flex items-center gap-2">
@@ -1333,7 +1350,7 @@ export default function JobDetail() {
                     </div>
 
                     <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-3 border border-navy-700/50">
-                      {pagedImageList.map((img, i) => {
+                      {displayList.map((img, i) => {
                         const isEditingThis = editingSceneIndex === img.index;
                         const isRegeneratingThis = regenImageMut.isPending;
                         const qualityScore = img.qualityScore ?? img.quality_score;
@@ -1568,28 +1585,28 @@ export default function JobDetail() {
                       })}
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3 text-xs text-navy-400">
-                      <span>씬 {((scenePage - 1) * 10) + 1}–{Math.min(scenePage * 10, sortedImageList.length)} / {sortedImageList.length}</span>
+                      <span>씬 {((curPage - 1) * 10) + 1}–{Math.min(curPage * 10, sortedImageList.length)} / {sortedImageList.length}</span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setScenePage(1)} disabled={scenePage === 1} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">«</button>
-                        <button onClick={() => setScenePage(p => Math.max(1, p - 1))} disabled={scenePage === 1} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">‹</button>
-                        {Array.from({ length: scenePageCount }, (_, i) => i + 1)
-                          .filter(page => page === 1 || page === scenePageCount || Math.abs(page - scenePage) <= 1)
+                        <button onClick={() => setCurPage(1)} disabled={curPage === 1} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">«</button>
+                        <button onClick={() => setCurPage(p => Math.max(1, p - 1))} disabled={curPage === 1} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">‹</button>
+                        {Array.from({ length: pageCount }, (_, i) => i + 1)
+                          .filter(page => page === 1 || page === pageCount || Math.abs(page - curPage) <= 1)
                           .map((page, index, pages) => (
                             <span key={page} className="flex items-center gap-1">
                               {index > 0 && page - pages[index - 1] > 1 && <span className="px-1">…</span>}
-                              <button onClick={() => setScenePage(page)} className={`min-w-7 px-2 py-1 rounded border ${page === scenePage ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold' : 'border-navy-600 hover:text-white'}`}>{page}</button>
+                              <button onClick={() => setCurPage(page)} className={`min-w-7 px-2 py-1 rounded border ${page === curPage ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold' : 'border-navy-600 hover:text-white'}`}>{page}</button>
                             </span>
                           ))}
-                        <button onClick={() => setScenePage(p => Math.min(scenePageCount, p + 1))} disabled={scenePage === scenePageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">›</button>
-                        <button onClick={() => setScenePage(scenePageCount)} disabled={scenePage === scenePageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">»</button>
+                        <button onClick={() => setCurPage(p => Math.min(pageCount, p + 1))} disabled={curPage === pageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">›</button>
+                        <button onClick={() => setCurPage(pageCount)} disabled={curPage === pageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">»</button>
                       </div>
                     </div>
                   </div>
-                )}
+                  )
+                })()}
               </div>
             )
           })}
-
         </div>
 
         <div className="space-y-4">

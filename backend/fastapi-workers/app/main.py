@@ -1173,6 +1173,9 @@ def generate_thumbnail(req: ThumbnailRequest):
             lora_model_id=req.lora_model_id,
             lora_trigger_word=req.lora_trigger_word,
             lora_scale=req.lora_scale,
+            gemini_model="gemini-3-pro-image",
+            gemini_image_size="2K",
+            gemini_service_tier="standard"
         )
         return {"status": "ok", "output_path": req.output_path}
     except Exception as e:

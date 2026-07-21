@@ -21,9 +21,19 @@ CHARACTER_LOCK = (
 )
 
 
-def build_prompt(spec: SceneSpec) -> str:
+def build_prompt(spec: SceneSpec, market_chart: dict | None = None) -> str:
     props = "; ".join(spec.props[:6])
     side = f" Supporting characters: {spec.side_characters}." if spec.side_characters else ""
+    
+    data_surface_clause = ""
+    if market_chart:
+        data_surface_clause = (
+            " The mascot character stands entirely within the LEFT third of the frame."
+            " The RIGHT half of the frame contains a large blank cream-colored circular"
+            " panel with a dark teal riveted metal frame, completely empty inside,"
+            " no text, no numbers, no chart, no character parts overlapping the panel."
+        )
+        
     return "\n".join((
         STYLE_LOCK, CHARACTER_LOCK,
         f"SCENE: Goldie is a {spec.character_role} wearing {spec.character_costume}.",
@@ -32,4 +42,5 @@ def build_prompt(spec: SceneSpec) -> str:
         f"CAMERA: {spec.camera}." + side,
         "Keep the top-left and lower 18 percent as ordinary full-bleed illustrated background; keep them visually readable "
         "for post-production text, but never create blank space, a board, a card, a rectangle, or any panel there.",
+        data_surface_clause
     ))

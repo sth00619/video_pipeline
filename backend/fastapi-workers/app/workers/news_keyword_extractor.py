@@ -200,7 +200,7 @@ class NewsKeywordExtractor:
         normalized = re.sub(r"\s+", " ", query or "").strip()
         if not normalized:
             return []
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, min(max_age_hours, 24)))
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, min(max_age_hours, 24 * 30)))
         try:
             response = requests.get(
                 "https://news.google.com/rss/search",
