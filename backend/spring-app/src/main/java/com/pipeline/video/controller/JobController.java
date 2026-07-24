@@ -127,4 +127,46 @@ public class JobController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @GetMapping("/{id}/thumbnail/{format}/variant/{variant}")
+    public ResponseEntity<org.springframework.core.io.Resource> getThumbnailVariant(
+            @PathVariable Long id, @PathVariable String format, @PathVariable int variant) {
+        if (!("longform".equals(format) || "shorts".equals(format)) || variant < 1 || variant > 3) {
+            return ResponseEntity.badRequest().build();
+        }
+        try {
+            java.io.File file = new java.io.File("/app/data/jobs/" + id + "/" + format + "_thumbnail_v" + variant + ".png");
+            // Legacy thumbnail generators did not persist _v1 separately.
+            if (!file.isFile() && variant == 1) {
+                file = new java.io.File("/app/data/jobs/" + id + "/" + format + "_thumbnail.png");
+            }
+            if (!file.isFile()) return ResponseEntity.notFound().build();
+            return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG)
+                    .body(new org.springframework.core.io.UrlResource(file.toURI()));
+        } catch (Exception exception) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{id}/thumbnail/{format}/select")
+    public ResponseEntity<java.util.Map<String, Object>> selectThumbnailVariant(
+            @PathVariable Long id, @PathVariable String format, @RequestParam int variant) {
+        try {
+            return ResponseEntity.ok(jobService.selectThumbnailVariant(id, format, variant));
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", exception.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/thumbnail/regenerate")
+    public ResponseEntity<java.util.Map<String, Object>> regenerateThumbnail(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "longform") String format,
+            @RequestParam(required = false) String preset) {
+        try {
+            return ResponseEntity.ok(jobService.regenerateThumbnail(id, format, preset));
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", exception.getMessage()));
+        }
+    }
 }

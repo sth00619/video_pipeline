@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { TrendingUp } from 'lucide-react'
 import { authApi } from '../api/auth'
 import { authStore } from '../store/auth'
 
 export default function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -19,7 +20,11 @@ export default function Login() {
       const data = await authApi.login(username, password)
       authStore.setToken(data.token)
       authStore.setUser({ username: data.username, role: data.role })
-      navigate('/dashboard')
+      const nextFromQuery = new URLSearchParams(location.search).get('next')
+      const nextPath = location.state?.from || nextFromQuery
+      // Only allow in-app paths so a crafted login URL cannot redirect users
+      // to an external site after authentication.
+      navigate(nextPath?.startsWith('/') ? nextPath : '/dashboard', { replace: true })
     } catch (err) {
       setError('아이디 또는 비밀번호가 올바르지 않습니다.')
     } finally {

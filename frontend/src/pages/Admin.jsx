@@ -27,7 +27,7 @@ export default function Admin() {
   const [channelPreviewLoading, setChannelPreviewLoading] = useState({})
   const [characterDescriptions, setCharacterDescriptions] = useState({})
   const [characterKeys, setCharacterKeys] = useState({})
-  const [newChannel, setNewChannel] = useState({ channelId: '', channelName: '', characterKey: '', characterStylePrompt: '', voiceId: '' })
+  const [newChannel, setNewChannel] = useState({ channelId: '', channelName: '', characterKey: '', characterStylePrompt: '', referenceStyleProfile: 'black_han_sans_v1', voiceId: '' })
 
   const { data: jobs = [] } = useQuery({
     queryKey: ['admin-jobs'],
@@ -81,7 +81,7 @@ export default function Admin() {
   const createChannelMutation = useMutation({
     mutationFn: () => apiClient.post('/channels', newChannel).then(r => r.data),
     onSuccess: () => {
-      setNewChannel({ channelId: '', channelName: '', characterKey: '', characterStylePrompt: '', voiceId: '' })
+      setNewChannel({ channelId: '', channelName: '', characterKey: '', characterStylePrompt: '', referenceStyleProfile: 'black_han_sans_v1', voiceId: '' })
       qc.invalidateQueries({ queryKey: ['admin-channels'] })
     },
     onError: (err) => alert('채널 생성 실패: ' + (err.response?.data?.message || err.message)),
@@ -223,6 +223,14 @@ export default function Admin() {
         >
           채널 프로필 관리
         </button>
+        <button
+          onClick={() => setActiveTab('people')}
+          className={`pb-3 font-semibold text-sm transition relative ${
+            activeTab === 'people' ? 'text-accent-cyan border-b-2 border-accent-cyan' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          실사 인물 에셋
+        </button>
       </div>
 
       {activeTab === 'jobs' ? (
@@ -301,7 +309,7 @@ export default function Admin() {
             <Pagination total={filteredJobs.length} currentPage={currentPage} onChange={setCurrentPage} />
           </div>
         </>
-      ) : (
+      ) : activeTab === 'channels' ? (
         <div className="space-y-4">
           <div className="bg-navy-800 border border-accent-cyan/30 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
@@ -313,6 +321,9 @@ export default function Admin() {
               <input value={newChannel.channelName} onChange={e => setNewChannel({ ...newChannel, channelName: e.target.value })} placeholder="채널명" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
               <input value={newChannel.characterKey} onChange={e => setNewChannel({ ...newChannel, characterKey: e.target.value })} placeholder="캐릭터 키 (coin_character)" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
               <input value={newChannel.characterStylePrompt} onChange={e => setNewChannel({ ...newChannel, characterStylePrompt: e.target.value })} placeholder="캐릭터 스타일 프롬프트" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+              <select value={newChannel.referenceStyleProfile} onChange={e => setNewChannel({ ...newChannel, referenceStyleProfile: e.target.value })} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white">
+                <option value="black_han_sans_v1">Black Han Sans v1</option>
+              </select>
               <select value={newChannel.voiceId} onChange={e => setNewChannel({ ...newChannel, voiceId: e.target.value })} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white"><option value="">기본 음성 사용</option>{voices.map(v => <option key={v.voiceId} value={v.voiceId}>{v.name}</option>)}</select>
             </div>
           </div>
@@ -521,8 +532,164 @@ export default function Admin() {
             })
           )}
         </div>
+      ) : (
+        <PersonAssetsPanel />
       )}
     </Layout>
+  )
+}
+
+const PERSON_LICENSES = [
+  ['OWNED', '직접 촬영·소유'],
+  ['PRESS_KIT', '공식 보도자료'],
+  ['KOGL_TYPE1', '공공누리 1유형'],
+  ['CC_BY', 'CC BY'],
+  ['CC_BY_SA', 'CC BY-SA'],
+  ['STOCK_LICENSED', '스톡 라이선스'],
+  ['AGENCY_LICENSED', '에이전시 계약'],
+]
+
+function PersonAssetsPanel() {
+  const qc = useQueryClient()
+  const [selectedPersonId, setSelectedPersonId] = useState('')
+  const [personForm, setPersonForm] = useState({
+    personId: '', nameKo: '', nameEn: '', aliasesJson: '[]',
+  })
+  const [photoForm, setPhotoForm] = useState({
+    file: null,
+    licenseType: 'OWNED',
+    licenseRef: '',
+    creditText: '',
+    authorName: '',
+    emotionTag: 'neutral',
+    pose: 'portrait',
+  })
+  const { data: people = [] } = useQuery({
+    queryKey: ['person-assets'],
+    queryFn: () => apiClient.get('/assets/person').then(r => r.data),
+  })
+  useEffect(() => {
+    if (!selectedPersonId && people.length) setSelectedPersonId(people[0].personId)
+  }, [people, selectedPersonId])
+  const { data: photos = [] } = useQuery({
+    queryKey: ['person-photos', selectedPersonId],
+    queryFn: () => apiClient.get(`/assets/person/${selectedPersonId}/photos`).then(r => r.data),
+    enabled: Boolean(selectedPersonId),
+  })
+  const createPerson = useMutation({
+    mutationFn: () => apiClient.post('/assets/person', personForm).then(r => r.data),
+    onSuccess: (person) => {
+      setSelectedPersonId(person.personId)
+      setPersonForm({ personId: '', nameKo: '', nameEn: '', aliasesJson: '[]' })
+      qc.invalidateQueries({ queryKey: ['person-assets'] })
+    },
+    onError: (error) => alert(error.response?.data?.message || '인물 등록에 실패했습니다.'),
+  })
+  const uploadPhoto = useMutation({
+    mutationFn: async () => {
+      const payload = new FormData()
+      payload.append('file', photoForm.file)
+      for (const key of ['licenseType', 'licenseRef', 'creditText', 'authorName', 'emotionTag', 'pose']) {
+        if (photoForm[key]) payload.append(key, photoForm[key])
+      }
+      return apiClient.post(`/assets/person/${selectedPersonId}/photos`, payload).then(r => r.data)
+    },
+    onSuccess: () => {
+      setPhotoForm(current => ({ ...current, file: null }))
+      qc.invalidateQueries({ queryKey: ['person-photos', selectedPersonId] })
+      alert('사진을 등록했습니다. 검토 후 승인해야 썸네일에 사용됩니다.')
+    },
+    onError: (error) => alert(error.response?.data?.message || '사진 등록에 실패했습니다.'),
+  })
+  const reviewPhoto = useMutation({
+    mutationFn: ({ photoId, action }) =>
+      apiClient.post(`/assets/person/${selectedPersonId}/photos/${photoId}/${action}`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['person-photos', selectedPersonId] }),
+    onError: (error) => alert(error.response?.data?.message || '검토 상태 변경에 실패했습니다.'),
+  })
+  const licenseNeedsRef = photoForm.licenseType !== 'OWNED'
+  const licenseNeedsCredit = ['CC_BY', 'CC_BY_SA', 'KOGL_TYPE1'].includes(photoForm.licenseType)
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-navy-800 border border-accent-gold/30 rounded-xl p-5">
+        <h2 className="font-semibold text-white">실사형 썸네일 권리 원칙</h2>
+        <p className="text-xs text-gray-400 leading-relaxed mt-2">
+          블러·누끼·색보정은 시각 효과일 뿐 저작권이나 초상권을 없애지 않습니다.
+          직접 소유하거나 이용 허락이 확인된 사진만 등록하고, 승인된 사진만 자동 썸네일 추천에 사용됩니다.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <section className="bg-navy-800 border border-navy-700 rounded-xl p-5 space-y-3">
+          <h3 className="font-semibold text-white">1. 인물 등록</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <input value={personForm.personId} onChange={e => setPersonForm({ ...personForm, personId: e.target.value })} placeholder="ID: sundar_pichai" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+            <input value={personForm.nameKo} onChange={e => setPersonForm({ ...personForm, nameKo: e.target.value })} placeholder="한글 이름" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+            <input value={personForm.nameEn} onChange={e => setPersonForm({ ...personForm, nameEn: e.target.value })} placeholder="영문 이름" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+            <input value={personForm.aliasesJson} onChange={e => setPersonForm({ ...personForm, aliasesJson: e.target.value })} placeholder='["구글 CEO"]' className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+          </div>
+          <button onClick={() => createPerson.mutate()} disabled={!personForm.personId || !personForm.nameKo || createPerson.isPending} className="bg-accent-cyan text-navy-950 rounded-lg px-4 py-2 text-xs font-semibold disabled:opacity-50">
+            {createPerson.isPending ? '등록 중…' : '인물 등록'}
+          </button>
+          <div className="pt-2">
+            <label className="block text-xs text-gray-400 mb-1">사진을 등록할 인물</label>
+            <select value={selectedPersonId} onChange={e => setSelectedPersonId(e.target.value)} className="w-full bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-sm text-white">
+              <option value="">인물을 선택하세요</option>
+              {people.map(person => <option key={person.personId} value={person.personId}>{person.nameKo} · {person.personId}</option>)}
+            </select>
+          </div>
+        </section>
+
+        <section className="bg-navy-800 border border-navy-700 rounded-xl p-5 space-y-3">
+          <h3 className="font-semibold text-white">2. 권리확인 사진 등록</h3>
+          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setPhotoForm({ ...photoForm, file: e.target.files?.[0] || null })} className="block w-full text-xs text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-accent-cyan file:px-3 file:py-2 file:font-semibold file:text-navy-950" />
+          <div className="grid grid-cols-2 gap-2">
+            <select value={photoForm.licenseType} onChange={e => setPhotoForm({ ...photoForm, licenseType: e.target.value })} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white">
+              {PERSON_LICENSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <input value={photoForm.licenseRef} onChange={e => setPhotoForm({ ...photoForm, licenseRef: e.target.value })} placeholder={licenseNeedsRef ? '출처 URL·계약 번호 (필수)' : '출처 메모 (선택)'} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+            <input value={photoForm.creditText} onChange={e => setPhotoForm({ ...photoForm, creditText: e.target.value })} placeholder={licenseNeedsCredit ? '표시할 크레딧 (필수)' : '크레딧 문구'} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+            <input value={photoForm.authorName} onChange={e => setPhotoForm({ ...photoForm, authorName: e.target.value })} placeholder="촬영자·권리자" className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white" />
+            <select value={photoForm.emotionTag} onChange={e => setPhotoForm({ ...photoForm, emotionTag: e.target.value })} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white">
+              <option value="neutral">중립</option><option value="serious">진지함</option><option value="surprised">놀람</option><option value="worried">걱정</option><option value="happy">긍정</option>
+            </select>
+            <select value={photoForm.pose} onChange={e => setPhotoForm({ ...photoForm, pose: e.target.value })} className="bg-navy-900 border border-navy-600 rounded-lg px-3 py-2 text-xs text-white">
+              <option value="portrait">정면 인물</option><option value="pointing">가리키는 포즈</option><option value="hand_up">손을 든 포즈</option><option value="profile">측면</option>
+            </select>
+          </div>
+          <button onClick={() => uploadPhoto.mutate()} disabled={!selectedPersonId || !photoForm.file || (licenseNeedsRef && !photoForm.licenseRef) || (licenseNeedsCredit && !photoForm.creditText) || uploadPhoto.isPending} className="bg-accent-gold text-navy-950 rounded-lg px-4 py-2 text-xs font-semibold disabled:opacity-50">
+            {uploadPhoto.isPending ? '업로드 중…' : '검토 대기 사진 등록'}
+          </button>
+        </section>
+      </div>
+
+      <section className="bg-navy-800 border border-navy-700 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div><h3 className="font-semibold text-white">3. 사진 검토 및 승인</h3><p className="text-[11px] text-gray-500 mt-1">승인된 선명한 사진만 대본의 인물명과 매칭되어 실사형 추천에 들어갑니다.</p></div>
+          <span className="text-xs text-gray-400">{photos.length}장</span>
+        </div>
+        {photos.length === 0 ? (
+          <div className="py-10 text-center text-sm text-gray-500">선택한 인물의 등록 사진이 없습니다.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {photos.map(photo => (
+              <article key={photo.photoId} className="bg-navy-900/60 border border-navy-700 rounded-xl overflow-hidden">
+                <img src={`/api/assets/person/${selectedPersonId}/photos/${photo.photoId}/content`} alt="" className="w-full aspect-video object-cover bg-black" />
+                <div className="p-3 space-y-2">
+                  <div className="flex items-center justify-between"><span className="text-xs font-semibold text-white">{photo.licenseType}</span><span className={`text-[10px] px-2 py-0.5 rounded-full ${photo.approved ? 'bg-accent-green/10 text-accent-green' : photo.rightsReviewStatus === 'REJECTED' ? 'bg-accent-red/10 text-accent-red' : 'bg-accent-gold/10 text-accent-gold'}`}>{photo.approved ? '승인됨' : photo.rightsReviewStatus === 'REJECTED' ? '반려됨' : '검토 대기'}</span></div>
+                  <div className="text-[11px] text-gray-500 break-all">{photo.licenseRef || '직접 소유 사진'}</div>
+                  <div className="flex gap-2">
+                    <button onClick={() => reviewPhoto.mutate({ photoId: photo.photoId, action: 'approve' })} className="flex-1 bg-accent-green/15 text-accent-green rounded py-1.5 text-xs font-semibold">승인</button>
+                    <button onClick={() => reviewPhoto.mutate({ photoId: photo.photoId, action: 'reject' })} className="flex-1 bg-accent-red/15 text-accent-red rounded py-1.5 text-xs font-semibold">반려</button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   )
 }
 

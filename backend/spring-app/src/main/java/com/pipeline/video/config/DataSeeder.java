@@ -86,13 +86,26 @@ public class DataSeeder implements CommandLineRunner {
             // Migrate that one-time default only; a later administrator choice
             // must never be overwritten on restart.
             channelProfileRepository.findById("finance_hunter").ifPresent(profile -> {
+                boolean changed = false;
+                // Keep the existing channel identity stable.  Older local
+                // installations stored only the style prompt, which meant the
+                // thumbnail renderer received no selected mascot asset at all.
+                if (profile.getCharacterImagePath() == null || profile.getCharacterImagePath().isBlank()) {
+                    profile.setCharacterImagePath("/app/assets/character/goldie_sheet_v1.png");
+                    changed = true;
+                    if (profile.getCharacterKey() == null || profile.getCharacterKey().isBlank()) {
+                        profile.setCharacterKey("goldie_sheet_v1");
+                        changed = true;
+                    }
+                }
                 String current = profile.getVoiceId();
                 if (current == null || current.isBlank()
                         || "FGY2WhTYpPnrIDTdsKH5".equals(current)
                         || "JBFqnCBsd6RMkjVDRZzb".equals(current)) {
                     profile.setVoiceId("dlKJ5VptCbYxal4doUO5");
-                    channelProfileRepository.save(profile);
+                    changed = true;
                 }
+                if (changed) channelProfileRepository.save(profile);
             });
             return;
         }

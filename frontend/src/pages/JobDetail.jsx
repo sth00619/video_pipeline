@@ -115,6 +115,8 @@ export default function JobDetail() {
   const [scenePage, setScenePage] = useState(1)
   const [longformScenePage, setLongformScenePage] = useState(1)
   const [imageSalt, setImageSalt] = useState(0)
+  const [selectedThumbnailVariant, setSelectedThumbnailVariant] = useState(1)
+  const [thumbnailPreset, setThumbnailPreset] = useState('')
   const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
   const [showEngPrompt, setShowEngPrompt] = useState({})
 
@@ -210,6 +212,28 @@ export default function JobDetail() {
   const { data: youtubeMetadataAssets = [] } = useQuery({
     queryKey: ['assets', id, 'YOUTUBE_METADATA'], queryFn: () => jobsApi.assets(id, 'YOUTUBE_METADATA'), enabled: !!job, refetchInterval: autoRefreshInterval,
   })
+  const { data: thumbnailAssets = [] } = useQuery({
+    queryKey: ['assets', id, 'THUMBNAIL_IMAGE'], queryFn: () => jobsApi.assets(id, 'THUMBNAIL_IMAGE'), enabled: !!job,
+  })
+
+  const thumbnailMeta = useMemo(() => {
+    const latest = thumbnailAssets[thumbnailAssets.length - 1]
+    try { return JSON.parse(latest?.metaJson || '{}') } catch { return {} }
+  }, [thumbnailAssets])
+  const thumbnailVariants = thumbnailMeta?.longform_result?.variants || []
+  const thumbnailVariantCount = Math.max(1, Math.min(3, thumbnailVariants.length || 1))
+  const recommendedThumbnailVariant = Number(thumbnailMeta?.longform_result?.selected_variant ?? 0) + 1
+  const thumbnailPersonMatches = thumbnailMeta?.person_matches || []
+  const thumbnailPresetLabels = {
+    person_led: '실사 인물 단독',
+    chart_led: '차트 중심',
+    mascot_led: '캐릭터 단독',
+  }
+
+  useEffect(() => {
+    const saved = Number(thumbnailMeta?.longform_selected_variant || thumbnailMeta?.longform_result?.selected_variant + 1 || 1)
+    setSelectedThumbnailVariant(saved)
+  }, [thumbnailMeta])
 
   const youtubePackage = useMemo(() => {
     if (!youtubeMetadataAssets.length) return null
@@ -375,6 +399,25 @@ export default function JobDetail() {
     onError: (err) => {
       alert('동영상 재조립 실패: ' + (err.response?.data?.message || err.message))
     }
+  })
+
+  const selectThumbnailMut = useMutation({
+    mutationFn: (variant) => jobsApi.selectThumbnailVariant(id, 'longform', variant),
+    onSuccess: ({ selected_variant }) => {
+      setSelectedThumbnailVariant(selected_variant)
+      setImageSalt(prev => prev + 1)
+      qc.invalidateQueries(['assets', id, 'THUMBNAIL_IMAGE'])
+    },
+    onError: (err) => alert('썸네일 선택 실패: ' + (err.response?.data?.message || err.message)),
+  })
+
+  const regenerateThumbnailMut = useMutation({
+    mutationFn: () => jobsApi.regenerateThumbnail(id, 'longform', thumbnailPreset || undefined),
+    onSuccess: () => {
+      setImageSalt(prev => prev + 1)
+      qc.invalidateQueries(['assets', id, 'THUMBNAIL_IMAGE'])
+    },
+    onError: (err) => alert('썸네일 재생성 실패: ' + (err.response?.data?.message || err.message)),
   })
 
   const stopMutation = useMutation({
@@ -632,7 +675,7 @@ export default function JobDetail() {
         </div>
       )}
 
-      {['READY', 'PUBLISHED'].includes(job.status) && (
+      {['PREVIEW_PENDING', 'READY', 'PUBLISHED'].includes(job.status) && (
         <div className="bg-navy-800 rounded-xl border border-accent-cyan p-5 space-y-4 mb-6 shadow-card">
           <div className="flex items-center justify-between border-b border-navy-700 pb-3">
             <h3 className="text-base font-bold text-accent-cyan flex items-center gap-1.5">
@@ -652,7 +695,19 @@ export default function JobDetail() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-navy-900/60 p-3 rounded-lg border border-navy-700 flex flex-col justify-between">
               <div>
-                <h4 className="text-sm font-semibold text-gray-200 mb-2">AI 자동 생성 썸네일</h4>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-semibold text-gray-200">자동 썸네일 추천</h4>
+                  {thumbnailPersonMatches.length > 0 && (
+                    <span className="rounded-full border border-accent-gold/40 bg-accent-gold/10 px-2 py-0.5 text-[10px] font-semibold text-accent-gold">
+                      {thumbnailPersonMatches.map((person) => person.person_name).filter(Boolean).join(' · ') || '실제 인물'} 반영
+                    </span>
+                  )}
+                  {thumbnailPersonMatches.length === 0 && (
+                    <span className="rounded-full border border-navy-600 bg-navy-900/70 px-2 py-0.5 text-[10px] text-gray-400">
+                      승인 인물 사진 없음
+                    </span>
+                  )}
+                </div>
                 <div className="aspect-video bg-navy-950 rounded border border-navy-700 overflow-hidden relative">
                   <img
                     src={`/api/jobs/${id}/thumbnail/longform?t=${imageSalt}`}
@@ -663,6 +718,57 @@ export default function JobDetail() {
                       e.target.src = "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=400&q=80";
                     }}
                   />
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 mt-2" aria-label="썸네일 후보 선택">
+                  {Array.from({ length: thumbnailVariantCount }, (_, index) => index + 1).map((variant, index) => (
+                    <button
+                      key={variant}
+                      type="button"
+                      disabled={selectThumbnailMut.isPending}
+                      onClick={() => selectThumbnailMut.mutate(variant)}
+                      className={`relative aspect-video overflow-hidden rounded border transition ${selectedThumbnailVariant === variant ? 'border-accent-cyan ring-1 ring-accent-cyan' : 'border-navy-700 hover:border-navy-500'}`}
+                      title={`후보 ${variant} 선택`}
+                    >
+                      <img
+                        src={`/api/jobs/${id}/thumbnail/longform/variant/${variant}?t=${imageSalt}`}
+                        alt={`썸네일 후보 ${variant}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }}
+                      />
+                      {recommendedThumbnailVariant === variant && (
+                        <span className="absolute left-0.5 top-0.5 rounded bg-accent-cyan px-1 text-[8px] font-bold text-navy-950">
+                          추천
+                        </span>
+                      )}
+                      <span className="absolute bottom-0.5 right-0.5 rounded bg-black/80 px-1 text-[9px] text-white">
+                        {thumbnailPresetLabels[thumbnailVariants[index]?.preset] || `${variant}안`}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] text-gray-500">
+                  영상 장면과 사용 가능한 승인 에셋으로 만든 후보입니다. 실사 인물과 캐릭터는 서로 섞지 않고 별도 안으로 제안합니다.
+                </p>
+                <div className="mt-2 flex gap-1.5">
+                  <select
+                    value={thumbnailPreset}
+                    onChange={(event) => setThumbnailPreset(event.target.value)}
+                    className="min-w-0 flex-1 rounded border border-navy-600 bg-navy-950 px-2 py-1.5 text-xs text-gray-200"
+                    aria-label="썸네일 재생성 프리셋"
+                  >
+                    <option value="">자동 추천</option>
+                    <option value="mascot_led">캐릭터 단독</option>
+                    <option value="person_led">실사 인물 단독</option>
+                    <option value="chart_led">차트 중심</option>
+                  </select>
+                  <button
+                    type="button"
+                    disabled={regenerateThumbnailMut.isPending}
+                    onClick={() => regenerateThumbnailMut.mutate()}
+                    className="rounded border border-accent-cyan/60 bg-accent-cyan/10 px-2 py-1.5 text-xs font-semibold text-accent-cyan disabled:opacity-50"
+                  >
+                    {regenerateThumbnailMut.isPending ? '생성 중…' : '후보 재생성'}
+                  </button>
                 </div>
               </div>
               <a
@@ -858,7 +964,10 @@ export default function JobDetail() {
           {PIPELINE_STEPS.map((step, idx) => {
             const ss = getStepStatus(step, job, approvals)
             const approval = approvals.find(a => a.gate === step.gate)
-            const showRun = ss === 'active' && runningStep === null && (isManual || (isGuided && ['keyword', 'tts'].includes(step.key)))
+            const canRetryBlockedImageStep = job.status === 'IMAGES_RETRY_REQUIRED' && step.key === 'images'
+            const showRun = ss === 'active' && runningStep === null && (
+              isManual || (isGuided && ['keyword', 'tts'].includes(step.key)) || canRetryBlockedImageStep
+            )
             const guidedGates = ['KEYWORD','SCRIPT','TTS','IMAGES','PREVIEW']
             const showGuidedApprove = isGuided && ss === 'active' && guidedGates.includes(step.gate)
             const showManualApprove = isManual && ss === 'active' && runningStep !== step.key

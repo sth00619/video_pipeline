@@ -119,6 +119,34 @@ def _is_eligible_evidence_source(video: TrendingVideo) -> bool:
     )
 
 
+def _is_eligible_exploration_source(video: TrendingVideo, ranking: str, min_subscribers: int | None) -> bool:
+    """Keep research browsing broad while excluding unreliable or live sources.
+
+    ``evidence`` remains deliberately strict because it drives automatic
+    recommendations. The dashboard's large-channel tabs serve a different
+    purpose: inspecting editorial formats used by established channels, so
+    their videos must not be discarded just because an upload has not yet
+    reached a fixed percentage of the channel's subscriber base.
+    """
+    if not video.subscriber_count_available:
+        return False
+    if not (0 < float(video.hours_since_publish or 0) <= 24 * 7):
+        return False
+    if bool(runtime_config.value("keyword_exclude_live")) and video.is_live:
+        return False
+
+    if ranking == "large_channel":
+        return int(video.subscribers or 0) >= max(0, int(min_subscribers or 0))
+
+    # Avoid surfacing a one-off upload from an unestablished channel in the
+    # view/subscriber comparison, while intentionally keeping this much wider
+    # than the automatic-evidence threshold.
+    return (
+        int(video.subscribers or 0) >= 3_000
+        and int(video.views or 0) >= 500
+    )
+
+
 class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
     """
     YouTube Data API v3 기반 트렌딩 영상 분석기.
@@ -130,7 +158,15 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         self.mock_fallback = MockTrendingVideoAnalyzer()
         self._redis = _get_redis_client()
 
-    def collect(self, category: str, seed: str, limit: int = 30, recent_hours: int | None = None) -> list[TrendingVideo]:
+    def collect(
+        self,
+        category: str,
+        seed: str,
+        limit: int = 30,
+        recent_hours: int | None = None,
+        ranking: str = "evidence",
+        min_subscribers: int | None = None,
+    ) -> list[TrendingVideo]:
         if not self.api_key:
             # API 키가 없을 때 임의 조회수/구독자 데이터를 만들어 내지 않는다.
             # 뉴스·시장 데이터 기반 후보는 계속 만들 수 있지만 YouTube 지표는 unavailable로 표시한다.
@@ -143,7 +179,9 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         minimum_multiple = float(runtime_config.value("keyword_min_source_viewer_multiple"))
         # v5: v4에서 잘못된 eventType=completed 조회로 남은 빈 캐시를
         # 재사용하지 않는다. 일반 업로드를 포함해 다시 수집한 결과만 쓴다.
-        cache_key = f"trending:v5:7d:nonlive:minsubs={minimum_subscribers}:minviews={minimum_views}:minmultiple={minimum_multiple}:{category}:{seed}:{limit}:recent={recent_hours or '7d'}"
+        ranking = ranking if ranking in {"evidence", "outperformer", "large_channel"} else "evidence"
+        requested_min_subscribers = max(0, int(min_subscribers or 0))
+        cache_key = f"trending:v6:7d:{ranking}:requested-minsubs={requested_min_subscribers}:nonlive:minsubs={minimum_subscribers}:minviews={minimum_views}:minmultiple={minimum_multiple}:{category}:{seed}:{limit}:recent={recent_hours or '7d'}"
         if self._redis:
             try:
                 cached = self._redis.get(cache_key)
@@ -159,7 +197,14 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         # for the candidate-comparison screen.
         if seed and seed.strip():
             try:
-                searched = self._collect_keyword_search(category, seed.strip(), limit, recent_hours=recent_hours)
+                searched = self._collect_keyword_search(
+                    category,
+                    seed.strip(),
+                    limit,
+                    recent_hours=recent_hours,
+                    ranking=ranking,
+                    min_subscribers=requested_min_subscribers,
+                )
                 if self._redis:
                     try:
                         self._redis.setex(
@@ -280,7 +325,15 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             logger.error(f"YouTube API 수집 오류: {e}, Mock 폴백 사용")
             return []
 
-    def _collect_keyword_search(self, category: str, seed: str, limit: int, recent_hours: int | None = None) -> list[TrendingVideo]:
+    def _collect_keyword_search(
+        self,
+        category: str,
+        seed: str,
+        limit: int,
+        recent_hours: int | None = None,
+        ranking: str = "evidence",
+        min_subscribers: int | None = None,
+    ) -> list[TrendingVideo]:
         region_code = "US" if category in _US_CATEGORIES else "KR"
         # The research UI is intentionally about fresh opportunities, rather
         # than all-time high-view videos. Keep the discovery pool within the
@@ -294,7 +347,10 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             # 오전 9시 자동 수집은 단순 제목 일치보다 최근 7일 안의 실제
             # 반응이 큰 영상을 넓게 확보해야 한다. 작업자가 직접 검색할 때는
             # 긴급 이슈의 문맥을 보존하도록 relevance를 유지한다.
-            "order": "viewCount" if limit >= 20 else "relevance",
+            # Large-channel research is about recently used editorial formats,
+            # not only established hits. Outperformer/evidence searches remain
+            # view-led so high-response videos are represented in the pool.
+            "order": "date" if ranking == "large_channel" else ("viewCount" if ranking == "outperformer" or limit >= 20 else "relevance"),
             "regionCode": region_code,
             "relevanceLanguage": "en" if region_code == "US" else "ko",
             "publishedAfter": published_after,
@@ -422,12 +478,17 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
                          or bool(item.get("liveStreamingDetails"))),
             )
             video.performance_score, video.performance_grade = _score_video(video)
-            if not _is_eligible_evidence_source(video):
+            is_eligible = (
+                _is_eligible_evidence_source(video)
+                if ranking == "evidence"
+                else _is_eligible_exploration_source(video, ranking, min_subscribers)
+            )
+            if not is_eligible:
                 logger.info(
                     "Excluded non-qualifying YouTube source: video=%s subscribers=%s views=%s multiple=%.2f live=%s available=%s min_subs=%s min_views=%s",
                     video.video_id, video.subscribers, video.views, video.views / max(video.subscribers, 1), video.is_live, video.subscriber_count_available,
-                    runtime_config.value("keyword_min_source_subscribers"),
-                    runtime_config.value("keyword_min_source_views"),
+                    min_subscribers if ranking == "large_channel" else runtime_config.value("keyword_min_source_subscribers"),
+                    500 if ranking == "outperformer" else runtime_config.value("keyword_min_source_views"),
                 )
                 continue
             output.append(video)
@@ -445,17 +506,30 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         # A wider discovery pool is collected for the automatic map.  Rank by
         # verified score first, then prefer longform when scores are similar.
         grade_rank = {"S": 3, "A": 2, "B": 1, "C": 0}
-        output.sort(
-            key=lambda video: (
-                grade_rank.get(video.performance_grade, 0),
-                1 if video.duration_seconds > 60 else 0,
-                video.performance_score,
-                video.views / max(video.hours_since_publish, 0.1),
-            ),
-            reverse=True,
-        )
+        if ranking == "large_channel":
+            output.sort(key=lambda video: (video.hours_since_publish, -video.views))
+        elif ranking == "outperformer":
+            output.sort(
+                key=lambda video: (
+                    video.views / max(video.subscribers, 1),
+                    video.views / max(video.hours_since_publish, 0.1),
+                    video.views,
+                ),
+                reverse=True,
+            )
+        else:
+            output.sort(
+                key=lambda video: (
+                    grade_rank.get(video.performance_grade, 0),
+                    1 if video.duration_seconds > 60 else 0,
+                    video.performance_score,
+                    video.views / max(video.hours_since_publish, 0.1),
+                ),
+                reverse=True,
+            )
         output = output[:limit]
-        self._attach_top_comments(output)
+        if ranking == "evidence":
+            self._attach_top_comments(output)
         return output
 
     def _attach_top_comments(self, videos: list[TrendingVideo]) -> None:

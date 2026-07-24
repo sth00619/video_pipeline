@@ -20,6 +20,7 @@ import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from PIL import Image, ImageFilter, ImageStat
 from app.utils.process_manager import is_job_stopped
 from app import runtime_config
 from app.utils.quality_gate import enrich_scene_plan, assess_images, persist_quality_report
@@ -53,11 +54,112 @@ def _scene_metadata_contract(source_scenes: list[dict], output_scenes: list[dict
         "motion_type_count": sum(bool(scene.get("motion_type")) for scene in output_scenes),
     }
 
+
+def _article_evidence_path(scene: dict) -> str:
+    capture = scene.get("article_capture")
+    kind = str(scene.get("visual_kind") or scene.get("visual_type") or "")
+    if kind not in {"article_evidence", "article_scene"} or not isinstance(capture, dict):
+        return ""
+    return str(capture.get("local_path") or scene.get("image_path") or "")
+
+
+def _character_regions(scene: dict) -> list[dict[str, float]]:
+    """Return conservative normalized keep-out zones for post-production UI.
+
+    Integrated AI illustrations cannot yield an alpha mask, so their region is
+    derived from the same art-direction placement contract used to compose the
+    scene.  Explicit regions from an editor/compositor always take precedence.
+    """
+    explicit = scene.get("character_regions")
+    if isinstance(explicit, list):
+        return explicit
+    direction = scene.get("art_direction") or {}
+    if not direction.get("character_required", False):
+        return []
+    placement = str(direction.get("character_placement") or "right third").lower()
+    if "left" in placement:
+        return [{"x": .015, "y": .10, "width": .41, "height": .79, "source": "art_direction_estimate"}]
+    return [{"x": .555, "y": .10, "width": .43, "height": .79, "source": "art_direction_estimate"}]
+
+
+def _saliency_grid_and_negative_spaces(clean_plate_path: str | None) -> tuple[list[list[float]], list[dict[str, float]]]:
+    """Build a deterministic local 8×8 saliency approximation from edge energy.
+
+    It deliberately avoids sending a frame to another model.  The planner uses
+    it only to reject busy speech-bubble positions; it is not face detection.
+    """
+    default_grid = [[0.0 for _ in range(8)] for _ in range(8)]
+    if not clean_plate_path or not Path(clean_plate_path).is_file():
+        return default_grid, []
+    try:
+        with Image.open(clean_plate_path) as loaded:
+            image = loaded.convert("L").resize((320, 180), Image.Resampling.LANCZOS)
+        edges = image.filter(ImageFilter.FIND_EDGES)
+        values: list[list[float]] = []
+        for row in range(8):
+            result_row: list[float] = []
+            for col in range(8):
+                crop = edges.crop((col * 40, row * 22, (col + 1) * 40, (row + 1) * 22))
+                result_row.append(float(ImageStat.Stat(crop).mean[0]))
+            values.append(result_row)
+        maximum = max(max(row) for row in values) or 1.0
+        grid = [[round(value / maximum, 4) for value in row] for row in values]
+        # Candidate locations correspond to common bubble slots. Low edge
+        # energy means the copy will not collide with a visual focal object.
+        candidates = [
+            (0, 0, 3, 3), (5, 0, 3, 3), (0, 3, 3, 2), (5, 3, 3, 2),
+        ]
+        spaces: list[dict[str, float]] = []
+        for x, y, width, height in candidates:
+            cells = [grid[row][col] for row in range(y, y + height) for col in range(x, x + width)]
+            if sum(cells) / len(cells) <= .42:
+                spaces.append({"x": x / 8, "y": y / 8, "width": width / 8, "height": height / 8})
+        return grid, spaces
+    except OSError:
+        return default_grid, []
+
+
+def _asset_layout_metadata(scene: dict, clean_plate_path: str | None) -> dict:
+    """Persist enough layout facts to make thumbnail selection deterministic.
+
+    This intentionally does not pretend to have face detection for an AI
+    illustration.  Unknown values remain null and the planner then avoids
+    person/mascot-led candidates rather than guessing an empty space.
+    """
+    regions = _character_regions(scene)
+    direction = scene.get("art_direction") or {}
+    placement = str(direction.get("character_placement") or "").lower()
+    subject_side = "left" if "left" in placement else ("right" if placement else None)
+    saliency_grid, negative_spaces = _saliency_grid_and_negative_spaces(clean_plate_path)
+    # A pose's opposite side is preferred if it is also locally quiet. If the
+    # plate is visually busy, no bubble is emitted rather than guessing.
+    preferred = {"x": .54, "y": .08, "width": .39, "height": .38} if subject_side == "left" else (
+        {"x": .07, "y": .08, "width": .39, "height": .38} if subject_side == "right" else None
+    )
+    negative_space = preferred if preferred and negative_spaces else (negative_spaces[0] if negative_spaces else None)
+    return {
+        "face_bbox": None,
+        "gaze_direction": None,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": saliency_grid,
+        "negative_space": negative_space,
+        "negative_spaces": negative_spaces,
+        "subject_side": subject_side,
+        "clean_plate_path": clean_plate_path,
+        "duplicate_character_count": 0 if clean_plate_path else None,
+        "character_regions": regions,
+    }
+
 DEFAULT_CHARACTER_SHEET = Path("/app/assets/character/goldie_sheet_v1.png")
 
 
 class NonRetryableImageGenerationError(RuntimeError):
-    """A local code/configuration fault that must not fan out into scene retries."""
+    """A deterministic image-generation fault that must not fan out into scene retries."""
+
+
+class ImageProviderCreditRequiredError(RuntimeError):
+    """The configured image provider cannot render until billing/quota is restored."""
 
 
 def _is_non_retryable_image_error(exc: Exception) -> bool:
@@ -181,8 +283,10 @@ class ImagesWorker:
                   lora_scale: float = 1.0) -> dict:
         market_snapshot = {}
         self.market_snapshot = {}
+        self.evidence_audit = {}
+        script_data: dict = {}
         # scenes_meta가 주어지지 않은 경우 script_meta_json에서 복원
-        if not scenes_meta and script_meta_json:
+        if script_meta_json:
             try:
                 import json
                 script_data = json.loads(script_meta_json)
@@ -190,7 +294,8 @@ class ImagesWorker:
                     script_data = json.loads(script_data)
                 market_snapshot = script_data.get("market_snapshot") or {}
                 self.market_snapshot = market_snapshot
-                scenes_meta = script_data.get("sections") or script_data.get("scenes") or []
+                if not scenes_meta:
+                    scenes_meta = script_data.get("sections") or script_data.get("scenes") or []
                 if not scenes_meta and script_data.get("script"):
                     import re
                     raw_script = script_data.get("script", "").strip()
@@ -215,6 +320,33 @@ class ImagesWorker:
         if not scenes_meta:
             scenes_meta = []
 
+        if scenes_meta and bool(runtime_config.value("article_evidence_auto_enabled")):
+            try:
+                from app.services.article.evidence_planner import (
+                    ArticleEvidencePlanner,
+                    NarrationHashMismatch,
+                )
+
+                planned = ArticleEvidencePlanner().attach(
+                    job_id=job_id,
+                    scenes=scenes_meta,
+                    verified_facts=list(script_data.get("verified_facts") or []),
+                )
+                scenes_meta = planned.scenes
+                self.evidence_audit = planned.audit
+            except NarrationHashMismatch:
+                raise
+            except Exception as exc:
+                # Public news is an optional evidence enhancement.  Search,
+                # publisher, or capture failures preserve the approved scene.
+                logger.warning("automatic article evidence planning skipped: %s", exc)
+                self.evidence_audit = {
+                    "job_id": job_id,
+                    "status": "unavailable",
+                    "reason": str(exc),
+                    "selected": [],
+                }
+
         if scenes_meta and not all(scene.get("art_direction") for scene in scenes_meta):
             scenes_meta = direct_scenes([
                 enrich_scene_plan(scene, i, len(scenes_meta))
@@ -222,6 +354,7 @@ class ImagesWorker:
             ])
         budget_preflight = None
         if scenes_meta:
+            billable_scenes = [scene for scene in scenes_meta if not _article_evidence_path(scene)]
             # Cost is planned before the first image call.  A high Pro limit
             # is reduced to Flash coverage rather than rejecting a whole job.
             estimated_total_duration = infer_total_duration_seconds(
@@ -232,7 +365,7 @@ class ImagesWorker:
             # actual seconds separately for audit because the provider caps a
             # request at five seconds.
             intro_motion_indices, motion_target_seconds, planned_motion_seconds = select_intro_motion_scene_indices(
-                scenes_meta,
+                billable_scenes,
                 estimated_total_duration,
                 short_seconds=float(runtime_config.value("intro_motion_seconds_short")),
                 long_seconds=float(runtime_config.value("intro_motion_seconds_long")),
@@ -248,11 +381,23 @@ class ImagesWorker:
                 clip_seconds=float(runtime_config.value("intro_motion_clip_seconds")),
             )
             budget_preflight = plan_preflight(
-                len(scenes_meta),
+                len(billable_scenes),
                 str(runtime_config.value("image_quality_tier")),
                 int(runtime_config.value("pro_image_max_scenes")),
                 len(intro_motion_indices),
             )
+            if not billable_scenes:
+                # plan_preflight normally reserves one generated thumbnail;
+                # an evidence-only job has no generated still at all.
+                budget_preflight.update({
+                    "pro_scene_count": 0,
+                    "flash_scene_count": 0,
+                    "kling_clip_count": 0,
+                    "estimated_cost_krw": 0,
+                    "actions": [],
+                    "allowed": True,
+                    "reason": None,
+                })
             budget_preflight["intro_motion_target_seconds"] = motion_target_seconds
             budget_preflight["intro_motion_planned_seconds"] = planned_motion_seconds
             budget_preflight["intro_motion_estimated_total_seconds"] = estimated_total_duration
@@ -264,17 +409,20 @@ class ImagesWorker:
                 )
             if budget_preflight["actions"]:
                 logger.warning("Budget preflight degraded optional quality: %s", budget_preflight["actions"])
-            scenes_meta = plan_image_quality_tiers(
-                scenes_meta,
+            tiered_billable_scenes = plan_image_quality_tiers(
+                billable_scenes,
                 runtime_config.value("image_quality_tier"),
                 int(budget_preflight["pro_scene_count"]),
             )
+            tiered_iter = iter(tiered_billable_scenes)
+            scenes_meta = [scene if _article_evidence_path(scene) else next(tiered_iter) for scene in scenes_meta]
 
         # Visual direction is deliberately separate from script writing. One
         # coordinated request assigns a distinct role/costume/action to every
         # scene; a deterministic fallback keeps the pipeline runnable when
         # the director is temporarily unavailable.
         directed_specs: dict[int, SceneSpec] = {}
+        article_evidence_indices = {index for index, scene in enumerate(scenes_meta) if _article_evidence_path(scene)}
         if scenes_meta:
             topic_context = " ".join(
                 str(scene.get("title") or scene.get("section") or "") for scene in scenes_meta[:4]
@@ -282,26 +430,39 @@ class ImagesWorker:
             lines = [
                 (str(index), str(scene.get("content") or scene.get("text") or scene.get("prompt") or scene.get("title") or "시장 분석"))
                 for index, scene in enumerate(scenes_meta)
+                if index not in article_evidence_indices
             ]
-            specs = SceneDirector().direct_batch(lines, topic_context=topic_context)
+            specs = SceneDirector().direct_batch(lines, topic_context=topic_context) if lines else []
             directed_specs = {int(spec.scene_id): spec for spec in specs if str(spec.scene_id).isdigit()}
             for index, scene in enumerate(scenes_meta):
                 if spec := directed_specs.get(index):
                     scene["scene_spec"] = spec.to_dict()
                     scene["headline"] = spec.headline
 
-        # The fixed reference sheet is used by default; an approved channel
-        # profile image is an additional reference, never a replacement.
+        # A selected channel character is an identity lock, not an additional
+        # suggestion next to the legacy Goldie sheet.  Passing both images to
+        # Gemini was the source of the unwanted mint/coin character mixture.
+        selected_character_exists = bool(character_image_path and Path(character_image_path).exists())
         character_reference_paths = []
-        for path in (str(DEFAULT_CHARACTER_SHEET), character_image_path):
+        reference_candidates = [character_image_path] if selected_character_exists else [str(DEFAULT_CHARACTER_SHEET)]
+        for path in reference_candidates:
             if path and Path(path).exists() and path not in character_reference_paths:
                 character_reference_paths.append(path)
+        if selected_character_exists or character_poses_dir or lora_model_id:
+            # When a real per-channel asset/pose/LoRA is supplied, do not let
+            # the provider inject its legacy generic mascot description.
+            character_style_prompt = character_style_prompt or "none"
 
         # [S2-3] 이중 레이어 합성 모드 제어
         # A pose library is a reference resource, not permission to paste a
         # separately rendered mascot over an unrelated background.  Pro 2K
         # scenes must be generated as one integrated illustration.
-        use_composite = False
+        # A selected pose library gives us a real pre-character image.  That
+        # image is persisted as ``clean_plate_path`` and is the only allowed
+        # backdrop for mascot/person thumbnail presets.  Without a pose
+        # library we preserve the existing integrated-scene pipeline and the
+        # thumbnail planner will select chart/article layouts instead.
+        use_composite = bool(character_poses_dir and Path(character_poses_dir).is_dir())
         if use_composite:
             logger.info(f"[합성모드] 이중 레이어 합성 활성화: poses_dir={character_poses_dir}")
         else:
@@ -362,6 +523,7 @@ class ImagesWorker:
             bool(runtime_config.value("gemini_pro_batch_enabled"))
             and runtime_config.value("image_provider") == "gemini"
             and bool(scenes_meta)
+            and not article_evidence_indices
             and all((scene.get("image_profile") or {}).get("tier") == "pro" for scene in scenes_meta)
             and not lora_model_id
         )
@@ -375,6 +537,7 @@ class ImagesWorker:
         if (
             ai_provider
             and len(scenes_meta) > 1
+            and not article_evidence_indices
             and bool(runtime_config.value("gemini_parallel_enabled"))
         ):
             return self._generate_parallel_scenes(
@@ -401,6 +564,24 @@ class ImagesWorker:
         for i, scene in enumerate(scenes_meta):
             if is_job_stopped(job_id):
                 raise RuntimeError(f"Job {job_id} stopped by user.")
+            evidence_path = _article_evidence_path(scene)
+            if evidence_path:
+                if not Path(evidence_path).is_file() or Path(evidence_path).stat().st_size < 100:
+                    raise RuntimeError(f"article evidence scene {i} has no valid captured image: {evidence_path}")
+                # Do not send screenshots to Gemini/Fal or substitute them with
+                # a generated still.  This keeps DOM coordinates exact and
+                # makes the scene's generation cost objectively zero.
+                generated.append({
+                    **scene,
+                    "index": i,
+                    "image_path": evidence_path,
+                    "generation_method": "article_evidence",
+                    "generation_cost_krw": 0,
+                    "use_kling": False,
+                    "quality_score": 100,
+                })
+                logger.info("scene %s uses captured article evidence directly (Gemini/Kling skipped)", i)
+                continue
             scene = enrich_scene_plan(scene, i, len(scenes_meta))
             section = scene.get("section", f"scene_{i}")
             narration = scene.get("content") or scene.get("text") or ""
@@ -425,10 +606,14 @@ class ImagesWorker:
 
             img_path = str(job_dir / f"scene_{i:03d}.png")
             raw_img_path = str(job_dir / f"scene_{i:03d}_raw.png")
+            background_path = None
 
             # If a long HTTP request was interrupted after this frame completed,
             # recover from disk instead of charging the image model a second time.
             if os.path.exists(img_path) and os.path.getsize(img_path) > 15000:
+                resumed_clean_plate = str(job_dir / f"scene_{i:03d}_bg.png")
+                if not Path(resumed_clean_plate).is_file():
+                    resumed_clean_plate = None
                 generated.append({
                     **scene,
                     "index": i, "section": section, "image_path": img_path,
@@ -444,6 +629,8 @@ class ImagesWorker:
                     "text": narration, "headline": spec.headline if spec else scene.get("headline", ""),
                     "headline_mood": spec.mood if spec else "neutral",
                     "scene_spec": spec.to_dict() if spec else scene.get("scene_spec"),
+                    "clean_plate_path": resumed_clean_plate,
+                    "asset_layout_metadata": _asset_layout_metadata(scene, resumed_clean_plate),
                 })
                 logger.info("Reusing completed image scene %s for job %s", i, job_id)
                 continue
@@ -454,6 +641,7 @@ class ImagesWorker:
                     if use_composite:
                         # [S2-3] 이중 레이어 합성
                         bg_path = str(job_dir / f"scene_{i:03d}_bg.png")
+                        background_path = bg_path
                         self._generate_background_layer(
                             ai_provider, prompt_en, bg_path, section, pose, image_profile
                         )
@@ -591,6 +779,9 @@ class ImagesWorker:
                         "index": i,
                         "section": section,
                         "image_path": img_path,
+                        "background_path": background_path,
+                        "clean_plate_path": background_path,
+                        "asset_layout_metadata": _asset_layout_metadata(scene, background_path),
                         "generation_method": "composite" if use_composite else ("flux_lora" if lora_model_id else image_profile.get("tier", "flash") + "_gemini"),
                         "quality_score": quality_score or 85,
                         "prompt_en": prompt_en,
@@ -669,6 +860,8 @@ class ImagesWorker:
             except Exception as e:
                 logger.error(f"씬 {i} 로컬 폴백 최종 실패: {e}")
 
+        for scene in generated:
+            scene["character_regions"] = _character_regions(scene)
         image_quality = assess_images(generated)
         semantic_quality = assess_visual_alignment(
             generated,
@@ -705,6 +898,7 @@ class ImagesWorker:
             "gifs": [],
             "gif_count": 0,
             "quality_report": {"images": image_quality},
+            "evidence_audit": self.evidence_audit,
         }
 
     def _generate_parallel_scenes(
@@ -796,13 +990,19 @@ class ImagesWorker:
             index = ctx["index"]
             img_path = str(job_dir / f"scene_{index:03d}.png")
             raw_img_path = str(job_dir / f"scene_{index:03d}_raw.png")
+            background_path = None
             image_profile = ctx["image_profile"]
             tier = image_profile.get("tier", "flash")
             scene_fingerprint = fingerprint(ctx)
             # Legacy files without a manifest remain resumable; once a
             # manifest exists, a changed prompt/profile forces regeneration.
             if valid_image(img_path) and (str(index) not in image_manifest or image_manifest.get(str(index)) == scene_fingerprint):
-                return {**ctx, "image_path": img_path, "generation_method": "resumed_existing", "quality_score": 90, "_fingerprint": scene_fingerprint}
+                resumed_clean_plate = str(job_dir / f"scene_{index:03d}_bg.png")
+                if not Path(resumed_clean_plate).is_file():
+                    resumed_clean_plate = None
+                return {**ctx, "image_path": img_path, "clean_plate_path": resumed_clean_plate,
+                        "asset_layout_metadata": _asset_layout_metadata(ctx, resumed_clean_plate),
+                        "generation_method": "resumed_existing", "quality_score": 90, "_fingerprint": scene_fingerprint}
 
             max_retries = max(1, min(int(runtime_config.value("gemini_retry_max")), 8))
             base_backoff = max(0.25, float(runtime_config.value("gemini_pro_retry_base_seconds")))
@@ -815,6 +1015,7 @@ class ImagesWorker:
                     Path(raw_img_path).unlink(missing_ok=True)
                     if use_composite:
                         bg_path = str(job_dir / f"scene_{index:03d}_bg.png")
+                        background_path = bg_path
                         self._generate_background_layer(
                             ai_provider, ctx["prompt_en"], bg_path, ctx["section"], ctx["pose"], image_profile,
                         )
@@ -880,6 +1081,9 @@ class ImagesWorker:
                     return {
                         **ctx,
                         "image_path": img_path,
+                        "background_path": background_path,
+                        "clean_plate_path": background_path,
+                        "asset_layout_metadata": _asset_layout_metadata(ctx, background_path),
                         "generation_method": "flux_lora" if lora_model_id else f"{tier}_gemini",
                         "quality_score": 95 if lora_model_id else 90,
                         "_fingerprint": scene_fingerprint,
@@ -934,8 +1138,15 @@ class ImagesWorker:
                     if isinstance(exc, NonRetryableImageGenerationError):
                         for pending in futures:
                             pending.cancel()
+                        root_cause = exc.__cause__ or exc
+                        decision = classify_image_error(root_cause)
+                        if decision.reason == "permanent provider billing/quota response":
+                            raise ImageProviderCreditRequiredError(
+                                "IMAGE_PROVIDER_CREDIT_REQUIRED: Gemini image credits or quota are unavailable. "
+                                "Restore billing, then retry image generation; completed scenes will be reused."
+                            ) from exc
                         raise RuntimeError(
-                            f"Image generation stopped before recovery: scene {index} has a local configuration/code error"
+                            f"Image generation stopped before recovery: scene {index} has a non-retryable error: {exc}"
                         ) from exc
                     signature = error_signature(exc.__cause__ or exc)
                     same_error_counts[signature] += 1
@@ -979,6 +1190,8 @@ class ImagesWorker:
         for result in sorted(results, key=lambda item: item["index"]):
             result.pop("spec", None)
             generated.append(result)
+        for scene in generated:
+            scene["character_regions"] = _character_regions(scene)
         image_quality = assess_images(generated)
         semantic_quality = assess_visual_alignment(
             generated,
@@ -1013,6 +1226,7 @@ class ImagesWorker:
             "gif_count": 0,
             "quality_report": {"images": image_quality},
             "budget_preflight": budget_preflight,
+            "evidence_audit": self.evidence_audit,
         }
 
     # ============================

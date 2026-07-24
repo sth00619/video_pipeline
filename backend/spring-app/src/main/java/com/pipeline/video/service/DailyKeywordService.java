@@ -34,14 +34,16 @@ public class DailyKeywordService {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     // One search request costs the same whether it returns 5 or 30 videos.
     // Pull a wider pool first. S/A videos are ranked first, but they are not
-    // an exclusion rule: a seven-day 3k/3k-qualified source remains useful
+    // an exclusion rule: a seven-day 3k-subscriber/500-view qualified source remains useful
     // evidence when the S/A pool is small.
     private static final int VIDEOS_PER_SEED = 30;
     private static final int MAX_DAILY_CANDIDATES = 30;
     private static final int REFRESH_TIMEOUT_SECONDS = 15;
     private static final long MIN_EVIDENCE_SUBSCRIBERS = 3_000L;
-    private static final long MIN_EVIDENCE_VIEWS = 3_000L;
-    private static final double MIN_EVIDENCE_VIEWER_MULTIPLE = 0.25d;
+    private static final long MIN_EVIDENCE_VIEWS = 500L;
+    // "구독자 수의 1% 이상 조회"는 대형 채널의 최신 영상을 너무 일찍
+    // 탈락시키지 않으면서 반응이 전혀 없는 영상은 걸러내는 기준이다.
+    private static final double MIN_EVIDENCE_VIEWER_MULTIPLE = 0.01d;
 
     private final FastApiClient fastApiClient;
     private final Map<String, List<Map<String, Object>>> snapshots = new ConcurrentHashMap<>();
@@ -199,7 +201,7 @@ public class DailyKeywordService {
         row.put("keyword", keyword);
         row.put("category", category);
         row.put("source", "manual");
-        row.put("reason", "직접 입력 · 최근 7일 안의 일반 영상 중 구독자·조회수 각 3천 이상, 구독자 대비 조회 0.25배 이상인 근거를 아직 찾지 못했습니다.");
+        row.put("reason", "직접 입력 · 최근 7일 안의 일반 영상 중 구독자 3천·조회수 500 이상, 조회수가 구독자 수의 1% 이상인 근거를 아직 찾지 못했습니다.");
         row.put("evidenceVideoIds", List.of());
         row.put("sourceVideos", List.of());
         row.put("metricsAvailable", false);

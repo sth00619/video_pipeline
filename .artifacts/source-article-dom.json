@@ -1,0 +1,34 @@
+{
+  "source_url": "https://en.yna.co.kr/view/AEN20260721001451320?section=economy-finance%2Feconomy",
+  "source_title": "Seoul stocks slip after opening slightly higher as Iran concerns temper bargain hunting",
+  "publisher": "Yonhap News Agency",
+  "published_at": "2026-07-21",
+  "captured_at": "2026-07-22T18:38:57.320930Z",
+  "capture_mode": "dom",
+  "quote": "After opening 0.58 percent higher, the benchmark Korea Composite Stock Price Index (KOSPI) trimmed earlier gains to fall 38.56 points, or 0.59 percent, to 6,477.71 as of 9:15 a.m.",
+  "image_sha256": "cbb33aebbf3cf79c9751d6883e728186bb2d5206b4e5eb6ab6d84bba68847aa4",
+  "target_bbox": {
+    "x": 0.11375387797311272,
+    "y": 0.4013377926421405,
+    "width": 0.7724922440537746,
+    "height": 0.16387959866220742
+  },
+  "quote_bboxes": [
+    {
+      "x": 0.11375387797311272,
+      "y": 0.4013377926421405,
+      "width": 0.7724922440537746,
+      "height": 0.07357859531772576
+    },
+    {
+      "x": 0.11375387797311272,
+      "y": 0.4916387959866221,
+      "width": 0.6763185108583247,
+      "height": 0.07357859531772576
+    }
+  ],
+  "bbox_source": "dom_range",
+  "approval_required": false,
+  "local_path": "/app/data/jobs/990001/evidence/article_cbb33aebbf3cf79c.png",
+  "object_key": "jobs/990001/evidence/article_cbb33aebbf3cf79c.png"
+}

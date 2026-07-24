@@ -3,17 +3,17 @@ import json
 import logging
 import hashlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import FileResponse, Response, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.workers.shorts_worker import ShortsWorker
 from app.workers.keyword_worker import KeywordWorker
 from app.workers.script_worker import ScriptWorker, ScriptResearchRequiredError
 from app.workers.tts_worker import TtsWorker
-from app.workers.images_worker import ImagesWorker
+from app.workers.images_worker import ImagesWorker, ImageProviderCreditRequiredError
 from app.workers.longform_worker import LongformWorker
 from app.workers.sfx_worker import SfxWorker
 from app.workers.bgm_worker import BgmWorker
@@ -22,11 +22,14 @@ from app.config import APP_MODE, CLAUDE_MODEL
 from app import runtime_config
 from app.utils.fal_billing import get_fal_credit_status
 from app.utils.art_direction import compile_editorial_prompt
+from app.models.article_evidence import EvidenceCaptureRequest, QuoteCardRequest
+from app.services.article_discovery import ArticleDiscoveryService, ArticleDiscoveryUnavailable
+from app.services.evidence_capture import EvidenceCaptureError, EvidenceCaptureService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AI Video Pipeline Workers", version="0.4.0")
+app = FastAPI(title="AI Video Pipeline Workers", version="0.5.0")
 
 DATA_DIR = Path("/app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -39,6 +42,7 @@ images_worker = None
 longform_worker = None
 sfx_worker = None
 bgm_worker = None
+evidence_capture_service = None
 
 
 def get_shorts_worker():
@@ -90,6 +94,13 @@ def get_bgm_worker():
     return bgm_worker
 
 
+def get_evidence_capture_service() -> EvidenceCaptureService:
+    global evidence_capture_service
+    if evidence_capture_service is None:
+        evidence_capture_service = EvidenceCaptureService()
+    return evidence_capture_service
+
+
 @app.on_event("startup")
 async def startup_event():
     """서버 시작 시 발음 사전 초기화"""
@@ -98,6 +109,12 @@ async def startup_event():
         logger.info(f"발음 사전 초기화: {result}")
     except Exception as e:
         logger.warning(f"발음 사전 초기화 실패 (TTS는 정상 작동): {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Gracefully release the worker-lifetime Chromium process."""
+    EvidenceCaptureService.shutdown()
 
 
 @app.get("/health")
@@ -181,6 +198,15 @@ class PipelineConfigUpdate(BaseModel):
     keyword_score_weight_comment: Optional[float] = None
     keyword_like_rate_benchmark: Optional[float] = None
     keyword_comment_rate_benchmark: Optional[float] = None
+    render_speech_bubbles: Optional[bool] = None
+    render_article_evidence: Optional[bool] = None
+    article_evidence_auto_enabled: Optional[bool] = None
+    evidence_max_scenes: Optional[int] = None
+    evidence_max_searches_per_scene: Optional[int] = None
+    evidence_min_sentence_similarity: Optional[float] = None
+    bubble_font_max_px: Optional[int] = None
+    bubble_font_min_px: Optional[int] = None
+    subtitle_safe_area_pct: Optional[float] = None
 
 
 @app.get("/pipeline/config")
@@ -203,6 +229,43 @@ def update_pipeline_config(update: PipelineConfigUpdate):
 def reset_pipeline_config():
     """환경변수 기본값으로 되돌립니다."""
     return {"status": "ok", "config": runtime_config.reset_to_env_defaults()}
+
+
+class ArticleDiscoveryRequest(BaseModel):
+    query: str
+    terms: List[str] = []
+    limit: int = 10
+
+
+@app.post("/workers/evidence/discover")
+def discover_article_candidates(request: ArticleDiscoveryRequest):
+    """Return attributable public-news candidates; this does not capture them."""
+    try:
+        candidates = ArticleDiscoveryService().discover(request.query, request.terms, request.limit)
+        return {"query": request.query, "candidates": [item.model_dump() for item in candidates]}
+    except ArticleDiscoveryUnavailable as exc:
+        raise HTTPException(503, str(exc))
+    except Exception as exc:
+        logger.exception("article discovery failed")
+        raise HTTPException(502, f"article discovery failed: {exc}")
+
+
+@app.post("/workers/evidence/capture")
+def capture_article_evidence(request: EvidenceCaptureRequest):
+    """Capture one public HTML article quote using DOM text coordinates."""
+    try:
+        return get_evidence_capture_service().capture_dom(request).model_dump(mode="json")
+    except EvidenceCaptureError as exc:
+        raise HTTPException(exc.status_code, str(exc))
+
+
+@app.post("/workers/evidence/render-quote-card")
+def render_quote_card(request: QuoteCardRequest):
+    """Render a clearly labelled editorial quote card, never a fake article."""
+    try:
+        return get_evidence_capture_service().render_quote_card(request).model_dump(mode="json")
+    except EvidenceCaptureError as exc:
+        raise HTTPException(exc.status_code, str(exc))
 
 
 @app.get("/workers/quality/{job_id}")
@@ -370,13 +433,26 @@ class TrendingRequest(BaseModel):
     keyword: str = ""
     limit: int = 10
     recent_hours: Optional[int] = None
+    ranking: str = "evidence"
+    min_subscribers: Optional[int] = None
 
 @app.post("/workers/trending/youtube")
 def trending_youtube(request: TrendingRequest):
     try:
         from app.providers.factory import get_trending_video_analyzer
         analyzer = get_trending_video_analyzer()
-        videos = analyzer.collect(category="", seed=request.keyword, limit=request.limit, recent_hours=request.recent_hours)
+        if request.ranking not in {"evidence", "outperformer", "large_channel"}:
+            raise HTTPException(400, "ranking must be evidence, outperformer, or large_channel")
+        if request.min_subscribers is not None and request.min_subscribers < 0:
+            raise HTTPException(400, "min_subscribers must be zero or greater")
+        videos = analyzer.collect(
+            category="",
+            seed=request.keyword,
+            limit=max(1, min(request.limit, 20)),
+            recent_hours=request.recent_hours,
+            ranking=request.ranking,
+            min_subscribers=request.min_subscribers,
+        )
         return {"videos": [v.__dict__ for v in videos]}
     except Exception as e:
         raise HTTPException(500, f"트렌딩 비디오 검색 실패: {str(e)}")
@@ -714,6 +790,16 @@ def images_generate(request: ImagesGenerateRequest):
             lora_model_id=request.lora_model_id,
             lora_trigger_word=request.lora_trigger_word,
             lora_scale=request.lora_scale,
+        )
+    except ImageProviderCreditRequiredError as e:
+        logger.warning("이미지 생성 중단: 공급자 크레딧/쿼터 필요: %s", e)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error_code": "IMAGE_PROVIDER_CREDIT_REQUIRED",
+                "message": str(e),
+                "retryable": False,
+            },
         )
     except Exception as e:
         logger.exception("이미지 생성 실패")
@@ -1148,12 +1234,43 @@ class ThumbnailRequest(BaseModel):
     lora_model_id: Optional[str] = None
     lora_trigger_word: Optional[str] = None
     lora_scale: Optional[float] = 1.0
+    # v2 keeps thumbnail provenance tied to a scene that is actually present
+    # in the final longform.  The legacy title-only route remains available as
+    # an explicit provider fallback while Spring is rolled out incrementally.
+    scene_candidates: List[Dict[str, Any]] = Field(default_factory=list)
+    thumbnail_brief: Dict[str, Any] = Field(default_factory=dict)
+    character_identity: Dict[str, Any] = Field(default_factory=dict)
+    person_photos: List[Dict[str, Any]] = Field(default_factory=list)
+    watermark_path: Optional[str] = None
+    variants: int = 3
+    reference_style_profile: str = "black_han_sans_v1"
+    preset: Optional[Literal["person_led", "mascot_led", "chart_led"]] = None
 
 
-@app.post("/workers/youtube/thumbnail")
-def generate_thumbnail(req: ThumbnailRequest):
-    """유튜브 업로드용 AI 썸네일 생성"""
+def _render_thumbnail_request(req: ThumbnailRequest):
+    """유튜브 업로드용 썸네일 생성.
+
+    Scene candidates are rendered locally to ensure the image really appears
+    in the video.  The old generated-poster path is only a compatibility
+    fallback for jobs produced before assembly manifests existed.
+    """
     try:
+        if req.scene_candidates:
+            from app.services.thumbnail import ThumbnailGenerator
+            return ThumbnailGenerator().render(
+                job_id=req.job_id,
+                format_name=req.format,
+                output_path=req.output_path,
+                candidates=req.scene_candidates,
+                brief=req.thumbnail_brief,
+                character_asset_path=req.character_image_path,
+                character_identity=req.character_identity,
+                person_photos=req.person_photos,
+                watermark_path=req.watermark_path,
+                variants=req.variants,
+                reference_style_profile=req.reference_style_profile,
+                forced_preset=req.preset,
+            )
         from app.providers.factory import get_image_provider
         provider = get_image_provider()
         
@@ -1163,8 +1280,9 @@ def generate_thumbnail(req: ThumbnailRequest):
         )
         prompt = f"YouTube Video Thumbnail: {req.title}. {theme_style}"
         
-        width = 1920 if req.format == "longform" else 1080
-        height = 1080 if req.format == "shorts" else 1920
+        # A custom YouTube longform thumbnail must be 16:9; the previous
+        # conditional produced a square for both formats.
+        width, height = (1080, 1920) if req.format == "shorts" else (1280, 720)
         
         provider.width = width
         provider.height = height
@@ -1182,10 +1300,36 @@ def generate_thumbnail(req: ThumbnailRequest):
             gemini_image_size="2K",
             gemini_service_tier="standard"
         )
-        return {"status": "ok", "output_path": req.output_path}
+        return {"status": "ok", "mode": "ai_fallback", "output_path": req.output_path, "variants": []}
     except Exception as e:
+        from app.services.thumbnail import PhotoLicenseError
+        from app.services.thumbnail.generator import ThumbnailRenderError
+        if isinstance(e, (PhotoLicenseError, ThumbnailRenderError)):
+            # These are actionable inputs/provenance errors, not an opaque
+            # provider failure.  Spring keeps the job usable and surfaces the
+            # concrete reason rather than claiming a successful thumbnail.
+            logger.warning("썸네일 생성 입력 검증 실패: %s", e)
+            raise HTTPException(status_code=422, detail={"code": str(e).split(":", 1)[0], "message": str(e)})
+        if isinstance(e, ValueError) and str(e).split(":", 1)[0] in {
+            "BRIEF_VALIDATION_FAILED", "HEADLINE_OVERFLOW", "THUMBNAIL_SOURCE_NOT_IN_VIDEO", "CLEAN_PLATE_REQUIRED",
+        }:
+            logger.warning("썸네일 v2 게이트 거부: %s", e)
+            raise HTTPException(status_code=422, detail={"code": str(e).split(":", 1)[0], "message": str(e)})
         logger.error(f"썸네일 생성 실패: {e}")
         raise HTTPException(status_code=500, detail=f"썸네일 생성 실패: {e}")
+
+
+@app.post("/workers/youtube/thumbnail")
+def generate_thumbnail(req: ThumbnailRequest):
+    return _render_thumbnail_request(req)
+
+
+@app.post("/workers/thumbnail/regenerate")
+def regenerate_thumbnail(req: ThumbnailRequest):
+    """Re-render existing, video-proven candidates without rewriting a script."""
+    if not req.scene_candidates:
+        raise HTTPException(status_code=422, detail={"code": "THUMBNAIL_SOURCE_NOT_IN_VIDEO"})
+    return _render_thumbnail_request(req)
 
 
 @app.post("/workers/pronunciation/init")

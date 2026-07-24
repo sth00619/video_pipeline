@@ -11,7 +11,15 @@ from app.domain.stock_keywords import get_category_data
 
 class MockTrendingVideoAnalyzer(TrendingVideoAnalyzer):
 
-    def collect(self, category: str, seed: str, limit: int = 30, recent_hours: int | None = None) -> list[TrendingVideo]:
+    def collect(
+        self,
+        category: str,
+        seed: str,
+        limit: int = 30,
+        recent_hours: int | None = None,
+        ranking: str = "evidence",
+        min_subscribers: int | None = None,
+    ) -> list[TrendingVideo]:
         cat_data = get_category_data(category)
         patterns = cat_data["title_patterns"]
         channels = cat_data["common_channels"]

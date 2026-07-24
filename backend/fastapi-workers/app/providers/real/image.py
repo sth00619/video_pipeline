@@ -42,7 +42,10 @@ logger = logging.getLogger(__name__)
 class GeminiImageGenerationError(RuntimeError):
     """A Gemini image request failed after its same-quality retry policy."""
 
-# 캐릭터 일관성 유지 프롬프트 (의인화된 금색 코인 마스코트 캐릭터)
+# Legacy fallback only.  Jobs with a selected character pass either a channel
+# style, a reference asset, a pose library, or a LoRA and never receive this
+# description.  Keeping it isolated prevents the old mint mascot from leaking
+# into selected-character scenes.
 CHARACTER_STYLE = (
     "featuring one friendly teal rounded market-card mascot, with a small diagonal chart notch rather than a currency symbol, "
     "expressive face, arms and legs, clean silhouette, wearing the scene-specific wardrobe, "

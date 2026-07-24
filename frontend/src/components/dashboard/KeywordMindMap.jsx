@@ -4,8 +4,8 @@ import { Check, ChevronRight, Network, Sparkles } from 'lucide-react'
 
 const FILTERS = [
   { id: 'all', label: '전체', threshold: 0 },
-  { id: 'one', label: '1x 이상', threshold: 1 },
-  { id: 'three', label: '3x 이상', threshold: 3 },
+  { id: 'one', label: '조회율 100%+', threshold: 1 },
+  { id: 'three', label: '조회율 300%+', threshold: 3 },
 ]
 
 const ellipsis = (value, limit = 19) => value?.length > limit ? `${value.slice(0, limit)}…` : value
@@ -13,6 +13,7 @@ const multipleOf = node => Number(node?.bestMultiple || 0)
 const evidenceMultiple = video => Number(video?.subscribers || video?.subscriberCount || 0) > 0
   ? Number(video?.views || video?.viewCount || 0) / Number(video?.subscribers || video?.subscriberCount || 0)
   : 0
+const displayResponse = multiple => `${(multiple * 100).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}%`
 
 function nodeStyle(node) {
   const value = multipleOf(node)
@@ -32,7 +33,7 @@ function EvidenceCard({ video, active, elementRef }) {
   return <a ref={elementRef} href={id ? `https://www.youtube.com/watch?v=${id}` : undefined} target="_blank" rel="noreferrer" className={`block w-full rounded-xl border p-3 text-left transition ${active ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-100' : 'border-slate-200 bg-white hover:border-violet-300 hover:bg-slate-50'}`}>
     <div className="flex items-start gap-2">
       <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded text-[10px] font-black ${grade === 'S' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>{grade}</span>
-      <div className="min-w-0"><p className="line-clamp-2 text-[12px] font-semibold leading-5 text-slate-800">{title}</p><p className="mt-1 text-[11px] text-slate-600">{video?.channelTitle || video?.channel_title || '채널 정보 없음'} · 구독자 대비 {multiple ? `${multiple.toFixed(2)}x` : '계산 불가'}</p></div>
+      <div className="min-w-0"><p className="line-clamp-2 text-[12px] font-semibold leading-5 text-slate-800">{title}</p><p className="mt-1 text-[11px] text-slate-600">{video?.channelTitle || video?.channel_title || '채널 정보 없음'} · 구독자 대비 조회율 {multiple ? displayResponse(multiple) : '계산 불가'}</p></div>
     </div>
   </a>
 }
@@ -53,14 +54,14 @@ function MindmapNode({ point, active, selected, onToggle, onFocusEvidence, onTog
     <rect x={left} y={top} width={style.width} height={height} rx="13" fill={selected ? style.stroke : style.fill} stroke={style.stroke} strokeWidth={node.kind === 'root' ? 2.5 : multipleOf(node) >= 5 ? 2 : 1.4} className={node.kind === 'root' || node.kind === 'overflow' ? '' : 'cursor-pointer'} onClick={handleSelect} />
     {node.kind === 'root' ? <><text x={point.y} y={point.x - 4} textAnchor="middle" fill={style.text} fontSize="16" fontWeight="800">{ellipsis(node.keyword, 17)}</text><text x={point.y} y={point.x + 14} textAnchor="middle" fill={style.subtext} fontSize="10">오늘의 분석 중심</text></> : <>
       <text x={point.y} y={point.x - 5} textAnchor="middle" fill={selected ? '#ffffff' : style.text} fontSize="13.5" fontWeight="700" className={node.kind === 'overflow' ? '' : 'cursor-pointer'} onClick={handleSelect}>{ellipsis(node.keyword, style.width >= 170 ? 18 : 16)}</text>
-      <text x={point.y} y={point.x + 12} textAnchor="middle" fill={selected ? '#f1f5f9' : style.subtext} fontSize="10.5" fontWeight="700">{node.kind === 'overflow' ? '확장 주제 보기' : `${style.badge} · 최고 ${multipleOf(node).toFixed(2)}x`}</text>
+      <text x={point.y} y={point.x + 12} textAnchor="middle" fill={selected ? '#f1f5f9' : style.subtext} fontSize="10.5" fontWeight="700">{node.kind === 'overflow' ? '확장 주제 보기' : `${style.badge} · 최고 조회율 ${displayResponse(multipleOf(node))}`}</text>
     </>}
     {isParent && <g role="button" tabIndex="0" aria-label={`${node.keyword} 확장 ${node.collapsed ? '열기' : '접기'}`} className="cursor-pointer" onClick={event => { event.stopPropagation(); onToggleBranch(node.id) }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggleBranch(node.id) } }}><circle cx={left + style.width - 1} cy={top + 1} r="10" fill="#ffffff" stroke={style.stroke} /><text x={left + style.width - 1} y={top + 4} textAnchor="middle" fill={style.text} fontSize="14" fontWeight="800">{node.collapsed ? '+' : '−'}</text></g>}
   </g>
 }
 
 export default function KeywordMindMap({ mindmap, selectedKeywords, onToggle, evidenceVideos = [], onFocusEvidence }) {
-  // 0.25x 이상은 이미 서버에서 검증한다. 처음부터 1x 필터를 켜면
+  // 조회율 1% 이상은 이미 서버에서 검증한다. 처음부터 100% 필터를 켜면
   // 유효한 신규 이슈까지 빈 지도처럼 보이므로 기본값은 전체다.
   const [filter, setFilter] = useState('all')
   const [collapsed, setCollapsed] = useState(() => new Set())
@@ -123,7 +124,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords, onToggle, ev
   }
 
   return <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div className="border-b border-slate-200 bg-slate-50 px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><Network size={16} className="text-violet-600" /><div><h4 className="text-sm font-bold text-slate-900">핵심 주제 마인드맵</h4><p className="mt-0.5 text-[11px] text-slate-600">실선은 정제 키워드, 점선은 같은 근거 영상에서 뽑은 확장 주제입니다.</p></div></div><div className="flex items-center gap-2"><div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5" role="group" aria-label="성과 배율 필터">{FILTERS.map(item => <button key={item.id} onClick={() => setFilter(item.id)} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${filter === item.id ? 'bg-violet-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{item.label}</button>)}</div><span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold text-violet-700"><Sparkles size={11} />화면 맞춤</span></div></div><div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-700"><span className="font-semibold text-slate-900">범례</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-rose-500" />5x 이상 · 떡상</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />1~5x · 주목</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-amber-500" />0.3~1x · 관찰</span></div></div>
+    <div className="border-b border-slate-200 bg-slate-50 px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><Network size={16} className="text-violet-600" /><div><h4 className="text-sm font-bold text-slate-900">핵심 주제 마인드맵</h4><p className="mt-0.5 text-[11px] text-slate-600">실선은 정제 키워드, 점선은 같은 근거 영상에서 뽑은 확장 주제입니다.</p></div></div><div className="flex items-center gap-2"><div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5" role="group" aria-label="구독자 대비 조회율 필터">{FILTERS.map(item => <button key={item.id} onClick={() => setFilter(item.id)} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${filter === item.id ? 'bg-violet-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{item.label}</button>)}</div><span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold text-violet-700"><Sparkles size={11} />화면 맞춤</span></div></div><div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-700"><span className="font-semibold text-slate-900">범례</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-rose-500" />조회율 500% 이상 · 떡상</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />조회율 100~500% · 주목</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-amber-500" />조회율 30~100% · 관찰</span></div></div>
     <div className="grid lg:grid-cols-[minmax(0,1fr)_330px]">
       <div className="min-w-0 border-b border-slate-200 p-3 lg:border-b-0 lg:border-r"><div ref={canvasRef} className="h-[min(52vh,500px)] min-h-[340px] w-full"><svg viewBox={layout.viewBox} preserveAspectRatio="xMidYMid meet" className="block h-full w-full" aria-label="좌에서 우로 정렬된 자동 생성 주제 마인드맵">{layout.links.map(item => { const active = !hasHover || (activeIds.has(item.source.data.id) && activeIds.has(item.target.data.id)); return <path key={`${item.source.data.id}-${item.target.data.id}`} d={line(item)} fill="none" stroke={item.target.data.kind === 'expansion' || item.target.data.kind === 'overflow' ? '#94a3b8' : nodeStyle(item.target.data).stroke} strokeWidth={item.target.data.kind === 'primary' ? 2 : 1.5} strokeDasharray={item.target.data.kind === 'primary' ? undefined : '5 5'} className={`transition-opacity ${active ? 'opacity-90' : 'opacity-25'}`} /> })}{layout.nodes.map(point => <MindmapNode key={point.data.id} point={point} active={!hasHover || activeIds.has(point.data.id)} selected={selectedKeywords.has(point.data.keyword)} onToggle={onToggle} onFocusEvidence={focusEvidence} onToggleBranch={id => setCollapsed(previous => { const next = new Set(previous); next.has(id) ? next.delete(id) : next.add(id); return next })} onHover={setHovered} />)}</svg></div>{!layout.root.children?.length && <p className="py-8 text-center text-sm text-slate-600">이 필터 조건을 통과한 키워드가 없습니다. 전체를 선택해 확인하세요.</p>}<p className="mt-1 text-[11px] text-slate-700">화면 너비와 높이에 맞춰 핵심 4~6개를 자동 배치합니다. 키워드를 누르면 스크립트 기획 후보에 담깁니다.</p></div>
       <aside className="bg-slate-50 p-4"><div className="flex items-center justify-between"><div><h4 className="text-sm font-bold text-slate-900">검증 근거 영상</h4><p className="mt-1 text-[11px] text-slate-600">S/A 우선 정렬한 일반 공개 영상입니다.</p></div><span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">{evidenceVideos.length}개</span></div><div className="mt-3 space-y-2">{evidenceVideos.slice(0, 8).map(video => { const key = video.videoId || video.video_id || video.title; const matches = hovered && (video.videoId === hovered.sourceVideoId || video.video_id === hovered.sourceVideoId || String(video.title || '').includes(hovered.keyword)); return <EvidenceCard key={key} elementRef={element => { if (element) evidenceRefs.current.set(key, element); else evidenceRefs.current.delete(key) }} video={video} active={matches} /> })}</div>{evidenceVideos.length > 8 && <p className="mt-3 flex items-center text-[11px] text-slate-600">나머지 영상은 아래 목록에서 확인하세요 <ChevronRight size={13} /></p>}</aside>

@@ -45,11 +45,12 @@ KEYWORD_COMMENT_RATE_BENCHMARK = float(os.getenv("KEYWORD_COMMENT_RATE_BENCHMARK
 # Small channels can produce a large view/subscriber multiple from a single
 # lucky upload. They do not qualify as automatic recommendation evidence.
 # 추천 근거는 "작은 채널의 우연한 한 건"을 막으면서도 일주일 안의
-# 신선한 시장 이슈를 충분히 확보해야 한다. 3천/3천 + 0.25x 조합은
-# 5천/5천 단일 하한보다 풀을 넓히되, 반응이 거의 없는 영상은 제외한다.
+# 신선한 시장 이슈를 충분히 확보해야 한다. 3천 구독자/500 조회 + 구독자 수의 1% 조회 기준은
+# 최신 대형 채널 영상도 포함하되, 반응이 거의 없는 영상은 제외한다.
+# 구독자 대비 조회수는 "구독자 수의 1%"처럼 퍼센트로 UI에 표시한다.
 KEYWORD_MIN_SOURCE_SUBSCRIBERS = int(os.getenv("KEYWORD_MIN_SOURCE_SUBSCRIBERS", "3000"))
-KEYWORD_MIN_SOURCE_VIEWS = int(os.getenv("KEYWORD_MIN_SOURCE_VIEWS", "3000"))
-KEYWORD_MIN_SOURCE_VIEWER_MULTIPLE = float(os.getenv("KEYWORD_MIN_SOURCE_VIEWER_MULTIPLE", "0.25"))
+KEYWORD_MIN_SOURCE_VIEWS = int(os.getenv("KEYWORD_MIN_SOURCE_VIEWS", "500"))
+KEYWORD_MIN_SOURCE_VIEWER_MULTIPLE = float(os.getenv("KEYWORD_MIN_SOURCE_VIEWER_MULTIPLE", "0.01"))
 KEYWORD_EXCLUDE_LIVE = os.getenv("KEYWORD_EXCLUDE_LIVE", "true").lower() in {"1", "true", "yes"}
 
 # ══════════════════════════════════════════════════════════
@@ -105,6 +106,23 @@ VISUAL_QA_ENABLED = os.getenv("VISUAL_QA_ENABLED", "true").lower() in {"1", "tru
 # of 240 scenes. File/codec validation still covers every scene.
 VISUAL_QA_MAX_SCENES = int(os.getenv("VISUAL_QA_MAX_SCENES", "24"))
 
+# Article evidence overlays are post-production assets. They never become
+# Gemini/Kling prompt text and can be toggled without a redeploy.
+RENDER_SPEECH_BUBBLES = os.getenv("RENDER_SPEECH_BUBBLES", "true").lower() in {"1", "true", "yes"}
+RENDER_ARTICLE_EVIDENCE = os.getenv("RENDER_ARTICLE_EVIDENCE", "true").lower() in {"1", "true", "yes"}
+THUMBNAIL_V2_ENABLED = os.getenv("THUMBNAIL_V2_ENABLED", "false").lower() in {"1", "true", "yes"}
+THUMBNAIL_HEADLINE_MAX_LINES = int(os.getenv("THUMBNAIL_HEADLINE_MAX_LINES", "4"))
+THUMBNAIL_HEADLINE_MIN_FONT_PX = int(os.getenv("THUMBNAIL_HEADLINE_MIN_FONT_PX", "64"))
+ARTICLE_ALLOWED_PUBLISHERS_ONLY = os.getenv("ARTICLE_ALLOWED_PUBLISHERS_ONLY", "true").lower() in {"1", "true", "yes"}
+ARTICLE_EVIDENCE_AUTO_ENABLED = os.getenv("ARTICLE_EVIDENCE_AUTO_ENABLED", "true").lower() in {"1", "true", "yes"}
+EVIDENCE_MAX_SCENES = int(os.getenv("EVIDENCE_MAX_SCENES", "2"))
+EVIDENCE_MAX_SEARCHES_PER_SCENE = int(os.getenv("EVIDENCE_MAX_SEARCHES_PER_SCENE", "3"))
+EVIDENCE_MIN_SENTENCE_SIMILARITY = float(os.getenv("EVIDENCE_MIN_SENTENCE_SIMILARITY", "0.85"))
+SCENE_REVEAL_ENABLED = os.getenv("SCENE_REVEAL_ENABLED", "true").lower() in {"1", "true", "yes"}
+BUBBLE_FONT_MAX_PX = int(os.getenv("BUBBLE_FONT_MAX_PX", "96"))
+BUBBLE_FONT_MIN_PX = int(os.getenv("BUBBLE_FONT_MIN_PX", "60"))
+SUBTITLE_SAFE_AREA_PCT = float(os.getenv("SUBTITLE_SAFE_AREA_PCT", "21"))
+
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "dlKJ5VptCbYxal4doUO5")
 ELEVENLABS_STABILITY = float(os.getenv("ELEVENLABS_STABILITY", "0.62"))
 ELEVENLABS_SIMILARITY_BOOST = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.80"))
@@ -125,6 +143,7 @@ TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "400"))
 # When short factual statements are joined into a thought group, use one
 # editorial beat at the group boundary instead of a stop after every sentence.
 TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "1100"))
+TTS_DURATION_TOLERANCE = float(os.getenv("TTS_DURATION_TOLERANCE", "0.15"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))
 

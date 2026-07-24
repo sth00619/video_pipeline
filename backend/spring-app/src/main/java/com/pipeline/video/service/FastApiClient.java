@@ -433,10 +433,16 @@ public class FastApiClient {
     }
 
     public List<TrendingVideoDto> getTrendingVideos(String keyword, int limit) {
+        return getTrendingVideos(keyword, limit, "evidence", 0L);
+    }
+
+    public List<TrendingVideoDto> getTrendingVideos(String keyword, int limit, String ranking, long minSubscribers) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("keyword", keyword);
             bodyMap.put("limit", limit);
+            bodyMap.put("ranking", ranking);
+            bodyMap.put("min_subscribers", minSubscribers);
             
             String responseBody = postJson(fastApiUrl + "/workers/trending/youtube", bodyMap);
             Map<String, Object> response = objectMapper.readValue(responseBody, Map.class);
@@ -504,6 +510,33 @@ public class FastApiClient {
     public void generateThumbnailImage(Long jobId, String title, String format, String outputPath, 
                                        String characterImagePath, String characterStylePrompt,
                                        String loraModelId, String loraTriggerWord, Double loraScale) {
+        generateThumbnailImage(jobId, title, format, outputPath, characterImagePath, characterStylePrompt,
+                loraModelId, loraTriggerWord, loraScale, java.util.List.of(), java.util.Map.of(),
+                java.util.Map.of(), java.util.List.of(), null, "black_han_sans_v1", null, false);
+    }
+
+    public java.util.Map<String, Object> generateThumbnailImage(Long jobId, String title, String format, String outputPath,
+                                       String characterImagePath, String characterStylePrompt,
+                                       String loraModelId, String loraTriggerWord, Double loraScale,
+                                       java.util.List<java.util.Map<String, Object>> sceneCandidates,
+                                       java.util.Map<String, Object> thumbnailBrief,
+                                       java.util.Map<String, Object> characterIdentity,
+                                       java.util.List<java.util.Map<String, Object>> personPhotos,
+                                       String watermarkPath) {
+        return generateThumbnailImage(jobId, title, format, outputPath, characterImagePath, characterStylePrompt,
+                loraModelId, loraTriggerWord, loraScale, sceneCandidates, thumbnailBrief, characterIdentity,
+                personPhotos, watermarkPath, "black_han_sans_v1", null, false);
+    }
+
+    public java.util.Map<String, Object> generateThumbnailImage(Long jobId, String title, String format, String outputPath,
+                                       String characterImagePath, String characterStylePrompt,
+                                       String loraModelId, String loraTriggerWord, Double loraScale,
+                                       java.util.List<java.util.Map<String, Object>> sceneCandidates,
+                                       java.util.Map<String, Object> thumbnailBrief,
+                                       java.util.Map<String, Object> characterIdentity,
+                                       java.util.List<java.util.Map<String, Object>> personPhotos,
+                                       String watermarkPath, String referenceStyleProfile, String preset,
+                                       boolean regeneration) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -515,7 +548,18 @@ public class FastApiClient {
             bodyMap.put("lora_model_id", loraModelId);
             bodyMap.put("lora_trigger_word", loraTriggerWord);
             bodyMap.put("lora_scale", loraScale);
-            postJson(fastApiUrl + "/workers/youtube/thumbnail", bodyMap);
+            bodyMap.put("scene_candidates", sceneCandidates == null ? java.util.List.of() : sceneCandidates);
+            bodyMap.put("thumbnail_brief", thumbnailBrief == null ? java.util.Map.of() : thumbnailBrief);
+            bodyMap.put("character_identity", characterIdentity == null ? java.util.Map.of() : characterIdentity);
+            bodyMap.put("person_photos", personPhotos == null ? java.util.List.of() : personPhotos);
+            bodyMap.put("reference_style_profile", referenceStyleProfile == null || referenceStyleProfile.isBlank()
+                    ? "black_han_sans_v1" : referenceStyleProfile);
+            if (preset != null && !preset.isBlank()) bodyMap.put("preset", preset);
+            if (watermarkPath != null && !watermarkPath.isBlank()) {
+                bodyMap.put("watermark_path", watermarkPath);
+            }
+            String response = postJson(fastApiUrl + (regeneration ? "/workers/thumbnail/regenerate" : "/workers/youtube/thumbnail"), bodyMap);
+            return objectMapper.readValue(response, Map.class);
         } catch (Exception e) {
             throw new RuntimeException("유튜브 썸네일 생성 오류: " + e.getMessage(), e);
         }

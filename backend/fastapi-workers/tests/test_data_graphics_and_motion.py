@@ -20,7 +20,9 @@ from app.workers.longform_worker import (
     _minimum_motion_delivery,
     _requires_verified_index_card,
     _scene_clip_fingerprint,
+    _chart_focus_annotation,
 )
+from app.workers.images_worker import _character_regions
 
 
 class DataGraphicsAndMotionTests(unittest.TestCase):
@@ -115,6 +117,39 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
             )
             self.assertNotEqual(first, second)
 
+    def test_scene_clip_fingerprint_changes_with_article_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            image = Path(directory) / "article.png"
+            image.write_bytes(b"article")
+            base = {
+                "visual_type": "article_evidence",
+                "article_capture": {"image_sha256": "a" * 64, "quote": "12.5%"},
+                "annotations": [{"type": "underline", "bboxes": [{"x": .1, "y": .1, "width": .3, "height": .1}]}],
+            }
+            changed = {**base, "article_capture": {"image_sha256": "b" * 64, "quote": "12.5%"}}
+            self.assertNotEqual(
+                _scene_clip_fingerprint(base, str(image), 5.0, "article_evidence"),
+                _scene_clip_fingerprint(changed, str(image), 5.0, "article_evidence"),
+            )
+
+    def test_verified_chart_focus_uses_final_surface_coordinates(self):
+        chart = {
+            "visual_kind": "trend_dashboard",
+            "focus": {"enabled": True},
+            "points": [{"close": 90}, {"close": 100}, {"close": 110}],
+        }
+        focus = _chart_focus_annotation(chart, {"x": 980, "y": 150, "width": 760, "height": 520})
+        self.assertEqual(focus["type"], "dashed_ellipse")
+        self.assertEqual(focus["origin"], "verified_market_chart_focus")
+        self.assertGreater(focus["bbox"]["x"], 0.4)
+        self.assertLess(focus["bbox"]["x"], 1.0)
+
+    def test_character_keep_out_region_follows_existing_art_direction(self):
+        left = _character_regions({"art_direction": {"character_required": True, "character_placement": "left third"}})
+        right = _character_regions({"art_direction": {"character_required": True, "character_placement": "right third"}})
+        self.assertLess(left[0]["x"], .1)
+        self.assertGreater(right[0]["x"], .5)
+
     def test_motion_delivery_gate_requires_three_quarters_of_plan(self):
         self.assertEqual(_minimum_motion_delivery(0), 0)
         self.assertEqual(_minimum_motion_delivery(1), 1)
@@ -125,13 +160,14 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
         self.assertTrue(_has_manual_kling_selection([{"use_kling": False}, {}]))
         self.assertTrue(_has_manual_kling_selection([{"use_kling": True}, {}]))
 
-    def test_floating_text_overlays_are_disabled(self):
+    def test_speech_bubble_runtime_toggle_can_disable_overlay(self):
         self.assertFalse(_requires_verified_index_card({
             "index_data": {"verified": True, "name": "KOSPI"}
         }))
-        self.assertTrue(_apply_speech_bubble_overlay(
-            {"bubble_text": "remove me"}, "unused.mp4", Path("."), 0, 5.0, 1
-        ))
+        with patch("app.workers.longform_worker.runtime_config.value", return_value=False):
+            self.assertTrue(_apply_speech_bubble_overlay(
+                {"bubble_text": "remove me"}, "unused.mp4", Path("."), 0, 5.0, 1
+            ))
 
     def test_one_minute_fal_proof_is_capped_to_four_opening_scenes(self):
         self.assertEqual(_cap_intro_motion_for_short_video(60, 12), 4)

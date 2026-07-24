@@ -15,7 +15,15 @@ from typing import Any
 
 
 CALIBRATION_PATH = Path(os.getenv("TTS_CPS_CALIBRATION_PATH", "/app/data/tts_cps_calibration.json"))
-TOLERANCE = 0.08
+TOLERANCE = 0.15
+
+
+def get_tolerance() -> float:
+    try:
+        from app import runtime_config
+        return float(runtime_config.value("tts_duration_tolerance"))
+    except Exception:
+        return 0.15
 
 
 def spoken_char_count(text: str) -> int:
@@ -77,15 +85,16 @@ def make_length_contract(
     # Avoid banker's rounding: a half-character budget should round up so the
     # displayed target is intuitive to operators.
     target_chars = int(safe_minutes * effective_cpm + 0.5)
+    tolerance = get_tolerance()
     return {
         "target_seconds": safe_minutes * 60,
         "base_cpm": round(calibrated_cpm, 2),
         "effective_cpm": round(effective_cpm, 2),
         "tts_speed": safe_speed,
         "target_chars": target_chars,
-        "min_chars": round(target_chars * (1 - TOLERANCE)),
-        "max_chars": round(target_chars * (1 + TOLERANCE)),
-        "tolerance_pct": round(TOLERANCE * 100),
+        "min_chars": round(target_chars * (1 - tolerance)),
+        "max_chars": round(target_chars * (1 + tolerance)),
+        "tolerance_pct": round(tolerance * 100),
         "calibration_samples": samples,
         "voice_id": voice_id or "default",
         "model_id": model_id or "default",

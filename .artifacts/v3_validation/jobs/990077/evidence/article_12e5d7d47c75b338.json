@@ -1,0 +1,47 @@
+{
+  "schema_version": 2,
+  "source_url": "https://www.yna.co.kr/view/AKR20260722082100008",
+  "source_title": "코스피, 반도체·외국인 견인에 5%대 상승 유지…'7천피' 재탈환",
+  "publisher": "연합뉴스",
+  "published_at": "2026-07-22",
+  "captured_at": "2026-07-23T11:47:28.530394Z",
+  "capture_mode": "dom",
+  "quote": "한국거래소에 따르면 오전 11시 현재 코스피는 전 거래일 대비 394.50포인트(5.85%) 상승한 7,142.45다.",
+  "image_sha256": "12e5d7d47c75b338856b2c8f4455fdb5e0586445fa79520ff6ac6acbef66bfc3",
+  "target_bbox": {
+    "x": 0.145791915175613,
+    "y": 0.40257969798657717,
+    "width": 0.708291915175613,
+    "height": 0.16107382550335575
+  },
+  "quote_bboxes": [
+    {
+      "x": 0.145791915175613,
+      "y": 0.40257969798657717,
+      "width": 0.708291915175613,
+      "height": 0.07046979865771812
+    },
+    {
+      "x": 0.145791915175613,
+      "y": 0.4931837248322148,
+      "width": 0.26402004638833665,
+      "height": 0.07046979865771812
+    }
+  ],
+  "key_phrase": "(5.85%) 상승한",
+  "key_phrase_bboxes": [
+    {
+      "x": 0.145791915175613,
+      "y": 0.4931837248322148,
+      "width": 0.14925033134526175,
+      "height": 0.07046979865771812
+    }
+  ],
+  "title_text_bbox": null,
+  "source_bbox": null,
+  "article_container_bbox": null,
+  "bbox_source": "dom_range",
+  "approval_required": false,
+  "local_path": "/validation/jobs/990077/evidence/article_12e5d7d47c75b338.png",
+  "object_key": "jobs/990077/evidence/article_12e5d7d47c75b338.png"
+}

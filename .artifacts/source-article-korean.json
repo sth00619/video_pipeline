@@ -1,0 +1,34 @@
+{
+  "source_url": "https://www.yna.co.kr/view/AKR20260722082100008",
+  "source_title": "코스피, 반도체·외국인 견인에 5%대 상승 유지…'7천피' 재탈환 | 연합뉴스",
+  "publisher": "연합뉴스",
+  "published_at": "2026-07-22T11:21:07+09:00",
+  "captured_at": "2026-07-22T19:54:15.648941Z",
+  "capture_mode": "dom",
+  "quote": "코스피가 22일 '반도체 투 톱' 상승에 장 중 '7천피'(코스피 7,000)를 재탈환했다.",
+  "image_sha256": "2930de142d5d736313fdf33170ffefecd54a4d891f8f6e155d40a870e98fd104",
+  "target_bbox": {
+    "x": 0.1427644386761843,
+    "y": 0.40257969798657717,
+    "width": 0.7143494484101233,
+    "height": 0.16107382550335575
+  },
+  "quote_bboxes": [
+    {
+      "x": 0.43399172615184944,
+      "y": 0.40257969798657717,
+      "width": 0.42312216093445815,
+      "height": 0.07046979865771812
+    },
+    {
+      "x": 0.1427644386761843,
+      "y": 0.4931837248322148,
+      "width": 0.2954047696301103,
+      "height": 0.07046979865771812
+    }
+  ],
+  "bbox_source": "dom_range",
+  "approval_required": false,
+  "local_path": "/app/data/jobs/9902/evidence/article_2930de142d5d7363.png",
+  "object_key": "jobs/9902/evidence/article_2930de142d5d7363.png"
+}

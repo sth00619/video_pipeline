@@ -15,6 +15,9 @@ public class LongformGenerateResponse {
     @JsonProperty("video_path")
     private String videoPath;
 
+    @JsonProperty("assembly_manifest_path")
+    private String assemblyManifestPath;
+
     @JsonProperty("duration_seconds")
     private Double durationSeconds;
 

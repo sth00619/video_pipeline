@@ -1,0 +1,15 @@
+# Phase 1: domestic Korean news only.  Keep selectors data-driven so adding a
+# reviewed publisher does not require a code deployment.
+yna.co.kr:
+  name: 연합뉴스
+  container: ["article.story-news", "div#articleWrap", "article"]
+  exclude: ["header", "nav", "aside", ".share", ".related", ".ad", "footer", ".comment"]
+  ko_mirror: {from: "en.yna.co.kr", to: "www.yna.co.kr"}
+mk.co.kr:
+  name: 매일경제
+  container: ["div.news_cnt_detail_wrap", "article"]
+  exclude: ["header", "nav", ".sns_area", ".ad_boundary", "aside", "footer"]
+yonhapnewstv.co.kr:
+  name: 연합뉴스TV
+  container: ["article", ".article-content"]
+  exclude: ["header", "nav", "aside", ".ad", "footer"]

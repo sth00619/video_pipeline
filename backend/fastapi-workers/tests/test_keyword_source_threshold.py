@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from app.providers.base import TrendingVideo
-from app.providers.real.trending import _is_eligible_evidence_source
+from app.providers.real.trending import _is_eligible_evidence_source, _is_eligible_exploration_source
 from app.workers.keyword_planning import build_mindmap
 
 
@@ -15,25 +15,25 @@ class KeywordSourceThresholdTests(unittest.TestCase):
         )
         self.assertFalse(_is_eligible_evidence_source(video))
 
-    def test_3k_subscriber_and_view_boundary_is_eligible_within_seven_days(self):
+    def test_3k_subscriber_and_500_view_boundary_is_eligible_within_seven_days(self):
         video = TrendingVideo(
             title="qualified", channel_title="qualified", video_id="qualified",
-            views=3_000, subscribers=3_000, channel_avg_views=1_000,
+            views=500, subscribers=3_000, channel_avg_views=1_000,
             published_at="2026-07-20T00:00:00Z", hours_since_publish=24,
         )
         self.assertTrue(_is_eligible_evidence_source(video))
 
-    def test_high_subscriber_channel_still_needs_3k_views_and_minimum_multiple(self):
+    def test_high_subscriber_channel_still_needs_500_views_and_minimum_one_percent_response(self):
         video = TrendingVideo(
             title="too few views", channel_title="large", video_id="few-views",
-            views=2_999, subscribers=20_000, channel_avg_views=1_000,
+            views=499, subscribers=20_000, channel_avg_views=1_000,
             published_at="2026-07-20T00:00:00Z", hours_since_publish=24,
         )
         self.assertFalse(_is_eligible_evidence_source(video))
 
         low_multiple = TrendingVideo(
             title="low response", channel_title="large", video_id="low-multiple",
-            views=3_000, subscribers=20_000, channel_avg_views=1_000,
+            views=500, subscribers=100_000, channel_avg_views=1_000,
             published_at="2026-07-20T00:00:00Z", hours_since_publish=24,
         )
         self.assertFalse(_is_eligible_evidence_source(low_multiple))
@@ -46,6 +46,28 @@ class KeywordSourceThresholdTests(unittest.TestCase):
             is_live=True,
         )
         self.assertFalse(_is_eligible_evidence_source(video))
+
+    def test_large_channel_research_does_not_require_viewer_multiple(self):
+        video = TrendingVideo(
+            title="recent format", channel_title="large", video_id="large-low-multiple",
+            views=900, subscribers=100_000, channel_avg_views=10_000,
+            published_at="2026-07-20T00:00:00Z", hours_since_publish=12,
+        )
+        self.assertTrue(_is_eligible_exploration_source(video, "large_channel", 50_000))
+
+    def test_outperformer_research_filters_unestablished_or_tiny_uploads(self):
+        tiny_upload = TrendingVideo(
+            title="tiny", channel_title="established", video_id="tiny",
+            views=499, subscribers=50_000, channel_avg_views=10_000,
+            published_at="2026-07-20T00:00:00Z", hours_since_publish=12,
+        )
+        small_channel = TrendingVideo(
+            title="small", channel_title="small", video_id="small",
+            views=5_000, subscribers=2_999, channel_avg_views=1_000,
+            published_at="2026-07-20T00:00:00Z", hours_since_publish=12,
+        )
+        self.assertFalse(_is_eligible_exploration_source(tiny_upload, "outperformer", 0))
+        self.assertFalse(_is_eligible_exploration_source(small_channel, "outperformer", 0))
 
     def test_mindmap_drops_untrusted_browser_rows(self):
         videos = [

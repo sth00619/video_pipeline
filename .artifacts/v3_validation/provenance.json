@@ -1,0 +1,122 @@
+{
+  "schema_version": 3,
+  "selected_variant": 0,
+  "variants": [
+    {
+      "template_id": "chart_warning",
+      "preset": "mascot_led",
+      "layout_variant": "default",
+      "source_scene_id": "chart-scene-1",
+      "scene_kind": "chart",
+      "supporting_scene_ids": [],
+      "source_ref": [
+        "facts[0]"
+      ],
+      "font": "NanumSquareBold/NanumGothicBold",
+      "output_path": "/Users/songtaeho/Documents/GitHub/video_pipeline/.artifacts/v3_validation/thumbnail_v3_v1.png",
+      "variant_index": 0,
+      "headline": [
+        {
+          "text": "코스피 7천 재탈환",
+          "tone": "white"
+        },
+        {
+          "text": "'반도체 역대급 반전'",
+          "tone": "yellow"
+        },
+        {
+          "text": "5.85% 급등",
+          "tone": "red"
+        }
+      ],
+      "qa": {
+        "face_sharpness": 0.0,
+        "subject_area": 0.54,
+        "copy_fill": 0.8801,
+        "contrast": 21.0,
+        "overlaps": 0,
+        "requires_face": false,
+        "passed": true,
+        "failures": []
+      }
+    },
+    {
+      "template_id": "chart_warning",
+      "preset": "mascot_led",
+      "layout_variant": "default",
+      "source_scene_id": "chart-scene-1",
+      "scene_kind": "chart",
+      "supporting_scene_ids": [],
+      "source_ref": [
+        "facts[0]"
+      ],
+      "font": "NanumSquareBold/NanumGothicBold",
+      "output_path": "/Users/songtaeho/Documents/GitHub/video_pipeline/.artifacts/v3_validation/thumbnail_v3_v2.png",
+      "variant_index": 1,
+      "headline": [
+        {
+          "text": "코스피 7천 재탈환",
+          "tone": "white"
+        },
+        {
+          "text": "5.85% 급등",
+          "tone": "red"
+        },
+        {
+          "text": "'반도체 역대급 반전'",
+          "tone": "yellow"
+        }
+      ],
+      "qa": {
+        "face_sharpness": 0.0,
+        "subject_area": 0.54,
+        "copy_fill": 0.8801,
+        "contrast": 21.0,
+        "overlaps": 0,
+        "requires_face": false,
+        "passed": true,
+        "failures": []
+      }
+    },
+    {
+      "template_id": "chart_warning",
+      "preset": "mascot_led",
+      "layout_variant": "mirrored",
+      "source_scene_id": "chart-scene-1",
+      "scene_kind": "chart",
+      "supporting_scene_ids": [],
+      "source_ref": [
+        "facts[0]"
+      ],
+      "font": "NanumSquareBold/NanumGothicBold",
+      "output_path": "/Users/songtaeho/Documents/GitHub/video_pipeline/.artifacts/v3_validation/thumbnail_v3_v3.png",
+      "variant_index": 2,
+      "headline": [
+        {
+          "text": "코스피 7천 재탈환",
+          "tone": "white"
+        },
+        {
+          "text": "'반도체 역대급 반전'",
+          "tone": "yellow"
+        },
+        {
+          "text": "5.85% 급등",
+          "tone": "red"
+        }
+      ],
+      "qa": {
+        "face_sharpness": 0.0,
+        "subject_area": 0.54,
+        "copy_fill": 0.8801,
+        "contrast": 21.0,
+        "overlaps": 0,
+        "requires_face": false,
+        "passed": true,
+        "failures": []
+      }
+    }
+  ],
+  "output_path": "/Users/songtaeho/Documents/GitHub/video_pipeline/.artifacts/v3_validation/thumbnail_v3.png",
+  "asset_rejections": []
+}

@@ -252,12 +252,13 @@ class TtsWorker:
                 runtime_config.value("tts_model_body"),
                 speed,
             )
+        duration_tolerance = float(runtime_config.value("tts_duration_tolerance"))
         duration_validation = {
             "target_seconds": round(float(target_seconds), 2) if target_seconds else None,
             "actual_seconds": round(actual_duration, 2),
             "delta_seconds": round(actual_duration - float(target_seconds), 2) if target_seconds else None,
             "within_tolerance": (
-                abs(actual_duration - float(target_seconds)) <= float(target_seconds) * 0.08
+                abs(actual_duration - float(target_seconds)) <= float(target_seconds) * duration_tolerance
                 if target_seconds else None
             ),
             "spoken_char_count": spoken_char_count(clean_script),
@@ -269,7 +270,7 @@ class TtsWorker:
         # credits on material that cannot fill the requested runtime.
         if target_seconds and not duration_validation["within_tolerance"]:
             message = (
-                "TTS duration is outside the allowed 8% range: "
+                f"TTS duration is outside the allowed {int(duration_tolerance * 100)}% range: "
                 f"requested={float(target_seconds):.1f}s, actual={actual_duration:.1f}s. "
                 "Regenerate the script using the current voice length contract."
             )

@@ -23,6 +23,11 @@ _TRANSIENT_TEXT = re.compile(
     r"connection reset|connection aborted|connection refused|network)\b",
     re.IGNORECASE,
 )
+_PERMANENT_PROVIDER_TEXT = re.compile(
+    r"(?:prepayment credits?|credits? (?:are )?depleted|insufficient (?:credit|balance)|"
+    r"spending cap|daily quota|billing (?:is )?(?:required|disabled)|resource[_ -]?exhausted)",
+    re.IGNORECASE,
+)
 
 
 def classify_image_error(exc: BaseException) -> RetryDecision:
@@ -33,6 +38,12 @@ def classify_image_error(exc: BaseException) -> RetryDecision:
         return RetryDecision(True, type(exc).__name__)
 
     message = str(exc or "")
+    # A provider can report a permanent billing/quota state with HTTP 429.
+    # Check the response body before the generic 429 rule: waiting and
+    # retrying cannot replenish prepaid credits and only fans the failure out
+    # across every remaining scene.
+    if _PERMANENT_PROVIDER_TEXT.search(message):
+        return RetryDecision(False, "permanent provider billing/quota response")
     if _TRANSIENT_TEXT.search(message):
         return RetryDecision(True, "transient provider/network response")
     return RetryDecision(False, f"unclassified {type(exc).__name__}")

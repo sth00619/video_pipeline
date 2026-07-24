@@ -38,6 +38,7 @@ from app.utils.keyword_aliases import normalise_terms
 from app.utils.script_delivery import annotate_sections, default_style_mix, validate_delivery
 from app.utils.elevenlabs_mapper import map_emotion_to_elevenlabs
 from app.utils.topic_evidence import is_market_level_forecast
+from app.services.verbatim_guard import validate as validate_verbatim
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +237,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
   3. [비주얼 프롬프트 (영어)] : AI 이미지 생성기용 영어 프롬프트 (오직 배경/분위기/객체만 묘사, 캐릭터 묘사 금지 + 공통 스타일/네거티브 키워드 추가)
   4. [감정] : 상황에 맞는 캐릭터 표정/포즈 (happy / worried / surprised / pointing / thinking / explaining / neutral 중 하나)
   5. [모션] : 인트로 구간(처음 약 13개 씬)인 경우에만 chart_shock, pointing_explain, thinking_desk, walking_intro, celebration 중 하나를 반드시 선택해 기술하세요. 본문 씬은 비워두거나 제외합니다.
-  6. [말풍선] : 이미지 안에 직접 합성할 2~4단어 분량의 짧은 한글 텍스트 (최대 8자 제한, 숫자/영어 포함 절대 금지, 예: "설계하자!", "돌파구다!", "안전하게!")
+  6. [말풍선] : 이미지 생성 뒤 별도 그래픽 레이어로 합성할 짧은 한글 텍스트 (최대 2줄). 숫자를 쓰려면 반드시 <verified_facts>에 있는 숫자·단위를 정확히 그대로 사용하세요. 그 외 숫자는 금지합니다. 숫자가 없는 감탄사는 창작할 수 있습니다.
 
 예시:
 ## 씬 1: 실적 발표와 주가 하락
@@ -263,7 +264,7 @@ chart_shock
 - 확정적 미래 예측 ("반드시 오릅니다" 등) 금지
 - 특정 종목에 대한 직접적인 매수/매도 지시 금지
 - <verified_facts>에 없는 수치나 날짜 창작 금지
-- [말풍선] 텍스트에 숫자(0-9)를 절대 포함하지 마십시오. 숫자가 들어간 말풍선은 시스템에서 강제 기각됩니다.
+- [말풍선] 숫자·단위는 <verified_facts> 또는 제공된 시장 데이터에 정확히 존재하는 경우에만 사용할 수 있습니다. 화면 그래픽에서는 `15%`처럼 기호를 유지하고, [대사]에서만 `퍼센트`로 읽습니다.
 
 🎯 영상 메타데이터 (대본 작성이 모두 끝난 후 마지막에 딱 1번만 작성):
 ## 메타데이터
@@ -450,6 +451,19 @@ class ScriptWorker:
                 sentence["elevenlabs_hint"] = map_emotion_to_elevenlabs(sentence["emotion_tag"], scene["phase"])
         delivery_validation = validate_delivery(sections)
         scene_quality = assess_scene_plan(sections)
+        rejected_scenes = [
+            {
+                "index": index,
+                "title": scene.get("title", ""),
+                "reason": (scene.get("bubble_validation") or {}).get("reasons", []),
+            }
+            for index, scene in enumerate(sections)
+            if scene.get("scene_rejected")
+        ]
+        if rejected_scenes:
+            scene_quality = dict(scene_quality)
+            scene_quality.setdefault("warnings", []).append("rejected_ungrounded_screen_text")
+            scene_quality["rejected_scenes"] = rejected_scenes
         art_quality = assess_art_diversity(sections)
         storytelling_quality = assess_storytelling(sections, full_script)
         keyword_validation = _validate_keyword_coverage(full_script, selected_terms)
@@ -459,6 +473,7 @@ class ScriptWorker:
                 keyword_validation["missing_terms"],
             )
         unit_validation = _validate_unit_usage(full_script)
+        thumbnail_brief = _build_thumbnail_brief(keyword, sections, verified_facts)
 
         return {
             "job_id": job_id,
@@ -476,7 +491,7 @@ class ScriptWorker:
             "market_snapshot": market_data or {},
             "used_real_llm": used_real_llm,
             "llm_provider_log": self._llm_provider_log,
-            "requires_manual_review": any(item.get("fallback") for item in self._llm_provider_log),
+            "requires_manual_review": bool(rejected_scenes) or any(item.get("fallback") for item in self._llm_provider_log),
             "storytelling_profile": DEFAULT_SCRIPT_STYLE_PROFILE,
             "style_mix_applied": default_style_mix("KOSPI"),
             "structure": "LONGFORM_KISUNGJEONGYEOL_v1",
@@ -487,7 +502,9 @@ class ScriptWorker:
                 "art_direction": art_quality,
                 "storytelling": storytelling_quality,
                 "delivery": delivery_validation,
+                "screen_text": {"passed": not rejected_scenes, "rejected_scenes": rejected_scenes},
             },
+            "thumbnail_brief": thumbnail_brief,
             "youtube_metadata": {
                 "title": meta_title,
                 "thumbnail_prompt": meta_thumb,
@@ -618,7 +635,10 @@ class ScriptWorker:
                     script_body = self._rewrite_dialogue_to_target(script_body, target_chars)
 
                 script_body = _cap_dialogue_to_target(script_body, target_chars)
-                sections = _split_sections_for_visual_pacing(_parse_sections(script_body))
+                sections = _split_sections_for_visual_pacing(_parse_sections(
+                    script_body,
+                    evidence={"verified_facts": verified_facts, "market_snapshot": market_data},
+                ))
                 break
             except ValueError as val_err:
                 logger.warning(f"Script parsing validation failed (attempt {attempt+1}/3): {val_err}. Retrying LLM call...")
@@ -662,6 +682,7 @@ class ScriptWorker:
                 "delivery": validate_delivery(sections),
                 "reason": "API 키 미설정 Mock 대본 — 자동 진행 금지",
             },
+            "thumbnail_brief": _build_thumbnail_brief(keyword, sections, []),
             "youtube_metadata": {
                 "title": f"{keyword} 핵심 정리",
                 "thumbnail_prompt": "Manual review required: no generated thumbnail prompt",
@@ -746,6 +767,58 @@ class ScriptWorker:
 # ──────────────────────────────────────────────────────────
 # 유틸 및 파싱 함수
 # ──────────────────────────────────────────────────────────
+def _build_thumbnail_brief(keyword: str, sections: list[dict], verified_facts: list[dict]) -> dict:
+    """Create a conservative thumbnail contract without inventing copy or data.
+
+    The renderer accepts only a badge with a concrete `source_ref`; a missing
+    verified value simply means no badge instead of a plausible-looking fake.
+    """
+    source_scene_ids = []
+    for index, scene in enumerate(sections[:8]):
+        role = str(scene.get("phase") or scene.get("section") or "")
+        if index == 0 or role in {"data", "scenario", "action", "conclusion"}:
+            source_scene_ids.append(str(scene.get("scene_id") or scene.get("id") or index))
+        if len(source_scene_ids) >= 3:
+            break
+    hook = str(keyword or "시장 핵심 이슈").strip()
+    punch = "{y:지금 확인할 핵심}"
+    badge: dict[str, str] = {}
+    for index, fact in enumerate(verified_facts or []):
+        value = str(fact.get("figure") or fact.get("value") or "").strip()
+        if value and re.search(r"\d", value):
+            badge = {"value": value, "source_ref": f"facts[{index}]"}
+            break
+    if bool(runtime_config.value("thumbnail_v2_enabled")):
+        # A scene manifest resolves the actual asset after assembly.  v2 starts
+        # with chart_warning because it needs no synthetic person or article.
+        # The planner/gate may replace it with article_evidence when a reviewed
+        # Korean evidence frame exists.
+        return {
+            "template": "chart_warning",
+            "language": "ko-KR",
+            "headline": [
+                {"text": hook[:16] or "시장 핵심 이슈", "tone": "white"},
+                {"text": "지금 확인할 핵심", "tone": "yellow"},
+            ],
+            "primary_subject": {"kind": "chart", "asset_id": "manifest_chart", "source_ref": "facts[0]" if verified_facts else None},
+            "secondary_subject": {"allowed": False},
+            "badge": ({"label": "핵심 수치", **badge} if badge else None),
+            "source_scene_ids": source_scene_ids or ["0"],
+            "verified_facts": verified_facts,
+            "narration": _narration_from_sections(sections),
+            "generated_from": "thumbnail_v2_contract",
+        }
+    return {
+        "layout": "reference_headline",
+        "hook_line": "{y:" + hook + "}",
+        "punch_line": punch,
+        "badge": badge,
+        "source_scene_ids": source_scene_ids or ["0"],
+        "persons": [],
+        "generated_from": "verified_script_contract_v1",
+    }
+
+
 def _narration_from_sections(sections: list[dict]) -> str:
     """Keep editorial scene metadata out of the downloadable TTS script."""
     return "\n\n".join(
@@ -1058,7 +1131,7 @@ def _split_sections_for_visual_pacing(sections: list, max_chars: int = 34) -> li
     return expanded
 
 
-def _parse_sections(full_text: str) -> list:
+def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
     """## 씬 제목 또는 ## 섹션명 기준으로 분리하고, 대사/한국어 설명/영어 프롬프트/감정 포즈를 추출합니다."""
     parts = re.split(r'(?m)^##\s*(.+)$', full_text)
     raw_sections = []
@@ -1107,10 +1180,13 @@ def _parse_sections(full_text: str) -> list:
             # [말풍선] 추출
             bubble_match = re.search(r'\[말풍선\]\s*(.*?)(?=\[대사|$|\[비주얼 설명|\[비주얼 프롬프트|\[감정|\[모션)', raw_content, re.DOTALL)
             bubble_text = bubble_match.group(1).strip() if bubble_match else ""
-            if re.search(r'[0-9]', bubble_text):
-                raise ValueError(f"bubble_text에 숫자 포함 금지: {bubble_text}")
-            if len(bubble_text) > 8:
-                bubble_text = bubble_text[:8].strip()
+            bubble_validation = validate_verbatim(bubble_text, evidence)
+            scene_rejected = bool(bubble_text and not bubble_validation.passed)
+            if scene_rejected:
+                logger.warning(
+                    "scene '%s' rejected: bubble text is not evidence-grounded (%s)",
+                    title, ", ".join(bubble_validation.reasons),
+                )
 
             raw_sections.append({
                 "title": title,
@@ -1119,7 +1195,14 @@ def _parse_sections(full_text: str) -> list:
                 "prompt_en": prompt_en,
                 "pose": pose,
                 "motion_type": motion_type,
-                "bubble_text": bubble_text
+                "bubble_text": bubble_text,
+                "bubble_validation": {
+                    "passed": bubble_validation.passed,
+                    "reasons": bubble_validation.reasons,
+                    "matched_sources": bubble_validation.matched_sources,
+                    "numeric_tokens": bubble_validation.numeric_tokens,
+                },
+                "scene_rejected": scene_rejected,
             })
 
     if not raw_sections:
@@ -1130,7 +1213,9 @@ def _parse_sections(full_text: str) -> list:
             "prompt_en": "Abstract financial chart background, professional finance news studio, dark navy blue background",
             "pose": "neutral",
             "motion_type": "walking_intro",
-            "bubble_text": ""
+            "bubble_text": "",
+            "bubble_validation": {"passed": True, "reasons": [], "matched_sources": [], "numeric_tokens": []},
+            "scene_rejected": False,
         })
 
     total = len(raw_sections)
@@ -1150,6 +1235,8 @@ def _parse_sections(full_text: str) -> list:
             "pose": s["pose"],
             "motion_type": s["motion_type"],
             "bubble_text": s["bubble_text"],
+            "bubble_validation": s.get("bubble_validation", {"passed": True}),
+            "scene_rejected": bool(s.get("scene_rejected")),
             "section": section_type,
             "char_count": len(s["content"]),
         })
@@ -1268,6 +1355,13 @@ def _attach_verified_market_charts(sections: list[dict], max_charts: int = 12) -
         else:
             chart["visual_theme"] = "chalkboard"
         chart.update({"verified": True, "source": "market_snapshot.chart_series"})
+        # A chart emphasis is opt-in from the semantic claim, then its exact
+        # screen position is derived by longform_worker from the final chart
+        # surface and verified data coordinates.  No LLM emits pixel values.
+        chart["focus"] = {
+            "enabled": any(token in text for token in ("상승", "하락", "급등", "급락", "등락", "돌파", "최고", "최저", "반등")),
+            "target": "latest_verified_point",
+        }
         sections[index]["market_chart"] = chart
         # The old KOSPI corner card is a HUD, not part of the cartoon scene.
         # An integrated display replaces it for these selected key scenes.

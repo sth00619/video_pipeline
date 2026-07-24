@@ -20,8 +20,13 @@ public class TrendingService {
     private final FastApiClient fastApiClient;
     private final ObjectMapper objectMapper;
 
-    public List<TrendingVideoDto> getTrendingVideos(String keyword) {
-        String redisKey = "youtube:trending:" + keyword;
+    public List<TrendingVideoDto> getTrendingVideos(String keyword, String ranking, Long minSubscribers) {
+        String normalizedRanking = switch (ranking == null ? "" : ranking) {
+            case "outperformer", "large_channel" -> ranking;
+            default -> "evidence";
+        };
+        long normalizedMinSubscribers = Math.max(0L, minSubscribers == null ? 0L : minSubscribers);
+        String redisKey = "youtube:trending:" + normalizedRanking + ":minsubs=" + normalizedMinSubscribers + ":" + keyword;
 
         try {
             // 1. Redis Cache Hit 체크
@@ -38,7 +43,7 @@ public class TrendingService {
         
         // 2. FastAPI (YouTube Data API) 호출
         int limit = 10;
-        List<TrendingVideoDto> videos = fastApiClient.getTrendingVideos(keyword, limit);
+        List<TrendingVideoDto> videos = fastApiClient.getTrendingVideos(keyword, limit, normalizedRanking, normalizedMinSubscribers);
 
         // 3. Redis 에 1시간 저장
         try {

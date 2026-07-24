@@ -12,6 +12,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +31,8 @@ public class JobService {
     private final CostLedgerRepository costLedgerRepository;
     private final ApprovalRepository approvalRepository;
     private final FastApiClient fastApiClient;
+    private final CharacterAssetResolver characterAssetResolver;
+    private final ThumbnailPersonResolver thumbnailPersonResolver;
     // [긴급 추가] 정지 버튼이 Temporal Workflow도 취소하도록 연결하기 위해 주입
     private final WorkflowOrchestrator workflowOrchestrator;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -200,37 +205,40 @@ public class JobService {
                 .build();
         assetRepository.save(metadataAsset);
         
-        String characterImagePath = null;
-        String characterStylePrompt = null;
-        String loraModelId = null;
-        String loraTriggerWord = null;
-        Double loraScale = 1.0;
-        if (job.getChannelId() != null) {
-            ChannelProfile profile = channelProfileRepository.findById(job.getChannelId()).orElse(null);
-            if (profile != null) {
-                characterImagePath = profile.getCharacterImagePath();
-                characterStylePrompt = profile.getCharacterStylePrompt();
-                loraModelId = profile.getLoraModelId();
-                loraTriggerWord = profile.getLoraTriggerWord();
-                if (profile.getLoraScale() != null) {
-                    loraScale = profile.getLoraScale().doubleValue();
-                }
-            }
-        }
+        CharacterAssetResolver.ResolvedCharacter character = characterAssetResolver.resolve(job);
+        String referenceStyleProfile = job.getChannelId() == null || job.getChannelId().isBlank()
+                ? "black_han_sans_v1"
+                : channelProfileRepository.findById(job.getChannelId())
+                    .map(ChannelProfile::getReferenceStyleProfile)
+                    .filter(value -> value != null && !value.isBlank())
+                    .orElse("black_han_sans_v1");
+        List<Map<String, Object>> sceneCandidates = buildThumbnailSceneCandidates(jobId);
+        Map<String, Object> thumbnailBrief = loadThumbnailBrief(scriptAssetOpt.get().getMetaJson(), longformTitleFallback(job));
+        Map<String, Object> characterIdentity = new java.util.HashMap<>();
+        characterIdentity.put("profile_id", character.profileId());
+        characterIdentity.put("identity_hash", character.identityHash());
+        characterIdentity.put("character_key", character.profileId());
         
         String longformTitle = job.getTitle();
         if (longformMeta != null && longformMeta.containsKey("titles")) {
             List<String> titles = (List<String>) longformMeta.get("titles");
             if (titles != null && !titles.isEmpty()) longformTitle = titles.get(0);
         }
+        List<Map<String, Object>> personPhotos = thumbnailPersonResolver.resolve(
+                thumbnailBrief, longformTitle, job.getKeyword(), scriptText
+        );
+        log.info("자동 썸네일용 승인 인물 사진 연결: jobId={}, count={}", jobId, personPhotos.size());
         
         String longformThumbPath = "/app/data/jobs/" + jobId + "/longform_thumbnail.png";
         String shortsThumbPath = "/app/data/jobs/" + jobId + "/shorts_thumbnail.png";
         
+        Map<String, Object> longformThumbnailResult = java.util.Map.of();
         try {
-            fastApiClient.generateThumbnailImage(jobId, longformTitle, "longform", longformThumbPath, 
-                                                 characterImagePath, characterStylePrompt,
-                                                 loraModelId, loraTriggerWord, loraScale);
+            longformThumbnailResult = fastApiClient.generateThumbnailImage(jobId, longformTitle, "longform", longformThumbPath,
+                    character.imagePath(), character.stylePrompt(), character.loraModelId(), character.loraTriggerWord(),
+                    character.loraScale() == null ? 1.0 : character.loraScale().doubleValue(),
+                    sceneCandidates, thumbnailBrief, characterIdentity, personPhotos, character.watermarkPath(),
+                    referenceStyleProfile, null, false);
         } catch (Exception e) {
             log.error("롱폼 썸네일 생성 실패: {}", e.getMessage());
         }
@@ -242,17 +250,29 @@ public class JobService {
                 if (sTitles != null && !sTitles.isEmpty()) shortsTitle = sTitles.get(0);
             }
             try {
-                fastApiClient.generateThumbnailImage(jobId, shortsTitle, "shorts", shortsThumbPath, 
-                                                     characterImagePath, characterStylePrompt,
-                                                     loraModelId, loraTriggerWord, loraScale);
+                fastApiClient.generateThumbnailImage(jobId, shortsTitle, "shorts", shortsThumbPath,
+                        character.imagePath(), character.stylePrompt(), character.loraModelId(), character.loraTriggerWord(),
+                        character.loraScale() == null ? 1.0 : character.loraScale().doubleValue(),
+                        sceneCandidates, thumbnailBrief, characterIdentity, personPhotos, character.watermarkPath(),
+                        referenceStyleProfile, null, false);
             } catch (Exception e) {
                 log.error("쇼츠 썸네일 생성 실패: {}", e.getMessage());
             }
         }
         
-        Map<String, String> thumbPaths = new java.util.HashMap<>();
+        Map<String, Object> thumbPaths = new java.util.HashMap<>();
         thumbPaths.put("longform_path", "/api/jobs/" + jobId + "/thumbnail/longform");
         thumbPaths.put("shorts_path", "/api/jobs/" + jobId + "/thumbnail/shorts");
+        thumbPaths.put("longform_result", longformThumbnailResult);
+        thumbPaths.put("character_identity", characterIdentity);
+        thumbPaths.put("source_mode", sceneCandidates.isEmpty() ? "ai_fallback" : "scene");
+        thumbPaths.put("person_matches", personPhotos.stream().map(photo -> java.util.Map.of(
+                "person_id", String.valueOf(photo.getOrDefault("person_id", "")),
+                "person_name", String.valueOf(photo.getOrDefault("person_name", "")),
+                "photo_id", String.valueOf(photo.getOrDefault("photo_id", "")),
+                "match_term", String.valueOf(photo.getOrDefault("match_term", "")),
+                "match_source", String.valueOf(photo.getOrDefault("match_source", ""))
+        )).toList());
         
         assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.THUMBNAIL_IMAGE)
                 .ifPresent(assetRepository::delete);
@@ -266,6 +286,179 @@ public class JobService {
         assetRepository.save(thumbnailAsset);
         
         log.info("유튜브 패키지 생성 완료: jobId={}", jobId);
+    }
+
+    private String longformTitleFallback(VideoJob job) {
+        return job.getTitle() == null ? "시장 핵심 이슈" : job.getTitle();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> loadThumbnailBrief(String scriptMetaJson, String fallbackTitle) {
+        try {
+            Map<String, Object> parsed = objectMapper.readValue(scriptMetaJson, Map.class);
+            Object brief = parsed.get("thumbnail_brief");
+            if (brief instanceof Map<?, ?> map) return new java.util.HashMap<>((Map<String, Object>) map);
+        } catch (Exception exception) {
+            log.warn("썸네일 브리프 복원 실패: {}", exception.getMessage());
+        }
+        Map<String, Object> fallback = new java.util.HashMap<>();
+        fallback.put("hook_line", "{y:" + fallbackTitle + "}");
+        fallback.put("punch_line", "{y:핵심 정리}");
+        fallback.put("source_scene_ids", java.util.List.of("0"));
+        return fallback;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> buildThumbnailSceneCandidates(Long jobId) {
+        List<Map<String, Object>> candidates = new java.util.ArrayList<>();
+        Optional<Asset> manifestAsset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.ASSEMBLY_MANIFEST);
+        if (manifestAsset.isPresent() && manifestAsset.get().getLocalPath() != null) {
+            try {
+                String payload = Files.readString(Path.of(manifestAsset.get().getLocalPath()));
+                Map<String, Object> manifest = objectMapper.readValue(payload, Map.class);
+                Object rawScenes = manifest.get("scenes");
+                if (rawScenes instanceof List<?> scenes) {
+                    for (Object value : scenes) {
+                        if (!(value instanceof Map<?, ?> rawScene)) continue;
+                        Map<String, Object> candidate = new java.util.HashMap<>((Map<String, Object>) rawScene);
+                        if (!Boolean.TRUE.equals(candidate.get("used_in_final_video"))) continue;
+                        Object imagePath = candidate.get("image_path");
+                        if (!(imagePath instanceof String path) || path.isBlank()) continue;
+                        candidate.putIfAbsent("scene_id", String.valueOf(candidate.getOrDefault("index", candidates.size())));
+                        candidates.add(candidate);
+                    }
+                }
+            } catch (Exception exception) {
+                log.warn("조립 매니페스트에서 썸네일 후보 복원 실패: {}", exception.getMessage());
+            }
+            if (!candidates.isEmpty()) return candidates;
+        }
+        for (Asset asset : assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE)) {
+            try {
+                Map<String, Object> scene = objectMapper.readValue(asset.getMetaJson(), Map.class);
+                String path = scene.get("image_path") instanceof String value ? value : asset.getLocalPath();
+                if (path == null || path.isBlank()) continue;
+                Map<String, Object> candidate = new java.util.HashMap<>(scene);
+                candidate.put("image_path", path);
+                candidate.put("used_in_final_video", true);
+                candidate.putIfAbsent("scene_id", String.valueOf(scene.getOrDefault("index", candidates.size())));
+                candidates.add(candidate);
+            } catch (Exception exception) {
+                log.warn("썸네일 후보 씬 메타데이터 복원 실패: assetId={}, error={}", asset.getId(), exception.getMessage());
+            }
+        }
+        return candidates;
+    }
+
+    /**
+     * Promotes an already-rendered, scene-backed thumbnail candidate.  No
+     * image generation runs here: the selected file is copied to the legacy
+     * primary path consumed by the YouTube package and download endpoint.
+     */
+    @Transactional
+    public Map<String, Object> selectThumbnailVariant(Long jobId, String format, int variant) {
+        if (!"longform".equals(format) && !"shorts".equals(format)) {
+            throw new IllegalArgumentException("thumbnail format must be longform or shorts");
+        }
+        if (variant < 1 || variant > 3) {
+            throw new IllegalArgumentException("thumbnail variant must be between 1 and 3");
+        }
+        String baseName = format + "_thumbnail";
+        Path jobDirectory = Path.of("/app/data/jobs", String.valueOf(jobId));
+        Path source = jobDirectory.resolve(baseName + "_v" + variant + ".png");
+        if (!Files.isRegularFile(source) && variant == 1) source = jobDirectory.resolve(baseName + ".png");
+        Path target = jobDirectory.resolve(baseName + ".png");
+        if (!Files.isRegularFile(source)) {
+            throw new IllegalStateException("thumbnail variant not found: " + variant);
+        }
+        try {
+            if (!source.equals(target)) {
+                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("thumbnail variant promotion failed", exception);
+        }
+
+        assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.THUMBNAIL_IMAGE)
+                .ifPresent(asset -> {
+                    Map<String, Object> metadata;
+                    try {
+                        metadata = objectMapper.readValue(asset.getMetaJson(), Map.class);
+                    } catch (Exception ignored) {
+                        metadata = new java.util.HashMap<>();
+                    }
+                    metadata.put(format + "_selected_variant", variant);
+                    metadata.put(format + "_path", "/api/jobs/" + jobId + "/thumbnail/" + format);
+                    asset.setLocalPath(target.toString());
+                    asset.setMetaJson(safeJson(metadata));
+                    assetRepository.save(asset);
+                });
+        return Map.of("format", format, "selected_variant", variant, "path", target.toString());
+    }
+
+    /** Re-render only the approved thumbnail candidates; script/video assets stay untouched. */
+    @Transactional
+    public Map<String, Object> regenerateThumbnail(Long jobId, String format, String preset) {
+        if (!"longform".equals(format) && !"shorts".equals(format)) {
+            throw new IllegalArgumentException("thumbnail format must be longform or shorts");
+        }
+        if (preset != null && !preset.isBlank() && !List.of("person_led", "mascot_led", "chart_led").contains(preset)) {
+            throw new IllegalArgumentException("unsupported thumbnail preset");
+        }
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new IllegalArgumentException("Job not found"));
+        Optional<Asset> scriptAsset = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
+        if (scriptAsset.isEmpty()) throw new IllegalStateException("thumbnail regeneration requires a script asset");
+        List<Map<String, Object>> candidates = buildThumbnailSceneCandidates(jobId);
+        if (candidates.isEmpty()) throw new IllegalStateException("thumbnail regeneration requires final-video scene candidates");
+
+        Map<String, Object> brief = loadThumbnailBrief(scriptAsset.get().getMetaJson(), longformTitleFallback(job));
+        String scriptText = scriptAsset.get().getMetaJson();
+        CharacterAssetResolver.ResolvedCharacter character = characterAssetResolver.resolve(job);
+        Map<String, Object> identity = new java.util.HashMap<>();
+        identity.put("profile_id", character.profileId());
+        identity.put("identity_hash", character.identityHash());
+        identity.put("character_key", character.profileId());
+        List<Map<String, Object>> people = thumbnailPersonResolver.resolve(brief, job.getTitle(), job.getKeyword(), scriptText);
+        String styleProfile = job.getChannelId() == null || job.getChannelId().isBlank()
+                ? "black_han_sans_v1"
+                : channelProfileRepository.findById(job.getChannelId()).map(ChannelProfile::getReferenceStyleProfile)
+                    .filter(value -> value != null && !value.isBlank()).orElse("black_han_sans_v1");
+        Path jobDirectory = Path.of("/app/data/jobs", String.valueOf(jobId));
+        String outputPath = jobDirectory.resolve(format + "_thumbnail.png").toString();
+        archiveThumbnailVariants(jobDirectory, format);
+        Map<String, Object> result = fastApiClient.generateThumbnailImage(
+                jobId, job.getTitle(), format, outputPath,
+                character.imagePath(), character.stylePrompt(), character.loraModelId(), character.loraTriggerWord(),
+                character.loraScale() == null ? 1.0 : character.loraScale().doubleValue(),
+                candidates, brief, identity, people, character.watermarkPath(), styleProfile, preset, true);
+
+        assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.THUMBNAIL_IMAGE).ifPresent(asset -> {
+            Map<String, Object> metadata;
+            try { metadata = objectMapper.readValue(asset.getMetaJson(), Map.class); }
+            catch (Exception ignored) { metadata = new java.util.HashMap<>(); }
+            int version = ((Number) metadata.getOrDefault("thumbnail_regeneration_version", 0)).intValue() + 1;
+            metadata.put("thumbnail_regeneration_version", version);
+            metadata.put(format + "_result", result);
+            metadata.put(format + "_selected_variant", ((Number) result.getOrDefault("selected_variant", 0)).intValue() + 1);
+            asset.setMetaJson(safeJson(metadata));
+            assetRepository.save(asset);
+        });
+        return Map.of("format", format, "result", result, "preset", preset == null ? "auto" : preset);
+    }
+
+    private void archiveThumbnailVariants(Path jobDirectory, String format) {
+        try {
+            Path archive = jobDirectory.resolve("thumbnail_history").resolve(format + "-" + System.currentTimeMillis());
+            Files.createDirectories(archive);
+            for (int variant = 1; variant <= 3; variant++) {
+                String suffix = variant == 1 ? ".png" : "_v" + variant + ".png";
+                Path source = jobDirectory.resolve(format + "_thumbnail" + suffix);
+                if (Files.isRegularFile(source)) Files.copy(source, archive.resolve(source.getFileName()));
+            }
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("thumbnail history archive failed", exception);
+        }
     }
 
     @Transactional

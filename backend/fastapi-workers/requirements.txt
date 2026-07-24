@@ -16,6 +16,14 @@ anthropic==0.40.0
 matplotlib==3.9.2
 numpy>=1.24.0,<2.0
 Pillow>=10.0.0
+# Approved real-person photos are cut out locally and cached; no face is sent
+# to an image-generation provider.
+# 2.0.60 supports the existing NumPy 1.x scientific stack (newer releases
+# require NumPy >=2.3). We use the in-process library API only, never rembg's
+# HTTP server / custom model endpoint.
+rembg[cpu]==2.0.60
+# DOM-native article quote coordinates and reproducible public-page captures.
+playwright==1.49.1
 
 # ─── 신규: 한국 주식 시장 데이터 ───────────────────────
 pykrx<1.2.7

@@ -25,6 +25,10 @@ public class ChannelProfile {
     @Column(name = "character_image_path", length = 500)
     private String characterImagePath;
 
+    /** Transparent channel logo/wordmark rendered in the thumbnail's top layer. */
+    @Column(name = "watermark_path", length = 500)
+    private String watermarkPath;
+
     @Column(name = "character_style_prompt", columnDefinition = "TEXT")
     private String characterStylePrompt;
 
@@ -66,6 +70,11 @@ public class ChannelProfile {
      *  미설정 시 runtime_config의 기본 자막 스타일 적용. */
     @Column(name = "subtitle_style", columnDefinition = "TEXT")
     private String subtitleStyle;
+
+    /** Versioned rendering policy, not a copied channel artwork or logo. */
+    @Column(name = "reference_style_profile", length = 100)
+    @Builder.Default
+    private String referenceStyleProfile = "black_han_sans_v1";
 
     /** [Sprint 3] 채널별 TTS 속도 배속 오버라이드.
      *  미설정(null) 시 runtime_config의 전역 tts_speed 값 사용.

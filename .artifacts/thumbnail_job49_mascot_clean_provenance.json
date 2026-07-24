@@ -1,0 +1,52 @@
+{
+  "schema_version": 3,
+  "selected_variant": 0,
+  "variants": [
+    {
+      "template_id": "mascot_headline",
+      "preset": "mascot_led",
+      "creative_mode": "mascot_only",
+      "layout_variant": "default",
+      "source_scene_id": "36",
+      "scene_kind": "chart",
+      "backdrop": {
+        "kind": "cropped_around_embedded_character",
+        "kept_side": "right",
+        "crop": [
+          0.45,
+          0.0,
+          0.55,
+          1.0
+        ]
+      },
+      "supporting_scene_ids": [],
+      "source_ref": [],
+      "font": "NanumSquareBold/NanumGothicBold",
+      "output_path": "/app/data/jobs/49/mascot_mode_clean_v1.png",
+      "variant_index": 0,
+      "headline": [
+        {
+          "text": "삼성전자·하이닉스",
+          "tone": "white"
+        },
+        {
+          "text": "'하반기 반전 신호'",
+          "tone": "yellow"
+        }
+      ],
+      "person": null,
+      "qa": {
+        "face_sharpness": 0.0,
+        "subject_area": 0.18,
+        "copy_fill": 0.8801,
+        "contrast": 21.0,
+        "overlaps": 0,
+        "requires_face": false,
+        "passed": true,
+        "failures": []
+      }
+    }
+  ],
+  "output_path": "/app/data/jobs/49/mascot_mode_clean.png",
+  "asset_rejections": []
+}

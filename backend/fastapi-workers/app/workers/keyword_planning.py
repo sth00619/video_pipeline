@@ -52,7 +52,7 @@ def _cache_key(keyword: str) -> str:
     # 사람이 Redis에서 찾기 쉬우면서 공백/한글도 안정적으로 쓰도록 hash suffix를 둔다.
     safe = re.sub(r"\s+", "-", keyword.strip().lower())[:48]
     # A layout/tokenization revision must not serve an old six-hour map.
-    digest = hashlib.sha256(f"v10:7d:nonlive:min-subs-3000:min-views-3000:min-multiple-0.25:{keyword.strip().lower()}".encode("utf-8")).hexdigest()[:10]
+    digest = hashlib.sha256(f"v12:7d:nonlive:min-subs-3000:min-views-500:min-multiple-0.01:{keyword.strip().lower()}".encode("utf-8")).hexdigest()[:10]
     return f"mindmap:{safe}:{digest}"
 
 

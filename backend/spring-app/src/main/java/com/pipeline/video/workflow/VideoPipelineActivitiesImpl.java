@@ -93,6 +93,10 @@ public class VideoPipelineActivitiesImpl implements VideoPipelineActivities {
         log.error("[Temporal Activity] Job FAILED 처리: jobId={}, reason={}", jobId, reason);
         VideoJob job = jobRepository.findById(jobId).orElse(null);
         if (job != null) {
+            if (job.getStatus() == JobStatus.IMAGES_RETRY_REQUIRED) {
+                log.warn("[Temporal Activity] 이미지 공급자 복구 대기 상태 유지: jobId={}", jobId);
+                return;
+            }
             job.setStatus(JobStatus.FAILED);
             jobRepository.save(job);
         }

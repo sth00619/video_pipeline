@@ -8,6 +8,7 @@ public enum AssetType {
     SCENE_IMAGE,
     GIF_CLIP,
     LONGFORM_VIDEO,
+    ASSEMBLY_MANIFEST,
     QC_REPORT,
     SHORT_CLIP,
     SOURCE_VIDEO,

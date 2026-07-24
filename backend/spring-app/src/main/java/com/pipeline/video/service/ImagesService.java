@@ -31,16 +31,30 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ImagesService {
 
+    private static final String PROVIDER_CREDIT_ERROR_CODE = "IMAGE_PROVIDER_CREDIT_REQUIRED";
+
+    /**
+     * A provider billing/quota failure is terminal for this attempt, but not
+     * for the user's job: previously rendered scenes are resumable after the
+     * account is funded.  Do not roll back the retry-required job state.
+     */
+    public static class ImageProviderRetryRequiredException extends RuntimeException {
+        public ImageProviderRetryRequiredException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
     private final VideoJobRepository jobRepository;
     private final AssetRepository assetRepository;
     private final ChannelProfileRepository channelProfileRepository;
+    private final CharacterAssetResolver characterAssetResolver;
     private final FastApiClient fastApiClient;
     private final GateService gateService;
     private final AutonomyService autonomyService;
     private final CostService costService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Transactional
+    @Transactional(noRollbackFor = ImageProviderRetryRequiredException.class)
     public ImagesGenerateResponse generate(Long jobId, String username) {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
@@ -60,28 +74,28 @@ public class ImagesService {
         // 스크립트 로드
         String scriptMetaJson = loadAssetMeta(jobId, AssetType.SCRIPT);
 
-        // 채널 프로필 로드 (캐릭터 일관성 파라미터 추출)
-        String characterImagePath = null;
-        String characterStylePrompt = null;
-        String characterPosesDir = null;  // [S2-4] 이중 레이어 합성용 포즈 디렉토리
-        String characterProfileId = job.getCharacterOverride() != null && !job.getCharacterOverride().isBlank()
-                ? job.getCharacterOverride() : job.getChannelId();
-        if (characterProfileId != null) {
-            ChannelProfile profile = channelProfileRepository.findById(characterProfileId).orElse(null);
-            if (profile != null) {
-                characterImagePath = profile.getCharacterImagePath();
-                characterStylePrompt = profile.getCharacterStylePrompt();
-                characterPosesDir = profile.getCharacterPosesDir();
-                log.info("채널 캐릭터 프로필 로드 완료: channelId={}, characterImagePath={}, posesDir={}",
-                        characterProfileId, characterImagePath, characterPosesDir);
-            }
-        }
+        CharacterAssetResolver.ResolvedCharacter character = characterAssetResolver.resolve(job);
+        log.info("단일 캐릭터 정체성 해석 완료: jobId={}, profileId={}, hash={}",
+                jobId, character.profileId(), character.identityHash().substring(0, 12));
 
         log.info("이미지 생성 시작: jobId={}, autonomy={}", jobId, job.getAutonomy());
 
         // FastAPI 호출
-        ImagesGenerateResponse result = fastApiClient.generateImages(
-                jobId, ttsMetaJson, scriptMetaJson, characterImagePath, characterStylePrompt, characterPosesDir);
+        ImagesGenerateResponse result;
+        try {
+            result = fastApiClient.generateImages(
+                    jobId, ttsMetaJson, scriptMetaJson, character.imagePath(), character.stylePrompt(), character.posesDir(),
+                    character.loraModelId(), character.loraTriggerWord(), character.loraScale());
+        } catch (RuntimeException e) {
+            if (isProviderCreditRequired(e)) {
+                job.setStatus(JobStatus.IMAGES_RETRY_REQUIRED);
+                jobRepository.save(job);
+                log.warn("이미지 공급자 크레딧/쿼터 부족으로 재시도 대기: jobId={}", jobId);
+                throw new ImageProviderRetryRequiredException(
+                        "이미지 공급자 크레딧 또는 쿼터가 부족합니다. 충전 후 이미지 생성만 다시 시도해 주세요.", e);
+            }
+            throw e;
+        }
 
         if ("BATCH_PENDING".equals(result.getStatus())) {
             assetRepository.findByJobIdAndAssetType(jobId, AssetType.IMAGE_BATCH)
@@ -144,6 +158,16 @@ public class ImagesService {
         }
 
         return result;
+    }
+
+    private static boolean isProviderCreditRequired(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            String message = current.getMessage();
+            if (message != null && message.contains(PROVIDER_CREDIT_ERROR_CODE)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Transactional

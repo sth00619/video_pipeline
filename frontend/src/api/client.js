@@ -21,7 +21,8 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 || error.response?.status === 403) {
       authStore.clearToken()
       if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
+        const next = window.location.pathname + window.location.search
+        window.location.href = `/login?next=${encodeURIComponent(next)}`
       }
     }
     return Promise.reject(error)

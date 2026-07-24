@@ -34,6 +34,13 @@ class ImageWorkerStabilityTests(unittest.TestCase):
         self.assertTrue(classify_image_error(RuntimeError("HTTP 503 unavailable")).retryable)
         self.assertTrue(classify_image_error(TimeoutError("timed out")).retryable)
 
+    def test_prepaid_credit_exhaustion_is_not_retried_even_when_provider_uses_429(self):
+        decision = classify_image_error(RuntimeError(
+            "HTTP 429: Your prepayment credits are depleted; status=RESOURCE_EXHAUSTED"
+        ))
+        self.assertFalse(decision.retryable)
+        self.assertEqual(decision.reason, "permanent provider billing/quota response")
+
     def test_background_layer_uses_registered_runtime_keys(self):
         provider = _Provider()
         pressure = _Pressure()

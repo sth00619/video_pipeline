@@ -1,0 +1,36 @@
+{
+  "job_id": 990077,
+  "created_at": "2026-07-23T11:47:20.554960+00:00",
+  "status": "completed",
+  "selected": [
+    {
+      "scene_id": "actual-yna-1",
+      "query": "코스피 상승한 다. 5.85%",
+      "terms": [
+        "코스피",
+        "상승한",
+        "다.",
+        "5.85%"
+      ],
+      "candidate_urls": [
+        "https://www.yna.co.kr/view/AKR20260722082100008"
+      ],
+      "selected_url": "https://www.yna.co.kr/view/AKR20260722082100008",
+      "publisher": "연합뉴스",
+      "quote": "한국거래소에 따르면 오전 11시 현재 코스피는 전 거래일 대비 394.50포인트(5.85%) 상승한 7,142.45다.",
+      "key_phrase": "(5.85%) 상승한",
+      "similarity": 0.9038,
+      "evidence_score": 12.0,
+      "fact_ref": "facts[0]",
+      "requested_body": "highlight_underline",
+      "effective_body": "highlight_underline",
+      "downgraded": false,
+      "narration_sha256": "b367c10d59cdc20233d986e09785c951940dcd78f621217562482988313477cc"
+    }
+  ],
+  "skipped": [],
+  "narration_hashes": {
+    "actual-yna-1": "b367c10d59cdc20233d986e09785c951940dcd78f621217562482988313477cc"
+  },
+  "selected_count": 1
+}

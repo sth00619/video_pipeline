@@ -51,16 +51,16 @@ from app.utils.intro_motion import select_intro_motion_scene_indices
 from app.utils.output_qc import build_output_qc_report
 from app.services.kling_prompt_builder import build_kling_motion_prompt
 from app.services.bubble_overlay import write_speech_bubble_overlay
+from app.services.annotate import callout_block, render_annotations
+from app.services.verbatim_guard import validate as validate_verbatim
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
-# Final-frame editorial policy. Verified market charts remain enabled, while
-# floating index cards and generated speech bubbles are intentionally omitted.
-# Bottom ASS subtitles are assembled separately and are unaffected.
+# Final-frame editorial policy.  Text and exact numerical values are rendered
+# only as post-production graphics, never as image/video-generation prompts.
 RENDER_VERIFIED_INDEX_CARDS = False
-RENDER_SPEECH_BUBBLES = False
-OVERLAY_POLICY_VERSION = 3
+OVERLAY_POLICY_VERSION = 4
 
 def _run_subprocess(cmd: str, job_id: int) -> int:
     """FFmpeg 등의 명령어를 subprocess.Popen으로 실행하고 중지 트래킹 등록"""
@@ -150,7 +150,7 @@ class LongformWorker:
             "scenes": scenes_meta_json,
             "gifs": gifs_meta_json,
             "audio": source_state(audio_path),
-            "images": [source_state(str(scene.get("image_path", ""))) for scene in scenes],
+            "images": [source_state(_article_image_path(scene)) for scene in scenes],
             "motion_policy": {
                 "enabled": bool(runtime_config.value("intro_motion_enabled")),
                 "clip_count": int(runtime_config.value("intro_motion_clip_count")),
@@ -160,7 +160,8 @@ class LongformWorker:
             "overlay_policy": {
                 "version": OVERLAY_POLICY_VERSION,
                 "verified_index_cards": RENDER_VERIFIED_INDEX_CARDS,
-                "speech_bubbles": RENDER_SPEECH_BUBBLES,
+                "speech_bubbles": bool(runtime_config.value("render_speech_bubbles")),
+                "article_evidence": bool(runtime_config.value("render_article_evidence")),
                 "market_charts": True,
             },
         }, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
@@ -185,7 +186,7 @@ class LongformWorker:
         missing_images = [
             int(scene.get("index", i))
             for i, scene in enumerate(scenes)
-            if not _verify_image(scene.get("image_path", ""))
+            if not _verify_image(_article_image_path(scene))
         ]
         if missing_images:
             raise RuntimeError(f"이미지 생성이 완료되지 않은 씬이 있어 조립을 중단합니다: {missing_images[:20]}")
@@ -290,7 +291,7 @@ class LongformWorker:
             futures = {
                 executor.submit(
                     self._process_scene, i, scene, video_provider,
-                    i in intro_kling_indices and (
+                    i in intro_kling_indices and not _article_capture_for_scene(scene) and (
                         bool(scene.get("use_kling")) if has_manual_kling_selection else True
                     ), temp_dir, job_id
                 ): i
@@ -327,7 +328,8 @@ class LongformWorker:
         clip_paths = [clip_paths_map[i] for i in sorted(clip_paths_map)]
         requested_motion_indices = {
             i for i in intro_kling_indices
-            if not has_manual_kling_selection or bool(scenes[i].get("use_kling"))
+            if not _article_capture_for_scene(scenes[i])
+            and (not has_manual_kling_selection or bool(scenes[i].get("use_kling")))
         }
         actual_kling_count = sum(
             1 for i in requested_motion_indices if clip_modes.get(i) == "kling"
@@ -602,6 +604,40 @@ class LongformWorker:
             "resolution": "1920x1080",
             "quality_report": quality_report,
         }
+        # Persist a small, stable provenance manifest for deterministic
+        # thumbnail selection.  A thumbnail may only use an image recorded
+        # here, never a separately generated poster that viewers will not see
+        # in the finished video.
+        timeline_seconds = 0.0
+        manifest_scenes = []
+        for index, scene in enumerate(scenes):
+            duration = scene_duration_seconds(scene, float(runtime_config.value("scene_duration_sec")))
+            image_path = _article_image_path(scene)
+            manifest_scenes.append({
+                "scene_id": str(scene.get("scene_id") or scene.get("id") or index),
+                "index": index,
+                "image_path": image_path,
+                "used_in_final_video": True,
+                "start_seconds": round(timeline_seconds, 3),
+                "end_seconds": round(timeline_seconds + duration, 3),
+                "use_kling": bool(scene.get("use_kling")),
+                "generation_method": scene.get("generation_method"),
+                "visual_type": scene.get("visual_type"),
+                "character_regions": scene.get("character_regions") or [],
+                "clean_plate_path": scene.get("clean_plate_path"),
+                "asset_layout_metadata": scene.get("asset_layout_metadata") or {},
+                "annotations": scene.get("annotations") or [],
+                "market_chart": scene.get("market_chart"),
+            })
+            timeline_seconds += duration
+        manifest_path = job_dir / "assembly_manifest.json"
+        manifest_path.write_text(json.dumps({
+            "job_id": job_id,
+            "video_path": output_path,
+            "resolution": "1920x1080",
+            "scenes": manifest_scenes,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+        result["assembly_manifest_path"] = str(manifest_path)
         cache_tmp = result_cache_path.with_suffix(".tmp")
         cache_tmp.write_text(
             json.dumps({"input_fingerprint": assembly_fingerprint, "result": result}, ensure_ascii=False),
@@ -625,7 +661,17 @@ class LongformWorker:
         if is_job_stopped(job_id):
             raise RuntimeError(f"Job {job_id} stopped by user.")
 
-        img_path = scene.get("image_path", "")
+        _prepare_deterministic_scene_asset(scene, temp_dir, i)
+        article_capture = _article_capture_for_scene(scene)
+        img_path = _article_image_path(scene)
+        if article_capture:
+            if not bool(runtime_config.value("render_article_evidence")):
+                raise RuntimeError(f"scene {i} is article evidence but article overlays are disabled")
+            if not _article_source_credit(scene):
+                raise RuntimeError(f"scene {i} article evidence is missing source_credit/publisher/date")
+            # Evidence screenshots must never be sent to Kling.  They retain
+            # DOM/PDF pixel geometry and therefore cost no Gemini/Kling call.
+            use_kling = False
         raw_dur = scene.get("duration")
         duration = float(raw_dur) if raw_dur is not None else 15.0
         clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
@@ -634,7 +680,7 @@ class LongformWorker:
         # An interrupted assembly can leave a valid *static* clip behind.  It
         # must never satisfy a later request for an opening Kling scene.
         motion_requested = bool(video_provider and use_kling)
-        expected_source_type = "kling" if motion_requested else "static"
+        expected_source_type = "kling" if motion_requested else ("article_evidence" if article_capture else "static")
         clip_fingerprint = _scene_clip_fingerprint(scene, img_path, duration, expected_source_type)
         if _can_reuse_scene_clip(
             clip_path,
@@ -714,12 +760,8 @@ class LongformWorker:
                                     pass
 
                         if _verify_video(clip_path) and abs(_probe_duration(clip_path) - duration) <= 0.15:
-                            if _requires_verified_index_card(scene) and not _requires_verified_market_chart(scene) and not _apply_verified_index_card(scene, clip_path, temp_dir, i, duration, job_id):
-                                raise RuntimeError(f"scene {i} verified index card overlay failed")
-                            if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
-                                raise RuntimeError(f"scene {i} verified market chart overlay failed")
-                            if not _apply_speech_bubble_overlay(scene, clip_path, temp_dir, i, duration, job_id):
-                                raise RuntimeError(f"scene {i} speech bubble overlay failed")
+                            if not _apply_editorial_overlays(scene, clip_path, temp_dir, i, duration, job_id):
+                                raise RuntimeError(f"scene {i} editorial overlay failed")
                             record_cost(job_id, "kling")
                             
                             # Write Kling audit params for reproducibility
@@ -741,12 +783,8 @@ class LongformWorker:
                     if os.path.exists(img_path):
                         try:
                             _ffmpeg_static_image_with_fade(img_path, clip_path, duration, bg_color, job_id)
-                            if _requires_verified_index_card(scene) and not _requires_verified_market_chart(scene) and not _apply_verified_index_card(scene, clip_path, temp_dir, i, duration, job_id):
-                                raise RuntimeError(f"scene {i} verified index card overlay failed")
-                            if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
-                                raise RuntimeError(f"scene {i} verified market chart overlay failed")
-                            if not _apply_speech_bubble_overlay(scene, clip_path, temp_dir, i, duration, job_id):
-                                raise RuntimeError(f"scene {i} speech bubble overlay failed")
+                            if not _apply_editorial_overlays(scene, clip_path, temp_dir, i, duration, job_id):
+                                raise RuntimeError(f"scene {i} editorial overlay failed")
                             if _verify_video(clip_path):
                                 logger.info(f"씬 {i} Fal 모션 실패 페이드 폴백 완료")
                                 _write_scene_clip_meta(clip_path, "fal_fallback_static", clip_fingerprint)
@@ -756,21 +794,22 @@ class LongformWorker:
 
             # 나머지 씬(또는 Kling 실패 시): 정적 이미지 효과 (흔들림 방지 및 화질 극대화)
             if os.path.exists(img_path):
-                _ffmpeg_static_image(img_path, clip_path, duration, bg_color, job_id)
+                reveal = scene.get("reveal_assets") if isinstance(scene.get("reveal_assets"), dict) else {}
+                if bool(runtime_config.value("scene_reveal_enabled")) and reveal.get("plain_path") and reveal.get("emphasized_path"):
+                    _ffmpeg_reveal_images(str(reveal["plain_path"]), str(reveal["emphasized_path"]), clip_path, duration, job_id)
+                else:
+                    _ffmpeg_static_image(img_path, clip_path, duration, bg_color, job_id)
             else:
                 raise RuntimeError(f"scene {i} image disappeared during assembly")
             if not _verify_video(clip_path):
                 raise RuntimeError(f"scene {i} clip failed validation after rendering")
-            if _requires_verified_index_card(scene) and not _requires_verified_market_chart(scene) and not _apply_verified_index_card(scene, clip_path, temp_dir, i, duration, job_id):
-                raise RuntimeError(f"scene {i} verified index card overlay failed")
-            if _requires_verified_market_chart(scene) and not _apply_verified_market_chart(scene, clip_path, temp_dir, i, duration, job_id):
-                raise RuntimeError(f"scene {i} verified market chart overlay failed")
-            if not _apply_speech_bubble_overlay(scene, clip_path, temp_dir, i, duration, job_id):
-                raise RuntimeError(f"scene {i} speech bubble overlay failed")
+            if not _apply_editorial_overlays(scene, clip_path, temp_dir, i, duration, job_id):
+                raise RuntimeError(f"scene {i} editorial overlay failed")
             if not _verify_video(clip_path):
                 raise RuntimeError(f"scene {i} clip failed validation after overlay")
-            _write_scene_clip_meta(clip_path, "static", clip_fingerprint)
-            return i, clip_path, "static", None
+            source_type = "article_evidence" if article_capture else "static"
+            _write_scene_clip_meta(clip_path, source_type, clip_fingerprint)
+            return i, clip_path, source_type, None
 
         except Exception as e:
             logger.error(f"scene {i} processing failed; aborting job: {e}")
@@ -1070,6 +1109,110 @@ def _can_reuse_scene_clip(
     return _verify_video(clip_path) and abs(_probe_duration(clip_path) - duration) <= 0.15
 
 
+def _article_capture_for_scene(scene: dict) -> dict | None:
+    capture = scene.get("article_capture")
+    if str(scene.get("visual_type") or scene.get("visual_kind") or "") not in {"article_evidence", "article_scene"} or not isinstance(capture, dict):
+        return None
+    return capture
+
+
+def _article_source_credit(scene: dict) -> str:
+    explicit = str(scene.get("source_credit") or "").strip()
+    if explicit:
+        return explicit
+    capture = _article_capture_for_scene(scene) or {}
+    publisher = str(capture.get("publisher") or "").strip()
+    published = str(capture.get("published_at") or "").strip()
+    return f"출처: {publisher} · {published}" if publisher and published else ""
+
+
+def _article_image_path(scene: dict) -> str:
+    capture = _article_capture_for_scene(scene) or {}
+    if str(scene.get("visual_kind") or "") == "article_scene" and scene.get("image_path"):
+        return str(scene["image_path"])
+    return str(capture.get("local_path") or scene.get("image_path") or "")
+
+
+def _prepare_deterministic_scene_asset(scene: dict, temp_dir: Path, index: int) -> None:
+    """Materialise declared evidence/infographic scenes before FFmpeg reads them.
+
+    These routes never call an image model.  A malformed scene stays a hard
+    failure instead of silently falling back to a mascot or generic artwork.
+    """
+    kind = str(scene.get("visual_kind") or "")
+    if kind not in {"article_scene", "infographic_timeline", "infographic_bullet_list"}:
+        return
+    if scene.get("_deterministic_scene_prepared"):
+        return
+    output = temp_dir / f"deterministic_scene_{index:03d}.png"
+    plain = temp_dir / f"deterministic_scene_{index:03d}_plain.png"
+    if kind == "article_scene":
+        from app.models.article_evidence import ArticleCapture
+        from app.services.article.frame_editor import ArticleFrameEditor
+        from app.services.scene_frames.article_scene import ArticleSceneRenderer, ArticleSceneSpec
+        from app.services.scene_frames.emphasis_policy import plan_from_scene
+        capture = ArticleCapture.model_validate(scene.get("article_capture") or {})
+        frame = ArticleFrameEditor().from_capture(capture)
+        emphasis = plan_from_scene(scene.get("emphasis_plan") or scene.get("article_emphasis"))
+        rendered = ArticleSceneRenderer().render(
+            frame,
+            ArticleSceneSpec(
+                evidence_quote=capture.quote,
+                emphasis=emphasis,
+                key_phrase=str(scene.get("key_phrase") or ""),
+                channel_watermark_path=str(scene.get("channel_watermark_path") or "") or None,
+            ),
+        )
+        scene["emphasis_plan"] = emphasis.model_dump(mode="json")
+        scene["emphasis_audit"] = rendered.audit or {}
+    else:
+        from app.services.scene_frames.infographic.schemas import BulletListCardSpec, TimelineCardSpec
+        from app.services.scene_frames.infographic.timeline import InfographicRenderer
+        renderer = InfographicRenderer()
+        verified = list(scene.get("verified_facts") or [])
+        if kind == "infographic_timeline":
+            rendered = renderer.timeline(TimelineCardSpec.model_validate(scene.get("card") or {}), verified)
+        else:
+            rendered = renderer.bullet_list(BulletListCardSpec.model_validate(scene.get("card") or {}), verified)
+    rendered.plain.save(plain, "PNG")
+    rendered.emphasized.save(output, "PNG")
+    scene["image_path"] = str(output)
+    scene["scene_kind"] = "article_scene" if kind == "article_scene" else "infographic"
+    scene["reveal_assets"] = {"plain_path": str(plain), "emphasized_path": str(output)}
+    scene["_deterministic_scene_prepared"] = True
+
+
+def _default_capture_annotations(capture: dict, raw_plan: object = None) -> list[dict]:
+    """Deprecated compatibility path routed through the V3 emphasis policy."""
+    from app.services.scene_frames.emphasis_policy import BodyEmphasis, plan_from_scene
+
+    plan = plan_from_scene(raw_plan)
+    annotations: list[dict] = []
+    quote_bboxes = capture.get("quote_bboxes") or []
+    key_bboxes = capture.get("key_phrase_bboxes") or []
+    effective = plan.body
+    if effective == BodyEmphasis.RECT and not key_bboxes:
+        effective = BodyEmphasis.HIGHLIGHT
+    if effective in {BodyEmphasis.HIGHLIGHT, BodyEmphasis.HIGHLIGHT_UNDERLINE}:
+        annotations.extend({
+            "type": "highlighter", "bbox": box,
+            "color": "#39E65A", "origin": "dom_quote_default_v3",
+        } for box in quote_bboxes)
+    if effective in {BodyEmphasis.UNDERLINE, BodyEmphasis.HIGHLIGHT_UNDERLINE} and quote_bboxes:
+        annotations.append({
+            "type": "underline", "bboxes": quote_bboxes,
+            "color": "#E60023", "stroke_width": 10,
+            "origin": "dom_quote_default_v3",
+        })
+    elif effective == BodyEmphasis.RECT:
+        annotations.extend({
+            "type": "rect", "bbox": box,
+            "color": "#E60023", "stroke_width": 8,
+            "origin": "dom_quote_default_v3",
+        } for box in key_bboxes)
+    return annotations
+
+
 def _scene_clip_fingerprint(
     scene: dict, image_path: str, duration: float, source_type: str
 ) -> str:
@@ -1087,12 +1230,17 @@ def _scene_clip_fingerprint(
         "motion_type": scene.get("motion_type"),
         "market_chart": scene.get("market_chart"),
         "index_data": scene.get("index_data"),
+        "article_capture": scene.get("article_capture"),
+        "annotations": scene.get("annotations"),
+        "callout": scene.get("callout"),
+        "speech_bubble": scene.get("speech_bubble"),
         "bubble_text": scene.get("bubble_text"),
         "subtitle_text": scene.get("subtitle_text"),
         "overlay_policy": {
             "version": OVERLAY_POLICY_VERSION,
             "verified_index_cards": RENDER_VERIFIED_INDEX_CARDS,
-            "speech_bubbles": RENDER_SPEECH_BUBBLES,
+            "speech_bubbles": bool(runtime_config.value("render_speech_bubbles")),
+            "article_evidence": bool(runtime_config.value("render_article_evidence")),
             "market_charts": True,
         },
     }
@@ -1202,6 +1350,21 @@ def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_colo
         raise RuntimeError(f"static image clip render failed: {img_path}")
 
 
+def _ffmpeg_reveal_images(plain_path: str, emphasized_path: str, clip_path: str, duration: float, job_id: int) -> None:
+    """One-pass wipe reveal for deterministic evidence/card scenes."""
+    hold = min(max(.2, duration * .28), max(.2, duration - .65))
+    cmd = (
+        f'ffmpeg -loop 1 -t {hold:.3f} -i "{plain_path}" -loop 1 -t {max(.7, duration - hold):.3f} -i "{emphasized_path}" '
+        f'-filter_complex "[0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih):white,setsar=1,fps=30[a];'
+        f'[1:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih):white,setsar=1,fps=30[b];'
+        f'[a][b]xfade=transition=wipeleft:duration=0.6:offset={max(0, hold-.2):.3f}[v]" '
+        f'-map "[v]" -t {duration:.3f} -an -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -y "{clip_path}" -loglevel error'
+    )
+    ret = _run_subprocess(cmd, job_id)
+    if ret != 0 or not _verify_video(clip_path):
+        raise RuntimeError("deterministic scene reveal render failed")
+
+
 def _requires_verified_index_card(scene: dict) -> bool:
     if not RENDER_VERIFIED_INDEX_CARDS:
         return False
@@ -1268,6 +1431,49 @@ def _requires_verified_market_chart(scene: dict) -> bool:
     )
 
 
+def _chart_focus_annotation(payload: dict, surface: dict[str, int]) -> dict | None:
+    """Derive a dotted emphasis ring from verified chart geometry, not an LLM.
+
+    The renderer owns the chart's panel rectangle.  This converts its current
+    data series into the same 1920×1080 coordinate space used by annotations,
+    so a later chart-surface adjustment cannot leave a ring floating elsewhere.
+    """
+    focus = payload.get("focus") or {}
+    if focus.get("enabled") is not True:
+        return None
+    kind = str(payload.get("visual_kind") or "trend_dashboard")
+    x, y, width, height = (float(surface[key]) for key in ("x", "y", "width", "height"))
+    if kind == "trend_dashboard":
+        values = [float(item.get("close")) for item in payload.get("points") or [] if item.get("close") is not None]
+        if len(values) < 2:
+            return None
+        minimum, maximum, latest = min(values), max(values), values[-1]
+        span = max(maximum - minimum, max(abs(maximum), 1.0) * .01)
+        padded_min, padded_max = minimum - span * .05, maximum + span * .05
+        normal = (latest - padded_min) / max(padded_max - padded_min, 1e-9)
+        # `_render_trend_dashboard` reserves the top area for title and the
+        # lower area for bars; the final point lies at 92% of the plot width.
+        center_x = x + width * .92
+        center_y = y + height * (.32 + (1 - normal) * .53)
+        ring_w, ring_h = width * .17, height * .20
+    elif kind == "change_arrow":
+        center_x, center_y, ring_w, ring_h = x + width * .64, y + height * .50, width * .28, height * .34
+    else:
+        center_x, center_y, ring_w, ring_h = x + width * .50, y + height * .51, width * .34, height * .42
+    return {
+        "type": "dashed_ellipse",
+        "bbox": {
+            "x": max(0, center_x - ring_w / 2) / 1920,
+            "y": max(0, center_y - ring_h / 2) / 1080,
+            "width": min(ring_w, 1920) / 1920,
+            "height": min(ring_h, 1080) / 1080,
+        },
+        "color": "#E60023",
+        "stroke_width": 10,
+        "origin": "verified_market_chart_focus",
+    }
+
+
 def _apply_verified_market_chart(scene: dict, clip_path: str, temp_dir: Path, index: int, duration: float, job_id: int) -> bool:
     """Render and overlay a collected price series; never ask the image model for a factual chart."""
     payload = scene.get("market_chart")
@@ -1297,6 +1503,11 @@ def _apply_verified_market_chart(scene: dict, clip_path: str, temp_dir: Path, in
             resolved_surface,
         )
         if ok:
+            focus_annotation = _chart_focus_annotation(payload, resolved_surface)
+            if focus_annotation:
+                existing = list(scene.get("annotations") or [])
+                if not any(item.get("origin") == "verified_market_chart_focus" for item in existing if isinstance(item, dict)):
+                    scene["annotations"] = [*existing, focus_annotation]
             logger.info(
                 "scene %s verified market chart overlay applied (series=%s source=%s)",
                 index, payload.get("series_key"), payload.get("source"),
@@ -1394,14 +1605,37 @@ def _apply_speech_bubble_overlay(
     job_id: int,
 ) -> bool:
     """Place exact bubble text after all generated-video work is complete."""
-    if not RENDER_SPEECH_BUBBLES:
+    if not bool(runtime_config.value("render_speech_bubbles")):
         return True
-    text = str(scene.get("bubble_text") or "").strip()
+    spec = scene.get("speech_bubble") if isinstance(scene.get("speech_bubble"), dict) else {}
+    text = str(spec.get("text") or scene.get("bubble_text") or "").strip()
     if not text:
         return True
+    validation = validate_verbatim(text, {
+        "article_capture": scene.get("article_capture"),
+        "verified_facts": scene.get("verified_facts"),
+        "market_snapshot": scene.get("market_snapshot"),
+    })
+    if not validation.passed:
+        logger.error("scene %s rejects ungrounded bubble text: %s", index, validation.reasons)
+        return False
     bubble_path = str(temp_dir / f"speech_bubble_{index:03d}.png")
     side = "left" if scene.get("market_chart") else "right"
-    if not write_speech_bubble_overlay(bubble_path, text, character_side=side):
+    avoid_regions = []
+    avoid_regions.extend(scene.get("character_regions") or [])
+    avoid_regions.extend((scene.get("article_capture") or {}).get("quote_bboxes") or [])
+    if isinstance(scene.get("callout"), dict) and scene["callout"].get("bbox"):
+        avoid_regions.append(scene["callout"]["bbox"])
+    if not write_speech_bubble_overlay(
+        bubble_path,
+        text,
+        character_side=side,
+        style=str(spec.get("style") or "round"),
+        avoid_regions=avoid_regions,
+        subtitle_safe_area_pct=float(runtime_config.value("subtitle_safe_area_pct")),
+        font_max_px=int(runtime_config.value("bubble_font_max_px")),
+        font_min_px=int(runtime_config.value("bubble_font_min_px")),
+    ):
         logger.warning("scene %s speech bubble renderer returned no valid file", index)
         return False
     staged = clip_path + ".bubble.mp4"
@@ -1419,6 +1653,98 @@ def _apply_speech_bubble_overlay(
         return False
     os.replace(staged, clip_path)
     return True
+
+
+def _apply_scene_annotation_overlay(
+    scene: dict,
+    clip_path: str,
+    temp_dir: Path,
+    index: int,
+    duration: float,
+    job_id: int,
+) -> bool:
+    """Apply annotations to either article captures or existing cartoon charts.
+
+    This is deliberately a post-process layer: existing Kling/static clips and
+    verified market-chart rendering stay unchanged underneath it.
+    """
+    # article_scene already contains its renderer-owned highlight + boxes;
+    # applying source-capture coordinates a second time would misalign them.
+    if str(scene.get("visual_kind") or "") == "article_scene":
+        return True
+    capture = _article_capture_for_scene(scene)
+    has_graphics = bool(scene.get("annotations")) or bool(scene.get("callout"))
+    if not capture and not has_graphics:
+        return True
+    credit = _article_source_credit(scene) if capture else ""
+    if capture and not credit:
+        return False
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+
+        raw_annotations = list(scene.get("annotations") or [])
+        # DOM captures provide exact quote geometry. If an editor has not
+        # selected custom annotations, render the captured lines with the
+        # same red underline/box treatment as the supplied references.
+        if capture and not raw_annotations:
+            raw_annotations.extend(_default_capture_annotations(
+                capture,
+                scene.get("emphasis_plan") or scene.get("article_emphasis"),
+            ))
+        annotations = []
+        for raw in raw_annotations:
+            item = dict(raw)
+            if item.get("type") == "circle":  # compatibility with the scene example contract
+                item["type"] = "ellipse"
+            annotations.append(item)
+        overlay = render_annotations((1920, 1080), annotations)
+        callout = scene.get("callout") if isinstance(scene.get("callout"), dict) else None
+        if callout and callout.get("text"):
+            check = validate_verbatim(str(callout["text"]), {"article_capture": capture, "verified_facts": scene.get("verified_facts"), "market_snapshot": scene.get("market_snapshot")})
+            if not check.passed:
+                logger.error("scene %s rejects ungrounded callout: %s", index, check.reasons)
+                return False
+            anchor = tuple(callout.get("anchor") or (.08, .08))
+            callout_block(overlay, str(callout["text"]), anchor, str(callout.get("style") or "red_block"))
+        draw = ImageDraw.Draw(overlay)
+        font_path = NANUM_BOLD if os.path.exists(NANUM_BOLD) else NANUM_REGULAR
+        try:
+            font = ImageFont.truetype(font_path, 27)
+        except OSError:
+            font = ImageFont.load_default()
+        if credit:
+            draw.text((38, 1016), credit, font=font, fill=(255, 255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0, 220))
+        overlay_path = temp_dir / f"scene_annotations_{index:03d}.png"
+        overlay.save(overlay_path, "PNG")
+    except Exception as exc:
+        logger.exception("scene %s annotation overlay render failed", index)
+        return False
+    staged = clip_path + ".evidence.mp4"
+    cmd = (
+        f'ffmpeg -i "{clip_path}" -loop 1 -i "{overlay_path}" '
+        f'-filter_complex "[0:v][1:v]overlay=0:0:format=auto[v]" '
+        f'-map "[v]" -t {duration:.3f} -an -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-y "{staged}" -loglevel error'
+    )
+    ret = _run_subprocess(cmd, job_id)
+    if ret != 0 or not _verify_video(staged):
+        if os.path.exists(staged):
+            os.remove(staged)
+        return False
+    os.replace(staged, clip_path)
+    return True
+
+
+def _apply_editorial_overlays(scene: dict, clip_path: str, temp_dir: Path, index: int, duration: float, job_id: int) -> bool:
+    if _requires_verified_index_card(scene) and not _requires_verified_market_chart(scene):
+        if not _apply_verified_index_card(scene, clip_path, temp_dir, index, duration, job_id):
+            return False
+    if _requires_verified_market_chart(scene):
+        if not _apply_verified_market_chart(scene, clip_path, temp_dir, index, duration, job_id):
+            return False
+    if not _apply_scene_annotation_overlay(scene, clip_path, temp_dir, index, duration, job_id):
+        return False
+    return _apply_speech_bubble_overlay(scene, clip_path, temp_dir, index, duration, job_id)
 
 
 def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_duration: float):
@@ -1495,4 +1821,3 @@ def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_durati
     if scenes and abs(diff) > 0.001:
         scenes[-1]["duration"] = round(max(0.05, scenes[-1]["duration"] + diff), 3)
         scenes[-1]["end_time"] = round(scenes[-1]["start_time"] + scenes[-1]["duration"], 3)
-

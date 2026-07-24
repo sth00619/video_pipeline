@@ -1,0 +1,11 @@
+{
+  "template_id": "chart_warning",
+  "source_scene_id": "chart-main",
+  "scene_kind": "chart",
+  "supporting_scene_ids": [],
+  "source_ref": [
+    "facts[0]"
+  ],
+  "font": "NanumGothicBold",
+  "output_path": "/Users/songtaeho/Documents/GitHub/video_pipeline/.artifacts/thumbnail-reference-v5.png"
+}

@@ -103,5 +103,13 @@ class TrendingVideoAnalyzer(ABC):
     Phase 2 (Real): YouTube Data API v3 (search.list + videos.list + channels.list)
     """
     @abstractmethod
-    def collect(self, category: str, seed: str, limit: int = 30, recent_hours: Optional[int] = None) -> list[TrendingVideo]:
+    def collect(
+        self,
+        category: str,
+        seed: str,
+        limit: int = 30,
+        recent_hours: Optional[int] = None,
+        ranking: str = "evidence",
+        min_subscribers: Optional[int] = None,
+    ) -> list[TrendingVideo]:
         pass

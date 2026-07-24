@@ -168,6 +168,17 @@ public class LongformService {
                 .metaJson(safeJson(result))
                 .build();
         assetRepository.save(asset);
+        if (result.getAssemblyManifestPath() != null && !result.getAssemblyManifestPath().isBlank()) {
+            Asset manifest = Asset.builder()
+                    .jobId(jobId)
+                    .assetType(AssetType.ASSEMBLY_MANIFEST)
+                    .localPath(result.getAssemblyManifestPath())
+                    .metaJson("{\"video_path\":\"" + result.getVideoPath().replace("\"", "\\\"") + "\"}")
+                    .build();
+            assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.ASSEMBLY_MANIFEST)
+                    .ifPresent(assetRepository::delete);
+            assetRepository.save(manifest);
+        }
         saveQcReport(jobId, result);
 
         // outputPath 업데이트
