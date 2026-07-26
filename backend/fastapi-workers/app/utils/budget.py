@@ -32,7 +32,7 @@ def _estimate(scene_count: int, pro_count: int, kling_count: int, cfg: dict[str,
     return round(_krw(usd, float(cfg["usd_krw"])) * (1 + float(cfg["budget_retry_buffer_pct"]) / 100))
 
 
-def plan_preflight(scene_count: int, quality_tier: str, requested_pro: int, requested_kling: int) -> dict[str, Any]:
+def plan_preflight(scene_count: int, quality_tier: str, requested_pro: int, requested_kling: int, *, template_scene_count: int = 0) -> dict[str, Any]:
     """Plan a complete video below the ceiling, degrading expensive tiers first."""
     cfg = runtime_config.get()
     max_budget = int(cfg["max_budget_per_video_krw"])
@@ -65,13 +65,24 @@ def plan_preflight(scene_count: int, quality_tier: str, requested_pro: int, requ
         if kling_count != requested_kling:
             actions.append(f"kling_clips:{requested_kling}->{kling_count}")
 
-    allowed = estimated <= max_budget
+    # 템플릿 장면은 보드 검출 실패 시 한 번만 재생성할 수 있으므로,
+    # 해당 장면 tier 비용의 25%를 사전 예비비로 잡는다.
+    retry_unit = float(cfg["img_cost_pro_2k_usd"] if quality_tier == "pro" else cfg["img_cost_flash_1k_usd"])
+    template_retry_reserve = round(_krw(template_scene_count * retry_unit * .25, float(cfg["usd_krw"])))
+    regen_enabled = estimated + template_retry_reserve <= max_budget
+    if template_scene_count and not regen_enabled:
+        actions.append("template_regeneration:disabled_budget_reserve")
+        template_retry_reserve = 0
+    estimated_with_reserve = estimated + template_retry_reserve
+    allowed = estimated_with_reserve <= max_budget
     return {
         "planned_at": datetime.now(timezone.utc).isoformat(), "scene_count": scene_count,
         "quality_tier": quality_tier, "pro_scene_count": pro_count, "flash_scene_count": max(0, scene_count - pro_count),
-        "kling_clip_count": kling_count, "estimated_cost_krw": estimated, "budget_limit_krw": max_budget,
+        "kling_clip_count": kling_count, "estimated_cost_krw": estimated_with_reserve, "budget_limit_krw": max_budget,
         "retry_buffer_pct": float(cfg["budget_retry_buffer_pct"]), "allowed": allowed,
         "actions": actions, "reason": None if allowed else "minimum_complete_plan_exceeds_budget",
+        "template_scene_count": template_scene_count, "template_retry_reserve_krw": template_retry_reserve,
+        "template_regeneration_enabled": regen_enabled,
         "rates": {key: cfg[key] for key in ("img_cost_flash_1k_usd", "img_cost_pro_2k_usd", "kling_cost_per_clip_usd", "usd_krw")},
     }
 
@@ -96,19 +107,43 @@ def load_preflight(job_id: int) -> dict[str, Any] | None:
         return None
 
 
-def record_cost(job_id: int, kind: str, count: int = 1) -> dict[str, Any]:
+def can_charge_overlay_vision(job_id: int, scene_key: str) -> bool:
+    """Reserve vision fallback for at most one attempt per data scene.
+
+    The detector is fail-closed: when this returns false callers use the
+    cloud/anchored overlay path rather than making an unbudgeted vision call.
+    """
+    rate = float(os.getenv("OVERLAY_VISION_COST_USD", "0.03"))
+    cfg = runtime_config.get()
+    path = _job_path(job_id, "cost_ledger.json")
+    with _LOCK:
+        try: ledger = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError): ledger = {"items": [], "total_krw": 0}
+        duplicate = any(
+            item.get("kind") == "overlay_vision" and item.get("scene_key") == scene_key
+            for item in ledger.get("items", []) if isinstance(item, dict)
+        )
+        projected = int(ledger.get("total_krw", 0)) + _krw(rate, float(cfg["usd_krw"]))
+        return not duplicate and projected <= int(cfg["max_budget_per_video_krw"])
+
+
+def record_cost(job_id: int, kind: str, count: int = 1, *, scene_key: str | None = None) -> dict[str, Any]:
     """Record successful external requests. Overrun warns but does not abandon a video."""
     rates = runtime_config.get()
     unit_usd = {
         "flash": float(rates["img_cost_flash_1k_usd"]), "pro": float(rates["img_cost_pro_2k_usd"]),
         "kling": float(rates["kling_cost_per_clip_usd"]),
+        "overlay_vision": float(os.getenv("OVERLAY_VISION_COST_USD", "0.03")),
     }.get(kind, 0.0)
     amount = _krw(unit_usd * count, float(rates["usd_krw"]))
     path = _job_path(job_id, "cost_ledger.json")
     with _LOCK:
         try: ledger = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError, TypeError): ledger = {"items": [], "total_krw": 0}
-        ledger["items"].append({"kind": kind, "count": count, "amount_krw": amount, "at": datetime.now(timezone.utc).isoformat()})
+        item = {"kind": kind, "count": count, "amount_krw": amount, "at": datetime.now(timezone.utc).isoformat()}
+        if scene_key:
+            item["scene_key"] = scene_key
+        ledger["items"].append(item)
         ledger["total_krw"] = int(ledger.get("total_krw", 0)) + amount
         limit = int(rates["max_budget_per_video_krw"])
         ledger["budget_overrun_krw"] = max(0, ledger["total_krw"] - limit)

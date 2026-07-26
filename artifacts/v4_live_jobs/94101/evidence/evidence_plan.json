@@ -1,0 +1,8 @@
+{
+  "job_id": 94101,
+  "created_at": "2026-07-26T07:48:22.797826+00:00",
+  "status": "unavailable",
+  "selected": [],
+  "skipped": [],
+  "reason": "verified_facts_or_naver_credentials_missing"
+}

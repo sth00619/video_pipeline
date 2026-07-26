@@ -35,8 +35,54 @@ from app.utils.intro_motion import infer_total_duration_seconds, select_intro_mo
 from app.utils.gemini_pressure import gemini_pressure
 from app.utils.image_job_lock import acquire_image_job_lock, release_image_job_lock
 from app.utils.retry_policy import classify_image_error, error_signature
+from app.services.info_surface.info_scene_templates import select_template
 
 logger = logging.getLogger(__name__)
+
+
+def _apply_info_scene_template(scene: dict) -> tuple[dict, object | None]:
+    """검증 payload 기반으로만 v4 장면 계약을 주입한다."""
+    template = select_template(scene, scene.get("proposed_template_id"))
+    if template is None:
+        return scene, None
+    planned = dict(scene)
+    direction = dict(planned.get("art_direction") or {})
+    direction.update({
+        "character_placement": f"{template.character.side} third",
+        "pose_asset": template.character.pose_asset,
+        "fallback_pose": "present_right" if template.character.side == "left" else "present_left",
+        "data_surface_kind": template.surface_kind,
+        "board_side": template.board_side,
+        "info_scene_template": template.template_id,
+    })
+    planned["art_direction"] = direction
+    planned["info_scene_template"] = template.model_dump()
+    return planned, template
+
+
+def _diagram_spec_from_scene(scene: dict, plan):
+    """검증된 구조 필드만 서사 다이어그램 입력으로 변환한다."""
+    from app.services.info_surface.narrative_diagrams import DiagramItem, DiagramSpec
+    chart = scene.get("market_chart") or {}
+    kind = str(plan.diagram_kind or "")
+    source = scene.get("stage_items") if kind == "stage_locks" else (
+        scene.get("structure_items") if kind == "blueprint_callouts" else (
+            chart.get("external_rates") if kind == "map_clouds" else scene.get("causal_nodes")
+        )
+    )
+    items = []
+    for raw in list(source or []):
+        if not isinstance(raw, dict) or not raw.get("label") or not raw.get("source_refs"):
+            continue
+        items.append(DiagramItem(label=str(raw["label"]), value=str(raw["value"]) if raw.get("value") is not None else None, state=raw.get("state"), emphasis=bool(raw.get("emphasis"))))
+    template = scene.get("info_scene_template") or {}
+    if len(items) < int(template.get("min_items", 1)):
+        raise ValueError("서사 다이어그램의 검증 항목 수가 템플릿 최소값보다 적습니다")
+    title = str(scene.get("embedded_title") or chart.get("label") or scene.get("title") or "핵심 구조")
+    # 서사형 다이어그램은 검증 payload의 노드·라벨만 제시한다. v3의 영문
+    # 기간 의미줄을 재사용하면 보드 가장자리에서 잘려 정보 소품 문법을 해친다.
+    meaning = ""
+    return DiagramSpec(kind=kind, title=title, items=items, meaning_line=meaning, stamp=str(scene.get("verdict_stamp") or "") or None, seed=str(chart.get("scene_seed") or plan.scene_id))
 
 
 def _scene_metadata_contract(source_scenes: list[dict], output_scenes: list[dict]) -> dict:
@@ -385,6 +431,7 @@ class ImagesWorker:
                 str(runtime_config.value("image_quality_tier")),
                 int(runtime_config.value("pro_image_max_scenes")),
                 len(intro_motion_indices),
+                template_scene_count=sum(1 for scene in billable_scenes if select_template(scene, scene.get("proposed_template_id")) is not None),
             )
             if not billable_scenes:
                 # plan_preflight normally reserves one generated thumbnail;
@@ -453,15 +500,10 @@ class ImagesWorker:
             # the provider inject its legacy generic mascot description.
             character_style_prompt = character_style_prompt or "none"
 
-        # [S2-3] 이중 레이어 합성 모드 제어
-        # A pose library is a reference resource, not permission to paste a
-        # separately rendered mascot over an unrelated background.  Pro 2K
-        # scenes must be generated as one integrated illustration.
-        # A selected pose library gives us a real pre-character image.  That
-        # image is persisted as ``clean_plate_path`` and is the only allowed
-        # backdrop for mascot/person thumbnail presets.  Without a pose
-        # library we preserve the existing integrated-scene pipeline and the
-        # thumbnail planner will select chart/article layouts instead.
+        # V3 canonical scene layers.  A pose library is the character's
+        # identity lock: clean plate -> verified physical surface -> alpha
+        # foreground character.  The legacy integrated path remains only for
+        # old jobs without a library and is never marked identity-locked.
         use_composite = bool(character_poses_dir and Path(character_poses_dir).is_dir())
         if use_composite:
             logger.info(f"[합성모드] 이중 레이어 합성 활성화: poses_dir={character_poses_dir}")
@@ -488,10 +530,11 @@ class ImagesWorker:
 
         def build_batch_scene(original: dict, index: int) -> dict:
             scene = enrich_scene_plan(original, index, len(scenes_meta))
+            scene, template = _apply_info_scene_template(scene)
             narration = scene.get("content") or scene.get("text") or ""
             spec = directed_specs.get(index)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = build_prompt(spec, scene.get("market_chart")) if spec else compile_editorial_prompt(scene, base_prompt)
+            prompt_en = build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt)
             return {
                 **scene,
                 "index": index,
@@ -583,12 +626,14 @@ class ImagesWorker:
                 logger.info("scene %s uses captured article evidence directly (Gemini/Kling skipped)", i)
                 continue
             scene = enrich_scene_plan(scene, i, len(scenes_meta))
+            scene, template = _apply_info_scene_template(scene)
+            scene["_template_regeneration_enabled"] = bool((budget_preflight or {}).get("template_regeneration_enabled"))
             section = scene.get("section", f"scene_{i}")
             narration = scene.get("content") or scene.get("text") or ""
 
             spec = directed_specs.get(i)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = build_prompt(spec, scene.get("market_chart")) if spec else compile_editorial_prompt(scene, base_prompt)
+            prompt_en = build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt)
             prompt_ko = scene.get("prompt_ko") or narration or scene.get("title") or ""
             pose = scene.get("pose", "neutral")
             art_direction = scene.get("art_direction") or {}
@@ -611,6 +656,7 @@ class ImagesWorker:
             # If a long HTTP request was interrupted after this frame completed,
             # recover from disk instead of charging the image model a second time.
             if os.path.exists(img_path) and os.path.getsize(img_path) > 15000:
+                self._apply_image_overlays(scene, img_path)
                 resumed_clean_plate = str(job_dir / f"scene_{i:03d}_bg.png")
                 if not Path(resumed_clean_plate).is_file():
                     resumed_clean_plate = None
@@ -645,22 +691,11 @@ class ImagesWorker:
                         self._generate_background_layer(
                             ai_provider, prompt_en, bg_path, section, pose, image_profile
                         )
-                        # [버그 수정] 오버레이(데이터 차트 등)는 배경에 먼저 그려야 캐릭터가 패널을 가리지 않음
-                        # Keep factual numbers and labels out of the still.  They
-                        # are composited after Kling/static assembly, where they
-                        # stay crisp and cannot be regenerated by a video model.
                         self._normalize_canvas(bg_path)
-                        
-                        x_ratio = 0.02 if scene.get("market_chart") else CHAR_OVERLAY_X_RATIO
-                        if character_required:
-                            self._composite_character(
-                                bg_path, character_poses_dir, pose_asset, img_path, job_id,
-                                fallback_pose=pose,
-                                x_ratio=x_ratio
-                            )
-                        else:
-                            import shutil
-                            shutil.copy2(bg_path, img_path)
+                        self._compose_layered_scene(
+                            scene, bg_path, character_poses_dir, pose_asset, img_path, job_id,
+                            fallback_pose=(scene.get("art_direction") or {}).get("fallback_pose") or pose,
+                        )
                             
                         if runtime_config.value("image_headline_overlay"):
                             add_headline(img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
@@ -715,6 +750,23 @@ class ImagesWorker:
                                     import shutil
                                     shutil.copy2(raw_img_path, img_path)
                                 self._apply_image_overlays(scene, img_path)
+                                # v4 보드 검출 실패는 이 경로에서만 한 번 더 생성한다.
+                                # 일반 제공자 재시도와 분리해 비용/manifest 의미를 보존한다.
+                                if scene.pop("_template_regeneration_request", None):
+                                    regen_prompt = prompt_en + " Regenerate this same template with the blank physical board much larger, unobstructed, and clearly separated from the character."
+                                    ai_provider.generate_image(
+                                        prompt=regen_prompt, output_path=raw_img_path, section=section, keyword=regen_prompt[:30],
+                                        character_image_path=character_reference_paths[0] if character_reference_paths else None,
+                                        character_image_paths=character_reference_paths, character_style_prompt=effective_character_style,
+                                        lora_model_id=lora_model_id, lora_trigger_word=lora_trigger_word, lora_scale=lora_scale,
+                                        image_provider=runtime_config.value("image_provider"), gemini_model=image_profile.get("model"),
+                                        gemini_image_size=image_profile.get("image_size"), gemini_service_tier=runtime_config.value("gemini_service_tier"),
+                                        gemini_max_attempts=1, gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"), style_locked=bool(spec),
+                                    )
+                                    import shutil
+                                    shutil.copy2(raw_img_path, img_path)
+                                    record_cost(job_id, "pro" if image_profile.get("tier") == "pro" else "flash", scene_key=f"template_regen:{i}")
+                                    self._apply_image_overlays(scene, img_path)
                                 quality_score = 95 if lora_model_id else 90
                                 break
                             else:
@@ -739,16 +791,12 @@ class ImagesWorker:
                                     )
                                     self._normalize_canvas(var_bg_path)
                                     
-                                    x_ratio = 0.02 if scene.get("market_chart") else CHAR_OVERLAY_X_RATIO
-                                    if character_required:
-                                        self._composite_character(
-                                            var_bg_path, character_poses_dir, pose_asset, var_img_path, job_id,
-                                            fallback_pose=pose,
-                                            x_ratio=x_ratio
-                                        )
-                                    else:
-                                        import shutil
-                                        shutil.copy2(var_bg_path, var_img_path)
+                                    self._compose_layered_scene(
+                                        # A variation owns a distinct clean-plate source and
+                                        # must not reuse the main still's detector provenance.
+                                        dict(scene), var_bg_path, character_poses_dir, pose_asset, var_img_path, job_id,
+                                        fallback_pose=(scene.get("art_direction") or {}).get("fallback_pose") or pose,
+                                    )
                                 else:
                                     var_raw_path = str(job_dir / f"scene_{i:03d}_raw_var_{v}.jpg")
                                     ai_provider.generate_image(
@@ -933,10 +981,12 @@ class ImagesWorker:
 
         def make_context(original: dict, index: int) -> dict:
             scene = enrich_scene_plan(original, index, len(scenes_meta))
+            scene, template = _apply_info_scene_template(scene)
+            scene["_template_regeneration_enabled"] = bool((budget_preflight or {}).get("template_regeneration_enabled"))
             narration = scene.get("content") or scene.get("text") or ""
             spec = directed_specs.get(index)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = build_prompt(spec, scene.get("market_chart")) if spec else compile_editorial_prompt(scene, base_prompt)
+            prompt_en = build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt)
             image_profile = scene.get("image_profile") or {}
             return {
                 **scene,
@@ -997,6 +1047,9 @@ class ImagesWorker:
             # Legacy files without a manifest remain resumable; once a
             # manifest exists, a changed prompt/profile forces regeneration.
             if valid_image(img_path) and (str(index) not in image_manifest or image_manifest.get(str(index)) == scene_fingerprint):
+                # Validate/recreate the final composited still from its saved
+                # source image on every resume entry point.
+                self._apply_image_overlays(ctx, img_path)
                 resumed_clean_plate = str(job_dir / f"scene_{index:03d}_bg.png")
                 if not Path(resumed_clean_plate).is_file():
                     resumed_clean_plate = None
@@ -1022,22 +1075,12 @@ class ImagesWorker:
                         if not valid_image(bg_path):
                             raise RuntimeError("provider returned a missing, undersized, or invalid background")
                         
-                        # TASK 1: 정규화
                         self._normalize_canvas(bg_path)
-                        
-                        # ① 차트를 배경에 먼저
-                        # The final video compositor owns verified graphics and
-                        # labels.  Do not bake them into a Kling input frame.
-                        # ② 캐릭터 합성
-                        x_ratio = 0.02 if ctx.get("market_chart") else CHAR_OVERLAY_X_RATIO
-                        if ctx["art_direction"].get("character_required", True):
-                            self._composite_character(
-                                bg_path, character_poses_dir, ctx["art_direction"].get("pose_asset") or ctx["pose"],
-                                img_path, job_id, fallback_pose=ctx["pose"],
-                                x_ratio=x_ratio
-                            )
-                        else:
-                            shutil.copy2(bg_path, img_path)
+                        self._compose_layered_scene(
+                            ctx, bg_path, character_poses_dir,
+                            ctx["art_direction"].get("pose_asset") or ctx["pose"], img_path, job_id,
+                            fallback_pose=ctx["art_direction"].get("fallback_pose") or ctx["pose"],
+                        )
                             
                         # ③ 말풍선은 캐릭터 위에
                         if runtime_config.value("image_headline_overlay"):
@@ -1072,6 +1115,20 @@ class ImagesWorker:
                         shutil.copy2(raw_img_path, img_path)
                         
                         self._apply_image_overlays(ctx, img_path)
+                        if ctx.pop("_template_regeneration_request", None):
+                            regen_prompt = ctx["prompt_en"] + " Regenerate this same template with the blank physical board much larger, unobstructed, and clearly separated from the character."
+                            ai_provider.generate_image(
+                                prompt=regen_prompt, output_path=raw_img_path, section=ctx["section"], keyword=regen_prompt[:30],
+                                character_image_path=character_reference_paths[0] if character_reference_paths else None,
+                                character_image_paths=character_reference_paths, character_style_prompt=character_style_prompt if ctx["art_direction"].get("character_required", True) else "none",
+                                lora_model_id=lora_model_id, lora_trigger_word=lora_trigger_word, lora_scale=lora_scale,
+                                image_provider=runtime_config.value("image_provider"), gemini_model=image_profile.get("model"),
+                                gemini_image_size=image_profile.get("image_size"), gemini_service_tier=runtime_config.value("gemini_service_tier"),
+                                gemini_max_attempts=1, gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"), style_locked=bool(ctx["spec"]),
+                            )
+                            shutil.copy2(raw_img_path, img_path)
+                            record_cost(job_id, "pro" if tier == "pro" else "flash", scene_key=f"template_regen:{index}")
+                            self._apply_image_overlays(ctx, img_path)
                         
                         if runtime_config.value("image_headline_overlay"):
                             add_headline(img_path, img_path, ctx["headline"], ctx["headline_mood"])
@@ -1241,7 +1298,12 @@ class ImagesWorker:
         gemini_pressure.acquire()
         try:
             ai_provider.generate_image(
-            prompt=prompt_en,
+            prompt=(
+                f"{prompt_en} "
+                "CLEAN PLATE REQUIREMENT: render the illustrated location and the physical blank information prop only. "
+                "No mascot, no person, no face, no arms, no hands, no fingers, no pointer, and no character silhouette. "
+                "A separately composited canonical foreground character will occupy the planned character side."
+            ),
             output_path=bg_path,
             section=section,
             keyword=prompt_en[:30],
@@ -1291,83 +1353,25 @@ class ImagesWorker:
           2. 배경(1920x1080) 위에 우하단 중앙 위치로 overlay
           3. 합성 실패 시 배경만 출력 (Graceful fallback)
         """
-        poses_path = Path(poses_dir)
-        pose_file = poses_path / f"{pose}.png"
-        if not pose_file.exists() and fallback_pose:
-            pose_file = poses_path / f"{fallback_pose}.png"
-        if not pose_file.exists():
-            pose_file = poses_path / "neutral.png"
-        if not pose_file.exists():
-            logger.warning(f"[합성] 포즈 파일 없음, 배경만 출력: pose={pose}")
-            import shutil
-            shutil.copy2(bg_path, output_path)
-            return
+        from app.services.scene_layers import compose_character_foreground
 
-        # 영상 크기
-        # Crop transparent padding before measuring the pose.  Earlier code
-        # blindly overlaid a full source canvas at x=1113, so wide pose files
-        # were visibly clipped by the right edge.
-        from PIL import Image
-        trimmed_pose_file = Path(f"{output_path}.character-trim.png")
+        placement = "left third" if x_ratio <= 0.10 else "right third"
         try:
-            with Image.open(pose_file).convert("RGBA") as pose_image:
-                alpha_bounds = pose_image.getchannel("A").getbbox()
-                if not alpha_bounds:
-                    raise ValueError("pose image has no visible pixels")
-                trimmed = pose_image.crop(alpha_bounds)
-                trimmed.save(trimmed_pose_file)
-                source_width, source_height = trimmed.size
-
-            W, H = 1920, 1080
-            is_left = x_ratio <= 0.10
-            max_width = int(W * (0.37 if is_left else 0.39))
-            max_height = min(int(H * CHAR_HEIGHT_RATIO), H - 140)
-            char_h = max(1, min(max_height, int(max_width * source_height / source_width)))
-            char_w = max(1, round(source_width * char_h / source_height))
-            side_margin = 48
-            x_offset = side_margin if is_left else W - char_w - side_margin
-            y_offset = H - char_h - 58
+            metadata = compose_character_foreground(
+                bg_path, poses_dir, pose, output_path,
+                fallback_pose=fallback_pose,
+                placement=placement,
+            )
+            logger.info("[합성] alpha foreground 완료: %s", output_path)
+            return metadata
         except Exception as exc:
-            logger.error("Unable to prepare character composite, using background: %s", exc)
+            # Do not silently produce a different, model-generated character.
+            # The clean plate remains usable, but the caller can record that
+            # the canonical foreground layer was unavailable.
+            logger.error("[합성] canonical foreground failed, using clean plate: %s", exc)
             import shutil
             shutil.copy2(bg_path, output_path)
-            trimmed_pose_file.unlink(missing_ok=True)
-            return
-
-        # FFmpeg overlay 명령어 (RGBA 투명 합성)
-        # 순서: 배경(1920x1080) 실망 스케일 → 캐릭터 크기 조정 → overlay
-        pose_file = trimmed_pose_file
-        ffmpeg_cmd = [
-            "ffmpeg",
-            "-i", bg_path,                       # 입력 0: 배경
-            "-i", str(pose_file),                 # 입력 1: 캐릭터 투명 PNG
-            "-filter_complex",
-            (
-                # 배경을 1920x1080으로 스케일
-                f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease,"
-                f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2[bg];"
-                # 캐릭터를 높이 char_h px로 스케일 (비율 유지)
-                f"[1:v]scale={char_w}:{char_h}[char];"
-                # overlay: 우하단 중앙 위치
-                f"[bg][char]overlay={x_offset}:{y_offset}[out]"
-            ),
-            "-map", "[out]",
-            "-frames:v", "1",
-            "-q:v", "2",
-            "-y", output_path
-        ]
-
-        try:
-            ret = self._run_subprocess(ffmpeg_cmd, job_id=job_id)
-            if ret != 0:
-                raise RuntimeError(f"FFmpeg process returned non-zero exit code {ret}")
-            logger.info(f"[합성] FFmpeg overlay 완료: {output_path}")
-        except Exception as e:
-            logger.error(f"[합성] FFmpeg overlay 실패, 배경만 사용: {e}")
-            import shutil
-            shutil.copy2(bg_path, output_path)
-        finally:
-            trimmed_pose_file.unlink(missing_ok=True)
+            return None
 
     # ============================
     # 섹션별 시각화 라우팅
@@ -1582,6 +1586,10 @@ class ImagesWorker:
         return "\n".join(textwrap.wrap(text, width=width))
 
     def _apply_chart_only(self, scene: dict, img_path: str):
+        # v4 템플릿 장면은 검출한 보드에 직접 워프한다. 레거시 크림 패널
+        # 정리 함수가 호출되면 안 된다.
+        if scene.get("info_scene_template"):
+            return
         if scene.get("section") == "data":
             from app.utils.market_charts import extract_market_chart
             from PIL import Image
@@ -1625,25 +1633,368 @@ class ImagesWorker:
                 except Exception as ex:
                     logger.error(f"Failed to render/composite data chart: {ex}")
 
-    def _apply_bubble_only(self, scene: dict, img_path: str):
-        bubble_text = scene.get("bubble_text")
-        if bubble_text:
-            side = "left" if scene.get("market_chart") else "right"
-            try:
-                draw_speech_bubble(img_path, bubble_text, img_path, character_side=side)
-            except TypeError:
-                draw_speech_bubble(img_path, bubble_text, img_path)  # 구버전 시그니처 호환
-            except Exception as ex:
-                logger.error(f"Failed to draw speech bubble: {ex}")
-
     def _apply_image_overlays(self, scene: dict, img_path: str):
-        """Normalize the generated still before final video composition.
+        """Finalize a still before any Ken Burns/video composition.
 
-        Verified charts, speech bubbles, and subtitles deliberately belong to
-        ``LongformWorker``.  Putting factual text into this image would expose
-        it to image-to-video distortion and duplicate the later overlay.
+        A verified data visual is written into its detected physical prop here
+        so the entire image moves together. Longform must never add a fixed
+        coordinate chart over a moving background.
         """
+        from app.services.scene_layers import load_layer_manifest
+
+        # Resume must rebuild the final image from the prepared surface, not
+        # write chart ink over an already-composited hand or finger.
+        layered = scene.get("layered_scene") or load_layer_manifest(img_path)
+        if isinstance(layered, dict) and layered.get("surface_image_path"):
+            self._resume_layered_scene(scene, img_path, layered)
+            return
         self._normalize_canvas(img_path)
+        self._apply_info_surface_plan(scene, img_path)
+
+    def _compose_layered_scene(
+        self,
+        scene: dict,
+        background_path: str,
+        poses_dir: str,
+        pose_asset: str,
+        output_path: str,
+        job_id: int,
+        *,
+        fallback_pose: str | None = None,
+    ) -> str:
+        """Assemble `plate -> verified surface -> canonical foreground`.
+
+        This is intentionally the only path for a pose-library scene.  The
+        foreground alpha layer is placed *after* the chart warp, so a palm,
+        glove, finger, or pointer cannot be painted over by a later graphic.
+        """
+        import shutil
+        from app.services.scene_layers import write_layer_manifest
+
+        self._normalize_canvas(background_path)
+        self._apply_info_surface_plan(scene, background_path)
+        direction = scene.get("art_direction") or {}
+        if direction.get("character_required", True):
+            placement_x = 0.02 if "left" in str(direction.get("character_placement") or "").lower() else CHAR_OVERLAY_X_RATIO
+            metadata = self._composite_character(
+                background_path, poses_dir, pose_asset, output_path, job_id,
+                fallback_pose=fallback_pose,
+                x_ratio=placement_x,
+            )
+        else:
+            shutil.copy2(background_path, output_path)
+            metadata = {
+                "version": "3.0",
+                "surface_image_path": background_path,
+                "foreground_mask_path": None,
+                "character_regions": [],
+                "z_order": ["clean_background", "verified_info_surface", "editorial_text"],
+            }
+        metadata = dict(metadata or {})
+        metadata.update({
+            "surface_image_path": str(background_path),
+            "output_path": str(output_path),
+            "pose_asset": pose_asset,
+            "fallback_pose": fallback_pose,
+            "character_placement": direction.get("character_placement", "right third"),
+        })
+        metadata["manifest_path"] = write_layer_manifest(output_path, metadata)
+        scene["layered_scene"] = metadata
+        scene["character_regions"] = metadata.get("character_regions", [])
+        plan = scene.get("info_surface_plan")
+        if isinstance(plan, dict):
+            plan["surface_image_path"] = str(background_path)
+            plan["final_image_path"] = str(output_path)
+        scene["final_image_path"] = str(output_path)
+        return str(output_path)
+
+    def _resume_layered_scene(self, scene: dict, output_path: str, layered: dict) -> str:
+        """Recompose a layered still from its clean/surface plate on resume."""
+        surface_path = str(layered.get("surface_image_path") or "")
+        foreground_asset = str(layered.get("foreground_asset_path") or "")
+        if not Path(surface_path).is_file():
+            logger.warning("Layer manifest has no usable surface plate for %s", output_path)
+            return output_path
+        # Calling this against the background preserves/reuses its `_source`
+        # sibling, so a changed verified chart gets a fresh warp without ever
+        # involving the foreground character pixels.
+        self._apply_info_surface_plan(scene, surface_path)
+        if foreground_asset and Path(foreground_asset).is_file():
+            from app.services.scene_layers import compose_character_foreground, write_layer_manifest
+            placement = str(layered.get("character_placement") or "right third")
+            pose_name = Path(foreground_asset).stem
+            metadata = compose_character_foreground(
+                surface_path, str(Path(foreground_asset).parent), pose_name, output_path,
+                fallback_pose=layered.get("fallback_pose"), placement=placement,
+            )
+            metadata.update({
+                "surface_image_path": surface_path,
+                "output_path": str(output_path),
+                "pose_asset": layered.get("pose_asset") or pose_name,
+                "fallback_pose": layered.get("fallback_pose"),
+                "character_placement": placement,
+            })
+            metadata["manifest_path"] = write_layer_manifest(output_path, metadata)
+            scene["layered_scene"] = metadata
+            scene["character_regions"] = metadata.get("character_regions", [])
+        else:
+            import shutil
+            shutil.copy2(surface_path, output_path)
+        plan = scene.get("info_surface_plan")
+        if isinstance(plan, dict):
+            plan["surface_image_path"] = surface_path
+            plan["final_image_path"] = str(output_path)
+        scene["final_image_path"] = str(output_path)
+        return str(output_path)
+
+    def _apply_info_surface_plan(self, scene: dict, img_path: str) -> str:
+        """Resolve detector/fallbacks into the final PNG/JPEG used by all later stages."""
+        if not bool(runtime_config.value("info_surface_enabled")):
+            return img_path
+        try:
+            import hashlib
+            import json
+            import shutil
+            import cv2
+            import numpy as np
+            from app.services.info_surface.contracts import (
+                INFO_SURFACE_CHART_STYLE_VERSION,
+                INFO_SURFACE_COMPOSITOR_VERSION,
+                INFO_SURFACE_DETECTOR_VERSION,
+                INFO_SURFACE_PHASE_B_VERSION,
+                INFO_SURFACE_PLAN_VERSION,
+                MIN_DIEGETIC_CHART_SHORT_SIDE_PX,
+                plan_from_scene,
+            )
+            from app.services.info_surface.detector import detect_surface_quad
+            from app.services.info_surface.warp_compositor import composite_planar, render_data_cutaway
+
+            plan = plan_from_scene(scene)
+            chart = scene.get("market_chart")
+            if plan is None or not isinstance(chart, dict):
+                return img_path
+
+            # Preserve the generated still separately from the composited
+            # output.  This makes a resume deterministic even after the final
+            # PNG has been overwritten by a prior warp or cutaway.
+            final_path = Path(img_path)
+            source_path = Path(scene.get("source_image_path") or final_path.with_name(f"{final_path.stem}_source{final_path.suffix}"))
+            if not source_path.is_file():
+                shutil.copy2(final_path, source_path)
+
+            def sha256(path: Path) -> str:
+                digest = hashlib.sha256()
+                with path.open("rb") as handle:
+                    for block in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(block)
+                return digest.hexdigest()
+
+            source_hash = sha256(source_path)
+            previous_plan = scene.get("info_surface_plan") if isinstance(scene.get("info_surface_plan"), dict) else {}
+            attempt_history = list(previous_plan.get("render_attempts") or [])[-19:]
+
+            def record_attempt(outcome: str, reason: str | None = None) -> None:
+                """Append provenance; a later success must not erase a failure."""
+                attempt_history.append({
+                    "outcome": outcome,
+                    "reason": reason,
+                    "render_mode": plan.render_mode,
+                    "source_sha256": source_hash,
+                    "final_sha256": sha256(final_path) if final_path.is_file() else None,
+                })
+                plan.render_attempts = attempt_history[-20:]
+                if plan.render_mode == "DATA_CUTAWAY":
+                    plan.replacement_of_scene_id = plan.scene_id
+
+            def request_template_regeneration(reason: str) -> bool:
+                """템플릿 보드 실패는 예산 승인된 경우에만 한 번 재생성한다."""
+                if not plan.template_id or not bool(scene.get("_template_regeneration_enabled")):
+                    return False
+                if bool(scene.get("_template_regeneration_attempted")):
+                    return False
+                scene["_template_regeneration_attempted"] = True
+                scene["_template_regeneration_request"] = reason
+                plan.render_attempts = attempt_history + [{"outcome": "REGENERATE_REQUESTED", "reason": reason, "render_mode": plan.render_mode}]
+                scene["info_surface_plan"] = plan.model_dump()
+                return True
+            render_fingerprint = hashlib.sha256(json.dumps({
+                "source_sha256": source_hash,
+                "plan": plan.model_dump(mode="json"),
+                "chart": chart,
+                "versions": {
+                    "plan": INFO_SURFACE_PLAN_VERSION,
+                    "detector": INFO_SURFACE_DETECTOR_VERSION,
+                    "compositor": INFO_SURFACE_COMPOSITOR_VERSION,
+                    "chart_style": INFO_SURFACE_CHART_STYLE_VERSION,
+                    "phase_b": INFO_SURFACE_PHASE_B_VERSION,
+                },
+            }, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+            previous = scene.get("info_surface_final_fingerprint")
+            if final_path.is_file() and previous == render_fingerprint:
+                final_hash = sha256(final_path)
+                if final_hash == scene.get("info_surface_final_sha256"):
+                    plan.source_image_path = str(source_path)
+                    plan.final_image_path = str(final_path)
+                    plan.render_attempts = attempt_history
+                    scene["info_surface_plan"] = plan.model_dump()
+                    scene["final_image_path"] = str(final_path)
+                    return str(final_path)
+
+            plan.source_image_path = str(source_path)
+            if plan.render_mode == "DATA_CUTAWAY":
+                result = render_data_cutaway(chart, self.CANVAS_SIZE, Image.open(source_path))
+                result.convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
+                plan.final_image_path = str(final_path)
+                record_attempt("DATA_CUTAWAY", plan.items[0].fallback_reason)
+                scene["info_surface_plan"] = plan.model_dump()
+                scene["final_image_path"] = str(final_path)
+                scene["source_image_path"] = str(source_path)
+                scene["info_surface_final_fingerprint"] = render_fingerprint
+                scene["info_surface_final_sha256"] = sha256(final_path)
+                return str(final_path)
+            if plan.surface is None or plan.surface.geometry != "planar_quad":
+                # P0 intentionally does not guess a shape for clouds/curved
+                # surfaces. Preserve data provenance and let the typed overlay
+                # planner use the role-specific fallback.
+                plan.render_mode = "DATA_CUTAWAY" if plan.items[0].role == "chart" else "GRAPHIC_LAYER"
+                plan.fallback_chain.append("unsupported_surface_geometry")
+                plan.chart_semantics_reduced = False
+                if plan.render_mode == "DATA_CUTAWAY":
+                    render_data_cutaway(chart, self.CANVAS_SIZE, Image.open(source_path)).convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
+                    plan.timeline_mode = "one_to_one_replace"
+                plan.final_image_path = str(final_path)
+                record_attempt(plan.render_mode, "unsupported_surface_geometry")
+                scene["info_surface_plan"] = plan.model_dump()
+                scene["final_image_path"] = str(final_path)
+                scene["source_image_path"] = str(source_path)
+                scene["info_surface_final_fingerprint"] = render_fingerprint
+                scene["info_surface_final_sha256"] = sha256(final_path)
+                return str(final_path)
+            bgr = cv2.cvtColor(np.asarray(Image.open(source_path).convert("RGB")), cv2.COLOR_RGB2BGR)
+            detection = detect_surface_quad(bgr, plan.surface)
+            if detection is None or detection.confidence < float(runtime_config.value("info_surface_quad_min_confidence")):
+                if request_template_regeneration("quad_not_found"):
+                    return str(final_path)
+                plan.render_mode = "DATA_CUTAWAY" if plan.items[0].role == "chart" else "GRAPHIC_LAYER"
+                plan.fallback_chain.append("quad_not_found")
+                plan.items[0].resolved_mode = plan.render_mode
+                if plan.render_mode == "DATA_CUTAWAY":
+                    result = render_data_cutaway(chart, self.CANVAS_SIZE, Image.open(source_path))
+                    result.convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
+                    plan.timeline_mode = "one_to_one_replace"
+                plan.final_image_path = str(final_path)
+                record_attempt(plan.render_mode, "quad_not_found")
+                scene["info_surface_plan"] = plan.model_dump()
+                scene["final_image_path"] = str(final_path)
+                scene["source_image_path"] = str(source_path)
+                scene["info_surface_final_fingerprint"] = render_fingerprint
+                scene["info_surface_final_sha256"] = sha256(final_path)
+                return str(final_path)
+            available = float(np.count_nonzero((detection.surface_mask > 0) & (detection.occluder_mask == 0))) / max(1, np.count_nonzero(detection.surface_mask))
+            quad = detection.quad
+            short_side = min(
+                np.linalg.norm(quad[1] - quad[0]), np.linalg.norm(quad[2] - quad[3]),
+                np.linalg.norm(quad[3] - quad[0]), np.linalg.norm(quad[2] - quad[1]),
+            )
+            too_small = plan.items[0].role == "chart" and short_side < MIN_DIEGETIC_CHART_SHORT_SIDE_PX
+            if available < .60 or too_small:
+                if request_template_regeneration("surface_occluded" if available < .60 else "surface_too_small_for_1080p_type"):
+                    return str(final_path)
+                plan.render_mode = "DATA_CUTAWAY" if plan.items[0].role == "chart" else "GRAPHIC_LAYER"
+                fallback_reason = "surface_occluded" if available < .60 else "surface_too_small_for_1080p_type"
+                plan.fallback_chain.append(fallback_reason)
+                plan.items[0].resolved_mode = plan.render_mode
+                if plan.render_mode == "DATA_CUTAWAY":
+                    render_data_cutaway(chart, self.CANVAS_SIZE, Image.open(source_path)).convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
+                    plan.timeline_mode = "one_to_one_replace"
+            else:
+                diagram = None
+                if plan.diagram_kind and plan.diagram_kind not in {"none", "hero_stat"}:
+                    from app.services.info_surface.narrative_diagrams import render_diagram
+                    from app.services.info_surface.warp_compositor import diegetic_supersample_factor
+                    quad = detection.quad
+                    width = max(96, int(max(np.linalg.norm(quad[1] - quad[0]), np.linalg.norm(quad[2] - quad[3])) * 1.7))
+                    height = max(72, int(max(np.linalg.norm(quad[3] - quad[0]), np.linalg.norm(quad[2] - quad[1])) * 1.7))
+                    diagram_spec = _diagram_spec_from_scene(scene, plan)
+                    supersample = diegetic_supersample_factor((width, height), quad, inset_ratio=plan.surface.inset_ratio, text_candidates=tuple(item.label for item in diagram_spec.items))
+                    from dataclasses import replace
+                    diagram_spec = replace(
+                        diagram_spec,
+                        support_font_scale=float(supersample.get("support_font_scale", 1.0)),
+                        support_stroke_scale=float(supersample.get("support_stroke_scale", 1.0)),
+                    )
+                    render_size = (max(width, round(width * supersample["factor"])), max(height, round(height * supersample["factor"])))
+                    diagram = render_diagram(diagram_spec, render_size)
+                else:
+                    supersample = None
+                result = composite_planar(Image.open(source_path).convert("RGBA"), chart, plan, detection, content_override=diagram)
+                result.convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
+                plan.detection = detection.as_dict()
+                if supersample is not None:
+                    plan.chart_render_metadata = {**(plan.chart_render_metadata or {}), "diagram_supersample": supersample, "diagram_render_size": list(diagram.size)}
+                # Phase B is intentionally inert unless this explicit flag is
+                # enabled. Its absence must leave the v3 Phase A PNG byte-for-
+                # byte on the normal path.
+                if bool(runtime_config.value("info_surface_harmonizer_enabled")):
+                    self._apply_phase_b_harmonizer(scene, final_path, plan, detection)
+            plan.final_image_path = str(final_path)
+            record_attempt(plan.render_mode, fallback_reason if available < .60 or too_small else None)
+            scene["info_surface_plan"] = plan.model_dump()
+            scene["final_image_path"] = str(final_path)
+            scene["source_image_path"] = str(source_path)
+            scene["info_surface_final_fingerprint"] = render_fingerprint
+            scene["info_surface_final_sha256"] = sha256(final_path)
+            return str(final_path)
+        except Exception as exc:
+            logger.warning("info-surface composition skipped for %s: %s", img_path, exc)
+            return img_path
+
+    def _apply_phase_b_harmonizer(self, scene: dict, final_path: Path, plan, detection) -> None:
+        """Optional one-shot crop harmonization; gate failure always keeps Phase A."""
+        import cv2
+        import numpy as np
+        from app.services.info_surface.phase_b.contracts import BarSpec, ExpectedText, HarmonizeRequest
+        from app.services.info_surface.phase_b.harmonizer import harmonize_surface
+        from app.services.info_surface.phase_b.ocr_readers import GeminiVisionReader, TesseractReader
+        from app.services.info_surface.phase_b.providers import FalCannyProvider, GeminiEditProvider
+
+        frame = cv2.imread(str(final_path))
+        if frame is None:
+            plan.phase_b = {"accepted": False, "fallback_reason": "frame_load_failed"}
+            return
+        quad = detection.quad
+        min_x, min_y = np.min(quad, axis=0).astype(int); max_x, max_y = np.max(quad, axis=0).astype(int)
+        crop_bbox = (int(min_x), int(min_y), max(1, int(max_x - min_x)), max(1, int(max_y - min_y)))
+        hero = plan.hero_stat
+        texts = [item.text for item in plan.items if item.text]
+        if hero:
+            texts.extend([hero.headline_value, hero.headline_unit_label, hero.meaning_line])
+        metadata = dict(plan.chart_render_metadata or {})
+        raw_w, raw_h = metadata.get("canvas_size") or (1, 1)
+        bars = [
+            BarSpec(
+                bbox=(12 + round(float(item["bbox"][0]) / raw_w * crop_bbox[2]), 12 + round(float(item["bbox"][1]) / raw_h * crop_bbox[3]), max(1, round(float(item["bbox"][2]) / raw_w * crop_bbox[2])), max(1, round(float(item["bbox"][3]) / raw_h * crop_bbox[3]))),
+                value=float(item["value"]), fill_rgb=tuple(item["fill_rgb"]),
+            ) for item in metadata.get("bars") or []
+        ]
+        kind = str(plan.surface.surface_kind if plan.surface else "paper").lower()
+        surface_kind = "chalkboard" if "chalk" in kind else "monitor" if "monitor" in kind else "signboard" if "sign" in kind else "clipboard" if "clip" in kind else "paper"
+        provider_name = str(runtime_config.value("info_surface_harmonizer_provider"))
+        reader_name = str(runtime_config.value("info_surface_harmonizer_reader"))
+        request = HarmonizeRequest(
+            scene_id=plan.scene_id, surface_kind=surface_kind, crop_bbox_in_frame=crop_bbox,
+            expected_texts=[ExpectedText(text=text) for text in dict.fromkeys(texts)], bars=bars,
+            palette_rgb=[(7, 26, 58), (255, 244, 214), (246, 190, 40), (201, 75, 60)],
+            style_prompt=f"hand-inked cartoon texture appropriate for {surface_kind}; preserve all glyphs and geometry",
+            strength=float(runtime_config.value("info_surface_harmonizer_strength")), provider=provider_name,
+        )
+        provider = FalCannyProvider() if provider_name == "fal_canny" else GeminiEditProvider()
+        reader = TesseractReader() if reader_name == "tesseract" else GeminiVisionReader()
+        composite_mask = (detection.surface_mask > 0) & (detection.occluder_mask == 0)
+        report, final = harmonize_surface(request, frame, provider, reader, composite_mask_full=composite_mask, output_path=str(final_path))
+        plan.phase_b = report.model_dump()
+        if report.accepted:
+            cv2.imwrite(str(final_path), final)
 
     def _check_panel_blank_qc(self, img_path: str):
         """

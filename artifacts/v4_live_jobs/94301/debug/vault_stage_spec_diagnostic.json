@@ -1,0 +1,220 @@
+{
+  "source_manifest": "/app/data/jobs/v4_live_validation_manifest.json",
+  "diagram_kind": "stage_locks",
+  "diagram_title": "퇴직연금 조건",
+  "stage_items_count": 3,
+  "diagram_spec_items": [
+    {
+      "index": 0,
+      "label": "가입",
+      "value": null,
+      "state": "done",
+      "emphasis": false
+    },
+    {
+      "index": 1,
+      "label": "보존",
+      "value": null,
+      "state": "locked",
+      "emphasis": false
+    },
+    {
+      "index": 2,
+      "label": "수령",
+      "value": null,
+      "state": "locked",
+      "emphasis": true
+    }
+  ],
+  "render_size": [
+    1427,
+    1239
+  ],
+  "side_margin": 0.1,
+  "slots": [
+    {
+      "item_index": 0,
+      "label": "가입",
+      "cx": 428,
+      "cy": 446,
+      "radius": 112,
+      "arc_bbox": [
+        316,
+        284,
+        540,
+        457
+      ],
+      "lock_bbox": [
+        316,
+        446,
+        540,
+        670
+      ],
+      "label_anchor": [
+        428,
+        731.5999999999999
+      ],
+      "display_text_calls": [
+        {
+          "text": "퇴직연금 조건",
+          "xy": [
+            713,
+            99
+          ],
+          "px": 123,
+          "role": "support",
+          "align": "center"
+        },
+        {
+          "text": "가입",
+          "xy": [
+            428,
+            731.5999999999999
+          ],
+          "px": 56,
+          "role": "support",
+          "align": "center"
+        }
+      ]
+    },
+    {
+      "item_index": 1,
+      "label": "보존",
+      "cx": 998,
+      "cy": 446,
+      "radius": 112,
+      "arc_bbox": [
+        886,
+        284,
+        1110,
+        457
+      ],
+      "lock_bbox": [
+        886,
+        446,
+        1110,
+        670
+      ],
+      "label_anchor": [
+        998,
+        731.5999999999999
+      ],
+      "display_text_calls": [
+        {
+          "text": "퇴직연금 조건",
+          "xy": [
+            713,
+            99
+          ],
+          "px": 123,
+          "role": "support",
+          "align": "center"
+        },
+        {
+          "text": "보존",
+          "xy": [
+            998,
+            731.5999999999999
+          ],
+          "px": 56,
+          "role": "support",
+          "align": "center"
+        }
+      ]
+    },
+    {
+      "item_index": 2,
+      "label": "수령",
+      "cx": 428,
+      "cy": 892,
+      "radius": 112,
+      "arc_bbox": [
+        316,
+        730,
+        540,
+        903
+      ],
+      "lock_bbox": [
+        316,
+        892,
+        540,
+        1116
+      ],
+      "label_anchor": [
+        428,
+        1177.6
+      ],
+      "display_text_calls": [
+        {
+          "text": "퇴직연금 조건",
+          "xy": [
+            713,
+            99
+          ],
+          "px": 123,
+          "role": "support",
+          "align": "center"
+        },
+        {
+          "text": "수령",
+          "xy": [
+            428,
+            1177.6
+          ],
+          "px": 56,
+          "role": "support",
+          "align": "center"
+        }
+      ]
+    },
+    {
+      "item_index": 3,
+      "label": null,
+      "cx": 998,
+      "cy": 892,
+      "radius": 112,
+      "arc_bbox": [
+        886,
+        730,
+        1110,
+        903
+      ],
+      "lock_bbox": [
+        886,
+        892,
+        1110,
+        1116
+      ],
+      "label_anchor": [
+        998,
+        1177.6
+      ],
+      "display_text_calls": []
+    }
+  ],
+  "source_stage_items": [
+    {
+      "label": "가입",
+      "state": "done",
+      "source_refs": [
+        "v4_live_validation.fixture"
+      ]
+    },
+    {
+      "label": "보존",
+      "state": "locked",
+      "source_refs": [
+        "v4_live_validation.fixture"
+      ]
+    },
+    {
+      "label": "수령",
+      "state": "locked",
+      "emphasis": true,
+      "source_refs": [
+        "v4_live_validation.fixture"
+      ]
+    }
+  ],
+  "reprocess_performed": false
+}

@@ -1,0 +1,12 @@
+{
+  "id": "yellow-mascot-style-reference-v1",
+  "role": "style_reference_only",
+  "asset": "yellow-mascot-style-reference-v1.png",
+  "description": "노란색 채널 마스코트를 사용하는 추천 썸네일 스타일 기준 시안입니다.",
+  "generation_behavior": "이 시안은 직접 발행 또는 선택용 결과물이 아닙니다. 사용자가 선택하면 현재 작업의 영상 장면과 승인 에셋을 활용해 mascot_led 후보를 재생성합니다.",
+  "constraints": [
+    "경제 인사이트 문구를 포함하지 않음",
+    "마스코트는 노란색 계열로 표현",
+    "실사 인물과 캐릭터를 한 후보에 혼합하지 않음"
+  ]
+}

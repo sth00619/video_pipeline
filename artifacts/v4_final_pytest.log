@@ -1,0 +1,43 @@
+........................................................................ [ 36%]
+........................................................................ [ 73%]
+...................................................                      [100%]
+=============================== warnings summary ===============================
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+  /usr/local/lib/python3.12/site-packages/matplotlib/_fontconfig_pattern.py:64: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    prop = Group((name + Suppress("=") + comma_separated(value)) | oneOf(_CONSTANTS))
+
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+  /usr/local/lib/python3.12/site-packages/matplotlib/_fontconfig_pattern.py:85: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+    parse = parser.parseString(pattern)
+
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+  /usr/local/lib/python3.12/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'
+    parser.resetCache()
+
+tests/test_scene_frames.py::test_article_body_underline_does_not_add_highlight
+tests/test_scene_frames.py::test_highlight_then_underline_keeps_opaque_red
+tests/test_scene_frames.py::test_missing_key_bbox_downgrades_rect_to_highlight
+tests/test_scene_frames.py::test_rect_uses_only_key_phrase_geometry
+  /app/tests/test_scene_frames.py:89: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    for r, g, b in image.crop((0, 300, image.width, 900)).getdata():
+
+tests/test_scene_frames.py::test_highlight_then_underline_keeps_opaque_red
+  /app/tests/test_scene_frames.py:124: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    assert (229, 36, 29) in set(rendered.emphasized.crop((0, 300, 1920, 900)).getdata())
+
+tests/test_scene_layers.py::test_foreground_alpha_is_above_surface_and_emits_a_real_mask
+  /app/tests/test_scene_layers.py:45: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    opaque_pixel = next((index for index, alpha in enumerate(mask.getdata()) if alpha > 250))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+195 passed, 19 warnings in 29.60s

@@ -26,6 +26,13 @@ from app import runtime_config
 from app.utils.quality_gate import enrich_scene_plans, assess_scene_plan
 from app.utils.art_direction import direct_scenes, assess_art_diversity
 from app.utils.market_charts import extract_market_chart
+from app.services.info_surface.hero_stat import hero_stat_from_chart
+from app.services.overlay.editorial_overlay import OverlaySlot
+from app.services.overlay.editorial_director import direct_editorial_overlays
+from app.services.overlay.plans import (
+    CopyClaim, DataOverlayPlan, SceneEditorialOverlayPlan, chart_kind_from_visual_kind,
+)
+from app.services.thumbnail.v2.narrative_plan import build_from_video_manifest
 from app.utils.script_style import (
     DEFAULT_SCRIPT_STYLE_PROFILE,
     assess_storytelling,
@@ -237,7 +244,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
   3. [비주얼 프롬프트 (영어)] : AI 이미지 생성기용 영어 프롬프트 (오직 배경/분위기/객체만 묘사, 캐릭터 묘사 금지 + 공통 스타일/네거티브 키워드 추가)
   4. [감정] : 상황에 맞는 캐릭터 표정/포즈 (happy / worried / surprised / pointing / thinking / explaining / neutral 중 하나)
   5. [모션] : 인트로 구간(처음 약 13개 씬)인 경우에만 chart_shock, pointing_explain, thinking_desk, walking_intro, celebration 중 하나를 반드시 선택해 기술하세요. 본문 씬은 비워두거나 제외합니다.
-  6. [말풍선] : 이미지 생성 뒤 별도 그래픽 레이어로 합성할 짧은 한글 텍스트 (최대 2줄). 숫자를 쓰려면 반드시 <verified_facts>에 있는 숫자·단위를 정확히 그대로 사용하세요. 그 외 숫자는 금지합니다. 숫자가 없는 감탄사는 창작할 수 있습니다.
+  6. [말풍선] : 필요한 씬에만 작성합니다. 훅·경고·질문·원인 설명·결론처럼 시청자의 시선을 한 번 더 잡아야 하는 장면만 선택하고, 일반 설명 씬에는 비워두세요. 이미지 생성 뒤 별도 그래픽 레이어로 합성할 짧은 한글 텍스트(최대 2줄)입니다. 숫자를 쓰려면 반드시 <verified_facts>에 있는 숫자·단위를 정확히 그대로 사용하세요. 그 외 숫자는 금지합니다. 숫자가 없는 감탄사는 창작할 수 있습니다.
 
 예시:
 ## 씬 1: 실적 발표와 주가 하락
@@ -416,8 +423,10 @@ class ScriptWorker:
             if data_visuals_enabled:
                 for scene in sections:
                     scene["market_snapshot"] = market_data
-                sections = _attach_verified_index_overlays(sections, market_data)
-                sections = _attach_verified_market_charts(sections)
+            sections = _attach_verified_index_overlays(sections, market_data)
+            sections = _attach_verified_market_charts(sections)
+            sections = _validate_info_scene_payloads(sections)
+            sections = direct_editorial_overlays(sections)
             used_real_llm = True
 
         except ScriptResearchRequiredError:
@@ -430,8 +439,10 @@ class ScriptWorker:
             if data_visuals_enabled:
                 for scene in sections:
                     scene["market_snapshot"] = market_data
-                sections = _attach_verified_index_overlays(sections, market_data)
-                sections = _attach_verified_market_charts(sections)
+            sections = _attach_verified_index_overlays(sections, market_data)
+            sections = _attach_verified_market_charts(sections)
+            sections = _validate_info_scene_payloads(sections)
+            sections = direct_editorial_overlays(sections)
             verified_facts = []
             fact_check_log = [f"오류: {str(e)}"]
             used_real_llm = False
@@ -773,7 +784,10 @@ def _build_thumbnail_brief(keyword: str, sections: list[dict], verified_facts: l
     The renderer accepts only a badge with a concrete `source_ref`; a missing
     verified value simply means no badge instead of a plausible-looking fake.
     """
-    source_scene_ids = []
+    narrative_plan = build_from_video_manifest(
+        keyword=keyword, sections=sections, verified_facts=verified_facts,
+    )
+    source_scene_ids = list(narrative_plan.source_scene_ids)
     for index, scene in enumerate(sections[:8]):
         role = str(scene.get("phase") or scene.get("section") or "")
         if index == 0 or role in {"data", "scenario", "action", "conclusion"}:
@@ -797,13 +811,25 @@ def _build_thumbnail_brief(keyword: str, sections: list[dict], verified_facts: l
             "template": "chart_warning",
             "language": "ko-KR",
             "headline": [
-                {"text": hook[:16] or "시장 핵심 이슈", "tone": "white"},
-                {"text": "지금 확인할 핵심", "tone": "yellow"},
+                {
+                    "text": hook[:16] or "시장 핵심 이슈",
+                    "spans": [{"text": hook[:16] or "시장 핵심 이슈", "tone": "white"}],
+                },
+                {
+                    "text": "지금 확인할 핵심",
+                    "spans": [
+                        {"text": "지금 확인할 ", "tone": "white"},
+                        {"text": "핵심", "tone": "yellow", "scale": 1.08},
+                    ],
+                },
             ],
             "primary_subject": {"kind": "chart", "asset_id": "manifest_chart", "source_ref": "facts[0]" if verified_facts else None},
             "secondary_subject": {"allowed": False},
             "badge": ({"label": "핵심 수치", **badge} if badge else None),
             "source_scene_ids": source_scene_ids or ["0"],
+            "editorial_overlays": [slot.model_dump() for slot in narrative_plan.overlays],
+            "pattern_id": narrative_plan.pattern_id,
+            "narrative_plan": narrative_plan.model_dump(),
             "verified_facts": verified_facts,
             "narration": _narration_from_sections(sections),
             "generated_from": "thumbnail_v2_contract",
@@ -1226,7 +1252,7 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
         if not prompt_en:
             prompt_en = f"Financial editorial scene representing {s['title']}, dark navy tone, original 2D Korean comic, bold ink outlines, cel shading"
 
-        sections.append({
+        section = {
             "title": s["title"],
             "content": s["content"],
             "prompt_ko": s["prompt_ko"],
@@ -1239,7 +1265,37 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
             "scene_rejected": bool(s.get("scene_rejected")),
             "section": section_type,
             "char_count": len(s["content"]),
-        })
+        }
+        # Preserve the legacy ``bubble_text`` for one release, while storing
+        # a typed plan whenever its category can safely render it. Numbers
+        # are never invented here: the existing verbatim guard has already
+        # rejected ungrounded source text above.
+        bubble = str(s.get("bubble_text") or "").strip()
+        if bubble:
+            kind = "burst" if section_type == "intro" else (
+                "caption_chip" if section_type in {"background", "conclusion"} else "speech"
+            )
+            numeric = bool(re.search(r"\d", bubble))
+            refs = ["facts[0]"] if numeric and (evidence or {}).get("verified_facts") else []
+            try:
+                overlay = OverlaySlot(
+                    kind=kind,
+                    text=bubble,
+                    claim_type="verbatim_fact" if numeric else "reaction",
+                    source_refs=refs,
+                    text_style="outline" if kind == "burst" else "solid",
+                )
+                section["editorial_overlay_plan"] = SceneEditorialOverlayPlan(
+                    section=section_type,
+                    message_role="hook" if section_type == "intro" else "reaction",
+                    overlay=overlay,
+                    subtitle_text=str(s.get("content") or ""),
+                ).model_dump()
+            except ValueError:
+                # Fail closed for the new plan; legacy bubble rendering stays
+                # available only for already validated one-release records.
+                section["editorial_overlay_plan"] = None
+        sections.append(section)
 
     return sections
 
@@ -1299,6 +1355,38 @@ def _attach_verified_index_overlays(sections: list[dict], market_data: dict) -> 
     return sections
 
 
+def _validate_info_scene_payloads(sections: list[dict]) -> list[dict]:
+    """v4 다이어그램 입력을 검증 사실과 출처가 있는 항목으로만 제한한다."""
+    limits = {"stage_items": (2, 4), "causal_nodes": (2, 5), "structure_items": (2, 3)}
+    for scene in sections:
+        chart = scene.get("market_chart") or {}
+        source_ref = str(chart.get("source_ref") or chart.get("source") or "")
+        for key, (minimum, maximum) in limits.items():
+            cleaned = []
+            for raw in list(scene.get(key) or [])[:maximum]:
+                if not isinstance(raw, dict) or not str(raw.get("label") or "").strip():
+                    continue
+                refs = [str(value) for value in raw.get("source_refs") or [] if str(value)] or ([source_ref] if source_ref else [])
+                if not refs:
+                    continue
+                cleaned.append({"label": str(raw["label"])[:24], "value": raw.get("value"), "state": raw.get("state"), "emphasis": bool(raw.get("emphasis")), "source_refs": refs})
+            if cleaned:
+                if not minimum <= len(cleaned) <= maximum:
+                    raise ValueError(f"{key} 항목 수가 v4 계약 범위를 벗어났습니다")
+                scene[key] = cleaned
+        rates = []
+        for raw in list(chart.get("external_rates") or [])[:3]:
+            if not isinstance(raw, dict) or not raw.get("label") or raw.get("value") is None:
+                continue
+            refs = [str(value) for value in raw.get("source_refs") or [] if str(value)] or ([source_ref] if source_ref else [])
+            if refs:
+                rates.append({"label": str(raw["label"])[:24], "value": str(raw["value"])[:18], "emphasis": bool(raw.get("emphasis")), "source_refs": refs})
+        if rates:
+            chart["external_rates"] = rates
+            scene["market_chart"] = chart
+    return sections
+
+
 def _attach_verified_market_charts(sections: list[dict], max_charts: int = 12) -> list[dict]:
     """Attach a small, evenly-spaced set of narrative data visuals only.
 
@@ -1339,7 +1427,10 @@ def _attach_verified_market_charts(sections: list[dict], max_charts: int = 12) -
     for index, _, chart in selected:
         chart = dict(chart)
         text = str(sections[index].get("content") or sections[index].get("text") or "").lower()
-        if any(token in text for token in ("상승", "하락", "급등", "급락", "등락")):
+        authored_kind = str(chart.get("visual_kind") or "")
+        if authored_kind in {"supply_flow", "stock_movers"}:
+            chart["visual_kind"] = authored_kind
+        elif any(token in text for token in ("상승", "하락", "급등", "급락", "등락")):
             chart["visual_kind"] = "change_arrow"
         elif any(token in text for token in ("비중", "점유", "구성")) and chart.get("market_cap_pie"):
             chart["visual_kind"] = "composition_pie"
@@ -1347,29 +1438,83 @@ def _attach_verified_market_charts(sections: list[dict], max_charts: int = 12) -
             chart["visual_kind"] = "comparison"
         else:
             chart["visual_kind"] = "trend_dashboard"
-        family = str((sections[index].get("art_direction") or {}).get("family") or "")
-        if family in {"industry_environment", "factory_dashboard"}:
-            chart["visual_theme"] = "factory_panel"
-        elif family in {"news_headline", "news_context", "comparison_board"}:
+        direction = dict(sections[index].get("art_direction") or {})
+        family = str(direction.get("family") or "")
+        # The data renderer inherits the physical prop chosen by the art
+        # director.  A monitor can use a dark panel, but clipboards, map
+        # clouds, tags and desk reports are paper-like.  This prevents every
+        # factual scene from collapsing into the former fixed chalkboard.
+        surface_kind = str(direction.get("data_surface_kind") or "")
+        theme_by_surface = {
+            "monitor": "factory_panel",
+            "trading_ticket": "factory_panel",
+            "inspection_clipboard": "paper_poster",
+            "ledger_card": "paper_poster",
+            "desk_report": "paper_poster",
+            "map_cloud": "paper_poster",
+            "product_label": "paper_poster",
+            "scene_card": "paper_poster",
+        }
+        if chart["visual_kind"] == "supply_flow":
             chart["visual_theme"] = "paper_poster"
+        elif chart["visual_kind"] == "stock_movers":
+            chart["visual_theme"] = "factory_panel"
+        elif surface_kind:
+            chart["visual_theme"] = theme_by_surface.get(surface_kind, "paper_poster")
+        elif family in {"industry_environment", "factory_dashboard"}:
+            chart["visual_theme"] = "factory_panel"
         else:
-            chart["visual_theme"] = "chalkboard"
+            chart["visual_theme"] = "paper_poster"
+        # Phase 2 F6: a data scene that naturally uses a chalkboard receives
+        # one full deterministic explainer board, never model-generated marks.
+        if chart["visual_theme"] == "chalkboard" and chart["visual_kind"] == "trend_dashboard":
+            chart["visual_kind"] = "chalkboard_explainer"
         chart.update({"verified": True, "source": "market_snapshot.chart_series"})
+        # Image copy is planned from the same verified payload as TTS, but it
+        # is not narration duplicated onto a board. The renderer receives one
+        # bounded hero fact plus its provenance before any image is generated.
+        chart["hero_stat"] = hero_stat_from_chart(chart).model_dump()
+        sections[index]["embedded_copy"] = [{
+            "text": chart["hero_stat"]["meaning_line"],
+            "claim_type": "derived_hook",
+            "source_refs": list(chart["hero_stat"]["source_refs"]),
+        }]
         # A chart emphasis is opt-in from the semantic claim, then its exact
         # screen position is derived by longform_worker from the final chart
         # surface and verified data coordinates.  No LLM emits pixel values.
         chart["focus"] = {
-            "enabled": any(token in text for token in ("상승", "하락", "급등", "급락", "등락", "돌파", "최고", "최저", "반등")),
+            "enabled": chart["visual_kind"] not in {"supply_flow", "stock_movers"} and any(token in text for token in ("상승", "하락", "급등", "급락", "등락", "돌파", "최고", "최저", "반등")),
             "target": "latest_verified_point",
         }
+        source_ref = str(chart.get("source_ref") or f"market_snapshot.chart_series.{chart['series_key']}")
+        plan_kind = chart_kind_from_visual_kind(chart["visual_kind"])
+        data_plan = DataOverlayPlan(
+            chart_kind=plan_kind,
+            primary_metric=str(chart["label"]),
+            unit=("원" if chart["visual_kind"] == "supply_flow" else "%" if chart["visual_kind"] == "stock_movers" else "pt"),
+            source_refs=[source_ref],
+            comparison_basis="동일 수집 기준일" if plan_kind == "comparison" else None,
+            focus_target=(
+                "largest_slice" if plan_kind == "composition"
+                else "larger_bar" if plan_kind == "comparison"
+                else "latest_point"
+            ),
+            callout=CopyClaim(
+                text="이 흐름이 핵심",
+                claim_type="derived_hook",
+                source_refs=[source_ref],
+            ),
+            subtitle_emphasis_ref=source_ref,
+            date_stamp_ref="market_chart.source_date",
+        )
+        sections[index]["data_overlay_plan"] = data_plan.model_dump()
         sections[index]["market_chart"] = chart
         # The old KOSPI corner card is a HUD, not part of the cartoon scene.
         # An integrated display replaces it for these selected key scenes.
         sections[index].pop("index_data", None)
-        direction = dict(sections[index].get("art_direction") or {})
         # The image prompt and FFmpeg compositor share this semantic anchor.
-        # It replaces the previous one-size-fits-all (880,120) rectangle,
-        # which could land outside a generated paper prop.
+        # Prefer the selected in-world prop; the legacy theme rect is only a
+        # fallback for older scene plans that predate surface selection.
         surfaces = {
             "factory_panel": {
                 "anchor": "right_factory_panel",
@@ -1384,7 +1529,7 @@ def _attach_verified_market_charts(sections: list[dict], max_charts: int = 12) -
                 "x": 980, "y": 150, "width": 760, "height": 520,
             },
         }
-        direction["data_surface"] = surfaces.get(chart["visual_theme"], surfaces["chalkboard"])
+        direction["data_surface"] = direction.get("data_surface") or surfaces.get(chart["visual_theme"], surfaces["paper_poster"])
         direction["overlay_strategy"] = "integrated_verified_data_visual"
         sections[index]["art_direction"] = direction
     return sections

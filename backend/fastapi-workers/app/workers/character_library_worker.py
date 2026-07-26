@@ -21,9 +21,19 @@ import os
 import logging
 import json
 import re
+import hashlib
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+IDENTITY_MANIFEST_VERSION = "3.0"
+IDENTITY_STYLE_LOCK = {
+    "medium": "original_2d_editorial_cartoon",
+    "body": "single round yellow coin mascot",
+    "face": "large oval eyes with black ink features",
+    "linework": "thick dark-brown variable-width ink outline",
+    "rendering": "two-to-three tone cel shading with subtle printed texture",
+}
 
 # 지원 포즈 목록 및 각 포즈별 프롬프트 접미사
 POSE_CONFIGS = {
@@ -85,6 +95,119 @@ POSE_CONFIGS.update({
     },
 })
 
+# 작업자와 운영 화면에서 같은 설명을 확인할 수 있도록, 모든 포즈 지시를
+# 한국어로 통일한다. 모델에게도 이 원문을 그대로 전달해 의상/표정 기준을
+# 한 파일에서 관리한다.
+POSE_CONFIGS.update({
+    "neutral": {"desc": "정면을 바라보며 한 손은 가볍게 재킷을 잡고 다른 손은 편안히 내린 차분하고 신뢰감 있는 기본 설명 포즈", "ko": "기본 설명 포즈, 차분하고 신뢰감 있는 표정"},
+    "happy": {"desc": "한 손으로 엄지를 들어 긍정 신호를 보이고 다른 손은 가볍게 펼친 채 자신 있게 미소 짓는 좋은 소식 반응 포즈", "ko": "긍정 신호 포즈, 자신감 있는 미소"},
+    "surprised": {"desc": "눈을 크게 뜨고 한 손은 입가에, 다른 손은 앞으로 펼쳐 예상 밖의 변화를 알리는 놀란 반응 포즈", "ko": "예상 밖 변화에 놀란 반응 포즈"},
+    "worried": {"desc": "미간을 살짝 찌푸리고 두 손을 앞으로 모아 위험을 신중하게 경고하는 우려 반응 포즈", "ko": "위험을 신중하게 경고하는 우려 포즈"},
+    "thinking": {"desc": "고개를 기울이고 관자놀이에 손가락을 대며 핵심을 고민하는 생각하는 포즈, 집중한 표정", "ko": "고개를 기울이고 관자놀이에 손가락을 대는 생각하는 포즈"},
+    "explaining": {"desc": "한 손바닥을 위로 열어 복잡한 내용을 쉽게 풀어 설명하고 다른 손은 몸 앞에서 받쳐 주는 설명 포즈", "ko": "핵심을 쉽게 풀어 설명하는 포즈"},
+    "pointing": {"desc": "오른쪽을 손가락으로 가리키는 포즈, 시선은 카메라를 향하고 단호한 표정", "ko": "오른쪽을 손가락으로 가리키는 포즈, 단호한 표정"},
+    "engineer": {"desc": "노란 안전모와 작업 조끼를 착용하고 작은 공구를 들며 현장을 점검하는 집중한 엔지니어 포즈", "ko": "현장을 점검하는 엔지니어 포즈"},
+    "scientist": {"desc": "흰 연구 가운과 보호 안경을 착용하고 손에 든 작은 칩을 살피는 호기심 있는 연구원 포즈", "ko": "칩을 살피는 연구원 포즈"},
+    "analyst": {"desc": "남색 분석가 재킷과 안경을 착용하고 얇은 노트와 펜으로 핵심을 짚는 침착한 분석가 포즈", "ko": "핵심을 짚는 침착한 분석가 포즈"},
+    "teacher": {"desc": "갈색 가디건과 둥근 안경을 착용하고 포인터로 설명하는 친절한 교수 포즈", "ko": "포인터로 설명하는 친절한 교수 포즈"},
+    "explorer": {"desc": "탐사 조끼와 모자를 착용하고 돋보기로 단서를 찾는 호기심 있는 탐험가 포즈", "ko": "돋보기로 단서를 찾는 탐험가 포즈"},
+    "hero_business": {"desc": "금색 포인트의 남색 정장을 입고 한 손을 들어 결론을 제시하는 당당한 비즈니스 리더 포즈", "ko": "결론을 제시하는 비즈니스 리더 포즈"},
+})
+
+# Phase 2 role-costume library.  This is deliberately separate from the
+# legacy generic poses: creating it makes an explicit 15-image billable asset
+# request, while existing channels keep rendering with their current library.
+ROLE_COSTUME_SPECS = {
+    "field_reporter": "yellow field-reporting vest, compact headset microphone, small handheld pointer",
+    "professor": "warm brown professor cardigan, round glasses, graduation cap, wooden pointer",
+    "anchor": "tailored navy broadcast jacket, neat bow tie, compact presenter earpiece",
+    "referee": "bold black-and-white referee jacket, whistle, gold decision card",
+    "analyst": "navy analyst vest, clear data glasses, slim stylus and notebook",
+}
+ROLE_COSTUME_STATES = {
+    "neutral": "calm professional stance, attentive expression, one hand ready to explain",
+    "highlight": "confident upbeat explanation, one arm raised toward an important finding, bright smile",
+    "worried": "concerned alert expression, cautious pointing gesture, visibly reacting to a risk",
+}
+ROLE_COSTUME_CONFIGS = {
+    f"{role}_{state}": {
+        "desc": f"wearing {costume}, {state_desc}, full-body isolated character pose",
+        "ko": f"{role} {state} role costume",
+        "role": role,
+        "state": state,
+    }
+    for role, costume in ROLE_COSTUME_SPECS.items()
+    for state, state_desc in ROLE_COSTUME_STATES.items()
+}
+
+_MODEL_POSE_DESCRIPTIONS = {
+    "neutral": "calm presenter stance, one hand lightly holds the jacket and the other rests naturally",
+    "happy": "confident positive-news gesture, one single right-hand thumbs-up, left arm resting down, warm composed smile, compact vertical silhouette",
+    "surprised": "unexpected-change reaction, widened eyes, one hand near the mouth and the other open forward",
+    "worried": "careful risk-warning gesture, brows slightly furrowed and both hands gathered forward",
+    "thinking": "head tilted, index finger touching the temple, focused thoughtful expression",
+    "explaining": "clear teaching pose, one palm open upward and the other hand supporting the explanation",
+    "pointing": "index finger pointing to the right, looking toward camera with an assertive expression",
+    "engineer": "yellow safety helmet and work vest, holding a small wrench, focused field engineer stance",
+    "scientist": "white lab coat and safety glasses, carefully examining a small microchip",
+    "analyst": "navy analyst jacket and glasses, using a slim notebook and pen in a calm analytical stance",
+    "teacher": "brown cardigan and round glasses, holding a wooden pointer in a kind professor stance",
+    "explorer": "field vest and cap, holding a magnifying glass while examining a clue",
+    "hero_business": "tailored navy business suit with a gold accent, one hand raised to present a conclusion",
+    "field_reporter_neutral": "yellow field reporter vest and compact headset microphone, calm explanatory stance with a small pointer",
+    "field_reporter_highlight": "yellow field reporter vest and compact headset microphone, raising a pointer to emphasize a finding",
+    "field_reporter_worried": "yellow field reporter vest and compact headset microphone, cautious risk-warning hand gesture",
+    "professor_neutral": "brown professor cardigan, round glasses and graduation cap, calm stance holding a wooden pointer",
+    "professor_highlight": "brown professor cardigan, round glasses and graduation cap, pointer raised to emphasize a key point",
+    "professor_worried": "brown professor cardigan, round glasses and graduation cap, carefully explaining a risk",
+    "anchor_neutral": "tailored navy anchor jacket, gold bow tie and presenter earpiece, composed broadcast stance",
+    "anchor_highlight": "tailored navy anchor jacket, gold bow tie and presenter earpiece, one hand emphasizing a key point",
+    "anchor_worried": "tailored navy anchor jacket, gold bow tie and presenter earpiece, alert breaking-news warning stance",
+    "referee_neutral": "black-and-white referee jacket and whistle, holding a gold decision card in a fair neutral stance",
+    "referee_highlight": "black-and-white referee jacket and whistle, raising a gold decision card decisively",
+    "referee_worried": "black-and-white referee jacket and whistle, holding a gold decision card with a tense risk-warning expression",
+    "analyst_neutral": "navy analyst vest and clear data glasses, calmly indicating a key insight with a slim pen and notebook",
+    "analyst_highlight": "navy analyst vest and clear data glasses, confidently pointing at an important finding with a slim pen",
+    "analyst_worried": "navy analyst vest and clear data glasses, holding a notebook and carefully warning about a risk signal",
+}
+for _pose_name, _config in {**POSE_CONFIGS, **ROLE_COSTUME_CONFIGS}.items():
+    _config["model_desc"] = _MODEL_POSE_DESCRIPTIONS[_pose_name]
+
+# 레퍼런스 영상처럼 캐릭터는 항상 의상을 입은 진행자로 읽혀야 한다.
+# 역할 자산은 각각의 직업 의상이 이미 model_desc에 포함되어 있고, 일반
+# 포즈는 장면 어디에 합성해도 작동하는 고정 진행자 정장을 공유한다.
+_GENERIC_WARDROBE = "tailored navy presenter blazer, crisp white shirt collar, slim gold tie, brown leather shoes"
+_SPECIAL_WARDROBE = {
+    "engineer": "yellow safety helmet, navy work jacket, utility belt, brown work boots",
+    "scientist": "white lab coat, navy shirt, clear safety glasses, brown shoes",
+    "teacher": "warm brown cardigan over a white shirt, round glasses, brown shoes",
+    "explorer": "brown field vest, utility cap, navy shirt, brown hiking boots",
+}
+for _pose_name, _config in POSE_CONFIGS.items():
+    _config["model_wardrobe"] = _SPECIAL_WARDROBE.get(_pose_name, _GENERIC_WARDROBE)
+for _config in ROLE_COSTUME_CONFIGS.values():
+    _config["model_wardrobe"] = ""
+
+# 역할 의상 또한 한국어 원문으로 고정한다. 다섯 역할의 금색 코인 캐릭터,
+# 굵은 짙은 갈색 외곽선, 2D 카툰 채색이라는 공통 스타일을 공유한다.
+ROLE_COSTUME_CONFIGS = {
+    "field_reporter_neutral": {"desc": "노란 현장 조끼와 헤드셋 마이크를 착용하고 작은 포인터를 든 현장 기자의 차분한 설명 포즈", "ko": "현장 기자 기본 설명 포즈"},
+    "field_reporter_highlight": {"desc": "노란 현장 조끼와 헤드셋 마이크를 착용하고 포인터를 들어 중요한 소식을 강조하는 현장 기자 포즈", "ko": "현장 기자 핵심 강조 포즈"},
+    "field_reporter_worried": {"desc": "노란 현장 조끼와 헤드셋 마이크를 착용하고 위험을 알리듯 조심스럽게 손짓하는 현장 기자 포즈", "ko": "현장 기자 위험 경고 포즈"},
+    "professor_neutral": {"desc": "갈색 가디건, 둥근 안경, 학사모를 착용하고 포인터를 든 차분한 교수 포즈", "ko": "교수 기본 설명 포즈"},
+    "professor_highlight": {"desc": "갈색 가디건, 둥근 안경, 학사모를 착용하고 포인터로 핵심을 강조하는 교수 포즈", "ko": "교수 핵심 강조 포즈"},
+    "professor_worried": {"desc": "갈색 가디건, 둥근 안경, 학사모를 착용하고 신중한 표정으로 위험을 설명하는 교수 포즈", "ko": "교수 위험 설명 포즈"},
+    "anchor_neutral": {"desc": "남색 방송 재킷, 금색 나비넥타이, 발표용 이어피스를 착용하고 차분히 진행하는 앵커 포즈", "ko": "앵커 기본 진행 포즈"},
+    "anchor_highlight": {"desc": "남색 방송 재킷, 금색 나비넥타이, 발표용 이어피스를 착용하고 한 손으로 핵심을 강조하는 앵커 포즈", "ko": "앵커 핵심 강조 포즈"},
+    "anchor_worried": {"desc": "남색 방송 재킷, 금색 나비넥타이, 발표용 이어피스를 착용하고 긴급 소식을 신중하게 전달하는 앵커 포즈", "ko": "앵커 긴급 경고 포즈"},
+    "referee_neutral": {"desc": "흑백 심판 재킷과 호루라지를 착용하고 금색 판정 카드를 든 공정한 심판 포즈", "ko": "심판 기본 판정 포즈"},
+    "referee_highlight": {"desc": "흑백 심판 재킷과 호루라지를 착용하고 금색 판정 카드를 높이 들어 결정을 알리는 심판 포즈", "ko": "심판 결정 강조 포즈"},
+    "referee_worried": {"desc": "흑백 심판 재킷과 호루라지를 착용하고 금색 판정 카드를 든 채 위험을 경고하는 긴장된 심판 포즈", "ko": "심판 위험 경고 포즈"},
+    "analyst_neutral": {"desc": "남색 분석가 조끼와 데이터 안경을 착용하고 얇은 펜과 노트로 핵심을 짚는 침착한 분석가 포즈", "ko": "분석가 기본 설명 포즈"},
+    "analyst_highlight": {"desc": "남색 분석가 조끼와 데이터 안경을 착용하고 펜으로 중요한 발견을 자신 있게 짚는 분석가 포즈", "ko": "분석가 핵심 강조 포즈"},
+    "analyst_worried": {"desc": "남색 분석가 조끼와 데이터 안경을 착용하고 노트를 든 채 위험 신호를 신중하게 경고하는 분석가 포즈", "ko": "분석가 위험 경고 포즈"},
+}
+
 CHAR_WIDTH = 480
 CHAR_HEIGHT = 854  # 9:16 비율 (세로형 캐릭터)
 
@@ -108,6 +231,9 @@ class CharacterLibraryWorker:
         channel_id: str,
         character_description: str,
         regenerate: bool = False,
+        include_role_costumes: bool = False,
+        include_legacy_poses: bool = False,
+        pose_names: list[str] | None = None,
     ) -> dict:
         """
         채널 ID에 해당하는 포즈 라이브러리 전체를 생성(또는 재생성)합니다.
@@ -144,7 +270,20 @@ class CharacterLibraryWorker:
             results["errors"].append(f"AI 프로바이더 로드 실패: {e}")
             return results
 
-        for pose_name, pose_config in POSE_CONFIGS.items():
+        # The opt-in role library is exactly the priced 15-asset set.  Do not
+        # silently add the legacy 12 poses to that purchase on a new channel.
+        if include_role_costumes and include_legacy_poses:
+            pose_configs = {**POSE_CONFIGS, **ROLE_COSTUME_CONFIGS}
+        else:
+            pose_configs = dict(ROLE_COSTUME_CONFIGS if include_role_costumes else POSE_CONFIGS)
+        if pose_names is not None:
+            requested = list(dict.fromkeys(str(name) for name in pose_names))
+            unknown = [name for name in requested if name not in pose_configs]
+            if unknown:
+                raise ValueError(f"unknown pose names for selected library: {', '.join(unknown)}")
+            pose_configs = {name: pose_configs[name] for name in requested}
+
+        for pose_name, pose_config in pose_configs.items():
             raw_path = poses_dir / f"{pose_name}_raw.png"
             final_path = poses_dir / f"{pose_name}.png"
 
@@ -155,7 +294,12 @@ class CharacterLibraryWorker:
                 continue
 
             # 1. 캐릭터 포즈 이미지 생성 (배경 있는 버전)
-            prompt = self._build_character_prompt(character_description, pose_config["desc"])
+            prompt = self._build_character_prompt(
+                character_description,
+                pose_config["desc"],
+                pose_config.get("model_desc"),
+                pose_config.get("model_wardrobe"),
+            )
             logger.info(f"포즈 '{pose_name}' 생성 중... prompt_len={len(prompt)}")
 
             try:
@@ -195,9 +339,12 @@ class CharacterLibraryWorker:
 
         # 라이브러리 메타데이터 저장
         meta_path = poses_dir / "library_meta.json"
+        existing_role_assets = any((poses_dir / f"{name}.png").exists() for name in ROLE_COSTUME_CONFIGS)
         meta = {
             "channel_id": channel_id,
             "character_description": character_description,
+            "role_costume_library": bool(include_role_costumes or existing_role_assets),
+            "role_costume_count": sum((poses_dir / f"{name}.png").exists() for name in ROLE_COSTUME_CONFIGS),
             "poses": {
                 p["pose"]: {"path": p["path"], "ko": p["ko"]}
                 for p in results["generated"]
@@ -205,6 +352,31 @@ class CharacterLibraryWorker:
         }
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False, indent=2)
+
+        # A pose collection is a character identity lock, not a loose bundle
+        # of independently generated mascots.  Downstream composition records
+        # this id and the selected asset hash on every final scene so mixed
+        # character libraries cannot pass unnoticed.
+        pose_assets = {}
+        for pose_name in sorted({**POSE_CONFIGS, **ROLE_COSTUME_CONFIGS}):
+            pose_path = poses_dir / f"{pose_name}.png"
+            if pose_path.is_file():
+                pose_assets[pose_name] = hashlib.sha256(pose_path.read_bytes()).hexdigest()
+        canonical_seed = json.dumps({
+            "channel_id": channel_id,
+            "character_description": character_description.strip(),
+            "style_lock": IDENTITY_STYLE_LOCK,
+        }, ensure_ascii=False, sort_keys=True)
+        identity_manifest = {
+            "version": IDENTITY_MANIFEST_VERSION,
+            "canonical_character_id": hashlib.sha256(canonical_seed.encode("utf-8")).hexdigest()[:20],
+            "style_lock": IDENTITY_STYLE_LOCK,
+            "pose_assets": pose_assets,
+        }
+        (poses_dir / "identity_manifest.json").write_text(
+            json.dumps(identity_manifest, ensure_ascii=False, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
 
         logger.info(
             f"캐릭터 라이브러리 생성 완료: channel={channel_id}, "
@@ -258,7 +430,8 @@ class CharacterLibraryWorker:
             meta = {}
 
         poses = []
-        for pose_name, pose_config in POSE_CONFIGS.items():
+        pose_configs = {**POSE_CONFIGS, **ROLE_COSTUME_CONFIGS}
+        for pose_name, pose_config in pose_configs.items():
             if (poses_dir / f"{pose_name}.png").exists():
                 poses.append({"pose": pose_name, "label": pose_config["ko"]})
 
@@ -268,21 +441,41 @@ class CharacterLibraryWorker:
             "poses": poses,
             "pose_count": len(poses),
             "character_description": meta.get("character_description", ""),
+            "canonical_character_id": self._read_canonical_character_id(poses_dir),
         }
 
     @staticmethod
-    def _build_character_prompt(character_description: str, pose_desc: str) -> str:
+    def _read_canonical_character_id(poses_dir: Path) -> str | None:
+        try:
+            payload = json.loads((poses_dir / "identity_manifest.json").read_text(encoding="utf-8"))
+            return str(payload.get("canonical_character_id") or "") or None
+        except (OSError, ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _build_character_prompt(
+        character_description: str,
+        pose_desc: str,
+        model_desc: str | None = None,
+        model_wardrobe: str | None = None,
+    ) -> str:
         """
         캐릭터 설명 + 포즈 설명을 조합하여 이미지 생성 프롬프트 구성.
         배경 제거(rembg)가 효과적으로 작동하도록 단색 배경 지정.
         """
-        base = character_description.strip().rstrip(",")
+        # The operational description remains Korean, but Gemini's provider
+        # intentionally rejects non-English prompts and replaces them with a
+        # generic finance scene.  Keep a separate, locked production sentence
+        # so every reusable asset still renders as the fixed coin mascot.
+        production_pose = model_desc or "calm full-body explanatory pose"
+        wardrobe = f"Costume: {model_wardrobe}. " if model_wardrobe else ""
         return (
-            f"{base}, {pose_desc}, "
-            "full body view, character centered, "
-            "isolated on solid white background, "
-            "no props no scenery no text, "
-            "high detail, clean edges, 4K quality"
+            "Single original yellow gold coin mascot character only: round coin body, large expressive cartoon eyes, "
+            "white gloves, short legs, thick clean dark-brown ink outline, crisp 2D digital cartoon cel shading. "
+            f"{wardrobe}Pose: {production_pose}. Full-body centered character with generous padding. "
+            "Perfectly uniform pure white background only; no floor line, no cast shadow, no contact shadow, no reflection, "
+            "no gradient, no scenery, no background objects, no other characters. No text, numbers, logo, or watermark. "
+            "No human person, no animal, no bull, no realistic photo, no 3D render, no mixed art style."
         )
 
     @staticmethod

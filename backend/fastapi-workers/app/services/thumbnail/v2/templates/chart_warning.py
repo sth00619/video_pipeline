@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from PIL import Image, ImageDraw, ImageEnhance
+from PIL import Image, ImageEnhance
 
 from .base import BaseTemplate, AssetBundle, register
 from ..mascot_compositor import paste_mascot
-from ..text_panel import _font
 from ..semantic_emphasis import draw_semantic_emphasis
+from app.services.overlay.editorial_overlay import OverlaySlot, render_editorial_overlay
 
 
 @register
@@ -43,48 +43,15 @@ class ChartWarningTemplate(BaseTemplate):
 
     @staticmethod
     def _speech_bubble(canvas: Image.Image, text: str, side: str = "left") -> dict[str, int]:
-        layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(layer)
-        font = _font(max(34, round(canvas.width * .034)))
-        max_width = int(canvas.width * .47)
-        while getattr(font, "size", 26) > 26 and draw.textlength(text, font=font) > max_width:
-            font = _font(font.size - 2)
-        bbox = draw.textbbox((0, 0), text, font=font, stroke_width=2)
-        width, height = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        left = (
-            int(canvas.width * .035)
-            if side == "left"
-            else canvas.width - width - 48 - int(canvas.width * .035)
+        result = render_editorial_overlay(
+            OverlaySlot(
+                kind="speech",
+                text=text,
+                anchor="upper_left" if side == "left" else "upper_right",
+            ),
+            canvas_size=canvas.size,
         )
-        # The channel watermark owns the top-right corner. A mirrored bubble
-        # moves below that reserved zone instead of being painted underneath it.
-        top = int(canvas.height * (.14 if side == "right" else .035))
-        bubble = (left, top, left + width + 48, top + height + 34)
-        draw.rounded_rectangle(
-            bubble, radius=24, fill=(255, 255, 255, 246),
-            outline=(16, 16, 16, 255), width=5,
-        )
-        draw.polygon(
-            [
-                (bubble[2] - 70, bubble[3] - 2),
-                (bubble[2] - 20, bubble[3] - 2),
-                (bubble[2] - 28, bubble[3] + 38),
-            ],
-            fill=(255, 255, 255, 246),
-            outline=(16, 16, 16, 255),
-        )
-        draw.text(
-            (left + 24, top + 12 - bbox[1]),
-            text,
-            font=font,
-            fill=(255, 211, 42, 255),
-            stroke_width=4,
-            stroke_fill=(10, 10, 10, 255),
-        )
-        canvas.alpha_composite(layer)
-        return {
-            "x": bubble[0],
-            "y": bubble[1],
-            "width": bubble[2] - bubble[0],
-            "height": bubble[3] - bubble[1] + 38,
-        }
+        if result and result.bbox:
+            canvas.alpha_composite(result.image)
+            return result.bbox
+        return {"x": 0, "y": 0, "width": 0, "height": 0}

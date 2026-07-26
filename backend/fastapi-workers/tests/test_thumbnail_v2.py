@@ -32,6 +32,25 @@ def test_contract_rejects_reference_channel_phrase():
     assert any("banned phrase" in item for item in validate_brief(brief))
 
 
+def test_span_contract_rejects_mismatched_or_over_highlighted_copy():
+    with pytest.raises(ValueError, match="must match"):
+        ThumbnailBriefV2.model_validate({
+            **_brief(),
+            "headline": [
+                {"text": "서로 다른 문장", "spans": [{"text": "다른 카피", "tone": "white"}]},
+                {"text": "지금 확인", "spans": [{"text": "지금 확인", "tone": "yellow"}]},
+            ],
+        })
+    brief = ThumbnailBriefV2.model_validate({
+        **_brief(),
+        "headline": [
+            {"text": "반도체 주가", "spans": [{"text": "반도체 주가", "tone": "red"}]},
+            {"text": "지금 확인", "spans": [{"text": "지금 확인", "tone": "yellow"}]},
+        ],
+    })
+    assert "headline highlight spans exceed 60 percent of copy" in validate_brief(brief)
+
+
 def test_semantic_arrow_requires_source_and_display_font_is_packaged():
     assert BLACK_HAN_PROFILE.require_font().is_file()
     with pytest.raises(ValueError, match="requires source"):

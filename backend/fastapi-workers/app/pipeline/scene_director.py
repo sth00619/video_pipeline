@@ -26,6 +26,13 @@ class SceneSpec:
     camera: str = "dynamic cinematic angle"
     side_characters: str = ""
     mood: str = "neutral"
+    # Overlay affordances are semantic hints only. Pixel geometry remains the
+    # deterministic compositor's responsibility after image generation.
+    thumbnail_anchor: str = ""
+    thumbnail_copy_zone: str = "auto"
+    thumbnail_overlay_zone: str = "auto"
+    thumbnail_target: str = ""
+    diegetic_surface_kind: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -49,6 +56,7 @@ Convert each narration line into a physical visual metaphor Goldie performs. Nev
 number/chart as the main idea. Every scene needs a different role costume, concrete action, a
 rich themed setting, and 3-6 relevant props. Do not request a screen, dashboard, chart, sign, document,
 or anything with readable markings: all facts and Korean typography are post-production graphics. The entire frame is a 2D Korean webtoon illustration.
+Choose one physical visual object that can later anchor an overlay and leave a naturally low-detail continuous area nearby. Never create a speech bubble, label, blank white panel, text, or numeric display.
 Return ONLY a JSON array, one object per requested scene, preserving scene_id. Keys: scene_id,
 headline (Korean, 2-8 characters), metaphor (Korean), character_role, character_costume,
 character_action, character_emotion, setting, props (English string array), camera,

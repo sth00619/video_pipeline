@@ -88,16 +88,17 @@ export default function Admin() {
   })
 
   const characterLibraryMutation = useMutation({
-    mutationFn: ({ channelId, characterDescription, regenerate }) =>
+    mutationFn: ({ channelId, characterDescription, regenerate, includeRoleCostumes = false }) =>
       apiClient.post(`/channels/${channelId}/character-library`, {
         characterDescription,
         regenerate,
+        includeRoleCostumes,
       }).then(r => r.data),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['character-libraries'] })
       qc.invalidateQueries({ queryKey: ['admin-channels'] })
       refetchChannels()
-      alert(variables.regenerate ? '캐릭터 포즈를 전체 재생성했습니다.' : '없는 캐릭터 포즈를 생성하고 채널에 연결했습니다.')
+      alert(variables.includeRoleCostumes ? '역할별 의상 15종을 생성하고 채널에 연결했습니다.' : (variables.regenerate ? '캐릭터 포즈를 전체 재생성했습니다.' : '없는 캐릭터 포즈를 생성하고 채널에 연결했습니다.'))
     },
     onError: (err) => {
       alert('캐릭터 포즈 생성 실패: ' + (err.response?.data?.message || err.message))
@@ -506,6 +507,19 @@ export default function Admin() {
                           <RefreshCw size={14} /> 전체 재생성
                         </button>
                       )}
+                      <button
+                        onClick={() => characterLibraryMutation.mutate({
+                          channelId: channel.channelId,
+                          characterDescription,
+                          regenerate: false,
+                          includeRoleCostumes: true,
+                        })}
+                        disabled={!characterDescription.trim() || isGeneratingLibrary}
+                        className="flex items-center gap-1.5 border border-accent-gold/70 text-accent-gold text-sm px-3 py-2 rounded-lg hover:bg-accent-gold/10 disabled:opacity-50"
+                        title="현장 리포터·교수·앵커·심판·애널리스트 × 중립·강조·경고 포즈 15종을 생성합니다."
+                      >
+                        <ImagePlus size={14} /> 역할 의상 15종 생성
+                      </button>
                       <span className="text-[11px] text-gray-500">외부 이미지 생성 API를 호출합니다.</span>
                     </div>
 

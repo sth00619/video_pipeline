@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 
 Tone = Literal["white", "yellow", "red"]
-TONE_RGB = {"white": (255, 255, 255), "yellow": (255, 214, 0), "red": (255, 59, 48)}
+TONE_RGB = {"white": (255, 255, 255), "yellow": (255, 210, 48), "red": (255, 81, 72)}
 
 
 class FontProfileNotFoundError(RuntimeError):
@@ -47,9 +47,9 @@ class TypographyProfile(BaseModel):
     id: Literal["black_han_sans_v1"] = "black_han_sans_v1"
     family: str = "Black Han Sans"
     safe_margin_px: int = 32
-    max_stroke_ratio: float = .055
-    letter_spacing_em: float = -.02
-    line_gap_ratio: float = .10
+    max_stroke_ratio: float = .028
+    letter_spacing_em: float = -.03
+    line_gap_ratio: float = .08
     min_font_px: int = 64
 
     @property
@@ -108,13 +108,13 @@ def _line_image(line: HeadlineLineV3, font_px: int, profile: TypographyProfile) 
     fonts = [load_display_font(round(font_px * span.scale), profile) for span in line.spans]
     ascents = [font.getmetrics()[0] for font in fonts]
     descents = [font.getmetrics()[1] for font in fonts]
-    stroke = max(2, min(round(font_px * profile.max_stroke_ratio), round(font_px * .065)))
+    stroke = max(1, min(round(font_px * profile.max_stroke_ratio), round(font_px * .035)))
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
     widths = [
         probe.textlength(span.text, font=font) + max(0, len(span.text) - 1) * round(font.size * profile.letter_spacing_em)
         for span, font in zip(line.spans, fonts)
     ]
-    shadow = max(3, round(font_px * .032))
+    shadow = max(1, round(font_px * .012))
     width = round(sum(widths) + stroke * 4 + shadow * 2)
     height = max(ascents) + max(descents) + stroke * 4 + shadow * 2
     image = Image.new("RGBA", (max(1, width), max(1, height)), (0, 0, 0, 0))

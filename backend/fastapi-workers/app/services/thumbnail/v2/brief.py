@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from .semantic_emphasis import SemanticEmphasis
 from .typography import HeadlineLineV3, Span
+from app.services.overlay.editorial_overlay import OverlaySlot
 
 Tone = Literal["white", "yellow", "red"]
 TemplateId = Literal[
@@ -19,17 +20,29 @@ TemplateId = Literal[
 
 
 class HeadlineLine(BaseModel):
-    """Compatibility input model for older thumbnail briefs.
+    """Headline input expressed as independently styled text spans.
 
-    Renderers immediately convert it into ``HeadlineLineV3`` so every actual
-    composition uses the profile-controlled span layout.
+    ``text`` remains as an API/display convenience, but new planners must
+    provide ``spans``.  Rendering always uses the span representation, so a
+    single whole-line tone can no longer bypass the typography contract.
     """
-    text: str = Field(min_length=2, max_length=32)
+    text: str | None = Field(default=None, min_length=2, max_length=32)
     tone: Tone = "white"
     spans: list[Span] | None = None
 
+    @model_validator(mode="after")
+    def requires_copy(self) -> "HeadlineLine":
+        if not self.text and not self.spans:
+            raise ValueError("headline line requires text or spans")
+        if self.spans:
+            span_text = "".join(span.text for span in self.spans)
+            if self.text and self.text != span_text:
+                raise ValueError("headline text must match concatenated spans")
+            self.text = span_text
+        return self
+
     def to_v3(self) -> HeadlineLineV3:
-        return HeadlineLineV3(spans=self.spans or [Span(text=self.text, tone=self.tone)])
+        return HeadlineLineV3(spans=self.spans or [Span(text=self.text or "", tone=self.tone)])
 
 
 class Subject(BaseModel):
@@ -57,22 +70,6 @@ class Badge(BaseModel):
     source_ref: str = Field(min_length=1)
 
 
-class EmphasisSpec(BaseModel):
-    kind: Literal["underline", "rect", "circle", "arrow"] = "rect"
-    bbox: tuple[float, float, float, float] | None = None
-
-    @model_validator(mode="after")
-    def normalized_bbox(self) -> "EmphasisSpec":
-        if self.bbox is None:
-            return self
-        x, y, width, height = self.bbox
-        if min(x, y) < 0 or min(width, height) <= 0:
-            raise ValueError("emphasis bbox must have non-negative origin and positive size")
-        if x + width > 1 or y + height > 1:
-            raise ValueError("emphasis bbox must stay inside normalized canvas")
-        return self
-
-
 class ThumbnailBriefV2(BaseModel):
     template: TemplateId
     language: Literal["ko-KR"] = "ko-KR"
@@ -81,9 +78,10 @@ class ThumbnailBriefV2(BaseModel):
     secondary_subject: MascotPolicy = Field(default_factory=MascotPolicy)
     evidence: Evidence | None = None
     badge: Badge | None = None
-    emphasis: EmphasisSpec | None = None
     semantic_emphasis: SemanticEmphasis | None = None
     speech_bubble: str | None = Field(default=None, max_length=24)
+    editorial_overlays: list[OverlaySlot] = Field(default_factory=list, max_length=2)
+    pattern_id: str | None = Field(default=None, max_length=8)
 
     @model_validator(mode="after")
     def template_requirements(self) -> "ThumbnailBriefV2":
@@ -110,6 +108,20 @@ def validate_brief(brief: ThumbnailBriefV2, verified_facts: list[dict] | None = 
     for phrase in BANNED_PHRASES:
         if phrase in joined:
             errors.append(f"banned phrase: {phrase}")
+    span_chars = 0
+    highlighted_chars = 0
+    for line in brief.headline:
+        # Legacy records did not contain spans. They stay renderable during
+        # migration, while every newly planned line is held to the cap.
+        if not line.spans:
+            continue
+        for span in line.to_v3().spans:
+            count = sum(not character.isspace() for character in span.text)
+            span_chars += count
+            if span.tone in {"yellow", "red"}:
+                highlighted_chars += count
+    if span_chars and highlighted_chars / span_chars > .60:
+        errors.append("headline highlight spans exceed 60 percent of copy")
     refs = {
         reference
         for index, _ in enumerate(verified_facts or [])

@@ -1,0 +1,433 @@
+[
+  {
+    "job_id": 94301,
+    "expected_template": "stages",
+    "scene": {
+      "title": "퇴직연금 3단계 조건",
+      "content": "퇴직연금의 안전장치를 세 단계로 확인합니다.",
+      "section": "data",
+      "market_chart": {
+        "verified": true,
+        "source": "v4_live_validation.fixture",
+        "source_ref": "v4_live_validation.fixture",
+        "source_date": "2026-07-26",
+        "label": "퇴직연금 조건",
+        "latest": 100,
+        "change_pct": 2.5,
+        "points": [
+          {
+            "date": "2026-07-24",
+            "close": 96
+          },
+          {
+            "date": "2026-07-25",
+            "close": 98
+          },
+          {
+            "date": "2026-07-26",
+            "close": 100
+          }
+        ]
+      },
+      "stage_items": [
+        {
+          "label": "가입",
+          "state": "done",
+          "source_refs": [
+            "v4_live_validation.fixture"
+          ]
+        },
+        {
+          "label": "보존",
+          "state": "locked",
+          "source_refs": [
+            "v4_live_validation.fixture"
+          ]
+        },
+        {
+          "label": "수령",
+          "state": "locked",
+          "emphasis": true,
+          "source_refs": [
+            "v4_live_validation.fixture"
+          ]
+        }
+      ],
+      "text": "퇴직연금의 안전장치를 세 단계로 확인합니다.",
+      "visual_type": "data_visual",
+      "visual_plan": {
+        "objective": "chart-shaped data visual with no generated text",
+        "visual_type": "data_visual",
+        "character_required": false,
+        "overlay_type": "fact_card",
+        "no_generated_text": true,
+        "source_scene_index": 0,
+        "source_scene_count": 1
+      },
+      "pose": "scientist",
+      "art_direction": {
+        "family": "data_lab",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "industrial_navy",
+          "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+        },
+        "wardrobe": "white lab coat and data goggles",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "present_right",
+        "fallback_pose": "present_right",
+        "character_required": true,
+        "camera": "wide establishing shot",
+        "lighting": "dramatic rim light",
+        "reference_composition": {
+          "id": "data_lab",
+          "character_placement": "right third",
+          "character_area_target": 0.44,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 110,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "monitor",
+        "data_surface_prompt": "a large blank wall monitor or desk terminal, with a matte non-glowing screen",
+        "surface_contract": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            65,
+            86,
+            102
+          ],
+          "border_rgb": [
+            15,
+            27,
+            42
+          ],
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.1,
+            "width": 0.42,
+            "height": 0.6
+          },
+          "tilt_hint": "nearly front-facing matte monitor"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "board_side": "right",
+        "info_scene_template": "vault_stages"
+      },
+      "style_profile": "editorial_comic_2d",
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "editorial_anchor"
+      },
+      "scene_spec": {
+        "scene_id": "0",
+        "narration": "퇴직연금의 안전장치를 세 단계로 확인합니다.",
+        "headline": "3단계 안전장치",
+        "metaphor": "골디가 거대한 금고 앞에서 세 개의 자물쇠를 차례로 점검하며 퇴직연금의 안전 조건을 확인하는 모습",
+        "character_role": "금고 점검관",
+        "character_costume": "짙은 남색 점검복, 금색 단추, 흰 장갑, 안전모",
+        "character_action": "한 손에 클립보드 대신 열쇠꾸러미를 들고, 다른 손으로 금고 문의 세 번째 자물쇠를 꼼꼼히 살피며 두드리는 동작",
+        "character_emotion": "진지하고 집중된 표정, 눈썹을 모으고 한쪽 눈을 살짝 찡그림",
+        "setting": "웅장한 금빛 금고실 내부, 두꺼운 원형 금고 문이 배경을 가득 채우고, 벽돌 벽에는 횃불 조명이 드리워져 있음",
+        "props": [
+          "대형 원형 금고 문",
+          "세 개의 서로 다른 자물쇠(모양 각각 다름)",
+          "열쇠꾸러미",
+          "금빛 랜턴",
+          "바닥에 놓인 두꺼운 쇠사슬"
+        ],
+        "camera": "살짝 낮은 앙각(low-angle) 미디엄 샷, 골디와 금고 문 전체가 프레임에 담기며 금고의 웅장함 강조",
+        "side_characters": "없음",
+        "mood": "neutral",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "3단계 안전장치",
+      "info_scene_template": {
+        "template_id": "vault_stages",
+        "claim_shape": "stages",
+        "diagram_kind": "stage_locks",
+        "character": {
+          "costume": "knight armor with channel-color cape and shield",
+          "pose_asset": "present_right",
+          "gaze": "board",
+          "hand": "points_board",
+          "side": "left"
+        },
+        "surface_kind": "monitor",
+        "board_side": "right",
+        "min_items": 2,
+        "max_items": 4,
+        "label_slots": [],
+        "prompt_en": "A sturdy cartoon bank vault room, {setting_detail}, with a huge vault door on the right and a large flat glowing status panel mounted on it. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.",
+        "allow_regen_on_quad_fail": true
+      },
+      "_template_regeneration_enabled": true,
+      "_template_regeneration_attempted": true,
+      "info_surface_plan": {
+        "scene_id": "scene",
+        "render_mode": "DATA_CUTAWAY",
+        "surface": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            31,
+            56,
+            76
+          ],
+          "marker_delta_e_max": 12.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "right",
+          "preferred_region": {
+            "x": 0.53,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "v4_live_validation.fixture"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DATA_CUTAWAY",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [
+          "quad_not_found"
+        ],
+        "detection": null,
+        "timeline_mode": "one_to_one_replace",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": "scene",
+        "source_image_path": "/app/data/jobs/94301/images/scene_000_source.png",
+        "final_image_path": "/app/data/jobs/94301/images/scene_000.png",
+        "hero_stat": {
+          "headline_value": "100.00",
+          "headline_unit_label": "퇴직연금 조건",
+          "direction": "up",
+          "meaning_line": "+2.50% over selected period",
+          "support_marks": [],
+          "comparison_basis": "2026-07-26",
+          "source_refs": [
+            "v4_live_validation.fixture"
+          ]
+        },
+        "chart_render_metadata": null,
+        "phase_b": null,
+        "template_id": "vault_stages",
+        "diagram_kind": "stage_locks",
+        "render_attempts": [
+          {
+            "outcome": "REGENERATE_REQUESTED",
+            "reason": "quad_not_found",
+            "render_mode": "DIEGETIC_WARP"
+          },
+          {
+            "outcome": "DATA_CUTAWAY",
+            "reason": "quad_not_found",
+            "render_mode": "DATA_CUTAWAY",
+            "source_sha256": "0ce7cbdbc1055eebc577c41e912dfa63c79e6eb20a6d6a3f74b244f011aff4db",
+            "final_sha256": "ef4ce8318333f58b41790e68bcddc59b3f17a33cb1268c1a8de180b771e72b7c"
+          }
+        ]
+      },
+      "final_image_path": "/app/data/jobs/94301/images/scene_000.png",
+      "source_image_path": "/app/data/jobs/94301/images/scene_000_source.png",
+      "info_surface_final_fingerprint": "8b9b5ae46177d7832bef98b5ed7b3c991ca02647622cf6a6b5ca8e83e833e940",
+      "info_surface_final_sha256": "ef4ce8318333f58b41790e68bcddc59b3f17a33cb1268c1a8de180b771e72b7c",
+      "index": 0,
+      "image_path": "/app/data/jobs/94301/images/scene_000.png",
+      "background_path": null,
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "left",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.015,
+            "y": 0.1,
+            "width": 0.41,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "generation_method": "pro_gemini",
+      "quality_score": 100,
+      "prompt_en": "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame.\nGoldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line language of the attached reference sheet; do not create a second mascot.\nSCENE TEMPLATE: A sturdy cartoon bank vault room, 웅장한 금빛 금고실 내부, 두꺼운 원형 금고 문이 배경을 가득 채우고, 벽돌 벽에는 횃불 조명이 드리워져 있음, with a huge vault door on the right and a large flat glowing status panel mounted on it. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.\nCHARACTER: Goldie wears knight armor with channel-color cape and shield; pose present_right; looking at the board, points_board toward it.\nThe character, gloves, pointer and any foreground prop must stay entirely on the opposite side of the board and never overlap its interior.\nThe board is an unlabeled physical prop, not a UI card. All Korean copy, numbers and diagrams are post-production only.",
+      "prompt_ko": "퇴직연금의 안전장치를 세 단계로 확인합니다.",
+      "prompt": "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame.\nGoldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line language of the attached reference sheet; do not create a second mascot.\nSCENE TEMPLATE: A sturdy cartoon bank vault room, 웅장한 금빛 금고실 내부, 두꺼운 원형 금고 문이 배경을 가득 채우고, 벽돌 벽에는 횃불 조명이 드리워져 있음, with a huge vault door on the right and a large flat glowing status panel mounted on it. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.\nCHARACTER: Goldie wears knight armor with channel-color cape and shield; pose present_right; looking at the board, points_board toward it.\nThe character, gloves, pointer and any foreground prop must stay entirely on the opposite side of the board and never overlap its interior.\nThe board is an unlabeled physical prop, not a UI card. All Korean copy, numbers and diagrams are post-production only.",
+      "market_snapshot": {},
+      "index_data": null,
+      "bubble_text": "",
+      "motion_type": "",
+      "headline_mood": "neutral",
+      "character_regions": [
+        {
+          "x": 0.015,
+          "y": 0.1,
+          "width": 0.41,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    },
+    "cost_ledger_path": "/app/data/jobs/94301/cost_ledger.json"
+  }
+]

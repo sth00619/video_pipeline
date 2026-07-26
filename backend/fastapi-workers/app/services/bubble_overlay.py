@@ -9,6 +9,7 @@ from typing import Iterable
 from PIL import Image, ImageDraw, ImageFont
 
 from app.services.text_style import draw_entertainment_text
+from app.services.overlay.editorial_overlay import OverlaySlot, render_editorial_overlay
 
 
 _FONT_PATHS = (
@@ -146,6 +147,27 @@ def render_speech_bubble_overlay(
     """
     if not str(text or "").strip():
         return Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+    # Compatibility wrapper during the overlay-grammar migration.  New code
+    # uses ``render_editorial_overlay`` directly; legacy callers keep their
+    # existing style argument without opening a second rendering path.
+    shared_kind = "burst" if style == "burst" else "speech"
+    shared = render_editorial_overlay(
+        OverlaySlot(
+            kind=shared_kind,
+            text=str(text).strip(),
+            anchor="upper_left" if character_side == "right" else "upper_right",
+            tone="benefit" if style in {"positive", "shout"} else ("danger" if style == "warning" else "neutral"),
+        ),
+        canvas_size=canvas_size,
+        subject_regions=avoid_regions,
+        subtitle_region={"x": 0, "y": 1 - max(0, min(subtitle_safe_area_pct, 45)) / 100, "width": 1, "height": max(0, min(subtitle_safe_area_pct, 45)) / 100},
+    )
+    if shared is not None:
+        return None if shared.skipped_reason else shared.image
+    return None
+    # Legacy implementation below is intentionally unreachable for one
+    # release. It remains in the source to make rollback of the public helper
+    # safe while all callers migrate to the common grammar renderer.
     overlay = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     max_width = round(canvas_size[0] * .36)

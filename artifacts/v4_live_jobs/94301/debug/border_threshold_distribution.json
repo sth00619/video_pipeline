@@ -1,0 +1,56 @@
+[
+  {
+    "fixture": "cream_4_surface_collision",
+    "border_match_0.70": 0.8061,
+    "accepted_0.70": true,
+    "confidence_0.70": 0.7473,
+    "border_match_0.65": 0.8061,
+    "accepted_0.65": true,
+    "confidence_0.65": 0.7473
+  },
+  {
+    "fixture": "cream_4_surface_texture",
+    "border_match_0.70": 0.8061,
+    "accepted_0.70": true,
+    "confidence_0.70": 0.7416,
+    "border_match_0.65": 0.8061,
+    "accepted_0.65": true,
+    "confidence_0.65": 0.7416
+  },
+  {
+    "fixture": "cream_4_surface_chain",
+    "border_match_0.70": 0.8123,
+    "accepted_0.70": true,
+    "confidence_0.70": 0.7277,
+    "border_match_0.65": 0.8123,
+    "accepted_0.65": true,
+    "confidence_0.65": 0.7277
+  },
+  {
+    "fixture": "cream_4_surface_antialias",
+    "border_match_0.70": 0.8061,
+    "accepted_0.70": true,
+    "confidence_0.70": 0.7473,
+    "border_match_0.65": 0.8061,
+    "accepted_0.65": true,
+    "confidence_0.65": 0.7473
+  },
+  {
+    "fixture": "metal_border_hint_mismatch",
+    "border_match_0.70": 1.0,
+    "accepted_0.70": true,
+    "confidence_0.70": 0.7861,
+    "border_match_0.65": 1.0,
+    "accepted_0.65": true,
+    "confidence_0.65": 0.7861
+  },
+  {
+    "fixture": "rounded_physical_board",
+    "border_match_0.70": 1.0,
+    "accepted_0.70": true,
+    "confidence_0.70": 0.785,
+    "border_match_0.65": 1.0,
+    "accepted_0.65": true,
+    "confidence_0.65": 0.785
+  }
+]

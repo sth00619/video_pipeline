@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/tools/run_v4_live_template_validation.py", line 40, in <module>
+    main()
+  File "/tools/run_v4_live_template_validation.py", line 32, in main
+    result = worker.generate(scenes_meta=[scene], job_id=job_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/workers/images_worker.py", line 311, in generate
+    lock_token = acquire_image_job_lock(job_id)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/utils/image_job_lock.py", line 23, in acquire_image_job_lock
+    raise ImageJobAlreadyRunningError(f"Image generation is already running for job {job_id}")
+app.utils.image_job_lock.ImageJobAlreadyRunningError: Image generation is already running for job 94101
+

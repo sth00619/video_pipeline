@@ -1,0 +1,75 @@
+{
+  "source_png": "/app/data/jobs/94301/images/scene_000_raw.png",
+  "final_png": "/app/data/jobs/94301/debug/vault_stages_warped.png",
+  "api_calls": 0,
+  "record_cost_calls": 0,
+  "template_id": "vault_stages",
+  "render_mode": "DIEGETIC_WARP",
+  "fallback_chain": [],
+  "render_attempts": [
+    {
+      "outcome": "DIEGETIC_WARP",
+      "reason": null,
+      "render_mode": "DIEGETIC_WARP",
+      "source_sha256": "517d8e868a3d80aed3b5ff35c2d351b54342bd8dfe8f72787c0213ce54343984",
+      "final_sha256": "25783b1127b4126b8554111843e687c86991f7ea58b72e2e3706ed0eb231c089"
+    }
+  ],
+  "detection": {
+    "quad": [
+      [
+        1411.31,
+        332.93
+      ],
+      [
+        2240.38,
+        199.69
+      ],
+      [
+        2356.08,
+        919.59
+      ],
+      [
+        1527.01,
+        1052.84
+      ]
+    ],
+    "confidence": 0.6139,
+    "color_purity": 0.7638,
+    "border_match": 0.683,
+    "position_score": 0.5212,
+    "area_ratio": 0.116,
+    "palette_collision": true
+  },
+  "surface_contract": {
+    "surface_kind": "monitor",
+    "geometry": "planar_quad",
+    "marker_rgb": [
+      246,
+      244,
+      210
+    ],
+    "marker_delta_e_max": 12.0,
+    "marker_scene_delta_e_min": 20.0,
+    "border_rgb": [
+      7,
+      26,
+      58
+    ],
+    "border_delta_e_max": 18.0,
+    "area_ratio_min": 0.1,
+    "area_ratio_max": 0.55,
+    "preferred_side": "right",
+    "preferred_region": {
+      "x": 0.53,
+      "y": 0.08,
+      "width": 0.42,
+      "height": 0.7
+    },
+    "candidate_iou_min": 0.3,
+    "tilt_hint": "slightly tilted like a real prop",
+    "inset_ratio": 0.06
+  },
+  "raw_sha256": "517d8e868a3d80aed3b5ff35c2d351b54342bd8dfe8f72787c0213ce54343984",
+  "final_sha256": "25783b1127b4126b8554111843e687c86991f7ea58b72e2e3706ed0eb231c089"
+}

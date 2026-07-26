@@ -412,7 +412,7 @@ export default function JobDetail() {
   })
 
   const regenerateThumbnailMut = useMutation({
-    mutationFn: () => jobsApi.regenerateThumbnail(id, 'longform', thumbnailPreset || undefined),
+    mutationFn: (preset) => jobsApi.regenerateThumbnail(id, 'longform', preset || undefined),
     onSuccess: () => {
       setImageSalt(prev => prev + 1)
       qc.invalidateQueries(['assets', id, 'THUMBNAIL_IMAGE'])
@@ -749,6 +749,32 @@ export default function JobDetail() {
                 <p className="mt-1.5 text-[11px] text-gray-500">
                   영상 장면과 사용 가능한 승인 에셋으로 만든 후보입니다. 실사 인물과 캐릭터는 서로 섞지 않고 별도 안으로 제안합니다.
                 </p>
+                <section className="mt-2 rounded-lg border border-accent-gold/30 bg-accent-gold/5 p-2" aria-label="노란 마스코트 스타일 추천안">
+                  <div className="flex gap-2">
+                    <img
+                      src="/thumbnail-examples/yellow-mascot-style-reference-v1.png"
+                      alt="노란 마스코트 스타일 추천 썸네일 예시"
+                      className="h-16 w-28 rounded border border-accent-gold/30 object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-accent-gold">노란 마스코트 스타일 추천안</p>
+                      <p className="mt-0.5 text-[10px] leading-relaxed text-gray-400">
+                        예시는 스타일 기준입니다. 선택하면 현재 영상 장면과 승인 에셋을 사용해 실제 후보로 재생성합니다.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={regenerateThumbnailMut.isPending}
+                        onClick={() => {
+                          setThumbnailPreset('mascot_led')
+                          regenerateThumbnailMut.mutate('mascot_led')
+                        }}
+                        className="mt-1.5 rounded border border-accent-gold/60 bg-accent-gold/10 px-2 py-1 text-[10px] font-semibold text-accent-gold transition hover:bg-accent-gold/20 disabled:opacity-50"
+                      >
+                        {regenerateThumbnailMut.isPending ? '생성 중…' : '이 스타일로 후보 생성'}
+                      </button>
+                    </div>
+                  </div>
+                </section>
                 <div className="mt-2 flex gap-1.5">
                   <select
                     value={thumbnailPreset}
@@ -764,7 +790,7 @@ export default function JobDetail() {
                   <button
                     type="button"
                     disabled={regenerateThumbnailMut.isPending}
-                    onClick={() => regenerateThumbnailMut.mutate()}
+                    onClick={() => regenerateThumbnailMut.mutate(thumbnailPreset)}
                     className="rounded border border-accent-cyan/60 bg-accent-cyan/10 px-2 py-1.5 text-xs font-semibold text-accent-cyan disabled:opacity-50"
                   >
                     {regenerateThumbnailMut.isPending ? '생성 중…' : '후보 재생성'}

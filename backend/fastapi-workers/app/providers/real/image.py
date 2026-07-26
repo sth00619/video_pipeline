@@ -62,10 +62,10 @@ FINANCE_STYLE = (
 # [S2-1] 배경 전용 모드 스타일 수식어 (캐릭터 없는 순수 배경용)
 # 캐릭터 라이브러리 포즈 이미지와 FFmpeg overlay 합성될 배경 생성에 사용
 BACKGROUND_ONLY_STYLE = (
-    "no people, no characters, no mascots, no figures, "
-    "wide 2D editorial-comic establishing shot, bold variable ink outlines, two-tone cel shading, "
+    "NON-NEGOTIABLE ART DIRECTION: no people, no characters, no mascots, no figures; "
+    "wide 2D Korean editorial-cartoon establishing shot, bold variable ink outlines on every background object, two-tone cel shading, "
     "specific real-world business props and layered industrial environment, colorful controlled scene palette, "
-    "not a dark empty studio, no photorealism, no glossy 3D render, "
+    "not a dark empty studio, no photorealism, no realistic photographic textures, no glossy 3D render, "
     "no text, no letters, no words, no watermark, no UI elements"
 )
 

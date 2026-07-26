@@ -11,6 +11,7 @@ from .brief import Subject, ThumbnailBriefV2, validate_brief
 from .templates import TEMPLATE_REGISTRY
 from .templates.base import AssetBundle
 from .layout_planner import EditorialQA, ThumbnailLayoutPlanner, assess, face_laplacian_variance
+from .narrative_plan import ThumbnailNarrativePlan
 
 
 def _person_path(photo: dict[str, Any]) -> str:
@@ -38,6 +39,14 @@ class ThumbnailV2Composer:
         if reference_style_profile != "black_han_sans_v1":
             raise ValueError("UNSUPPORTED_REFERENCE_STYLE_PROFILE")
         contract = ThumbnailBriefV2.model_validate(brief)
+        # The script worker attaches an inspectable narrative contract.  It is
+        # authoritative for pattern and readable overlay placement, while the
+        # thumbnail brief remains backward compatible for older jobs.
+        raw_narrative = brief.get("narrative_plan") if isinstance(brief, dict) else None
+        if isinstance(raw_narrative, dict):
+            narrative = ThumbnailNarrativePlan.model_validate(raw_narrative)
+            contract.editorial_overlays = narrative.overlays
+            contract.pattern_id = narrative.pattern_id
         errors = validate_brief(contract, verified_facts, narration)
         if errors:
             raise ValueError("BRIEF_VALIDATION_FAILED: " + "; ".join(errors))
@@ -194,6 +203,7 @@ class ThumbnailV2Composer:
             )
             rendered_variants.append({
                 "template_id": variant_contract.template,
+                "pattern_id": variant_contract.pattern_id or ("P3" if variant_contract.speech_bubble else "P5"),
                 "preset": plan.preset,
                 "creative_mode": (
                     "real_person" if variant_people

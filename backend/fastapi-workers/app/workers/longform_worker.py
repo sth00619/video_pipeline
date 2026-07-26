@@ -46,11 +46,14 @@ from app.utils.fal_billing import get_fal_credit_status
 from app.utils.stock_overlay import Anchor, IndexData, Market, overlay_filter, render_index_card
 from app.utils.market_charts import render_market_chart
 from app.utils.data_surface_locator import locate_data_surface
+from app.services.overlay.surface_detector import detect_surface
 from app.utils.budget import load_preflight, record_cost
 from app.utils.intro_motion import select_intro_motion_scene_indices
 from app.utils.output_qc import build_output_qc_report
 from app.services.kling_prompt_builder import build_kling_motion_prompt
 from app.services.bubble_overlay import write_speech_bubble_overlay
+from app.services.overlay.editorial_overlay import OverlaySlot, render_editorial_overlay
+from app.services.overlay.plans import DataOverlayPlan, SceneEditorialOverlayPlan
 from app.services.annotate import callout_block, render_annotations
 from app.services.verbatim_guard import validate as validate_verbatim
 from datetime import datetime, timezone
@@ -193,6 +196,7 @@ class LongformWorker:
 
         # [S4] 1. 씬별 재생 시간(duration) 정밀 타임라인 동적 매핑 (TTS 청크 기반)
         _assign_scene_durations_from_chunks(scenes, chunks, total_duration)
+        _assign_editorial_overlay_timing(scenes)
 
         # Editorial overlay policy: generic AI/text overlays remain disabled.
         # Only scenes carrying an explicitly verified index_data payload may
@@ -205,7 +209,8 @@ class LongformWorker:
         )
         market_chart_count = sum(
             1 for scene in scenes
-            if isinstance(scene.get("market_chart"), dict) and scene["market_chart"].get("verified") is True
+            if isinstance(scene.get("market_chart"), dict)
+            and scene["market_chart"].get("verified") is True
         )
         logger.info(
             f"editorial overlays: verified index cards={data_card_count}, market charts={market_chart_count} (scenes={len(scenes)})"
@@ -239,7 +244,7 @@ class LongformWorker:
             logger.info("intro_motion_test_mode is active. Kling clip count capped to 2.")
 
         # Dynamic budget clip auto-downgrade check
-        max_budget_krw = int(runtime_config.value("max_budget_per_video_krw") or 40000)
+        max_budget_krw = int(runtime_config.value("max_budget_per_video_krw") or 70000)
         budget_remaining_krw = max_budget_krw
         budget_preflight = load_preflight(job_id)
         if budget_preflight:
@@ -836,13 +841,13 @@ class LongformWorker:
             # 반투명 다크 바 + 흰 글자 + 금색 강조 포인트.
             style = (
                 f"Style: Main,{font_name},{font_size},&H00FFFFFF,&H0000FFFF,"
-                "&H003A3122,&H88120E0B,-1,0,0,0,100,100,0,0,3,0,0,2,60,60,72,1"
+                "&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,5,0,2,70,70,58,1"
             )
         else:
             # 흰 굵은 글자와 검정 외곽선. 불투명 박스 없이 장면을 살린다.
             style = (
                 f"Style: Main,{font_name},{font_size},&H00FFFFFF,&H0000FFFF,"
-                "&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,5,2,2,50,50,78,1"
+                "&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,5,0,2,70,70,58,1"
             )
 
         header = f"""[Script Info]
@@ -1130,6 +1135,8 @@ def _article_image_path(scene: dict) -> str:
     capture = _article_capture_for_scene(scene) or {}
     if str(scene.get("visual_kind") or "") == "article_scene" and scene.get("image_path"):
         return str(scene["image_path"])
+    if scene.get("final_image_path"):
+        return str(scene["final_image_path"])
     return str(capture.get("local_path") or scene.get("image_path") or "")
 
 
@@ -1219,7 +1226,8 @@ def _scene_clip_fingerprint(
     """Hash every input that can change a rendered scene clip."""
     try:
         stat = os.stat(image_path)
-        image_identity = {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
+        digest = hashlib.sha256(Path(image_path).read_bytes()).hexdigest()
+        image_identity = {"size": stat.st_size, "mtime_ns": stat.st_mtime_ns, "sha256": digest}
     except OSError:
         image_identity = {"size": None, "mtime_ns": None}
     contract = {
@@ -1229,6 +1237,7 @@ def _scene_clip_fingerprint(
         "image": image_identity,
         "motion_type": scene.get("motion_type"),
         "market_chart": scene.get("market_chart"),
+        "info_surface_plan": scene.get("info_surface_plan"),
         "index_data": scene.get("index_data"),
         "article_capture": scene.get("article_capture"),
         "annotations": scene.get("annotations"),
@@ -1421,14 +1430,26 @@ def _apply_verified_index_card(scene: dict, clip_path: str, temp_dir: Path, inde
 
 
 def _requires_verified_market_chart(scene: dict) -> bool:
+    plan = scene.get("info_surface_plan")
+    # New images already contain the verified graphic before motion.  Keeping
+    # the old FFmpeg card path here would create the exact floating-card bug
+    # this pipeline replaces.
+    if isinstance(plan, dict) and plan.get("final_image_path"):
+        return False
     payload = scene.get("market_chart")
-    return (
-        isinstance(payload, dict)
-        and payload.get("verified") is True
-        and isinstance(payload.get("points"), list)
-        and len(payload["points"]) >= 5
-        and bool(payload.get("source"))
-    )
+    if not (isinstance(payload, dict) and payload.get("verified") is True and bool(payload.get("source"))):
+        return False
+    # A policy/cost comparison has no time axis.  It is valid with two or
+    # more collector-backed values, while a trend still needs its full series.
+    if str(payload.get("visual_kind") or "") == "indexed_comparison":
+        return (
+            isinstance(payload.get("comparison_values"), list)
+            and len(payload["comparison_values"]) >= 2
+            and bool(str(payload.get("comparison_basis") or "").strip())
+        )
+    if str(payload.get("visual_kind") or "") in {"supply_flow", "stock_movers"}:
+        return True
+    return isinstance(payload.get("points"), list) and len(payload["points"]) >= 5
 
 
 def _chart_focus_annotation(payload: dict, surface: dict[str, int]) -> dict | None:
@@ -1484,6 +1505,8 @@ def _apply_verified_market_chart(scene: dict, clip_path: str, temp_dir: Path, in
         resolved_surface = _resolve_market_chart_surface(
             (scene.get("art_direction") or {}).get("data_surface"),
             str(scene.get("image_path") or scene.get("path") or ""),
+            job_id=job_id,
+            scene_key=str(scene.get("scene_id") or index),
         )
         render_payload = dict(payload)
         render_payload["render_surface"] = {
@@ -1539,20 +1562,40 @@ def _apply_data_card_overlay(clip_path: str, card_path: str, duration: float, jo
     return True
 
 
-def _resolve_market_chart_surface(surface: dict | None, source_image_path: str = "") -> dict[str, int]:
+def _resolve_market_chart_surface(
+    surface: dict | None,
+    source_image_path: str = "",
+    *,
+    job_id: int | None = None,
+    scene_key: str = "",
+) -> dict[str, int]:
     """Return the actual 1920×1080 safe rectangle for both renderer and FFmpeg."""
     surface = surface if isinstance(surface, dict) else {}
     resolved = {
         "x": int(surface.get("x", 1120)), "y": int(surface.get("y", 65)),
         "width": int(surface.get("width", 720)), "height": int(surface.get("height", 390)),
     }
+    detection = detect_surface(
+        source_image_path,
+        "board",
+        job_id=job_id,
+        scene_key=scene_key,
+    )
     detected = locate_data_surface(source_image_path, surface)
-    if not detected:
+    if not detected and not detection:
         return resolved
     try:
         from PIL import Image
         with Image.open(source_image_path) as source:
             source_w, source_h = source.size
+        if detection:
+            xs = [point[0] for point in detection.quad]
+            ys = [point[1] for point in detection.quad]
+            detected = {
+                "x": round(min(xs) * source_w), "y": round(min(ys) * source_h),
+                "width": round((max(xs) - min(xs)) * source_w),
+                "height": round((max(ys) - min(ys)) * source_h),
+            }
         resolved = {
             "x": round(detected["x"] * 1920 / source_w),
             "y": round(detected["y"] * 1080 / source_h),
@@ -1655,6 +1698,72 @@ def _apply_speech_bubble_overlay(
     return True
 
 
+def _apply_scene_editorial_plan(
+    scene: dict,
+    clip_path: str,
+    temp_dir: Path,
+    index: int,
+    duration: float,
+    job_id: int,
+) -> bool:
+    """Render the typed non-data overlay plan through the shared renderer."""
+    raw = scene.get("editorial_overlay_plan")
+    data_raw = scene.get("data_overlay_plan")
+    if not isinstance(raw, dict) and not isinstance(data_raw, dict):
+        return True
+    try:
+        if isinstance(raw, dict):
+            plan = SceneEditorialOverlayPlan.model_validate(raw)
+            overlay = plan.overlay
+        else:
+            data_plan = DataOverlayPlan.model_validate(data_raw)
+            if not data_plan.callout:
+                return True
+            overlay = OverlaySlot(
+                kind="caption_chip",
+                text=data_plan.callout.text,
+                claim_type=data_plan.callout.claim_type,
+                source_refs=data_plan.callout.source_refs,
+                anchor="upper_left",
+            )
+        result = render_editorial_overlay(
+            overlay,
+            canvas_size=(1920, 1080),
+            subject_regions=scene.get("character_regions") or [],
+            copy_regions=(scene.get("article_capture") or {}).get("quote_bboxes") or [],
+        )
+        if not result or result.skipped_reason:
+            scene.setdefault("overlay_provenance", []).append({
+                "kind": overlay.kind,
+                "skipped_reason": result.skipped_reason if result else "renderer_returned_none",
+            })
+            return True
+        overlay_path = temp_dir / f"editorial_overlay_{index:03d}.png"
+        result.image.save(overlay_path, "PNG")
+        staged = clip_path + ".editorial.mp4"
+        timing = _overlay_timing(scene, duration)
+        cmd = (
+            f'ffmpeg -i "{clip_path}" -loop 1 -i "{overlay_path}" '
+            f'-filter_complex "[0:v][1:v]overlay=0:0:format=auto:enable=\'between(t,{timing[0]:.3f},{timing[1]:.3f})\'[v]" '
+            f'-map "[v]" -t {duration:.3f} -an -c:v libx264 -preset fast -crf 18 '
+            f'-pix_fmt yuv420p -y "{staged}" -loglevel error'
+        )
+        ret = _run_subprocess(cmd, job_id)
+        if ret != 0 or not _verify_video(staged):
+            if os.path.exists(staged):
+                os.remove(staged)
+            return False
+        os.replace(staged, clip_path)
+        scene.setdefault("overlay_provenance", []).append({
+            "kind": overlay.kind, "bbox": result.bbox,
+            "source_refs": overlay.source_refs,
+        })
+        return True
+    except (TypeError, ValueError, OSError) as exc:
+        logger.warning("scene %s editorial overlay plan skipped: %s", index, exc)
+        return True
+
+
 def _apply_scene_annotation_overlay(
     scene: dict,
     clip_path: str,
@@ -1736,14 +1845,26 @@ def _apply_scene_annotation_overlay(
 
 
 def _apply_editorial_overlays(scene: dict, clip_path: str, temp_dir: Path, index: int, duration: float, job_id: int) -> bool:
-    if _requires_verified_index_card(scene) and not _requires_verified_market_chart(scene):
+    chart = scene.get("market_chart")
+    verified_chart = isinstance(chart, dict) and chart.get("verified") is True
+    plan = scene.get("info_surface_plan")
+    # v2.2 forbids adding a factual chart after camera/motion rendering.  A
+    # persisted legacy job must be regenerated from its source still; silently
+    # applying the old FFmpeg rectangle would detach the data from the scene.
+    if verified_chart and not (isinstance(plan, dict) and plan.get("final_image_path")):
+        logger.error("scene %s has verified chart but no finalized info surface", index)
+        return False
+    if _requires_verified_index_card(scene) and not verified_chart:
         if not _apply_verified_index_card(scene, clip_path, temp_dir, index, duration, job_id):
             return False
-    if _requires_verified_market_chart(scene):
-        if not _apply_verified_market_chart(scene, clip_path, temp_dir, index, duration, job_id):
-            return False
+    if not _apply_scene_editorial_plan(scene, clip_path, temp_dir, index, duration, job_id):
+        return False
     if not _apply_scene_annotation_overlay(scene, clip_path, temp_dir, index, duration, job_id):
         return False
+    # A typed plan supersedes the legacy string bubble. The legacy path stays
+    # for one release of previously persisted jobs only.
+    if isinstance(scene.get("editorial_overlay_plan"), dict):
+        return True
     return _apply_speech_bubble_overlay(scene, clip_path, temp_dir, index, duration, job_id)
 
 
@@ -1821,3 +1942,27 @@ def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_durati
     if scenes and abs(diff) > 0.001:
         scenes[-1]["duration"] = round(max(0.05, scenes[-1]["duration"] + diff), 3)
         scenes[-1]["end_time"] = round(scenes[-1]["start_time"] + scenes[-1]["duration"], 3)
+
+
+def _assign_editorial_overlay_timing(scenes: list[dict]) -> None:
+    """Give overlays a short interval derived from the TTS-mapped scene time."""
+    for scene in scenes:
+        if not isinstance(scene.get("editorial_overlay_plan"), dict) and not isinstance(scene.get("data_overlay_plan"), dict):
+            continue
+        duration = max(.05, float(scene.get("duration") or 0))
+        start = min(max(.18, duration * .12), max(.05, duration - .5))
+        end = min(duration - .08, max(start + .7, duration * .78))
+        if end <= start:
+            start, end = .0, duration
+        scene["overlay_timing"] = {
+            "start": round(start, 3),
+            "end": round(end, 3),
+            "source": "tts_scene_duration",
+        }
+
+
+def _overlay_timing(scene: dict, duration: float) -> tuple[float, float]:
+    raw = scene.get("overlay_timing") if isinstance(scene.get("overlay_timing"), dict) else {}
+    start = max(0.0, min(float(raw.get("start", 0.0)), max(0.0, duration - .05)))
+    end = max(start + .01, min(float(raw.get("end", duration)), duration))
+    return start, end

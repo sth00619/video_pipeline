@@ -57,21 +57,5 @@ def grade_photo_backdrop(canvas: Image.Image, *, subject_side: str) -> Image.Ima
     blurred.alpha_composite(overlay)
     return blurred
 
-
-def draw_person_accent(canvas: Image.Image, region: dict[str, int], *, side: str) -> None:
-    """Place graphic accents around, never over, the approved person's face."""
-    width, height = canvas.size
-    layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(layer)
-    x, y = int(region["x"]), int(region["y"])
-    rw, rh = int(region["width"]), int(region["height"])
-    if side == "right":
-        left, right = max(20, x - int(width * .11)), max(24, x - 12)
-    else:
-        left, right = min(width - 24, x + rw + 12), min(width - 20, x + rw + int(width * .11))
-    top, bottom = max(20, y + int(rh * .08)), min(int(height * .61), y + int(rh * .72))
-    # One restrained direction marker; avoid stacking arrows, circles and
-    # frames around a portrait because that competes with the facial cue.
-    draw.arc((left, top, right, bottom), 208, 334, fill=(239, 48, 38, 220), width=10)
-    draw.polygon([(right - 2, top + 15), (right - 34, top + 23), (right - 11, top + 47)], fill=(239, 48, 38, 220))
-    canvas.alpha_composite(layer)
+# Deliberately no portrait arrow/circle helper: all editorial markings are
+# rendered only through ``semantic_emphasis`` with a fact and target.

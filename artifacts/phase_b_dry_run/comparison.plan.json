@@ -1,0 +1,11 @@
+{
+  "scene_id": "comparison",
+  "surface_kind": "clipboard",
+  "crop_bbox_in_frame": [900, 700, 500, 120],
+  "expected_texts": [{"text": "절감안 적용 시 운송비 28% 감소"}],
+  "bars": [],
+  "palette_rgb": [[7, 26, 58], [255, 244, 214], [246, 190, 40], [169, 159, 138]],
+  "style_prompt": "hand-inked cartoon texture on cream clipboard; preserve every glyph and mark",
+  "strength": 0.38,
+  "provider": "fal_canny"
+}

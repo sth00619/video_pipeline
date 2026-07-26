@@ -48,6 +48,8 @@ class ImageWorkerStabilityTests(unittest.TestCase):
             ImagesWorker()._generate_background_layer(provider, "prompt", "/tmp/scene.png", "data", "neutral")
         self.assertEqual(provider.kwargs["gemini_service_tier"], runtime_config.value("gemini_service_tier"))
         self.assertEqual(provider.kwargs["gemini_retry_base_seconds"], runtime_config.value("gemini_pro_retry_base_seconds"))
+        self.assertIn("CLEAN PLATE REQUIREMENT", provider.kwargs["prompt"])
+        self.assertIn("no hands", provider.kwargs["prompt"].lower())
         self.assertEqual(pressure.outcomes, [None])
 
     def test_parallel_renderer_accepts_preflight_from_generate_scope(self):

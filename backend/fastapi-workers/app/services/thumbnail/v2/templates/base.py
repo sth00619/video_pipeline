@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 from ..brief import ThumbnailBriefV2
 from ..text_panel import Zone, draw
+from app.services.overlay.editorial_overlay import render_editorial_overlay
 
 # Render long-form masters at Full HD.  YouTube re-encodes uploads, so local
 # type and cutout edges need more source pixels than a 1280px preview.
@@ -252,6 +253,16 @@ class BaseTemplate:
         self.place_subjects(canvas, brief, assets)
         self.cinematic_grade(canvas, 1 - self.panel_ratio)
         zone = self.text_zone(size)
+        for overlay in brief.editorial_overlays:
+            result = render_editorial_overlay(
+                overlay,
+                canvas_size=canvas.size,
+                subject_regions=self.last_protected_regions,
+                copy_regions=[{"x": zone.left, "y": zone.top, "width": zone.width, "height": zone.height}],
+            )
+            if result and result.bbox:
+                canvas.alpha_composite(result.image)
+                self.last_protected_regions.append(result.bbox)
         copy_box = (zone.left, zone.top, zone.left + zone.width, zone.top + zone.height)
         self.last_overlap_count = sum(
             1 for region in self.last_protected_regions if self._overlaps(region, copy_box)

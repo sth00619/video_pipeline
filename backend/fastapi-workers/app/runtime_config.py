@@ -62,6 +62,19 @@ _state = {
     "bubble_font_max_px": _cfg.BUBBLE_FONT_MAX_PX,
     "bubble_font_min_px": _cfg.BUBBLE_FONT_MIN_PX,
     "subtitle_safe_area_pct": _cfg.SUBTITLE_SAFE_AREA_PCT,
+    # Diegetic factual surfaces are applied to the final still before motion.
+    # Baked labels remain explicitly disabled pending product approval.
+    "info_surface_enabled": True,
+    "info_surface_mode_default": "diegetic",
+    "info_surface_quad_min_confidence": 0.55,
+    "info_surface_texture_strength": 0.20,
+    "info_surface_baked_enabled": False,
+    # Phase B is opt-in only. These defaults make a fresh deployment unable to
+    # create an external provider request until product approval changes them.
+    "info_surface_harmonizer_enabled": False,
+    "info_surface_harmonizer_provider": "fal_canny",
+    "info_surface_harmonizer_reader": "tesseract",
+    "info_surface_harmonizer_strength": 0.38,
     "elevenlabs_voice_id": _cfg.ELEVENLABS_VOICE_ID,
     "elevenlabs_stability": _cfg.ELEVENLABS_STABILITY,
     "elevenlabs_similarity_boost": _cfg.ELEVENLABS_SIMILARITY_BOOST,

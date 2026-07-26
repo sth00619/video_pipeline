@@ -207,6 +207,11 @@ class PipelineConfigUpdate(BaseModel):
     bubble_font_max_px: Optional[int] = None
     bubble_font_min_px: Optional[int] = None
     subtitle_safe_area_pct: Optional[float] = None
+    info_surface_enabled: Optional[bool] = None
+    info_surface_mode_default: Optional[str] = None
+    info_surface_quad_min_confidence: Optional[float] = None
+    info_surface_texture_strength: Optional[float] = None
+    info_surface_baked_enabled: Optional[bool] = None
 
 
 @app.get("/pipeline/config")
@@ -916,8 +921,20 @@ async def generate_single_image(request: SingleImageGenerateRequest):
                 images_worker._generate_background_layer(
                     ai_provider, prompt_en, bg_path, request.section, "neutral"
                 )
-                images_worker._composite_character(
-                    bg_path, request.character_poses_dir, "neutral", img_path, request.job_id
+                images_worker._compose_layered_scene(
+                    {
+                        "index": request.index,
+                        "section": request.section,
+                        "art_direction": {
+                            "character_required": True,
+                            "character_placement": "right third",
+                            "layer_pipeline": {
+                                "version": "3.0",
+                                "z_order": ["clean_background", "verified_info_surface", "character_foreground", "editorial_text"],
+                            },
+                        },
+                    },
+                    bg_path, request.character_poses_dir, "neutral", img_path, request.job_id,
                 )
                 return {"status": "ok", "index": request.index, "image_path": img_path,
                         "prompt_en": prompt_en, "prompt_ko": source_text}
@@ -970,6 +987,9 @@ class CharacterLibraryRequest(BaseModel):
     channel_id: str
     character_description: str
     regenerate: bool = False
+    include_role_costumes: bool = False
+    include_legacy_poses: bool = False
+    pose_names: list[str] | None = None
 
 @app.post("/workers/character-library/generate")
 async def generate_character_library(request: CharacterLibraryRequest):
@@ -983,7 +1003,10 @@ async def generate_character_library(request: CharacterLibraryRequest):
         result = worker.generate_library(
             channel_id=request.channel_id,
             character_description=request.character_description,
-            regenerate=request.regenerate
+            regenerate=request.regenerate,
+            include_role_costumes=request.include_role_costumes,
+            include_legacy_poses=request.include_legacy_poses,
+            pose_names=request.pose_names,
         )
         return result
     except Exception as e:

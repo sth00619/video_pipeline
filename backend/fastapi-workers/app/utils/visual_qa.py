@@ -47,7 +47,7 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
         report["warnings"].append("visual_qa_no_gemini_key")
         return report
 
-    eligible = [scene for scene in scenes if Path(str(scene.get("image_path") or "")).exists()]
+    eligible = [scene for scene in scenes if Path(str(scene.get("final_image_path") or scene.get("image_path") or "")).exists()]
     eligible.sort(key=_review_priority, reverse=True)
     # Keep a long-form job bounded even if an operator accidentally supplies
     # a very large runtime value. Deterministic file/codec checks cover all
@@ -56,7 +56,7 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
     for scene in eligible[:review_limit]:
         index = int(scene.get("index", 0))
         try:
-            image_path = Path(str(scene["image_path"]))
+            image_path = Path(str(scene.get("final_image_path") or scene["image_path"]))
             encoded = base64.b64encode(image_path.read_bytes()).decode()
             direction = scene.get("art_direction") or {}
             instruction = (

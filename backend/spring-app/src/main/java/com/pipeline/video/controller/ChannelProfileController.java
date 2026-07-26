@@ -279,7 +279,7 @@ public class ChannelProfileController {
         }
 
         Map<String, Object> result = fastApiClient.generateCharacterLibrary(
-                id, description, request.isRegenerate());
+                id, description, request.isRegenerate(), request.isIncludeRoleCostumes());
         Object posesDir = result.get("poses_dir");
         if (posesDir instanceof String path && !path.isBlank()) {
             profile.setCharacterPosesDir(path);

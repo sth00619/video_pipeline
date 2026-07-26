@@ -10,14 +10,17 @@ from app.services.bubble_overlay import render_speech_bubble_overlay
 from app.services.kling_prompt_builder import build_kling_motion_prompt
 from app.utils.intro_motion import select_intro_motion_scene_indices
 from app.utils.market_charts import render_market_chart
+from app.utils.market_charts import extract_market_chart
 from app.workers.images_worker import ImagesWorker, _scene_metadata_contract
 from app.workers.longform_worker import (
+    _apply_editorial_overlays,
     _apply_speech_bubble_overlay,
     _cap_intro_motion_for_short_video,
     _can_reuse_scene_clip,
     _cleanup_scene_clips,
     _has_manual_kling_selection,
     _minimum_motion_delivery,
+    _requires_verified_market_chart,
     _requires_verified_index_card,
     _scene_clip_fingerprint,
     _chart_focus_annotation,
@@ -189,6 +192,7 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
             path = Path(directory) / "chart.png"
             chart = {
                 "verified": True,
+                "source_ref": "fixture.kospi",
                 "label": "KOSPI",
                 "latest": 6747.95,
                 "change_pct": 3.56,
@@ -203,6 +207,110 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
             self.assertTrue(render_market_chart(chart, str(path)))
             with Image.open(path).convert("RGBA") as rendered:
                 self.assertEqual(rendered.getpixel((0, 0))[3], 255)
+
+    def test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "chalkboard.png"
+            chart = {
+                "verified": True, "label": "KOSPI", "latest": 6747.95,
+                "change_pct": 3.56, "source_date": "2026-07-21", "source_ref": "fixture.kospi",
+                "visual_kind": "chalkboard_explainer", "visual_theme": "chalkboard",
+                "render_surface": {"width": 760, "height": 520},
+                "points": [{"date": f"2026-07-{day:02d}", "close": value} for day, value in ((13, 6806), (14, 6856), (15, 7284), (20, 6516), (21, 6747))],
+            }
+            self.assertTrue(render_market_chart(chart, str(path)))
+            with Image.open(path).convert("RGBA") as rendered:
+                self.assertEqual(rendered.size, (1520, 1040))
+                self.assertEqual(rendered.getpixel((0, 0))[3], 255)
+
+    def test_supply_flow_uses_collected_values_without_a_generic_index_card(self):
+        scene = {
+            "section": "data", "content": "외국인과 기관의 수급 흐름을 확인합니다.",
+            "market_snapshot": {
+                "kr": {
+                    "data_date": "2026-07-25",
+                    "supply_demand": {"kospi": {
+                        "foreign_net_buy": "+1,240억원",
+                        "institution_net_buy": "-320억원",
+                        "retail_net_buy": "+80억원",
+                    }},
+                },
+            },
+        }
+        chart = extract_market_chart(scene)
+        self.assertEqual(chart["visual_kind"], "supply_flow")
+        self.assertEqual(chart["source_ref"], "market_snapshot.kr.supply_demand.kospi")
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "supply.png"
+            chart["visual_theme"] = "paper_poster"
+            chart["render_surface"] = {"width": 720, "height": 405}
+            self.assertTrue(render_market_chart(chart, str(output)))
+            self.assertGreater(output.stat().st_size, 4_000)
+
+    def test_related_stock_scoreboard_uses_collected_percent_changes(self):
+        scene = {
+            "section": "data", "content": "반도체 관련주 등락률을 비교합니다.",
+            "market_snapshot": {"associated_data": {"associated_stocks": [
+                {"name": "A", "close": 1000, "change_pct": 2.3},
+                {"name": "B", "close": 2000, "change_pct": -1.2},
+            ]}},
+        }
+        chart = extract_market_chart(scene)
+        self.assertEqual(chart["visual_kind"], "stock_movers")
+        self.assertEqual(chart["movers"][1]["change_pct"], -1.2)
+
+    def test_policy_copy_does_not_fall_back_to_an_unrelated_index_trend(self):
+        scene = {
+            "section": "data", "content": "관세 상한과 비용 조건을 비교합니다.",
+            "market_snapshot": {"kr": {"chart_series": {"kospi": [
+                {"date": f"2026-07-{day:02d}", "close": 2500 + day}
+                for day in range(1, 8)
+            ]}}},
+        }
+        self.assertIsNone(extract_market_chart(scene))
+
+    def test_indexed_comparison_has_a_bounded_axis_and_renders(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "comparison.png"
+            chart = {
+                "visual_kind": "indexed_comparison", "label": "비용 지수 비교",
+                "verified": True, "source_ref": "fixture", "comparison_baseline": 100, "comparison_basis": "2026-07-21 = 100", "comparison_values": [
+                    {"label": "기준", "value": 100},
+                    {"label": "관세", "value": 112.5},
+                    {"label": "상한", "value": 110},
+                ], "source_date": "2026-07-25", "visual_theme": "paper_poster",
+                "render_surface": {"width": 720, "height": 405},
+            }
+            self.assertTrue(render_market_chart(chart, str(output)))
+            self.assertGreater(output.stat().st_size, 4_000)
+
+    def test_verified_indexed_comparison_needs_values_not_an_unrelated_time_series(self):
+        scene = {
+            "market_chart": {
+                "verified": True,
+                "source": "verified policy evidence",
+                "visual_kind": "indexed_comparison",
+                "comparison_basis": "2026-07-21 = 100",
+                "comparison_values": [
+                    {"label": "기준", "value": 100},
+                    {"label": "상한", "value": 110},
+                ],
+            },
+        }
+        self.assertTrue(_requires_verified_market_chart(scene))
+
+    def test_final_info_surface_prevents_legacy_fixed_chart_overlay(self):
+        scene = {
+            "market_chart": {"verified": True, "source": "fixture", "points": [{"close": 1}] * 5},
+            "info_surface_plan": {"final_image_path": "/tmp/final-scene.png", "render_mode": "DIEGETIC_WARP"},
+        }
+        self.assertFalse(_requires_verified_market_chart(scene))
+
+    def test_verified_chart_without_final_surface_is_rejected_not_ffmpeg_overlaid(self):
+        scene = {
+            "market_chart": {"verified": True, "source": "fixture", "points": [{"close": 1}] * 5},
+        }
+        self.assertFalse(_apply_editorial_overlays(scene, "/missing.mp4", Path("/tmp"), 1, 5.0, 0))
 
 
 if __name__ == "__main__":

@@ -758,11 +758,18 @@ public class FastApiClient {
     @SuppressWarnings("unchecked")
     public Map<String, Object> generateCharacterLibrary(
             String channelId, String characterDescription, boolean regenerate) {
+        return generateCharacterLibrary(channelId, characterDescription, regenerate, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> generateCharacterLibrary(
+            String channelId, String characterDescription, boolean regenerate, boolean includeRoleCostumes) {
         try {
             Map<String, Object> body = new HashMap<>();
             body.put("channel_id", channelId);
             body.put("character_description", characterDescription);
             body.put("regenerate", regenerate);
+            body.put("include_role_costumes", includeRoleCostumes);
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/character-library/generate", body), Map.class);
         } catch (Exception e) {
