@@ -30,6 +30,9 @@ class SurfaceContract(BaseModel):
     surface_kind: str
     geometry: SurfaceGeometry = "planar_quad"
     marker_rgb: tuple[int, int, int] | None = None
+    # 생성 모델의 조명·질감 변화로 같은 무문자 보드가 다른 색으로 나와도,
+    # 템플릿이 허용한 소수의 물리적 표면색 안에서만 검출한다.
+    marker_rgb_candidates: list[tuple[int, int, int]] = Field(default_factory=list)
     marker_delta_e_max: float = Field(default=12.0, gt=0, le=80)
     marker_scene_delta_e_min: float = Field(default=20.0, gt=0, le=100)
     border_rgb: tuple[int, int, int] | None = None
@@ -94,9 +97,6 @@ def plan_from_scene(scene: dict) -> InfoSurfacePlan | None:
     raw_contract = direction.get("surface_contract")
     if not isinstance(chart, dict) or chart.get("verified") is not True:
         return None
-    # The plan owns a precomputed hero hierarchy. A bad indexed payload is
-    # rejected before a renderer can present it as an absolute market quote.
-    hero = hero_stat_from_chart(chart)
     # 템플릿이 있는 경우에만 v4가 v3 위에 올라간다. 비교/추세는
     # select_template()이 None을 반환하므로 기존 HeroStat 경로를 유지한다.
     template = None
@@ -105,15 +105,23 @@ def plan_from_scene(scene: dict) -> InfoSurfacePlan | None:
         template = select_template(scene, scene.get("proposed_template_id"))
     except (ImportError, ValueError):
         template = None
+    # 서사형 템플릿은 HeroStat 수치가 아니라 검증된 구조 항목을 렌더한다.
+    # trend/comparison 경로에서만 기존 HeroStat 계약을 유지한다.
+    hero = None if template and template.diagram_kind not in {"none", "hero_stat"} else hero_stat_from_chart(chart)
     if template and template.diagram_kind not in {"none", "hero_stat"}:
         # v4 보드의 실제 생성 계약: 칠판만 어둡고, 금고 패널·설계도·날씨
         # 스크린은 그림을 넣기 위한 밝은 무문자 매트 표면이다.
-        marker = (43, 72, 57) if template.surface_kind == "chalkboard" else (246, 244, 210)
+        marker = (43, 72, 57) if template.surface_kind == "chalkboard" else (
+            (216, 240, 248) if template.template_id == "weather_map_studio" else (246, 244, 210)
+        )
+        candidates = [(138, 183, 188)] if template.template_id == "weather_map_studio" else []
         raw_contract = {
             "surface_kind": template.surface_kind, "geometry": "planar_quad", "marker_rgb": marker,
+            "marker_rgb_candidates": candidates,
             "border_rgb": (7, 26, 58), "preferred_side": template.board_side,
             "preferred_region": {"x": .05 if template.board_side == "left" else .53, "y": .08, "width": .42, "height": .70},
             "area_ratio_min": .10, "area_ratio_max": .55,
+            "marker_delta_e_max": 12.0 if template.template_id == "weather_map_studio" else 30.0,
         }
     try:
         contract = SurfaceContract.model_validate(raw_contract) if isinstance(raw_contract, dict) else None

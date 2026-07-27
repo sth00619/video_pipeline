@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:06:30.109927+00:00",
+      "scene_key": "image:0"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:10:17.988701+00:00",
+      "scene_key": "template_regen:0"
+    }
+  ],
+  "total_krw": 376,
+  "budget_overrun_krw": 0
+}

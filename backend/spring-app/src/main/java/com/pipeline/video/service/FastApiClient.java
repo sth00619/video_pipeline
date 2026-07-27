@@ -237,6 +237,25 @@ public class FastApiClient {
         }
     }
 
+    /**
+     * 수동 편집 대본도 생성 경로와 같은 하우스 스타일 하드 게이트로 검증한다.
+     * 실제 활성화 여부와 숫자 추적 정책은 FastAPI 런타임 설정이 결정한다.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> assessScriptHouseStyle(String script, String format,
+                                                       List<Map<String, Object>> verifiedFacts) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("script", script != null ? script : "");
+            bodyMap.put("format", "shorts".equals(format) ? "shorts" : "longform");
+            bodyMap.put("verified_facts", verifiedFacts != null ? verifiedFacts : List.of());
+            return objectMapper.readValue(
+                    postJson(fastApiUrl + "/workers/script/quality-gate", bodyMap), Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("스크립트 하우스 스타일 검증 오류: " + e.getMessage(), e);
+        }
+    }
+
     // Phase 3-3 — TTS
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId) {
         return generateTts(jobId, script, voiceId, null, null);

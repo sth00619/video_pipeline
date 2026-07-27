@@ -1,6 +1,7 @@
 import hashlib
 import pytest
 from app.services.info_surface.info_scene_templates import CharacterContract, InfoSceneTemplate, claim_shape_from_payload, select_template
+from app.services.info_surface.contracts import plan_from_scene
 from app.services.info_surface.narrative_diagrams import DiagramItem, DiagramSpec, render_diagram
 from app.pipeline.scene_director import fallback_spec
 from app.providers.real.prompt_builder import build_prompt
@@ -54,3 +55,19 @@ def test_stage_diagram_keeps_10_percent_horizontal_safety_margin():
     assert bbox is not None
     assert bbox[0] >= 720 * .10 - 8
     assert bbox[2] <= 720 * .90 + 8
+
+
+def test_external_rate_template_does_not_require_hero_stat_values():
+    scene = _scene(market_chart={
+        "verified": True,
+        "source_ref": "fixture",
+        "external_rates": [{"label": "전기차", "value": "100%", "source_refs": ["fixture"]}],
+    })
+    plan = plan_from_scene(scene)
+    assert plan is not None
+    assert plan.template_id == "weather_map_studio"
+    assert plan.diagram_kind == "map_clouds"
+    assert plan.hero_stat is None
+    assert plan.surface.marker_rgb == (216, 240, 248)
+    assert plan.surface.marker_rgb_candidates == [(138, 183, 188)]
+    assert plan.surface.marker_delta_e_max == 12.0

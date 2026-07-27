@@ -1,0 +1,21 @@
+{
+  "asset": "fomc_ivc_audio_review_character_precise.mp4",
+  "audio": "narration.mp3",
+  "subtitle": "subtitles_original_voice_character_precise.srt",
+  "audio_policy": "기존 fomc_ivc_audio_review.mp4의 음성 트랙을 재합성·후처리 없이 사용",
+  "timing_method": "기존 음성이 실제로 읽은 발음형으로 Forced Alignment를 실행하고, 문자 971개의 시작·끝 시점에 화면 원문을 순서대로 대응",
+  "subtitle_result": {
+    "cue_count": 72,
+    "character_alignment": true,
+    "overlap_count": 0,
+    "max_inter_cue_gap_seconds": 0.739,
+    "transition_policy": "다음 자막은 이전 자막의 마지막 실제 발음 문자가 끝난 뒤에만 시작"
+  },
+  "av_duration": {
+    "video_seconds": 101.291667,
+    "audio_seconds": 101.285011,
+    "difference_seconds": 0.006656,
+    "result": "24fps 한 프레임 이내"
+  },
+  "note": "고정 지연이나 글자 수 비례 시간 배분을 사용하지 않았다."
+}

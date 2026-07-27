@@ -23,7 +23,8 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app import runtime_config
-from app.config import NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, REDIS_HOST, REDIS_PORT
+from app.config import REDIS_HOST, REDIS_PORT
+from app.services.naver_api_hub import naver_api_hub_configured
 from app.models.article_evidence import (
     ArticleCandidate,
     ArticleSource,
@@ -278,11 +279,11 @@ class ArticleEvidencePlanner:
             audit["status"] = "disabled"
             return EvidencePlannerResult(output, audit)
         if not verified_facts or (
-            (not NAVER_CLIENT_ID or not NAVER_CLIENT_SECRET)
+            not naver_api_hub_configured()
             and not self._discovery_injected
         ):
             audit["status"] = "unavailable"
-            audit["reason"] = "verified_facts_or_naver_credentials_missing"
+            audit["reason"] = "verified_facts_or_naver_api_hub_credentials_missing"
             self._persist_audit(job_id, audit)
             return EvidencePlannerResult(output, audit)
 

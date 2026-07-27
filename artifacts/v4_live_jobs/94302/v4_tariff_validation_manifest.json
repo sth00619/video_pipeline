@@ -1,0 +1,431 @@
+{
+  "job_id": 94302,
+  "scenes": [
+    {
+      "scene_id": "tariff-map-001",
+      "title": "중국산 핵심 품목 관세",
+      "content": "미국 USTR이 확정한 중국산 핵심 품목의 Section 301 관세율입니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "중국산 핵심 품목 관세",
+        "external_rates": [
+          {
+            "label": "전기차",
+            "value": "100%",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ]
+          },
+          {
+            "label": "전기차 배터리",
+            "value": "25%",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ]
+          }
+        ]
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "editorial_anchor"
+      },
+      "text": "미국 USTR이 확정한 중국산 핵심 품목의 Section 301 관세율입니다.",
+      "visual_plan": {
+        "objective": "chart-shaped data visual with no generated text",
+        "visual_type": "data_visual",
+        "character_required": false,
+        "overlay_type": "fact_card",
+        "no_generated_text": true,
+        "source_scene_index": 0,
+        "source_scene_count": 1
+      },
+      "pose": "scientist",
+      "art_direction": {
+        "family": "data_lab",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "industrial_navy",
+          "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+        },
+        "wardrobe": "white lab coat and data goggles",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "point_left_up",
+        "fallback_pose": "present_left",
+        "character_required": true,
+        "camera": "wide establishing shot",
+        "lighting": "dramatic rim light",
+        "reference_composition": {
+          "id": "data_lab",
+          "character_placement": "right third",
+          "character_area_target": 0.44,
+          "information_area_target": 0.42
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 110,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "monitor",
+        "data_surface_prompt": "a large blank wall monitor or desk terminal, with a matte non-glowing screen",
+        "surface_contract": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            65,
+            86,
+            102
+          ],
+          "border_rgb": [
+            15,
+            27,
+            42
+          ],
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.1,
+            "width": 0.42,
+            "height": 0.6
+          },
+          "tilt_hint": "nearly front-facing matte monitor"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "board_side": "left",
+        "info_scene_template": "weather_map_studio"
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_spec": {
+        "scene_id": "0",
+        "narration": "미국 USTR이 확정한 중국산 핵심 품목의 Section 301 관세율입니다.",
+        "headline": "미중 관세 폭풍",
+        "metaphor": "골디가 거대한 철제 관세 장벽 앞에서 무거운 황금 화물 상자를 들고 힘겹게 버티는 모습으로, 미국 USTR이 중국산 핵심 품목에 확정한 높은 관세 장벽을 상징한다.",
+        "character_role": "세관 짐꾼",
+        "character_costume": "진한 파란색 세관원 재킷, 금색 단추, 납작한 세관원 모자, 흰 장갑, 어깨에 두꺼운 멜빵",
+        "character_action": "두 팔로 거대한 황금 화물 상자를 들어 올리려 하지만, 앞을 가로막은 두꺼운 붉은 벽돌 장벽에 짓눌려 온몸이 뒤로 젖혀지며 발이 땅을 긁고 있다.",
+        "character_emotion": "이를 악물고 눈썹을 치켜올린 채 고통스럽고 긴장된 표정, 볼에 힘줄이 솟은 모습",
+        "setting": "거대한 붉은 벽돌 관세 장벽이 프레임 중앙을 가로지르는 항구 부두 위, 장벽 왼쪽은 붉은 오성홍기 깃발이 펄럭이는 중국 화물선 부두, 장벽 오른쪽은 성조기 문양의 컨테이너가 쌓인 미국 항구 야적장, 하늘은 먹구름이 몰려드는 을씨년스러운 회색빛",
+        "props": [
+          "oversized golden cargo crate covered in chain links",
+          "thick red brick tariff wall with deep cracks",
+          "dangling heavy iron padlock on the wall",
+          "Chinese cargo ship in the background left",
+          "American flag-patterned shipping container stack on the right",
+          "scattered golden coins spilling from the crate"
+        ],
+        "camera": "로우 앵글 와이드샷 — 카메라가 바닥 가까이에서 올려다보며 장벽의 압도적인 높이와 골디의 작아 보이는 실루엣을 대비시키고, 황금 화물 상자 윗면이 자연스럽게 넓고 평탄한 저디테일 영역을 형성해 오버레이 앵커 역할을 한다.",
+        "side_characters": "장벽 꼭대기에서 아래를 내려다보는 미국 독수리 캐릭터(독수리 머리, 양복 차림)와 장벽 반대편에서 발을 동동 구르는 붉은 용 캐릭터(소형 귀여운 용, 중국 전통 의상)가 대치하는 구도",
+        "mood": "alert",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "미중 관세 폭풍",
+      "info_scene_template": {
+        "template_id": "weather_map_studio",
+        "claim_shape": "external_rate",
+        "diagram_kind": "map_clouds",
+        "character": {
+          "costume": "broadcast blazer with headset microphone",
+          "pose_asset": "point_left_up",
+          "gaze": "board",
+          "hand": "points_board",
+          "side": "right"
+        },
+        "surface_kind": "monitor",
+        "board_side": "left",
+        "min_items": 1,
+        "max_items": 3,
+        "label_slots": [],
+        "prompt_en": "A cartoon TV weather studio, {setting_detail}, with a huge curved wall screen on the left showing only a plain pale continent map and sea, with no labels. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.",
+        "allow_regen_on_quad_fail": true
+      },
+      "_template_regeneration_enabled": true,
+      "index": 0,
+      "image_path": "/app/data/jobs/94302/images/scene_000.png",
+      "generation_method": "resumed_existing",
+      "quality_score": 100,
+      "prompt_en": "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame.\nGoldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line language of the attached reference sheet; do not create a second mascot.\nSCENE TEMPLATE: A cartoon TV weather studio, 거대한 붉은 벽돌 관세 장벽이 프레임 중앙을 가로지르는 항구 부두 위, 장벽 왼쪽은 붉은 오성홍기 깃발이 펄럭이는 중국 화물선 부두, 장벽 오른쪽은 성조기 문양의 컨테이너가 쌓인 미국 항구 야적장, 하늘은 먹구름이 몰려드는 을씨년스러운 회색빛, with a huge curved wall screen on the left showing only a plain pale continent map and sea, with no labels. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.\nCHARACTER: Goldie wears broadcast blazer with headset microphone; pose point_left_up; looking at the board, points_board toward it.\nThe character, gloves, pointer and any foreground prop must stay entirely on the opposite side of the board and never overlap its interior.\nThe board is an unlabeled physical prop, not a UI card. All Korean copy, numbers and diagrams are post-production only.",
+      "prompt_ko": "미국 USTR이 확정한 중국산 핵심 품목의 Section 301 관세율입니다.",
+      "prompt": "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame.\nGoldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line language of the attached reference sheet; do not create a second mascot.\nSCENE TEMPLATE: A cartoon TV weather studio, 거대한 붉은 벽돌 관세 장벽이 프레임 중앙을 가로지르는 항구 부두 위, 장벽 왼쪽은 붉은 오성홍기 깃발이 펄럭이는 중국 화물선 부두, 장벽 오른쪽은 성조기 문양의 컨테이너가 쌓인 미국 항구 야적장, 하늘은 먹구름이 몰려드는 을씨년스러운 회색빛, with a huge curved wall screen on the left showing only a plain pale continent map and sea, with no labels. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.\nCHARACTER: Goldie wears broadcast blazer with headset microphone; pose point_left_up; looking at the board, points_board toward it.\nThe character, gloves, pointer and any foreground prop must stay entirely on the opposite side of the board and never overlap its interior.\nThe board is an unlabeled physical prop, not a UI card. All Korean copy, numbers and diagrams are post-production only.",
+      "market_snapshot": {},
+      "index_data": null,
+      "bubble_text": "",
+      "motion_type": "",
+      "headline_mood": "alert",
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    }
+  ],
+  "scene_count": 1,
+  "gifs": [],
+  "gif_count": 0,
+  "quality_report": {
+    "images": {
+      "score": 100,
+      "warnings": [],
+      "image_count": 1,
+      "scene_metrics": [
+        {
+          "index": 0,
+          "score": 100,
+          "warnings": [],
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.7778,
+          "brightness": 120.0,
+          "contrast": 60.8,
+          "color_variation": 72.9,
+          "perceptual_hash": "0000000000000000000000011000110001100001110011100111100111011110011111111111110001111110111111000111111011111000011111111111100001111110111100000111111001100000011100000100000000000000000100000000000010000000000000111001000000000011100000000000000000000000",
+          "retry_recommended": false
+        }
+      ],
+      "retry_recommended_indices": [],
+      "art_direction": {
+        "score": 100,
+        "warnings": [],
+        "families": [
+          "data_lab"
+        ],
+        "palettes": [
+          "industrial_navy"
+        ],
+        "pose_assets": [
+          "point_left_up"
+        ]
+      },
+      "semantic_alignment": {
+        "enabled": true,
+        "reviewed": [],
+        "skipped": [
+          0
+        ],
+        "warnings": [
+          "visual_qa_http_404"
+        ],
+        "score": null
+      },
+      "scene_metadata_contract": {
+        "passed": true,
+        "source_keys": [
+          "art_direction",
+          "content",
+          "headline",
+          "image_profile",
+          "market_chart",
+          "pose",
+          "scene_id",
+          "scene_spec",
+          "section",
+          "style_profile",
+          "text",
+          "title",
+          "visual_plan",
+          "visual_type"
+        ],
+        "output_keys": [
+          "_template_regeneration_enabled",
+          "art_direction",
+          "asset_layout_metadata",
+          "bubble_text",
+          "character_regions",
+          "clean_plate_path",
+          "content",
+          "generation_method",
+          "headline",
+          "headline_mood",
+          "image_path",
+          "image_profile",
+          "index",
+          "index_data",
+          "info_scene_template",
+          "market_chart",
+          "market_snapshot",
+          "motion_type",
+          "pose",
+          "prompt",
+          "prompt_en",
+          "prompt_ko",
+          "quality_flags",
+          "quality_score",
+          "retry_recommended",
+          "scene_id",
+          "scene_spec",
+          "section",
+          "style_profile",
+          "text",
+          "title",
+          "visual_plan",
+          "visual_type"
+        ],
+        "missing_keys": [],
+        "market_chart_count": 1,
+        "index_data_count": 0,
+        "motion_type_count": 0
+      }
+    }
+  },
+  "evidence_audit": {
+    "job_id": 94302,
+    "created_at": "2026-07-26T15:02:56.965932+00:00",
+    "status": "unavailable",
+    "selected": [],
+    "skipped": [],
+    "reason": "verified_facts_or_naver_credentials_missing"
+  }
+}

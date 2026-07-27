@@ -1,4 +1,6 @@
 from app.workers.tts_worker import TtsWorker
+from app.tts.forced_alignment_srt import WordTiming, words_to_cues
+from app.utils.korean_tts import normalize_korean_numbers_for_tts
 
 
 def _timed(text: str, step: float = 0.05):
@@ -111,3 +113,75 @@ def test_timing_shift_only_affects_the_following_sentence():
     shifted = TtsWorker._shift_character_timings_for_pauses(characters, pauses)
     assert shifted[1]["end"] == 0.2  # Sentence-ending punctuation is unchanged.
     assert shifted[3]["start"] > characters[3]["start"]
+
+
+def test_forced_alignment_keeps_original_numeric_subtitle_text(monkeypatch):
+    monkeypatch.setattr(
+        "app.tts.forced_alignment_srt.align_audio_to_text",
+        lambda _audio, _script: [
+            WordTiming("관세가", 0.0, 0.3),
+            WordTiming("12.5퍼센트", 0.3, 1.0),
+            WordTiming("붙었습니다.", 1.0, 1.8),
+        ],
+    )
+
+    chunks = TtsWorker()._extract_timestamps_with_forced_alignment(
+        "unused.mp3", "관세가 12.5퍼센트 붙었습니다."
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0]["text"] == "관세가 12.5퍼센트 붙었습니다."
+    assert chunks[0]["start"] == 0.0
+    assert chunks[0]["end"] == 1.8
+
+
+def test_displayed_decimal_waits_for_its_full_spoken_form():
+    words = [
+        WordTiming("금리는", 0.0, 0.3),
+        WordTiming("삼쩜칠오퍼센트야", 0.3, 1.2),
+        WordTiming("다음", 1.35, 1.6),
+        WordTiming("발표야", 1.6, 2.0),
+    ]
+
+    chunks = TtsWorker()._map_display_chunks_to_spoken_words(
+        ["금리는 3.75퍼센트야.", "다음 발표야."], words
+    )
+
+    assert chunks[0]["text"] == "금리는 3.75퍼센트야."
+    assert chunks[0]["end"] == 1.2
+    assert chunks[1]["start"] == 1.35
+
+
+def test_character_alignment_uses_the_final_spoken_decimal_character():
+    class Character:
+        def __init__(self, text, start, end):
+            self.text = text
+            self.start = start
+            self.end = end
+
+    text = "삼쩜칠오퍼센트야"
+    characters = [Character(char, index * 0.1, (index + 1) * 0.1) for index, char in enumerate(text)]
+
+    chunks = TtsWorker()._map_display_chunks_to_spoken_characters(
+        ["3.75퍼센트야"], characters
+    )
+
+    assert chunks[0]["start"] == 0.0
+    assert chunks[0]["end"] == round(len(text) * 0.1, 3)
+
+
+def test_decimal_is_read_in_natural_korean_tts_form():
+    assert normalize_korean_numbers_for_tts("3.75퍼센트") == "삼쩜칠오퍼센트"
+
+
+def test_subtitle_cue_does_not_exceed_the_requested_character_limit():
+    cues = words_to_cues(
+        [
+            WordTiming("경제활동은", 0.0, 0.4),
+            WordTiming("견조한", 0.4, 0.7),
+            WordTiming("속도로", 0.7, 1.0),
+        ],
+        max_chars=8,
+    )
+
+    assert [cue.text for cue in cues] == ["경제활동은", "견조한 속도로"]

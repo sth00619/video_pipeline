@@ -73,15 +73,15 @@ public class ScriptService {
                 jobId, job.getKeyword(), llmTargetMinutes, categoryName, marketSnapshotJson,
                 job.isDataVisualsEnabled(), job.getTtsVoiceId());
 
-        // [버그 수정] 기존에는 BigDecimal.ZERO로 하드코딩되어 있어서 스크립트 생성 비용이
-        // 예산 누적에 전혀 반영되지 않았습니다 (JobDetail 비용 게이지가 항상 0으로 표시되던
-        // 원인 중 하나). 이제 3-Round 팩트체크 왕복까지 감안한 근사치를 기록합니다.
+        // 실제 Claude 호출 수를 워커가 반환한다. 팩트체크뿐 아니라 내러티브 플랜과
+        // 흐름 QA도 비용에 반영해야 영상별 예산 상한을 우회하지 않는다.
         int outputChars = result.getCharCount() != null ? result.getCharCount() : 0;
         int inputChars = marketSnapshotJson != null ? marketSnapshotJson.length() : 500;
-        java.math.BigDecimal claudeCost = CostEstimator.claude(inputChars, outputChars, 3);
+        int llmCallCount = result.getLlmCallCount() != null ? result.getLlmCallCount() : 3;
+        java.math.BigDecimal claudeCost = CostEstimator.claude(inputChars, outputChars, llmCallCount);
         costService.record(jobId, "CLAUDE_LLM", claudeCost, "USD",
-                String.format("스크립트 목표 %d분 (LLM %d분) %d자, 3-Round 팩트체크", targetMinutes, llmTargetMinutes,
-                        outputChars));
+                String.format("스크립트 목표 %d분 (LLM %d분) %d자, Claude %d회 호출", targetMinutes, llmTargetMinutes,
+                        outputChars, llmCallCount));
 
         Asset asset = Asset.builder()
                 .jobId(jobId)
@@ -286,6 +286,28 @@ public class ScriptService {
             scriptToSave = sb.toString().trim();
         }
 
+        // 수동 편집 후에도 생성 경로의 하드 게이트를 우회하지 못하도록, 확정 직전에
+        // 정제된 내레이션과 검증 사실을 워커에 다시 전달한다. 비활성화 상태에서는
+        // 워커가 통과 결과를 돌려 기존 작업 흐름을 보존한다.
+        StringBuilder narrationForGate = new StringBuilder();
+        for (Map<String, Object> section : sections) {
+            Object raw = section.get("content") != null ? section.get("content") : section.get("text");
+            if (raw == null || raw.toString().isBlank()) continue;
+            if (narrationForGate.length() > 0) narrationForGate.append(' ');
+            narrationForGate.append(raw.toString());
+        }
+        String formatName = job.getLongformTargetMinutes() != null && job.getLongformTargetMinutes() <= 1
+                ? "shorts" : "longform";
+        Map<String, Object> houseStyleGate = fastApiClient.assessScriptHouseStyle(
+                narrationForGate.length() > 0 ? narrationForGate.toString() : scriptToSave,
+                formatName,
+                verifiedFacts
+        );
+        if (!Boolean.TRUE.equals(houseStyleGate.get("passed"))) {
+            Object failures = houseStyleGate.getOrDefault("hard_failures", List.of());
+            throw new IllegalStateException("스크립트 하우스 스타일 하드 게이트 실패: " + failures);
+        }
+
         Asset finalAsset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.SCRIPT)
@@ -294,7 +316,8 @@ public class ScriptService {
                         "final", true,
                         "char_count", scriptToSave.length(),
                         "sections", sections,
-                        "verified_facts", verifiedFacts
+                        "verified_facts", verifiedFacts,
+                        "house_style_gate", houseStyleGate
                 )))
                 .build();
         assetRepository.save(finalAsset);

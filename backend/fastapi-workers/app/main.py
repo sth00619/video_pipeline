@@ -212,6 +212,11 @@ class PipelineConfigUpdate(BaseModel):
     info_surface_quad_min_confidence: Optional[float] = None
     info_surface_texture_strength: Optional[float] = None
     info_surface_baked_enabled: Optional[bool] = None
+    script_house_style_enabled: Optional[bool] = None
+    script_pattern_numbers_enabled: Optional[bool] = None
+    script_pattern_analogy_enabled: Optional[bool] = None
+    script_pattern_fake_question_enabled: Optional[bool] = None
+    script_pattern_llm_labeling_enabled: Optional[bool] = None
 
 
 @app.get("/pipeline/config")
@@ -588,6 +593,13 @@ class ScriptGenerateRequest(BaseModel):
     # accepted as a profile; future approved profiles remain opt-in here.
     storytelling_profile: str = "original_finance_storyteller_v1"
 
+
+class ScriptQualityGateRequest(BaseModel):
+    script: str
+    format: Literal["shorts", "longform"] = "longform"
+    verified_facts: list[dict] = Field(default_factory=list)
+    reference_texts: list[str] = Field(default_factory=list)
+
 @app.post("/workers/script/generate")
 def script_generate(request: ScriptGenerateRequest):
     try:
@@ -610,6 +622,22 @@ def script_generate(request: ScriptGenerateRequest):
         })
     except Exception as e:
         raise HTTPException(500, f"스크립트 생성 실패: {str(e)}")
+
+
+@app.post("/workers/script/quality-gate")
+def script_quality_gate(request: ScriptQualityGateRequest):
+    """수동 편집 대본도 확정 전 동일한 결정론 하드 게이트를 통과시킨다."""
+    from app.utils.quality_gate import assess_script_house_style
+
+    return assess_script_house_style(
+        request.script,
+        format_name=request.format,
+        verified_facts=request.verified_facts,
+        reference_texts=request.reference_texts,
+        enabled=bool(runtime_config.value("script_house_style_enabled")),
+        llm_labeling_enabled=bool(runtime_config.value("script_pattern_llm_labeling_enabled")),
+        number_traceability_required=bool(runtime_config.value("script_pattern_numbers_enabled")),
+    )
 
 
 # ============================

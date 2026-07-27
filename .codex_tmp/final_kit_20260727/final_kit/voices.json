@@ -1,0 +1,22 @@
+{
+  "voices": [
+    {
+      "name": "original_anchor",
+      "voice_id": "PUT_VOICE_ID_HERE_1",
+      "model_id": "eleven_multilingual_v2",
+      "stability": 0.4,
+      "similarity_boost": 0.75,
+      "style": 0.0,
+      "use_speaker_boost": true
+    },
+    {
+      "name": "ivc_news_anchor_with_pauses",
+      "voice_id": "PUT_VOICE_ID_HERE_2",
+      "model_id": "eleven_multilingual_v2",
+      "stability": 0.4,
+      "similarity_boost": 0.75,
+      "style": 0.0,
+      "use_speaker_boost": true
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "score": 100,
+  "warnings": [],
+  "image_count": 1,
+  "scene_metrics": [
+    {
+      "index": 0,
+      "score": 100,
+      "warnings": [],
+      "width": 1920,
+      "height": 1080,
+      "aspect_ratio": 1.7778,
+      "brightness": 120.0,
+      "contrast": 60.8,
+      "color_variation": 72.9,
+      "perceptual_hash": "0000000000000000000000011000110001100001110011100111100111011110011111111111110001111110111111000111111011111000011111111111100001111110111100000111111001100000011100000100000000000000000100000000000010000000000000111001000000000011100000000000000000000000",
+      "retry_recommended": false
+    }
+  ],
+  "retry_recommended_indices": [],
+  "art_direction": {
+    "score": 100,
+    "warnings": [],
+    "families": [
+      "data_lab"
+    ],
+    "palettes": [
+      "industrial_navy"
+    ],
+    "pose_assets": [
+      "point_left_up"
+    ]
+  },
+  "semantic_alignment": {
+    "enabled": true,
+    "reviewed": [],
+    "skipped": [
+      0
+    ],
+    "warnings": [
+      "visual_qa_http_404"
+    ],
+    "score": null
+  },
+  "scene_metadata_contract": {
+    "passed": true,
+    "source_keys": [
+      "art_direction",
+      "content",
+      "headline",
+      "image_profile",
+      "market_chart",
+      "pose",
+      "scene_id",
+      "scene_spec",
+      "section",
+      "style_profile",
+      "text",
+      "title",
+      "visual_plan",
+      "visual_type"
+    ],
+    "output_keys": [
+      "_template_regeneration_enabled",
+      "art_direction",
+      "asset_layout_metadata",
+      "bubble_text",
+      "character_regions",
+      "clean_plate_path",
+      "content",
+      "generation_method",
+      "headline",
+      "headline_mood",
+      "image_path",
+      "image_profile",
+      "index",
+      "index_data",
+      "info_scene_template",
+      "market_chart",
+      "market_snapshot",
+      "motion_type",
+      "pose",
+      "prompt",
+      "prompt_en",
+      "prompt_ko",
+      "quality_flags",
+      "quality_score",
+      "retry_recommended",
+      "scene_id",
+      "scene_spec",
+      "section",
+      "style_profile",
+      "text",
+      "title",
+      "visual_plan",
+      "visual_type"
+    ],
+    "missing_keys": [],
+    "market_chart_count": 1,
+    "index_data_count": 0,
+    "motion_type_count": 0
+  }
+}

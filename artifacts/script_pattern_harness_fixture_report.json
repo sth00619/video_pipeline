@@ -1,0 +1,348 @@
+{
+  "format": "shorts",
+  "baseline": {
+    "version": "reference_baseline.v1",
+    "groups": {
+      "benchmark_stock:shorts": {
+        "sample_count": 2,
+        "metrics": {
+          "fake_reader_q_per_1k": {
+            "count": 2,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0
+          },
+          "analogy_per_1k": {
+            "count": 2,
+            "p10": 9.434,
+            "p50": 9.434,
+            "p90": 19.417
+          },
+          "analogy_coverage": {
+            "count": 2,
+            "p10": 1.0,
+            "p50": 1.0,
+            "p90": 1.0
+          },
+          "banmal_ratio": {
+            "count": 2,
+            "p10": 0.8,
+            "p50": 0.8,
+            "p90": 0.8333
+          },
+          "second_person_per_1k": {
+            "count": 2,
+            "p10": 9.434,
+            "p50": 9.434,
+            "p90": 19.417
+          },
+          "stake_framing_count": {
+            "count": 2,
+            "p10": 1.0,
+            "p50": 1.0,
+            "p90": 1.0
+          },
+          "short_emphasis_ratio": {
+            "count": 2,
+            "p10": 0.4,
+            "p50": 0.4,
+            "p90": 0.6667
+          },
+          "connective_variety": {
+            "count": 2,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.125
+          }
+        }
+      },
+      "general_econ:shorts": {
+        "sample_count": 1,
+        "metrics": {
+          "fake_reader_q_per_1k": {
+            "count": 1,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0
+          },
+          "analogy_per_1k": {
+            "count": 1,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0
+          },
+          "analogy_coverage": {
+            "count": 1,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0
+          },
+          "short_emphasis_ratio": {
+            "count": 1,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0
+          },
+          "connective_variety": {
+            "count": 1,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0
+          }
+        }
+      }
+    }
+  },
+  "generated_profile": {
+    "axis1_structure": {
+      "devices_present": {
+        "D1": true,
+        "D2": false,
+        "D3": true,
+        "D4": true,
+        "D5": true,
+        "D6": true,
+        "D7": false,
+        "D8": true,
+        "twist": false,
+        "ending_nondirective": true
+      },
+      "required": [
+        "D1",
+        "D4",
+        "twist",
+        "D6",
+        "D8",
+        "ending_nondirective"
+      ],
+      "order_ok": true,
+      "method": "deterministic"
+    },
+    "axis2_retention": {
+      "fake_reader_q_count": 2,
+      "analogy_count": 1,
+      "fear_reframe_count": 1,
+      "checkpoint_count": 1,
+      "per_1k_chars": {
+        "fake_reader_q": 9.302,
+        "analogy": 4.651
+      },
+      "method": "deterministic"
+    },
+    "axis3_rhythm": {
+      "sent_len_mean": 21.5,
+      "sent_len_p90": 28,
+      "short_emphasis_ratio": 0.2,
+      "ender_variety": 0.4,
+      "connective_variety": 0.125,
+      "max_same_ender_run": 2,
+      "method": "deterministic"
+    },
+    "axis4_register": {
+      "banmal_ratio": 1.0,
+      "second_person_per_1k": 18.605,
+      "stake_framing_count": 3,
+      "method": "deterministic"
+    },
+    "axis5_analogy": {
+      "concept_count": 1,
+      "concepts_with_analogy": 1,
+      "coverage": 1.0,
+      "method": "deterministic"
+    },
+    "axis6_hook": {
+      "type": "number_first",
+      "has_number": true,
+      "has_question": true,
+      "first3s_char_window": "15퍼센트 빠졌는데 왜 우리 계좌는 더 불안할까? 님들, 숫자만 보면 겁나지만 이유를 보면 달라져. 처음 보",
+      "method": "deterministic"
+    },
+    "axis7_safety": {
+      "buy_sell_directive_count": 0,
+      "banned_phrase_count": 0,
+      "hype_count": 0,
+      "reference_ngram_similarity": 0.0664,
+      "method": "deterministic"
+    },
+    "axis8_fact": {
+      "numbers_total": 1,
+      "numbers_traceable": 1,
+      "untraceable": [],
+      "method": "deterministic"
+    },
+    "meta": {
+      "format": "shorts",
+      "kind": "generated",
+      "script_sha256": "7ec291e16568b0b8e6ef2968d806f7c5e6d523d0c5aac254bb417579560bb808",
+      "char_count": 215
+    }
+  },
+  "hard_gate": {
+    "passed": true,
+    "failures": []
+  },
+  "rows": [
+    {
+      "label": "D3 가짜 독자 질문/1k자",
+      "metric": "fake_reader_q_per_1k",
+      "reference": {
+        "count": 2,
+        "p10": 0.0,
+        "p50": 0.0,
+        "p90": 0.0
+      },
+      "generated": 9.302,
+      "in_band": false,
+      "gap": 9.302,
+      "action": "P3 질문 삽입 강화"
+    },
+    {
+      "label": "D4 비유/1k자",
+      "metric": "analogy_per_1k",
+      "reference": {
+        "count": 2,
+        "p10": 9.434,
+        "p50": 9.434,
+        "p90": 19.417
+      },
+      "generated": 4.651,
+      "in_band": false,
+      "gap": -4.783,
+      "action": "P2 비유 보강"
+    },
+    {
+      "label": "D4 비유 커버리지",
+      "metric": "analogy_coverage",
+      "reference": {
+        "count": 2,
+        "p10": 1.0,
+        "p50": 1.0,
+        "p90": 1.0
+      },
+      "generated": 1.0,
+      "in_band": true,
+      "gap": 0.0,
+      "action": "P2 개념 비유 재생성"
+    },
+    {
+      "label": "반말 비율",
+      "metric": "banmal_ratio",
+      "reference": {
+        "count": 2,
+        "p10": 0.8,
+        "p50": 0.8,
+        "p90": 0.8333
+      },
+      "generated": 1.0,
+      "in_band": false,
+      "gap": 0.2,
+      "action": "레지스터 프롬프트 점검"
+    },
+    {
+      "label": "2인칭/1k자",
+      "metric": "second_person_per_1k",
+      "reference": {
+        "count": 2,
+        "p10": 9.434,
+        "p50": 9.434,
+        "p90": 19.417
+      },
+      "generated": 18.605,
+      "in_band": true,
+      "gap": 0.0,
+      "action": "D8 스테이크 연결 보강"
+    },
+    {
+      "label": "짧은 강조문 비율",
+      "metric": "short_emphasis_ratio",
+      "reference": {
+        "count": 2,
+        "p10": 0.4,
+        "p50": 0.4,
+        "p90": 0.6667
+      },
+      "generated": 0.2,
+      "in_band": false,
+      "gap": -0.2,
+      "action": "짧은 강조문과 설명문 비율 조정"
+    }
+  ],
+  "top_gaps": [
+    {
+      "label": "D3 가짜 독자 질문/1k자",
+      "metric": "fake_reader_q_per_1k",
+      "reference": {
+        "count": 2,
+        "p10": 0.0,
+        "p50": 0.0,
+        "p90": 0.0
+      },
+      "generated": 9.302,
+      "in_band": false,
+      "gap": 9.302,
+      "action": "P3 질문 삽입 강화"
+    },
+    {
+      "label": "D4 비유/1k자",
+      "metric": "analogy_per_1k",
+      "reference": {
+        "count": 2,
+        "p10": 9.434,
+        "p50": 9.434,
+        "p90": 19.417
+      },
+      "generated": 4.651,
+      "in_band": false,
+      "gap": -4.783,
+      "action": "P2 비유 보강"
+    },
+    {
+      "label": "반말 비율",
+      "metric": "banmal_ratio",
+      "reference": {
+        "count": 2,
+        "p10": 0.8,
+        "p50": 0.8,
+        "p90": 0.8333
+      },
+      "generated": 1.0,
+      "in_band": false,
+      "gap": 0.2,
+      "action": "레지스터 프롬프트 점검"
+    }
+  ],
+  "axis_summary": [
+    {
+      "axis": "축1 구조",
+      "value": "장치 D1, D3, D4, D5, D6, D8, ending_nondirective"
+    },
+    {
+      "axis": "축2 유지",
+      "value": "질문 2 · 비유 1"
+    },
+    {
+      "axis": "축3 리듬",
+      "value": "평균 21.5자 · 연속 종결 2"
+    },
+    {
+      "axis": "축4 레지스터",
+      "value": "반말 1.0 · 2인칭/1k 18.605"
+    },
+    {
+      "axis": "축5 비유",
+      "value": "커버리지 1.0"
+    },
+    {
+      "axis": "축6 훅",
+      "value": "number_first · 숫자 True"
+    },
+    {
+      "axis": "축7 안전",
+      "value": "지시 0 · 유사도 0.0664"
+    },
+    {
+      "axis": "축8 사실",
+      "value": "추적 1/1"
+    }
+  ]
+}

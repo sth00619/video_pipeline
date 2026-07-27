@@ -1,0 +1,113 @@
+{
+  "generated_at": "2026-07-27 20:13:28",
+  "results": [
+    {
+      "voice": "original_anchor",
+      "script": "01_hook_number_shock",
+      "status": "ok",
+      "seconds": 1.6,
+      "chars": 39,
+      "words": 11,
+      "audio_duration": 4.6,
+      "path": "voice_samples\\original_anchor\\01_hook_number_shock.mp3",
+      "settings": {
+        "name": "original_anchor",
+        "model_id": "eleven_multilingual_v2",
+        "stability": 0.4,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": true
+      }
+    },
+    {
+      "voice": "original_anchor",
+      "script": "02_body_explain",
+      "status": "ok",
+      "seconds": 2.6,
+      "chars": 120,
+      "words": 35,
+      "audio_duration": 16.7,
+      "path": "voice_samples\\original_anchor\\02_body_explain.mp3",
+      "settings": {
+        "name": "original_anchor",
+        "model_id": "eleven_multilingual_v2",
+        "stability": 0.4,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": true
+      }
+    },
+    {
+      "voice": "original_anchor",
+      "script": "03_closing_cta",
+      "status": "ok",
+      "seconds": 1.5,
+      "chars": 52,
+      "words": 14,
+      "audio_duration": 6.7,
+      "path": "voice_samples\\original_anchor\\03_closing_cta.mp3",
+      "settings": {
+        "name": "original_anchor",
+        "model_id": "eleven_multilingual_v2",
+        "stability": 0.4,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": true
+      }
+    },
+    {
+      "voice": "ivc_news_anchor_with_pauses",
+      "script": "01_hook_number_shock",
+      "status": "ok",
+      "seconds": 4.3,
+      "chars": 39,
+      "words": 11,
+      "audio_duration": 3.8,
+      "path": "voice_samples\\ivc_news_anchor_with_pauses\\01_hook_number_shock.mp3",
+      "settings": {
+        "name": "ivc_news_anchor_with_pauses",
+        "model_id": "eleven_multilingual_v2",
+        "stability": 0.4,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": true
+      }
+    },
+    {
+      "voice": "ivc_news_anchor_with_pauses",
+      "script": "02_body_explain",
+      "status": "ok",
+      "seconds": 1.9,
+      "chars": 120,
+      "words": 35,
+      "audio_duration": 12.0,
+      "path": "voice_samples\\ivc_news_anchor_with_pauses\\02_body_explain.mp3",
+      "settings": {
+        "name": "ivc_news_anchor_with_pauses",
+        "model_id": "eleven_multilingual_v2",
+        "stability": 0.4,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": true
+      }
+    },
+    {
+      "voice": "ivc_news_anchor_with_pauses",
+      "script": "03_closing_cta",
+      "status": "ok",
+      "seconds": 2.3,
+      "chars": 52,
+      "words": 14,
+      "audio_duration": 5.3,
+      "path": "voice_samples\\ivc_news_anchor_with_pauses\\03_closing_cta.mp3",
+      "settings": {
+        "name": "ivc_news_anchor_with_pauses",
+        "model_id": "eleven_multilingual_v2",
+        "stability": 0.4,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": true
+      }
+    }
+  ]
+}

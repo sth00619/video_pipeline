@@ -24,8 +24,14 @@ FAL_KEY = os.getenv("FAL_KEY", "")
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")       # 미국 주식 뉴스·시세
 FRED_API_KEY = os.getenv("FRED_API_KEY", "")              # 연준 거시경제 지표
 DART_API_KEY = os.getenv("DART_API_KEY", "")              # 한국 공시 PER/PBR (선택)
-NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID", "")        # 네이버 검색 API
-NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET", "") # 네이버 검색 API
+NAVER_API_HUB_ENABLED = os.getenv("NAVER_API_HUB_ENABLED", "false").lower() in {"1", "true", "yes"}
+NAVER_API_HUB_CLIENT_ID = os.getenv("NAVER_API_HUB_CLIENT_ID", "")
+NAVER_API_HUB_CLIENT_SECRET = os.getenv("NAVER_API_HUB_CLIENT_SECRET", "")
+if NAVER_API_HUB_ENABLED and (not NAVER_API_HUB_CLIENT_ID or not NAVER_API_HUB_CLIENT_SECRET):
+    raise RuntimeError(
+        "NAVER_API_HUB_ENABLED=true이면 NAVER_API_HUB_CLIENT_ID와 "
+        "NAVER_API_HUB_CLIENT_SECRET이 모두 필요합니다"
+    )
 
 # Claude 모델 — 프로젝트 고정값. 임의 변경 절대 금지.
 # (keyword_worker.py에 "claude-sonnet-5"라는 오타가 있었고,
@@ -124,15 +130,15 @@ BUBBLE_FONT_MIN_PX = int(os.getenv("BUBBLE_FONT_MIN_PX", "68"))
 SUBTITLE_SAFE_AREA_PCT = float(os.getenv("SUBTITLE_SAFE_AREA_PCT", "18"))
 
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "dlKJ5VptCbYxal4doUO5")
-ELEVENLABS_STABILITY = float(os.getenv("ELEVENLABS_STABILITY", "0.62"))
-ELEVENLABS_SIMILARITY_BOOST = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.80"))
-ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.05"))
-# V3 uses a small, controlled performance range: the intro may be natural and
-# expressive, while the long-form body stays stable and repeatable.
-TTS_MODEL_INTRO = os.getenv("TTS_MODEL_INTRO", "eleven_v3")
-TTS_MODEL_BODY = os.getenv("TTS_MODEL_BODY", "eleven_v3")
-TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.5"))
-TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "0.5"))
+ELEVENLABS_STABILITY = float(os.getenv("ELEVENLABS_STABILITY", "0.35"))
+ELEVENLABS_SIMILARITY_BOOST = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.75"))
+ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.0"))
+# 한국어 금융 내레이션은 발음 안정성을 우선해 다국어 v2를 기본으로 사용한다.
+# 감정 연기가 필요한 구간만 환경 변수로 v3를 명시적으로 선택할 수 있다.
+TTS_MODEL_INTRO = os.getenv("TTS_MODEL_INTRO", "eleven_multilingual_v2")
+TTS_MODEL_BODY = os.getenv("TTS_MODEL_BODY", "eleven_multilingual_v2")
+TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.35"))
+TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "0.35"))
 TTS_CER_THRESHOLD = float(os.getenv("TTS_CER_THRESHOLD", "0.15"))
 TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
 TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "true").lower() in {"1", "true", "yes"}
@@ -167,5 +173,15 @@ IMG_COST_FLASH_1K_USD = float(os.getenv("IMG_COST_FLASH_1K_USD", "0.045"))
 IMG_COST_PRO_2K_USD = float(os.getenv("IMG_COST_PRO_2K_USD", "0.134"))
 KLING_COST_PER_CLIP_USD = float(os.getenv("KLING_COST_PER_CLIP_USD", "0.35"))  # 5 sec × $0.07/sec, audio off
 USD_KRW = float(os.getenv("USD_KRW", "1400"))
-MAX_BUDGET_PER_VIDEO_KRW = int(os.getenv("MAX_BUDGET_PER_VIDEO_KRW", "70000"))
+MAX_BUDGET_PER_VIDEO_KRW = min(40_000, int(os.getenv("MAX_BUDGET_PER_VIDEO_KRW", "40000")))
 BUDGET_RETRY_BUFFER_PCT = float(os.getenv("BUDGET_RETRY_BUFFER_PCT", "10"))
+
+# 대본 하우스 스타일은 운영자가 단계적으로 활성화한다. 기본값은 기존 채널
+# 동작을 보존하며, 활성화된 작업에서만 확정 전 하드 게이트가 적용된다.
+SCRIPT_HOUSE_STYLE_ENABLED = os.getenv("SCRIPT_HOUSE_STYLE_ENABLED", "false").lower() in {"1", "true", "yes"}
+SCRIPT_PATTERN_NUMBERS_ENABLED = os.getenv("SCRIPT_PATTERN_NUMBERS_ENABLED", "false").lower() in {"1", "true", "yes"}
+SCRIPT_PATTERN_ANALOGY_ENABLED = os.getenv("SCRIPT_PATTERN_ANALOGY_ENABLED", "false").lower() in {"1", "true", "yes"}
+SCRIPT_PATTERN_FAKE_QUESTION_ENABLED = os.getenv("SCRIPT_PATTERN_FAKE_QUESTION_ENABLED", "false").lower() in {"1", "true", "yes"}
+SCRIPT_PATTERN_LLM_LABELING_ENABLED = os.getenv("SCRIPT_PATTERN_LLM_LABELING_ENABLED", "false").lower() in {"1", "true", "yes"}
+SCRIPT_NARRATIVE_PLANNING_ENABLED = os.getenv("SCRIPT_NARRATIVE_PLANNING_ENABLED", "true").lower() in {"1", "true", "yes"}
+SCRIPT_FLOW_QA_ENABLED = os.getenv("SCRIPT_FLOW_QA_ENABLED", "true").lower() in {"1", "true", "yes"}

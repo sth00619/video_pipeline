@@ -1,0 +1,19 @@
+{
+  "asset": "fomc_ivc_audio_review_precise_sync.mp4",
+  "audio": "narration_tight.mp3",
+  "subtitle": "subtitles_tight_precise.srt",
+  "timing_method": "실제 TTS 발음용 문장으로 Forced Alignment를 실행한 뒤, 화면 원문 큐를 발음 단어 경계에 순서대로 매핑",
+  "subtitle_result": {
+    "cue_count": 72,
+    "overlap_count": 0,
+    "max_inter_cue_gap_seconds": 0.38,
+    "decimal_policy": "화면 3.75퍼센트야. / 발음 삼쩜칠오퍼센트야 / 같은 발음 단어의 끝에서 큐 전환"
+  },
+  "av_duration": {
+    "video_seconds": 94.583333,
+    "audio_seconds": 94.598005,
+    "difference_seconds": 0.014672,
+    "result": "24fps 한 프레임 이내"
+  },
+  "note": "고정 지연값을 추가하지 않았다. 각 자막의 시작과 끝은 최종 MP3의 정렬 단어 시점에서 결정된다."
+}

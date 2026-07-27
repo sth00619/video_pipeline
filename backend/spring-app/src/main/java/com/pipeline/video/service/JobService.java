@@ -62,7 +62,9 @@ public class JobService {
                 .makeShorts(request.isMakeShorts())
                 .shortsCount(request.getShortsCount())
                 .longformTargetMinutes(targetMinutes)
-                .budgetCap(request.getBudgetCap() != null ? request.getBudgetCap() : PricingConfig.VIDEO_BUDGET_CAP_KRW)
+                .budgetCap(request.getBudgetCap() == null
+                        ? PricingConfig.VIDEO_BUDGET_CAP_KRW
+                        : request.getBudgetCap().min(PricingConfig.VIDEO_BUDGET_CAP_KRW))
                 .costAccumulated(BigDecimal.ZERO)
                 .policyJson(request.getPolicyJson())
                 .channelId(request.getChannelId())

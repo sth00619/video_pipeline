@@ -68,7 +68,7 @@ def test_mock_response_matches_script_response_contract(monkeypatch):
         "job_id", "keyword", "script", "sections", "char_count", "length_contract",
         "keyword_validation", "unit_validation", "verified_facts", "fact_check_rounds",
         "fact_check_log", "market_snapshot_used", "market_snapshot", "used_real_llm",
-        "requires_manual_review", "quality_report", "youtube_metadata",
+        "llm_call_count", "narrative_plan", "flow_qa", "requires_manual_review", "quality_report", "youtube_metadata",
     }
     assert required.issubset(result)
     assert result["requires_manual_review"] is True

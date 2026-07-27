@@ -1,0 +1,10 @@
+{
+  "profile": "ivc_news_anchor_with_pauses",
+  "model_id": "eleven_multilingual_v2",
+  "stability": 0.35,
+  "similarity_boost": 0.75,
+  "style": 0.0,
+  "audio_duration_seconds": 101.099,
+  "subtitle_cues": 66,
+  "sync_verdict": "OK: 문장 경계 싱크 양호 (임계 이내)"
+}

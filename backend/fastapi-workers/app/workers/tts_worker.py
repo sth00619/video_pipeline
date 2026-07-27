@@ -47,6 +47,7 @@ class TtsWorker:
     def __init__(self):
         self._whisper_model = None
         self._last_provider_request = {}
+        self._last_subtitle_alignment_mode = "unavailable"
 
     def _run_subprocess(self, cmd: str, job_id: int) -> int:
         """FFmpeg 등의 명령어를 subprocess.Popen으로 실행하고 중지 트래킹 등록"""
@@ -72,6 +73,7 @@ class TtsWorker:
 
     def synthesize(self, script: str, voice_id: str, job_id: int = 0,
                    tts_speed: float = None, target_seconds: float = None) -> dict:
+        self._last_subtitle_alignment_mode = "unavailable"
         if not script or not script.strip():
             raise ValueError("스크립트가 비어있습니다.")
 
@@ -141,6 +143,9 @@ class TtsWorker:
         # 2. 음성 생성 (ElevenLabs v3 → gTTS → 무음 폴백)
         used_tts = False
         tts_engine = "silent"
+        # 실제 공급자에 전달하는 발음용 문장을 한 번만 결정해, 생성과 사후
+        # Forced Alignment가 서로 다른 숫자·약어 표기를 쓰지 않게 한다.
+        delivery_script = self._soften_korean_delivery_cadence(preprocessed)
         # The /with-timestamps endpoint returns timing at the exact moment the
         # audio is synthesized.  Keep it in memory so the video timeline can
         # use first-party timing rather than re-transcribing its own narration.
@@ -149,7 +154,7 @@ class TtsWorker:
             if os.getenv("ELEVENLABS_API_KEY"):
                 logger.info("ELEVENLABS_API_KEY 감지 → ElevenLabs v3 AI 성우 + 발음 사전 적용")
                 used_tts, elevenlabs_characters = self._generate_elevenlabs(
-                    self._soften_korean_delivery_cadence(preprocessed), mp3_path, provider_voice_id, job_id, tts_speed=speed,
+                    delivery_script, mp3_path, provider_voice_id, job_id, tts_speed=speed,
                     seed=max(1, job_id * 10 + 1), thought_group_delivery=True,
                 )
                 if used_tts:
@@ -173,7 +178,7 @@ class TtsWorker:
                 if attempt < max_retries:
                     logger.warning("TTS CER quality gate retrying generation (%s/%s)", attempt + 1, max_retries)
                     used_tts, elevenlabs_characters = self._generate_elevenlabs(
-                        self._soften_korean_delivery_cadence(preprocessed), mp3_path, provider_voice_id, job_id, tts_speed=speed,
+                        delivery_script, mp3_path, provider_voice_id, job_id, tts_speed=speed,
                         seed=max(1, job_id * 10 + attempt + 1), thought_group_delivery=True,
                     )
                     if not used_tts:
@@ -240,6 +245,10 @@ class TtsWorker:
                 for char in elevenlabs_characters
             ]
 
+        # 최종 MP3만 검사한다. 문장별 조각 결합이 발생했더라도, 실제 배포될
+        # 파일에서 디지털 무음 절벽이 발견될 때만 QA 경고를 남긴다.
+        splice_artifacts = self._assess_splice_artifacts(mp3_path, job_id)
+
         # 실제 MP3 길이 측정
         actual_duration = self._probe_duration(mp3_path) or len(clean_script) / 5.0
         logger.info(f"음성 길이 ({speed}x 배속 후): {actual_duration:.1f}초")
@@ -281,10 +290,23 @@ class TtsWorker:
         # 3. 자막 타임스탬프 추출 (Forced Alignment → stable-ts → Whisper → 글자수 비례)
         chunks = []
         if used_tts:
-            # 3a. The TTS response itself is the authoritative timing source.
-            # It avoids a second API call and prevents STT/FA drift on Korean
-            # numbers, tickers, and pronunciation aliases.
+            # 3a. 실제 완성 오디오와 원문 자막을 Forced Alignment로 직접 정렬한다.
+            # 숫자 낭독형과 화면 숫자 표기의 길이가 달라도 글자 수 비례 추정을 하지 않는다.
             if tts_engine == "elevenlabs":
+                try:
+                    chunks = self._extract_timestamps_with_forced_alignment(
+                        mp3_path,
+                        clean_script,
+                        subtitle_max_chars,
+                        spoken_alignment_script=delivery_script,
+                    )
+                    logger.info(f"Forced Alignment 자막 타임스탬프 추출: {len(chunks)}개 세그먼트")
+                except Exception as e:
+                    logger.warning(f"Forced Alignment 자막 타임스탬프 추출 실패: {e}")
+                    chunks = []
+
+            # 3b. with-timestamps 응답은 Forced Alignment 장애 시에만 폴백으로 사용한다.
+            if tts_engine == "elevenlabs" and not chunks:
                 try:
                     chunks = self._extract_timestamps_from_elevenlabs_response(
                         clean_script,
@@ -292,18 +314,9 @@ class TtsWorker:
                         subtitle_max_chars,
                         time_scale=alignment_time_scale,
                     )
-                    logger.info(f"ElevenLabs 생성 타임스탬프 추출: {len(chunks)}개 세그먼트")
+                    logger.info(f"ElevenLabs with-timestamps 폴백 추출: {len(chunks)}개 세그먼트")
                 except Exception as e:
-                    logger.warning(f"ElevenLabs 생성 타임스탬프 사용 실패, Forced Alignment 폴백: {e}")
-                    chunks = []
-
-            # 3b. Forced Alignment is now a validation/fallback path only.
-            if tts_engine == "elevenlabs" and not chunks:
-                try:
-                    chunks = self._extract_timestamps_with_forced_alignment(mp3_path, clean_script, subtitle_max_chars)
-                    logger.info(f"Forced Alignment 폴백 타임스탬프 추출: {len(chunks)}개 세그먼트")
-                except Exception as e:
-                    logger.warning(f"Forced Alignment 실패, stable-ts 폴백: {e}")
+                    logger.warning(f"ElevenLabs with-timestamps 폴백 실패, stable-ts 폴백: {e}")
                     chunks = []
 
             # 3c. stable-ts 폴백 (ElevenLabs timing/FA 실패 또는 gTTS 엔진)
@@ -329,8 +342,23 @@ class TtsWorker:
             logger.warning("글자 수 비례 타임스탬프로 폴백")
             chunks = self._fallback_timing(clean_script, actual_duration, subtitle_max_chars)
 
+        # 최종 MP3 문자 정렬이 확보되지 않은 상태에서는 영상 조립을 허용하지
+        # 않는다. 저정밀 폴백을 자동 출고하면 숫자·약어 구간에서 체감 싱크가
+        # 다시 무너질 수 있으므로, 작업을 TTS 검토 단계에 남긴다.
+        if tts_engine == "elevenlabs" and self._last_subtitle_alignment_mode != "character":
+            raise RuntimeError(
+                "최종 음성의 문자 단위 정렬을 확보하지 못했습니다. "
+                "저정밀 자막으로 영상 조립하지 말고 TTS 검토 후 재생성하세요."
+            )
+
         subtitle_quality = assess_subtitles(chunks, actual_duration, subtitle_max_chars)
-        persist_quality_report(job_id, "tts", subtitle_quality)
+        quality_report = {
+            "subtitles": subtitle_quality,
+            "tts_verification": tts_verification,
+            "splice_artifacts": splice_artifacts,
+            "subtitle_alignment_mode": self._last_subtitle_alignment_mode,
+        }
+        persist_quality_report(job_id, "tts", quality_report)
         logger.info(
             f"TTS v6 완료: {actual_duration:.1f}초, chunks={len(chunks)}, engine={tts_engine}, "
             f"subtitle_quality={subtitle_quality['score']}"
@@ -347,7 +375,7 @@ class TtsWorker:
             "duration_validation": duration_validation,
             "provider_request": self._last_provider_request,
             "leading_silence_seconds": leading_silence_seconds,
-            "quality_report": {"subtitles": subtitle_quality, "tts_verification": tts_verification},
+            "quality_report": quality_report,
         }
 
     # ============================
@@ -1046,72 +1074,143 @@ class TtsWorker:
             logger.info("Using native ElevenLabs character timing for %s subtitle chunks", len(chunks))
         return chunks
 
-    def _extract_timestamps_with_forced_alignment(self, mp3_path: str, original_script: str,
-                                                    subtitle_max_chars: int = 22) -> list[dict]:
+    def _extract_timestamps_with_forced_alignment(
+        self,
+        mp3_path: str,
+        original_script: str,
+        subtitle_max_chars: int = 22,
+        *,
+        spoken_alignment_script: str | None = None,
+    ) -> list[dict]:
         """
         ElevenLabs Forced Alignment API를 사용하여 단어 단위 정밀 타임스탬프를 추출합니다.
 
-        [버그 수정] 이전 버전은 자막 청크 자체를 preprocessed_text(발음 전처리된
-        텍스트, 예: "이천칠백팔십포인트")로 분할해서 썼습니다. 그러면 실제 음성이
-        읽은 발음대로 화면 자막이 나오게 되어, 대본에 쓴 "2,780포인트" 표기와
-        자막이 달라지는 문제가 있었습니다 ("스크립트=자막 100% 일치" 요구사항에 어긋남).
-
-        수정: 자막에 표시할 텍스트는 원본(가독형) original_script 기준으로 분할하고,
-        Forced Alignment 결과와의 매핑 비율만 "각 청크를 개별 전처리했을 때의
-        글자 수"를 기준으로 계산합니다. 전처리 후 글자 수가 실제 발음 시간과
-        훨씬 비례하기 때문에, 화면 자막은 원본 그대로 유지하면서 타이밍
-        정확도만 개선됩니다.
+        정렬 API에는 실제 TTS 발음용 문장을 전달한다. 화면에는 원문 표기를
+        유지하되, 각 화면 큐는 실제 발음 단어가 끝나는 시점에만 전환한다.
         """
-        import requests
+        from app.tts.forced_alignment_srt import AlignmentError, align_audio_to_text_with_characters
 
-        api_key = os.getenv("ELEVENLABS_API_KEY")
-        if not api_key:
+        try:
+            alignment_script = spoken_alignment_script or self._preprocess_for_tts(original_script)
+            words, characters = align_audio_to_text_with_characters(mp3_path, alignment_script)
+        except AlignmentError as exc:
+            logger.warning("Forced Alignment API 요청 실패: %s", exc)
+            self._last_subtitle_alignment_mode = "forced_alignment_error"
             return []
 
-        # 화면에 보일 자막 청크는 원본(가독형) 텍스트 기준으로 분할
-        text_chunks = self._split_script_into_chunks(original_script, max_chars=subtitle_max_chars)
-        if not text_chunks:
-            return []
-
-        # TTS에 실제로 전달된 것과 동일한 전처리 텍스트로 FA API 호출 (음성=정렬 대상 일치)
-        clean_text = re.sub(r'^##\s*.+$', '', original_script, flags=re.MULTILINE).strip()
-        preprocessed_text = self._preprocess_for_tts(clean_text)
-
-        with open(mp3_path, "rb") as audio_file:
-            resp = requests.post(
-                "https://api.elevenlabs.io/v1/forced-alignment",
-                headers={"xi-api-key": api_key},
-                files={"file": ("audio.mp3", audio_file, "audio/mpeg")},
-                data={"text": preprocessed_text},
-                timeout=120,
-            )
-
-        if resp.status_code != 200:
-            logger.warning(f"Forced Alignment API 실패: {resp.status_code} {resp.text}")
-            return []
-
-        alignment = resp.json()
-        raw_characters = alignment.get("characters", [])
-        raw_words = alignment.get("words", [])
-        if not raw_words and not raw_characters:
-            logger.warning("Forced Alignment 결과에 단어가 없음")
-            return []
-
-        if raw_characters:
-            character_chunks = self._map_timestamps_by_character_alignment(text_chunks, raw_characters)
-            if character_chunks:
-                logger.info(f"Forced Alignment character-level mapping complete: {len(character_chunks)} chunks")
-                return character_chunks
-
-        engine_words = [
-            {"word": w.get("text", ""), "start": w.get("start", 0.0), "end": w.get("end", 0.0)}
-            for w in raw_words
-        ]
-        logger.info(f"Forced Alignment 단어 {len(engine_words)}개 추출 완료")
-
-        chunks = self._map_timestamps_by_preprocessed_length(text_chunks, engine_words)
-        logger.info(f"Forced Alignment 정밀 매핑 완료 (자막=원본, 타이밍=발음전처리 기준): {len(text_chunks)}개 청크")
+        display_chunks = self._split_script_into_chunks(original_script, max_chars=subtitle_max_chars)
+        chunks = self._map_display_chunks_to_spoken_characters(display_chunks, characters)
+        if not chunks:
+            chunks = self._map_display_chunks_to_spoken_words(display_chunks, words)
+            self._last_subtitle_alignment_mode = "word_fallback"
+        else:
+            self._last_subtitle_alignment_mode = "character"
+        logger.info("Forced Alignment 원문 자막 큐 생성: %s개", len(chunks))
         return chunks
+
+    def _map_display_chunks_to_spoken_characters(self, display_chunks: List[str], characters: List) -> List[dict]:
+        """화면 원문을 실제 발음 문자 배열에 정확히 대응시킨다."""
+        if not display_chunks or not characters:
+            return []
+
+        def comparison_key(value: str) -> str:
+            return re.sub(r"[\W_]+", "", value, flags=re.UNICODE)
+
+        spoken_characters = [
+            item for item in characters if comparison_key(str(item.text))
+        ]
+        spoken_text = "".join(comparison_key(str(item.text)) for item in spoken_characters)
+        cursor = 0
+        result: List[dict] = []
+        for index, display_text in enumerate(display_chunks, start=1):
+            expected = comparison_key(self._preprocess_for_tts(display_text))
+            if not expected or not spoken_text.startswith(expected, cursor):
+                logger.warning("문자 정렬 텍스트 불일치: 자막 %s", index)
+                return []
+            start_character = spoken_characters[cursor]
+            end_character = spoken_characters[cursor + len(expected) - 1]
+            start = float(start_character.start)
+            end = float(end_character.end)
+            if end <= start:
+                return []
+            result.append({
+                "index": index,
+                "text": display_text,
+                "start": round(start, 3),
+                "end": round(end, 3),
+                "duration": round(end - start, 3),
+            })
+            cursor += len(expected)
+
+        if cursor != len(spoken_text):
+            logger.warning("문자 정렬 잔여 발음 텍스트가 있어 단어 정렬로 폴백합니다.")
+            return []
+        return result
+
+    def _map_display_chunks_to_spoken_words(self, display_chunks: List[str], words: List) -> List[dict]:
+        """표시용 원문을 실제 발음 단어 경계에 맞춰 시간화한다.
+
+        숫자 표기 ``3.75``와 실제 발음 ``삼쩜칠오``는 길이가 다르다. 비례식으로
+        시간을 배분하면 화면 자막이 발음 중간에 넘어갈 수 있으므로, 발음용으로
+        정규화한 각 표시 큐의 글자량을 실제 정렬 단어에서 순서대로 소비한다.
+        마지막 단어 전체를 포함하므로 다음 자막이 앞선 발음보다 빨리 오지 않는다.
+        """
+        if not display_chunks or not words:
+            return []
+
+        def comparison_key(value: str) -> str:
+            return re.sub(r"[\W_]+", "", value, flags=re.UNICODE)
+
+        result: List[dict] = []
+        word_index = 0
+        for index, display_text in enumerate(display_chunks, start=1):
+            target_length = len(comparison_key(self._preprocess_for_tts(display_text)))
+            if target_length <= 0:
+                continue
+            first_word_index = word_index
+            consumed_length = 0
+            while word_index < len(words) and consumed_length < target_length:
+                consumed_length += len(comparison_key(str(words[word_index].text)))
+                word_index += 1
+            if word_index == first_word_index:
+                return []
+
+            start = float(words[first_word_index].start)
+            end = float(words[word_index - 1].end)
+            if end <= start:
+                return []
+            result.append({
+                "index": index,
+                "text": display_text,
+                "start": round(start, 3),
+                "end": round(end, 3),
+                "duration": round(end - start, 3),
+            })
+
+        # 정렬 응답이 문장부호를 별도 단어로 돌려준 경우에도 마지막 자막이
+        # 실제 음성보다 먼저 사라지지 않도록 남은 단어의 끝을 반영한다.
+        if result and word_index < len(words):
+            last_end = float(words[-1].end)
+            if last_end > result[-1]["end"]:
+                result[-1]["end"] = round(last_end, 3)
+                result[-1]["duration"] = round(result[-1]["end"] - result[-1]["start"], 3)
+        return result
+
+    def _assess_splice_artifacts(self, audio_path: str, job_id: int) -> Dict:
+        """최종 오디오의 디지털 무음 접합부를 경고용으로 검사한다."""
+        from app.tts.splice_artifact_detector import analyze_audio
+
+        try:
+            report = analyze_audio(audio_path, work_dir=os.path.dirname(audio_path))
+        except Exception as exc:
+            logger.warning("TTS 접합부 QA를 실행하지 못했습니다: %s", exc)
+            return {"passed": None, "warning": "splice_analysis_failed"}
+        if report["suspect_count"]:
+            logger.warning(
+                "TTS 접합부 QA 경고: 의심 구간 %s개 (job_id=%s)",
+                report["suspect_count"], job_id,
+            )
+        return report
 
     def _map_timestamps_by_character_alignment(self, text_chunks: List[str], characters: List[Dict]) -> List[dict]:
         """Map subtitle chunks to exact Forced Alignment character timings.

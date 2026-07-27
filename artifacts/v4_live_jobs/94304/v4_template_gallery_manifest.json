@@ -1,0 +1,689 @@
+{
+  "job_id": 94304,
+  "scene_count": 4,
+  "scenes": [
+    {
+      "scene_id": "vault-stages-001",
+      "title": "관세 적용 단계",
+      "content": "검증용 장면: 관세 적용 절차를 단계별로 보여줍니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "관세 적용 단계",
+        "scene_seed": "vault-stages-001"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "v4 template gallery verification"
+      },
+      "stage_items": [
+        {
+          "label": "검토",
+          "value": "4년",
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "확정",
+          "value": "2024",
+          "emphasis": true,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "적용",
+          "value": "2024–26",
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        }
+      ],
+      "source_image_path": "/app/data/jobs/94304/images/scene_000_source.png",
+      "info_surface_plan": {
+        "scene_id": "vault-stages-001",
+        "render_mode": "DIEGETIC_WARP",
+        "surface": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            246,
+            244,
+            210
+          ],
+          "marker_rgb_candidates": [],
+          "marker_delta_e_max": 30.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "right",
+          "preferred_region": {
+            "x": 0.53,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DIEGETIC_WARP",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [],
+        "detection": {
+          "quad": [
+            [
+              747.0,
+              191.0
+            ],
+            [
+              1625.0,
+              186.0
+            ],
+            [
+              1632.0,
+              769.0
+            ],
+            [
+              749.0,
+              774.0
+            ]
+          ],
+          "confidence": 0.7597,
+          "color_purity": 0.9859,
+          "border_match": 0.6653,
+          "position_score": 0.464,
+          "area_ratio": 0.2518,
+          "palette_collision": false
+        },
+        "timeline_mode": "original",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": null,
+        "source_image_path": "/app/data/jobs/94304/images/scene_000_source.png",
+        "final_image_path": "/app/data/jobs/94304/images/scene_000.png",
+        "hero_stat": null,
+        "chart_render_metadata": {
+          "bars": [],
+          "canvas_size": [
+            2101,
+            1387
+          ],
+          "diagram_supersample": {
+            "factor": 1.4,
+            "final_output_scale": 0.552423,
+            "logical_xheight_px": 43.0,
+            "logical_stroke_px": 3.82,
+            "predicted_xheight_1080p_px": 25.888,
+            "predicted_stroke_1080p_px": 2.3,
+            "support_font_scale": 1.2,
+            "support_stroke_scale": 1.4,
+            "predicted_after_typography_xheight_1080p_px": 31.065,
+            "predicted_after_typography_stroke_1080p_px": 3.22,
+            "min_xheight_1080p_px": 24.0,
+            "min_stroke_1080p_px": 2.2
+          },
+          "diagram_render_size": [
+            2101,
+            1387
+          ]
+        },
+        "phase_b": null,
+        "template_id": "vault_stages",
+        "diagram_kind": "stage_locks",
+        "render_attempts": [
+          {
+            "outcome": "DIEGETIC_WARP",
+            "reason": null,
+            "render_mode": "DIEGETIC_WARP",
+            "source_sha256": "0d8c6f846b7cdcbea70f07ddfc6888e28661c6c209f8023dc8919d4cc3a953cf",
+            "final_sha256": "9934d47e23e219bd51869e21d5f4ad4cec21f36a4a4baa8ec5230b87f199cf6d"
+          }
+        ]
+      },
+      "final_image_path": "/app/data/jobs/94304/images/scene_000.png",
+      "info_surface_final_fingerprint": "9b59fcf1d6568cdc655e8d399d0266b561a85dcd3055ea149eaa9bfed7af93fa",
+      "info_surface_final_sha256": "9934d47e23e219bd51869e21d5f4ad4cec21f36a4a4baa8ec5230b87f199cf6d",
+      "image_path": "/app/data/jobs/94304/images/scene_000.png"
+    },
+    {
+      "scene_id": "blueprint-structure-001",
+      "title": "핵심 품목 구조",
+      "content": "검증용 장면: 공지에 언급된 핵심 품목을 구조적으로 보여줍니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "핵심 품목 구조",
+        "scene_seed": "blueprint-structure-001"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "v4 template gallery verification"
+      },
+      "structure_items": [
+        {
+          "label": "전기차",
+          "value": "100%",
+          "emphasis": true,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "배터리",
+          "value": "25%",
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "반도체",
+          "value": "50%",
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        }
+      ],
+      "source_image_path": "/app/data/jobs/94304/images/scene_001_source.png",
+      "info_surface_plan": {
+        "scene_id": "blueprint-structure-001",
+        "render_mode": "DIEGETIC_WARP",
+        "surface": {
+          "surface_kind": "desk_report",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            246,
+            244,
+            210
+          ],
+          "marker_rgb_candidates": [],
+          "marker_delta_e_max": 30.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DIEGETIC_WARP",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [],
+        "detection": {
+          "quad": [
+            [
+              274.0,
+              117.0
+            ],
+            [
+              995.0,
+              172.0
+            ],
+            [
+              1106.0,
+              646.0
+            ],
+            [
+              388.0,
+              689.0
+            ]
+          ],
+          "confidence": 0.7964,
+          "color_purity": 0.9726,
+          "border_match": 1.0,
+          "position_score": 0.4951,
+          "area_ratio": 0.1811,
+          "palette_collision": false
+        },
+        "timeline_mode": "original",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": null,
+        "source_image_path": "/app/data/jobs/94304/images/scene_001_source.png",
+        "final_image_path": "/app/data/jobs/94304/images/scene_001.png",
+        "hero_stat": null,
+        "chart_render_metadata": {
+          "bars": [],
+          "canvas_size": [
+            1721,
+            1387
+          ],
+          "diagram_supersample": {
+            "factor": 1.4,
+            "final_output_scale": 0.587024,
+            "logical_xheight_px": 44.0,
+            "logical_stroke_px": 3.82,
+            "predicted_xheight_1080p_px": 28.149,
+            "predicted_stroke_1080p_px": 2.444,
+            "support_font_scale": 1.2,
+            "support_stroke_scale": 1.4,
+            "predicted_after_typography_xheight_1080p_px": 33.778,
+            "predicted_after_typography_stroke_1080p_px": 3.421,
+            "min_xheight_1080p_px": 24.0,
+            "min_stroke_1080p_px": 2.2
+          },
+          "diagram_render_size": [
+            1721,
+            1387
+          ]
+        },
+        "phase_b": null,
+        "template_id": "blueprint_board",
+        "diagram_kind": "blueprint_callouts",
+        "render_attempts": [
+          {
+            "outcome": "DIEGETIC_WARP",
+            "reason": null,
+            "render_mode": "DIEGETIC_WARP",
+            "source_sha256": "838d012d48554ed7eac0026079cabc596fea38d7a2a0ed820a59f4f459b770dd",
+            "final_sha256": "1a27271c7678e6fc33d2aa38ed87341ac8eb060dac80f3d44bbc292489723d10"
+          }
+        ]
+      },
+      "final_image_path": "/app/data/jobs/94304/images/scene_001.png",
+      "info_surface_final_fingerprint": "8a42fa8b70b020d2fafdddedfce510d002eff72b55e1340a4ccc179aedcaf1d1",
+      "info_surface_final_sha256": "1a27271c7678e6fc33d2aa38ed87341ac8eb060dac80f3d44bbc292489723d10",
+      "image_path": "/app/data/jobs/94304/images/scene_001.png"
+    },
+    {
+      "scene_id": "weather-rates-001",
+      "title": "중국산 핵심 품목 관세",
+      "content": "검증용 장면: USTR이 확정한 일부 중국산 핵심 품목 관세율입니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "중국산 핵심 품목 관세",
+        "scene_seed": "weather-rates-001",
+        "external_rates": [
+          {
+            "label": "전기차",
+            "value": "100%",
+            "emphasis": true,
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ]
+          },
+          {
+            "label": "전기차 배터리",
+            "value": "25%",
+            "emphasis": false,
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ]
+          }
+        ]
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "v4 template gallery verification"
+      },
+      "source_image_path": "/app/data/jobs/94304/images/scene_002_source.png",
+      "info_surface_plan": {
+        "scene_id": "weather-rates-001",
+        "render_mode": "DIEGETIC_WARP",
+        "surface": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            216,
+            240,
+            248
+          ],
+          "marker_rgb_candidates": [
+            [
+              138,
+              183,
+              188
+            ]
+          ],
+          "marker_delta_e_max": 12.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DIEGETIC_WARP",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [],
+        "detection": {
+          "quad": [
+            [
+              246.0,
+              106.0
+            ],
+            [
+              1134.0,
+              247.0
+            ],
+            [
+              1133.0,
+              733.0
+            ],
+            [
+              247.0,
+              783.0
+            ]
+          ],
+          "confidence": 0.8414,
+          "color_purity": 0.964,
+          "border_match": 1.0,
+          "position_score": 0.5798,
+          "area_ratio": 0.2401,
+          "palette_collision": false
+        },
+        "timeline_mode": "original",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": null,
+        "source_image_path": "/app/data/jobs/94304/images/scene_002_source.png",
+        "final_image_path": "/app/data/jobs/94304/images/scene_002.png",
+        "hero_stat": null,
+        "chart_render_metadata": {
+          "bars": [],
+          "canvas_size": [
+            2457,
+            1849
+          ],
+          "diagram_supersample": {
+            "factor": 1.608,
+            "final_output_scale": 0.533913,
+            "logical_xheight_px": 44.0,
+            "logical_stroke_px": 3.82,
+            "predicted_xheight_1080p_px": 22.062,
+            "predicted_stroke_1080p_px": 1.915,
+            "support_font_scale": 1.3054,
+            "support_stroke_scale": 1.608,
+            "predicted_after_typography_xheight_1080p_px": 28.8,
+            "predicted_after_typography_stroke_1080p_px": 3.08,
+            "min_xheight_1080p_px": 24.0,
+            "min_stroke_1080p_px": 2.2
+          },
+          "diagram_render_size": [
+            2457,
+            1849
+          ]
+        },
+        "phase_b": null,
+        "template_id": "weather_map_studio",
+        "diagram_kind": "map_clouds",
+        "render_attempts": [
+          {
+            "outcome": "DIEGETIC_WARP",
+            "reason": null,
+            "render_mode": "DIEGETIC_WARP",
+            "source_sha256": "381e6eb8d74c0dbf8eed158c7d5ab30a289490e5e554e35eaed6579c1a181e0f",
+            "final_sha256": "8c952976ad1b874a428068330122120d415554e36a9e94b3c8c11da319bf8f0d"
+          }
+        ]
+      },
+      "final_image_path": "/app/data/jobs/94304/images/scene_002.png",
+      "info_surface_final_fingerprint": "aac1af1b569f69dcb56033e01d7f99343c0620145ca55ce43458f95a836c4745",
+      "info_surface_final_sha256": "8c952976ad1b874a428068330122120d415554e36a9e94b3c8c11da319bf8f0d",
+      "image_path": "/app/data/jobs/94304/images/scene_002.png"
+    },
+    {
+      "scene_id": "chalk-flow-001",
+      "title": "관세 전달 경로",
+      "content": "검증용 장면: 관세가 비용 압력으로 전달되는 일반적인 경로를 보여줍니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "관세 전달 경로",
+        "scene_seed": "chalk-flow-001"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "v4 template gallery verification"
+      },
+      "causal_nodes": [
+        {
+          "label": "관세",
+          "value": "정책",
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "비용",
+          "value": "상승",
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "가격",
+          "value": "압력",
+          "emphasis": true,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        }
+      ],
+      "verdict_stamp": "USTR 확정",
+      "source_image_path": "/app/data/jobs/94304/images/scene_003_source.png",
+      "info_surface_plan": {
+        "scene_id": "chalk-flow-001",
+        "render_mode": "DIEGETIC_WARP",
+        "surface": {
+          "surface_kind": "chalkboard",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            43,
+            72,
+            57
+          ],
+          "marker_rgb_candidates": [],
+          "marker_delta_e_max": 30.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DIEGETIC_WARP",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [],
+        "detection": {
+          "quad": [
+            [
+              159.0,
+              118.0
+            ],
+            [
+              1236.0,
+              117.0
+            ],
+            [
+              1236.0,
+              874.0
+            ],
+            [
+              160.0,
+              874.0
+            ]
+          ],
+          "confidence": 0.7426,
+          "color_purity": 0.6795,
+          "border_match": 1.0,
+          "position_score": 0.6074,
+          "area_ratio": 0.3922,
+          "palette_collision": false
+        },
+        "timeline_mode": "original",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": null,
+        "source_image_path": "/app/data/jobs/94304/images/scene_003_source.png",
+        "final_image_path": "/app/data/jobs/94304/images/scene_003.png",
+        "hero_stat": null,
+        "chart_render_metadata": {
+          "bars": [],
+          "canvas_size": [
+            3177,
+            2233
+          ],
+          "diagram_supersample": {
+            "factor": 1.7361,
+            "final_output_scale": 0.55301,
+            "logical_xheight_px": 43.0,
+            "logical_stroke_px": 3.82,
+            "predicted_xheight_1080p_px": 19.97,
+            "predicted_stroke_1080p_px": 1.774,
+            "support_font_scale": 1.4421,
+            "support_stroke_scale": 1.7361,
+            "predicted_after_typography_xheight_1080p_px": 28.8,
+            "predicted_after_typography_stroke_1080p_px": 3.08,
+            "min_xheight_1080p_px": 24.0,
+            "min_stroke_1080p_px": 2.2
+          },
+          "diagram_render_size": [
+            3177,
+            2233
+          ]
+        },
+        "phase_b": null,
+        "template_id": "chalk_logic_class",
+        "diagram_kind": "flow_chalk",
+        "render_attempts": [
+          {
+            "outcome": "DIEGETIC_WARP",
+            "reason": null,
+            "render_mode": "DIEGETIC_WARP",
+            "source_sha256": "02dc1135acdeb54057e309f29dd24b1a8221fae32119e2a5cc27ea7c8d1c3cec",
+            "final_sha256": "2d94569b9780e6f8f0df916b1bfa1285d334339f142d72ad4fe83b555ff25430"
+          }
+        ]
+      },
+      "final_image_path": "/app/data/jobs/94304/images/scene_003.png",
+      "info_surface_final_fingerprint": "9f395bcb6a1d922e5ffe13aea364e105b1750f39e8df72fd38eba9d289caa98a",
+      "info_surface_final_sha256": "2d94569b9780e6f8f0df916b1bfa1285d334339f142d72ad4fe83b555ff25430",
+      "image_path": "/app/data/jobs/94304/images/scene_003.png"
+    }
+  ]
+}

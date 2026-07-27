@@ -23,7 +23,7 @@ from typing import Optional
 from app.workers.market_data_collector import MarketDataCollector
 from app.config import CLAUDE_MODEL, SCENE_DURATION_SEC
 from app import runtime_config
-from app.utils.quality_gate import enrich_scene_plans, assess_scene_plan
+from app.utils.quality_gate import enrich_scene_plans, assess_scene_plan, assess_script_house_style
 from app.utils.art_direction import direct_scenes, assess_art_diversity
 from app.utils.market_charts import extract_market_chart
 from app.services.info_surface.hero_stat import hero_stat_from_chart
@@ -43,6 +43,8 @@ from app.utils.sentence_splitter import split_sentences
 from app.workers.news_keyword_extractor import NewsKeywordExtractor
 from app.utils.keyword_aliases import normalise_terms
 from app.utils.script_delivery import annotate_sections, default_style_mix, validate_delivery
+from app.utils.narrative_planner import fallback_plan, plan_narrative
+from app.utils.flow_qa import review_flow
 from app.utils.elevenlabs_mapper import map_emotion_to_elevenlabs
 from app.utils.topic_evidence import is_market_level_forecast
 from app.services.verbatim_guard import validate as validate_verbatim
@@ -206,7 +208,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
 편집 원칙과 별도로 제공되는 오리지널 스토리텔링 프로필을 사용합니다.
 
 작성 원칙:
-- 친근하지만 전문적인 톤 (반말 아닌 존댓말, "~습니다/~해요" 혼용)
+- 친근하지만 전문적인 톤. 존댓말/반말 레지스터는 활성 하우스 스타일 프로필의 지시를 따른다.
 - <verified_facts>의 수치만 사용, 목록에 없는 구체적 수치는 절대 창작 금지
 - 수치를 자연스럽게 구어체로 표현: "코스닥이 785포인트를 기록했습니다"
 - 각 씬은 자연스럽게 다음 씬으로 연결
@@ -286,80 +288,98 @@ class ScriptWorker:
         self.collector = MarketDataCollector()
 
     def _call_llm_with_fallback(self, system_prompt: str, messages: list, max_tokens: int = 4000) -> str:
-        """Claude API를 먼저 호출하고, 크레딧 부족 등 실패 시 Gemini API로 자동 폴백합니다."""
-        # 1. Claude 시도
+        """프로젝트 고정 Claude 모델만 호출한다.
+
+        사실 검증·대본·수사 장치의 생성 경로를 다른 모델로 조용히 바꾸면
+        결과 재현성과 검증 경계가 무너진다. 호출 실패는 상위 게이트가 처리한다.
+        """
         anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-        if anthropic_key:
-            try:
-                from anthropic import Anthropic
-                from app.utils.anthropic_cache import cached_system, log_cache_usage
-                client = Anthropic(api_key=anthropic_key)
-                response = client.messages.create(
-                    model=CLAUDE_MODEL,
-                    max_tokens=max_tokens,
-                    system=cached_system(system_prompt),
-                    messages=messages
-                )
-                log_cache_usage(response, "script_worker")
-                content_text = "".join(block.text for block in response.content if hasattr(block, "text"))
-                if content_text:
-                    logger.info(f"Claude API 호출 성공 ({len(content_text)}자)")
-                    self._llm_provider_log.append({"provider": "claude", "fallback": False})
-                    return content_text
-            except Exception as e:
-                logger.error(f"Claude API 호출 실패: {e}. Gemini 폴백 시도합니다.")
-        
-        # 2. Gemini 폴백
-        self._llm_provider_log.append({"provider": "gemini", "fallback": True})
-        gemini_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_key:
-            raise RuntimeError("Claude 호출 실패 및 GEMINI_API_KEY가 설정되지 않아 진행할 수 없습니다.")
-        
-        logger.info("Gemini API 호출 시작 (모델: gemini-2.5-flash)...")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
-        
-        # convert messages list to gemini contents
-        contents = []
-        for msg in messages:
-            role = "user" if msg["role"] == "user" else "model"
-            content_text = msg["content"]
-            if isinstance(content_text, list):
-                content_text = "".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in content_text)
-            
-            contents.append({
-                "role": role,
-                "parts": [{"text": str(content_text)}]
-            })
-            
-        payload = {
-            "contents": contents,
-            "systemInstruction": {
-                "parts": [{"text": system_prompt}]
-            },
-            "generationConfig": {
-                "maxOutputTokens": max_tokens,
-                "temperature": 0.2
-            }
-        }
-        
+        if not anthropic_key:
+            raise RuntimeError("ANTHROPIC_API_KEY가 없어 고정 Claude 대본 경로를 실행할 수 없습니다.")
         try:
-            import requests
-            resp = requests.post(url, json=payload, timeout=90)
-            if resp.status_code == 200:
-                res_json = resp.json()
-                candidates = res_json.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts:
-                        gemini_content = parts[0].get("text", "")
-                        logger.info(f"Gemini API 호출 성공 ({len(gemini_content)}자)")
-                        return gemini_content
-                raise RuntimeError(f"Gemini 응답 구조 분석 실패: {res_json}")
-            else:
-                raise RuntimeError(f"Gemini API 오류 (status: {resp.status_code}): {resp.text}")
-        except Exception as e:
-            logger.error(f"Gemini API 호출 예외: {e}")
-            raise e
+            from anthropic import Anthropic
+            from app.utils.anthropic_cache import cached_system, log_cache_usage
+            client = Anthropic(api_key=anthropic_key)
+            response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=max_tokens,
+                system=cached_system(system_prompt),
+                messages=messages,
+            )
+            log_cache_usage(response, "script_worker")
+            content_text = "".join(block.text for block in response.content if hasattr(block, "text"))
+            if not content_text:
+                raise RuntimeError("Claude 응답에 텍스트가 없습니다.")
+            logger.info("Claude API 호출 성공 (%s자)", len(content_text))
+            self._llm_provider_log.append({"provider": "claude-sonnet-4-6", "fallback": False})
+            self._llm_call_count = getattr(self, "_llm_call_count", 0) + 1
+            return content_text
+        except Exception as exc:
+            logger.error("Claude API 호출 실패: %s", exc)
+            raise RuntimeError(f"Claude 대본 호출 실패: {exc}") from exc
+
+    @staticmethod
+    def _format_name(target_minutes: int) -> str:
+        return "shorts" if int(target_minutes or 0) <= 1 else "longform"
+
+    def _rewrite_sections_for_device(
+        self,
+        sections: list[dict],
+        verified_facts: list[dict],
+        *,
+        device: str,
+        format_name: str,
+    ) -> list[dict]:
+        """Claude로 수사 장치만 보강한다.
+
+        이 경로는 feature flag가 켜진 경우에만 실행한다. 숫자·날짜·회사명·인과
+        관계를 바꾸지 않는 JSON 씬 수정만 허용하며, 이후 결정론 숫자 게이트가
+        다시 검증한다.
+        """
+        source_rows = [
+            {"index": index, "text": str(section.get("content") or section.get("text") or "")}
+            for index, section in enumerate(sections)
+        ]
+        facts = json.dumps(verified_facts, ensure_ascii=False)
+        if device == "analogy":
+            instruction = (
+                "추상 금융 개념을 설명하는 씬에만, 매번 새로 만든 일상 비유를 한 개 추가하세요. "
+                "비유는 사실을 꾸미는 용도이며 금융 사실·수치·날짜·회사명·인과관계를 바꾸면 안 됩니다."
+            )
+        else:
+            instruction = (
+                "초보자가 헷갈릴 수 있는 한 줄 질문과 검증된 사실에 근거한 즉답을 자연스러운 전환 위치에 넣으세요. "
+                "숫자·날짜·회사명·인과관계는 추가·삭제·변경하면 안 됩니다."
+            )
+        system = """당신은 한국 금융 대본의 수사 장치 편집자입니다.
+지정된 장치만 보강하고, 특정 창작자·채널의 문장이나 시그니처를 흉내 내지 마세요.
+매수·매도·보유 지시나 과장 표현을 쓰지 마세요. JSON 배열만 반환하세요.
+각 원소는 {"index": 정수, "text": "수정된 한국어 대사"}여야 합니다."""
+        prompt = f"""형식: {format_name}
+검증 사실 묶음: {facts}
+작업: {instruction}
+씬: {json.dumps(source_rows, ensure_ascii=False)}"""
+        try:
+            raw = self._call_llm_with_fallback(system, [{"role": "user", "content": prompt}], max_tokens=5000)
+            match = re.search(r"\[[\s\S]*\]", raw)
+            edited = json.loads(match.group(0) if match else raw)
+            if not isinstance(edited, list):
+                return sections
+            replacements = {
+                int(item.get("index")): str(item.get("text") or "").strip()
+                for item in edited if isinstance(item, dict) and str(item.get("index", "")).isdigit()
+            }
+            changed = [dict(section) for section in sections]
+            for index, replacement in replacements.items():
+                if 0 <= index < len(changed) and replacement:
+                    changed[index]["content"] = replacement
+                    changed[index]["text"] = replacement
+                    changed[index]["char_count"] = len(replacement)
+            self._llm_provider_log.append({"provider": "claude-sonnet-4-6", "fallback": False, "purpose": f"house_style_{device}"})
+            return changed
+        except Exception as exc:
+            logger.warning("하우스 스타일 %s 보강 실패: %s", device, exc)
+            return sections
 
     def generate(self, keyword: str, category: str, target_minutes: int,
                  market_data: Optional[dict] = None, job_id: int = 0,
@@ -368,7 +388,10 @@ class ScriptWorker:
                  voice_id: Optional[str] = None) -> dict:
         category_label = CATEGORY_LABELS.get(category, "주식시장")
         self._llm_provider_log: list[dict] = []
+        self._llm_call_count = 0
         selected_terms = _selected_keyword_terms(keyword)
+        format_name = self._format_name(target_minutes)
+        house_style_enabled = bool(runtime_config.value("script_house_style_enabled"))
         speed = float(runtime_config.value("tts_speed"))
         length_contract = make_length_contract(
             target_minutes,
@@ -383,9 +406,8 @@ class ScriptWorker:
                     f"category={category}, target={target_minutes}분")
 
         api_key = os.environ.get("ANTHROPIC_API_KEY")
-        gemini_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key and not gemini_key:
-            logger.warning("ANTHROPIC_API_KEY 및 GEMINI_API_KEY 모두 미설정 — Mock 스크립트로 폴백")
+        if not api_key:
+            logger.warning("ANTHROPIC_API_KEY 미설정 — Mock 스크립트로 폴백")
             return self._mock_generate(keyword, category_label, target_minutes, job_id)
 
         # 시장 데이터 수집 (전달받지 못한 경우)
@@ -413,12 +435,52 @@ class ScriptWorker:
                 keyword, category_label, market_data, selected_terms, keyword_news
             )
 
+            try:
+                narrative_plan = plan_narrative(
+                    lambda system, messages, max_tokens: self._call_llm_with_fallback(system, messages, max_tokens),
+                    selected_terms=selected_terms,
+                    verified_facts=verified_facts,
+                    candidate_context={
+                        "category": category_label,
+                        "market_summary": _build_market_summary_for_script(market_data)[:2000],
+                        "news_titles": [str(row.get("title", ""))[:180] for row in keyword_news[:5]],
+                    },
+                    format_name=format_name,
+                ) if runtime_config.value("script_narrative_planning_enabled") else {
+                    "plan_id": "planning_disabled", "planner": "disabled", "story_beats": []
+                }
+            except Exception as exc:
+                logger.warning("내러티브 플랜 생성 실패: %s", exc)
+                narrative_plan = fallback_plan(selected_terms, verified_facts, format_name)
+
             # 검증된 사실 기반 스크립트 생성
             full_script, sections, meta_title, meta_thumb, meta_desc, meta_shorts = self._generate_with_verified_facts(
                 keyword, category_label, target_minutes, target_chars,
                 verified_facts, market_data, storytelling_profile,
-                selected_terms, keyword_news, length_contract,
+                selected_terms, keyword_news, length_contract, narrative_plan,
             )
+            # P2/P3은 사실 생성이 아닌 수사 장치 보강만 하며, 각각 최대 한 번의
+            # Claude 호출만 사용한다. 비활성화하면 기존 생성 결과를 그대로 둔다.
+            if house_style_enabled and runtime_config.value("script_pattern_analogy_enabled"):
+                sections = self._rewrite_sections_for_device(
+                    sections, verified_facts, device="analogy", format_name=format_name,
+                )
+            if house_style_enabled and runtime_config.value("script_pattern_fake_question_enabled"):
+                sections = self._rewrite_sections_for_device(
+                    sections, verified_facts, device="fake_reader_question", format_name=format_name,
+                )
+            full_script = _dedupe_adjacent_paragraphs(_narration_from_sections(sections))
+            try:
+                flow_qa = review_flow(
+                    lambda system, messages, max_tokens: self._call_llm_with_fallback(system, messages, max_tokens),
+                    script=full_script,
+                    narrative_plan=narrative_plan,
+                ) if runtime_config.value("script_flow_qa_enabled") else {
+                    "passed": True, "method": "disabled", "transition_issues": []
+                }
+            except Exception as exc:
+                logger.warning("대본 흐름 QA 실패: %s", exc)
+                flow_qa = {"passed": False, "method": "unavailable", "transition_issues": ["흐름 QA 호출 실패"]}
             sections = direct_scenes(enrich_scene_plans(sections))
             if data_visuals_enabled:
                 for scene in sections:
@@ -444,6 +506,8 @@ class ScriptWorker:
             sections = _validate_info_scene_payloads(sections)
             sections = direct_editorial_overlays(sections)
             verified_facts = []
+            narrative_plan = {"plan_id": "generation_fallback", "planner": "fallback", "story_beats": []}
+            flow_qa = {"passed": False, "method": "generation_fallback", "transition_issues": ["생성 실패"]}
             fact_check_log = [f"오류: {str(e)}"]
             used_real_llm = False
             meta_title = "제목 자동 생성 실패"
@@ -476,7 +540,17 @@ class ScriptWorker:
             scene_quality.setdefault("warnings", []).append("rejected_ungrounded_screen_text")
             scene_quality["rejected_scenes"] = rejected_scenes
         art_quality = assess_art_diversity(sections)
-        storytelling_quality = assess_storytelling(sections, full_script)
+        storytelling_quality = assess_storytelling(
+            sections, full_script, format_name=format_name, house_style_enabled=house_style_enabled,
+        )
+        house_style_quality = assess_script_house_style(
+            full_script,
+            format_name=format_name,
+            verified_facts=verified_facts,
+            enabled=house_style_enabled,
+            llm_labeling_enabled=bool(runtime_config.value("script_pattern_llm_labeling_enabled")),
+            number_traceability_required=bool(runtime_config.value("script_pattern_numbers_enabled")),
+        )
         keyword_validation = _validate_keyword_coverage(full_script, selected_terms)
         if not keyword_validation["passed"]:
             raise ScriptResearchRequiredError(
@@ -502,16 +576,24 @@ class ScriptWorker:
             "market_snapshot": market_data or {},
             "used_real_llm": used_real_llm,
             "llm_provider_log": self._llm_provider_log,
-            "requires_manual_review": bool(rejected_scenes) or any(item.get("fallback") for item in self._llm_provider_log),
+            "llm_call_count": self._llm_call_count,
+            "narrative_plan": narrative_plan,
+            "flow_qa": flow_qa,
+            "requires_manual_review": (
+                bool(rejected_scenes)
+                or any(item.get("fallback") for item in self._llm_provider_log)
+                or not house_style_quality["passed"]
+                or not flow_qa["passed"]
+            ),
             "storytelling_profile": DEFAULT_SCRIPT_STYLE_PROFILE,
-            "style_mix_applied": default_style_mix("KOSPI"),
-            "structure": "LONGFORM_KISUNGJEONGYEOL_v1",
             "style_mix_applied": default_style_mix(category),
-            "structure": "LONGFORM_KISUNGJEONGYEOL_v1",
+            "structure": narrative_plan.get("plan_id", "adaptive_plan"),
             "quality_report": {
                 "scene_plan": scene_quality,
                 "art_direction": art_quality,
                 "storytelling": storytelling_quality,
+                "house_style": house_style_quality,
+                "flow": flow_qa,
                 "delivery": delivery_validation,
                 "screen_text": {"passed": not rejected_scenes, "rejected_scenes": rejected_scenes},
             },
@@ -579,16 +661,16 @@ class ScriptWorker:
                                        storytelling_profile: str = DEFAULT_SCRIPT_STYLE_PROFILE,
                                        selected_terms: Optional[list[str]] = None,
                                        keyword_news: Optional[list[dict]] = None,
-                                       length_contract: Optional[dict] = None):
+                                       length_contract: Optional[dict] = None,
+                                       narrative_plan: Optional[dict] = None):
         facts_text = "\n".join(f"- {f['fact']} (상세 정보: {f.get('figure', 'N/A')}, 출처: {f.get('source_field', 'N/A')}, 신뢰도: {f.get('confidence', 0):.2f})" for f in verified_facts)
         market_summary = _build_market_summary_for_script(market_data)
         selected_terms = selected_terms or _selected_keyword_terms(keyword)
         keyword_news = keyword_news or []
-        style_mix = default_style_mix("US_STOCKS" if "US" in category_label.upper() else "KOSPI")
+        narrative_plan = narrative_plan or {"plan_id": "adaptive_plan", "story_beats": []}
         style_instruction = (
-            "Use 10 or more small curiosity-to-answer turns across the long-form narration."
-            if style_mix["economic_hunter"] >= 0.6 else
-            "Use concise evidence-led explanation with a transition every few scenes."
+            "정보 공개 간격과 전환 횟수는 내러티브 플랜의 선택 근거와 검증 사실의 밀도에 맞춰 정한다. "
+            "정해진 질문 수나 반전 횟수를 채우기 위해 문장을 추가하지 않는다."
         )
         evidence_text = "\n".join(
             f"- [{row.get('matched_keyword', '')}] {row.get('title', '')} ({row.get('source', '')})"
@@ -600,6 +682,7 @@ class ScriptWorker:
 <verified_facts>{facts_text}</verified_facts>
 <market_context>{market_summary}</market_context>
 <keyword_news_evidence>{evidence_text}</keyword_news_evidence>
+<narrative_plan>{json.dumps(narrative_plan, ensure_ascii=False)}</narrative_plan>
 작성 규칙:
 - [대사], [비주얼 설명 (한국어)], [비주얼 프롬프트 (영어)], [감정] 포함
 - [대사] 블록만 합산해 공백 제외 약 {target_chars}자(±8%)로 작성. 비주얼 설명·영문 프롬프트·메타데이터는 이 분량에 포함하지 않음
@@ -607,16 +690,22 @@ class ScriptWorker:
 - Mention every distinctive entity, concept, and time qualifier contained in the selected topic naturally at least once. The category is the analytical lens, not a substitute for the selected topic.
 - Use unit-safe facts only: percentages use '퍼센트', index or price changes use '포인트'; never call a percentage a point value.
 - Write continuous, readable narration. Image scenes are derived after narration is complete; do not pad, shorten, or duplicate narration to reach a scene count.
-- Use the four delivery phases: Hook (first 8%), Context (to 55%), Twist (to 85%), Resolution (final 15%). {style_instruction}
+- 내러티브 플랜의 story_beats 순서·전환 목표를 따른다. 플랜은 고정 문구나 고정 비율이 아니라 소재에 맞춘 편집 의도다. 사실의 자연스러운 설명에 필요하면 인접 비트를 합치거나 짧게 조절할 수 있지만, 새 사실을 만들지 않는다. {style_instruction}
+- 앞 문장이 질문이면 바로 다음 문장 또는 다음 씬에서 검증 사실로 답한다. 같은 사실은 역할이 달라질 때만 다시 언급한다. 마지막은 도입을 반복하지 말고, 플랜의 체크포인트를 자연스럽게 정리한다.
 - Improve only voice, pacing, transitions, and listener comprehension. Do not add, remove, substitute, or reinterpret any verified fact, number, date, company, source, or causal relationship.
 - 마지막에 ## 메타데이터 섹션 추가 ([추천 제목], [추천 썸네일], [더보기 설명], [쇼츠 대본])
 - 쇼츠 대본은 본 영상의 핵심만 30초 내외로 요약한 강렬한 문장으로 작성
 목표 영상 길이: {target_minutes}분 / TTS 배속: {(length_contract or {}).get('tts_speed', 1.0)}x"""
 
+        style_guide = get_script_style_guide(
+            storytelling_profile,
+            format_name=self._format_name(target_minutes),
+            house_style_enabled=bool(runtime_config.value("script_house_style_enabled")),
+        )
         for attempt in range(3):
             try:
                 full_text = self._call_llm_with_fallback(
-                    f"{SCRIPT_SYSTEM_PROMPT}\n\n{get_script_style_guide(storytelling_profile)}",
+                    f"{SCRIPT_SYSTEM_PROMPT}\n\n{style_guide}",
                     [{"role": "user", "content": user_prompt}],
                     max_tokens=8000,
                 )
@@ -684,12 +773,16 @@ class ScriptWorker:
             "market_snapshot_used": False,
             "market_snapshot": {},
             "used_real_llm": False,
+            "llm_call_count": 0,
+            "narrative_plan": {"plan_id": "mock", "planner": "mock", "story_beats": []},
+            "flow_qa": {"passed": False, "method": "mock", "transition_issues": ["Mock 대본"]},
             "requires_manual_review": True,
             "storytelling_profile": DEFAULT_SCRIPT_STYLE_PROFILE,
             "quality_report": {
                 "scene_plan": assess_scene_plan(sections),
                 "art_direction": assess_art_diversity(sections),
                 "storytelling": assess_storytelling(sections, script_text),
+                "flow": {"passed": False, "method": "mock"},
                 "delivery": validate_delivery(sections),
                 "reason": "API 키 미설정 Mock 대본 — 자동 진행 금지",
             },

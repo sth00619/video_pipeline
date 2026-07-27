@@ -1,0 +1,60 @@
+{
+  "model": "claude-sonnet-4-6",
+  "topic": "미국 기준금리 동결",
+  "facts_source": "Federal Reserve FOMC statement, 2026-06-17",
+  "iterations": [
+    {
+      "iteration": 1,
+      "result": "게이트 실패",
+      "hard_failure": "BANMAL_REGISTER_BELOW_MINIMUM",
+      "measured": {
+        "banmal_ratio": 0.7647,
+        "sentence_chars_mean": 14.29,
+        "analogy_coverage": 0.5,
+        "numbers_traceable": "5/5"
+      }
+    },
+    {
+      "iteration": 2,
+      "result": "게이트 실패",
+      "hard_failure": "MISSING_NUMBER_FIRST_HOOK",
+      "measured": {
+        "banmal_ratio": 0.9091,
+        "sentence_chars_mean": 26.36,
+        "analogy_coverage": 0.0,
+        "numbers_traceable": "4/4"
+      }
+    },
+    {
+      "iteration": 3,
+      "result": "사실 경계 편집 후 초기 통과",
+      "hard_failures": 0,
+      "advisories": 0,
+      "measured": {
+        "banmal_ratio": 1.0,
+        "sentence_chars_mean": 26.42,
+        "analogy_coverage": 1.0,
+        "opening_three_sentence_number_count": 2,
+        "numbers_traceable": "8/8",
+        "buy_sell_directives": 0,
+        "hype": 0
+      }
+    },
+    {
+      "iteration": 4,
+      "result": "실제 레퍼런스 비교 격차 보완 후 최종 통과",
+      "hard_failures": 0,
+      "advisories": 0,
+      "measured": {
+        "banmal_ratio": 0.9286,
+        "sentence_chars_mean": 25.5,
+        "short_emphasis_ratio": 0.2857,
+        "analogy_coverage": 1.0,
+        "opening_three_sentence_number_count": 2,
+        "numbers_traceable": "8/8",
+        "buy_sell_directives": 0,
+        "hype": 0
+      }
+    }
+  ]
+}

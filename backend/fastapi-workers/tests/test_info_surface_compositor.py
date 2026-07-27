@@ -35,6 +35,66 @@ def test_diegetic_supersample_is_derived_from_quad_size():
     assert large_result["final_output_scale"] > small_result["final_output_scale"]
 
 
+def test_compositor_keeps_larger_diagram_canvas_without_pre_shrink():
+    source, marker, border = _input()
+    contract = SurfaceContract(surface_kind="hanging_tag", marker_rgb=marker, border_rgb=border, area_ratio_min=.05, area_ratio_max=.35, preferred_region={"x": .45, "y": .10, "width": .48, "height": .72})
+    detection = detect_surface_quad(source, contract)
+    assert detection is not None
+    plan = InfoSurfacePlan(scene_id="large-diagram", render_mode="DIEGETIC_WARP", surface=contract, items=[InfoItem(item_id="chart", role="chart")])
+    chart = {"verified": True, "source_ref": "fixture", "visual_kind": "indexed_comparison", "label": "비용", "comparison_basis": "2026-07-21 = 100", "comparison_values": [{"label": "기준", "value": 100}, {"label": "절감", "value": 72}]}
+    content = Image.new("RGBA", (2200, 1800), (0, 0, 0, 0))
+    composite_planar(Image.fromarray(cv2.cvtColor(source, cv2.COLOR_BGR2RGB)), chart, plan, detection, content_override=content)
+    assert plan.chart_render_metadata["canvas_size"] == [2200, 1800]
+
+
+def test_compositor_uses_narrative_override_without_hero_stat_values():
+    source, marker, border = _input()
+    contract = SurfaceContract(surface_kind="monitor", marker_rgb=marker, border_rgb=border, area_ratio_min=.05, area_ratio_max=.35, preferred_region={"x": .45, "y": .10, "width": .48, "height": .72})
+    detection = detect_surface_quad(source, contract)
+    assert detection is not None
+    plan = InfoSurfacePlan(scene_id="map-clouds", render_mode="DIEGETIC_WARP", surface=contract, items=[InfoItem(item_id="chart", role="chart")], diagram_kind="map_clouds")
+    chart = {"verified": True, "source_ref": "fixture", "external_rates": [{"label": "전기차", "value": "100%"}]}
+    content = Image.new("RGBA", (800, 600), (0, 0, 0, 0))
+    result = composite_planar(Image.fromarray(cv2.cvtColor(source, cv2.COLOR_BGR2RGB)), chart, plan, detection, content_override=content)
+    assert result.size == (960, 540)
+    assert plan.chart_render_metadata["bars"] == []
+
+
+def test_template_surface_does_not_mask_deterministic_ink_with_generated_texture():
+    source, marker, border = _input()
+    contract = SurfaceContract(surface_kind="monitor", marker_rgb=marker, border_rgb=border, area_ratio_min=.05, area_ratio_max=.35, preferred_region={"x": .45, "y": .10, "width": .48, "height": .72})
+    detection = detect_surface_quad(source, contract)
+    assert detection is not None
+    # 소스의 체인처럼 보드 바깥 요소가 있어도 템플릿 표면의 잉크는 보존한다.
+    plan = InfoSurfacePlan(scene_id="template-ink", render_mode="DIEGETIC_WARP", surface=contract, template_id="vault_stages", items=[InfoItem(item_id="chart", role="chart")])
+    content = Image.new("RGBA", (1200, 900), (0, 0, 0, 0))
+    from PIL import ImageDraw
+    ImageDraw.Draw(content).rectangle((250, 250, 950, 650), fill=(255, 0, 0, 255))
+    result = composite_planar(Image.fromarray(cv2.cvtColor(source, cv2.COLOR_BGR2RGB)), {"verified": True}, plan, detection, content_override=content)
+    red = np.asarray(result.convert("RGB"))[:, :, 0]
+    assert int((red > 180).sum()) > 1000
+
+
+def test_detector_accepts_template_marker_color_alternative():
+    image = np.full((540, 960, 3), (34, 48, 61), dtype=np.uint8)
+    cv2.rectangle(image, (120, 90), (620, 420), (24, 18, 12), -1)
+    # 생성 조명에 따라 밝은 청색 모니터가 청록으로 내려간 실제 v4 사례.
+    cv2.rectangle(image, (130, 100), (610, 410), (188, 183, 138), -1)
+    contract = SurfaceContract(
+        surface_kind="monitor",
+        marker_rgb=(216, 240, 248),
+        marker_rgb_candidates=[(138, 183, 188)],
+        marker_delta_e_max=12,
+        border_rgb=(7, 26, 58),
+        area_ratio_min=.10,
+        area_ratio_max=.55,
+        preferred_region={"x": .05, "y": .08, "width": .65, "height": .75},
+    )
+    detection = detect_surface_quad(image, contract)
+    assert detection is not None
+    assert detection.confidence >= .55
+
+
 def test_warp_keeps_chain_above_verified_ink():
     source, marker, border = _input()
     contract = SurfaceContract(surface_kind="hanging_tag", marker_rgb=marker, border_rgb=border, area_ratio_min=.05, area_ratio_max=.35, preferred_region={"x": .45, "y": .10, "width": .48, "height": .72})

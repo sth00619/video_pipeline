@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:42:00.060843+00:00"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:42:32.075037+00:00",
+      "scene_key": "template_regen:0"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:42:33.414924+00:00"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:42:36.904967+00:00",
+      "scene_key": "template_regen:3"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:42:38.051208+00:00"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:43:34.584686+00:00",
+      "scene_key": "template_regen:1"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-07-26T15:43:35.861743+00:00"
+    }
+  ],
+  "total_krw": 1316,
+  "budget_overrun_krw": 0
+}

@@ -12,6 +12,41 @@ from typing import Any
 
 DEFAULT_SCRIPT_STYLE_PROFILE = "original_finance_storyteller_v1"
 
+# 특정 채널의 문체가 아닌, 검증 가능한 편집 장치만 정의한 하우스 스타일이다.
+# signature_phrases는 권리 검수를 마친 사람이 별도 설정으로 추가한다.
+HOUSE_STYLE_V1 = {
+    "register": {
+        "person": "banmal_2nd",
+        "audience_terms": ["님들", "우리", "너"],
+        "stake_framing": ["우리 계좌", "내 돈"],
+    },
+    "required_devices": {
+        "longform": ["D1", "D2", "D4", "D5", "D6", "D8", "ending_nondirective"],
+        "shorts": ["D1", "D4", "twist", "D6", "D8", "ending_nondirective"],
+        "min_counts": {
+            "fake_reader_q_longform": 2,
+            "fake_reader_q_shorts": 1,
+            "analogy_coverage_ratio": 0.8,
+            "fear_reframe_longform": 1,
+        },
+    },
+    "banned": {
+        "signature_phrases": [],
+        "buy_sell_verbs": ["매수", "매도", "사라", "팔아라", "담아라", "익절", "손절하라"],
+        "hype": ["무조건 폭락", "무조건 급등", "확실하게 오른다", "지금 안 사면 후회"],
+    },
+    "hook_types": ["number_shock", "number_first", "question", "contrast", "loss_aversion", "belief_reversal"],
+    # 제공된 측정 보충 노트에서 확정한 주식 타깃의 구조 수치다. 특정 채널의
+    # 문장·표현을 복제하지 않고, 생성물의 호흡과 오프닝만 비교한다.
+    "benchmark_stock_targets": {
+        "banmal_ratio_min": 0.8,
+        "opening_number_within_first_three_min": 1,
+        "number_shock_or_direct_address_required": True,
+        "shorts_sentence_chars_min": 25,
+        "shorts_sentence_chars_max": 35,
+    },
+}
+
 FINANCE_STORYTELLER_GUIDE = """
 <editorial_style_profile name="original_finance_storyteller_v1">
 Write an original Korean finance-storytelling script. Do not imitate, name,
@@ -55,14 +90,48 @@ Integrity rules:
 """.strip()
 
 
-def get_script_style_guide(profile: str | None = None) -> str:
+def get_script_style_guide(
+    profile: str | None = None,
+    *,
+    format_name: str = "longform",
+    house_style_enabled: bool = False,
+) -> str:
     """Return the supported original profile, safely falling back to default."""
     # Keeping one explicit profile makes future approved house-style variants
     # additive without allowing unreviewed creator imitation through a request.
-    return FINANCE_STORYTELLER_GUIDE
+    if not house_style_enabled:
+        return FINANCE_STORYTELLER_GUIDE
+
+    required = HOUSE_STYLE_V1["required_devices"].get(format_name, HOUSE_STYLE_V1["required_devices"]["longform"])
+    return f"""{FINANCE_STORYTELLER_GUIDE}
+
+<house_style_rules>
+이 규칙은 특정 창작자의 문장이나 시그니처를 따라 하라는 뜻이 아니다.
+검증된 사실을 설명하는 우리 채널의 편집 규칙으로만 사용한다.
+
+- 레지스터: 반말 2인칭으로 자연스럽게 말한다. "님들", "우리", "너"를 과용하지 말고,
+  사실의 영향을 "우리 계좌" 또는 "내 돈" 관점으로 연결할 때만 사용한다.
+- 필수 장치: {", ".join(required)}.
+- D1은 첫 3초 안에 검증된 숫자 하나와 질문 또는 대조를 함께 둔다. 숫자는 verified_facts의 값만 쓴다.
+- 쇼츠는 첫 3문장 안에 검증된 숫자를 하나 이상 두고, 숫자 쇼크 또는 "님들" 같은 직접 호명 중 하나로 시작한다.
+- 쇼츠의 평균 문장 길이는 대체로 25~35자로 유지하되, 숫자 쇼크 한 문장은 더 짧을 수 있다.
+- D2는 롱폼에서만 초반에 일반적인 말로 오늘 다룰 항목 수를 예고한다.
+- D3은 초보자가 헷갈릴 질문 한 줄을 새로 만들고, 바로 검증된 근거로 답한다.
+- D4 비유는 추상 개념의 이해를 돕는 새 일상 비유만 쓴다. 다른 대본의 비유나 표현을 재사용하지 않는다.
+- D5는 불안한 해석을 제시하되 공포 조장으로 끝내지 말고, 해석을 바꾸는 검증 조건을 제시한다.
+- D6은 확인할 체크포인트 목록을 만들되 매수·매도 지시로 연결하지 않는다.
+- D8은 남의 뉴스가 시청자의 판단에 왜 중요한지 연결하되 수익을 보장하지 않는다.
+- 결말은 매수·매도·보유 지시가 아니라 다음에 확인할 조건 또는 지표로 끝낸다.
+</house_style_rules>""".strip()
 
 
-def assess_storytelling(sections: list[dict[str, Any]], script: str) -> dict[str, Any]:
+def assess_storytelling(
+    sections: list[dict[str, Any]],
+    script: str,
+    *,
+    format_name: str = "longform",
+    house_style_enabled: bool = False,
+) -> dict[str, Any]:
     """Provide transparent editorial QA without judging factual correctness.
 
     Scores are intentionally diagnostic: they flag a script that reads like an
@@ -74,7 +143,7 @@ def assess_storytelling(sections: list[dict[str, Any]], script: str) -> dict[str
     normalized = re.sub(r"\s+", " ", source)
     sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", normalized) if s.strip()]
     question_count = sum("?" in s for s in sentences)
-    direct_address_count = len(re.findall(r"(?:여러분|지금|우리가|보시면|생각해\s*볼)", normalized))
+    direct_address_count = len(re.findall(r"(?:여러분|님들|우리|너|지금|우리가|보시면|생각해\s*볼)", normalized))
     transition_count = len(re.findall(r"(?:그런데|반대로|다만|그래서|문제는|여기서)", normalized))
     figure_count = len(re.findall(r"\d", normalized))
     avg_length = round(sum(len(s.replace(" ", "")) for s in sentences) / len(sentences), 1) if sentences else 0
@@ -98,7 +167,7 @@ def assess_storytelling(sections: list[dict[str, Any]], script: str) -> dict[str
     if not signals["closing_monitoring_point"]:
         suggestions.append("마지막에 매수·매도 지시 대신 다음에 확인할 지표를 남기세요.")
 
-    return {
+    result = {
         "profile": DEFAULT_SCRIPT_STYLE_PROFILE,
         "score": score,
         "signals": signals,
@@ -110,3 +179,11 @@ def assess_storytelling(sections: list[dict[str, Any]], script: str) -> dict[str
         },
         "suggestions": suggestions,
     }
+    if house_style_enabled:
+        result["house_style"] = {
+            "enabled": True,
+            "format": format_name,
+            "required_devices": HOUSE_STYLE_V1["required_devices"].get(format_name, []),
+            "register": HOUSE_STYLE_V1["register"]["person"],
+        }
+    return result

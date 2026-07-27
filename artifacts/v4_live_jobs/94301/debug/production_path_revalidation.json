@@ -71,6 +71,8 @@
       "predicted_stroke_1080p_px": 1.842,
       "support_font_scale": 1.4221,
       "support_stroke_scale": 3.5833,
+      "predicted_after_typography_xheight_1080p_px": 28.8,
+      "predicted_after_typography_stroke_1080p_px": 6.6,
       "min_xheight_1080p_px": 24.0,
       "min_stroke_1080p_px": 3.0
     },
@@ -80,5 +82,5 @@
     ]
   },
   "source_sha256": "517d8e868a3d80aed3b5ff35c2d351b54342bd8dfe8f72787c0213ce54343984",
-  "final_sha256": "a532031f083c751407b2d698e2d9959af3c803820d612ce0a60fad73f79fc767"
+  "final_sha256": "6949d92c9eb6f08ca8022472838edc62d9bae9751c070b0f505936bf693c2004"
 }

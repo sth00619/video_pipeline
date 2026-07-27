@@ -1,0 +1,414 @@
+{
+  "report_date": "2026-07-27",
+  "reference_input": {
+    "benchmark_stock_count": 4,
+    "general_econ_count": 6,
+    "handling": "원문은 보고서 JSON과 Markdown에 저장하지 않고 메모리에서 수치만 분석"
+  },
+  "reference_samples": [
+    {
+      "name": "하락장",
+      "channel": "benchmark_stock",
+      "character_count": 7317,
+      "hook": "number_first",
+      "sent_len_mean": 30.49,
+      "sent_len_p90": 53,
+      "banmal_ratio": 0.8875,
+      "number_density_per_100_chars": 1.64,
+      "devices": {
+        "D1": true,
+        "D3": true,
+        "D4": true,
+        "D5": true,
+        "D6": false,
+        "D8": false,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 6,
+        "banned_phrase_count": 0,
+        "hype_count": 1,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "구글_반도체",
+      "channel": "benchmark_stock",
+      "character_count": 7650,
+      "hook": "question",
+      "sent_len_mean": 38.83,
+      "sent_len_p90": 68,
+      "banmal_ratio": 0.797,
+      "number_density_per_100_chars": 1.1895,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": true,
+        "D6": true,
+        "D8": false,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 5,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "코스피_한달",
+      "channel": "benchmark_stock",
+      "character_count": 9852,
+      "hook": "number_first",
+      "sent_len_mean": 30.69,
+      "sent_len_p90": 58,
+      "banmal_ratio": 0.7975,
+      "number_density_per_100_chars": 1.8169,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": true,
+        "D8": true,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 4,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "1600달러",
+      "channel": "benchmark_stock",
+      "character_count": 6933,
+      "hook": "number_shock",
+      "sent_len_mean": 25.4,
+      "sent_len_p90": 47,
+      "banmal_ratio": 0.7436,
+      "number_density_per_100_chars": 3.4184,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": false,
+        "D8": false,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 1,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "인도_이미지",
+      "channel": "general_econ",
+      "character_count": 6219,
+      "hook": "question",
+      "sent_len_mean": 30.79,
+      "sent_len_p90": 54,
+      "banmal_ratio": 0.1733,
+      "number_density_per_100_chars": 0.3538,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": false,
+        "D8": false,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 1,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "롤렉스",
+      "channel": "general_econ",
+      "character_count": 5797,
+      "hook": "none",
+      "sent_len_mean": 25.31,
+      "sent_len_p90": 45,
+      "banmal_ratio": 0.1747,
+      "number_density_per_100_chars": 0.552,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": false,
+        "D8": false,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 0,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "대표팀_32강",
+      "channel": "general_econ",
+      "character_count": 7463,
+      "hook": "number_first",
+      "sent_len_mean": 40.56,
+      "sent_len_p90": 80,
+      "banmal_ratio": 0.1141,
+      "number_density_per_100_chars": 0.4824,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": false,
+        "D8": false,
+        "twist": false
+      },
+      "safety": {
+        "buy_sell_directive_count": 0,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "한국호감도",
+      "channel": "general_econ",
+      "character_count": 8524,
+      "hook": "none",
+      "sent_len_mean": 41.99,
+      "sent_len_p90": 76,
+      "banmal_ratio": 0.1232,
+      "number_density_per_100_chars": 0.5162,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": false,
+        "D8": false,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 0,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "홈플러스",
+      "channel": "general_econ",
+      "character_count": 8400,
+      "hook": "none",
+      "sent_len_mean": 52.5,
+      "sent_len_p90": 89,
+      "banmal_ratio": 0.0938,
+      "number_density_per_100_chars": 0.5952,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": false,
+        "D8": true,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 4,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    },
+    {
+      "name": "짱구_일본식문화",
+      "channel": "general_econ",
+      "character_count": 5903,
+      "hook": "question",
+      "sent_len_mean": 21.31,
+      "sent_len_p90": 37,
+      "banmal_ratio": 0.2744,
+      "number_density_per_100_chars": 0.559,
+      "devices": {
+        "D1": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": false,
+        "D8": false,
+        "twist": true
+      },
+      "safety": {
+        "buy_sell_directive_count": 0,
+        "banned_phrase_count": 0,
+        "hype_count": 0,
+        "reference_ngram_similarity": 0.0,
+        "method": "deterministic"
+      }
+    }
+  ],
+  "generated": {
+    "name": "이번 실제 생성 대본",
+    "channel": "generated",
+    "character_count": 357,
+    "hook": "number_first",
+    "sent_len_mean": 25.5,
+    "sent_len_p90": 36,
+    "banmal_ratio": 0.9286,
+    "number_density_per_100_chars": 2.2409,
+    "devices": {
+      "D1": true,
+      "D3": true,
+      "D4": true,
+      "D5": false,
+      "D6": true,
+      "D8": true,
+      "twist": true
+    },
+    "safety": {
+      "buy_sell_directive_count": 0,
+      "banned_phrase_count": 0,
+      "hype_count": 0,
+      "reference_ngram_similarity": 0.0,
+      "method": "deterministic"
+    }
+  },
+  "baseline": {
+    "version": "reference_baseline.v1",
+    "groups": {
+      "benchmark_stock:longform": {
+        "sample_count": 4,
+        "metrics": {
+          "fake_reader_q_per_1k": {
+            "count": 4,
+            "p10": 0.547,
+            "p50": 1.442,
+            "p90": 1.827
+          },
+          "analogy_per_1k": {
+            "count": 4,
+            "p10": 0.915,
+            "p50": 1.503,
+            "p90": 2.03
+          },
+          "analogy_coverage": {
+            "count": 4,
+            "p10": 0.0526,
+            "p50": 0.1321,
+            "p90": 0.25
+          },
+          "banmal_ratio": {
+            "count": 4,
+            "p10": 0.7436,
+            "p50": 0.7975,
+            "p90": 0.8875
+          },
+          "second_person_per_1k": {
+            "count": 4,
+            "p10": 1.961,
+            "p50": 2.538,
+            "p90": 4.373
+          },
+          "stake_framing_count": {
+            "count": 4,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 3.0
+          },
+          "short_emphasis_ratio": {
+            "count": 4,
+            "p10": 0.2183,
+            "p50": 0.2804,
+            "p90": 0.3919
+          },
+          "connective_variety": {
+            "count": 4,
+            "p10": 0.625,
+            "p50": 0.875,
+            "p90": 1.0
+          }
+        }
+      },
+      "general_econ:longform": {
+        "sample_count": 6,
+        "metrics": {
+          "fake_reader_q_per_1k": {
+            "count": 6,
+            "p10": 0.119,
+            "p50": 0.235,
+            "p90": 0.847
+          },
+          "analogy_per_1k": {
+            "count": 6,
+            "p10": 0.643,
+            "p50": 2.07,
+            "p90": 2.68
+          },
+          "analogy_coverage": {
+            "count": 6,
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0
+          },
+          "short_emphasis_ratio": {
+            "count": 6,
+            "p10": 0.0938,
+            "p50": 0.1957,
+            "p90": 0.4148
+          },
+          "connective_variety": {
+            "count": 6,
+            "p10": 0.25,
+            "p50": 0.5,
+            "p90": 0.75
+          }
+        }
+      }
+    }
+  },
+  "stock_bands": {
+    "sent_len_mean": {
+      "p10": 25.4,
+      "p50": 30.69,
+      "p90": 38.83
+    },
+    "short_emphasis_ratio": {
+      "count": 4,
+      "p10": 0.2183,
+      "p50": 0.2804,
+      "p90": 0.3919
+    },
+    "banmal_ratio": {
+      "count": 4,
+      "p10": 0.7436,
+      "p50": 0.7975,
+      "p90": 0.8875
+    },
+    "second_person_per_1k": {
+      "count": 4,
+      "p10": 1.961,
+      "p50": 2.538,
+      "p90": 4.373
+    }
+  }
+}

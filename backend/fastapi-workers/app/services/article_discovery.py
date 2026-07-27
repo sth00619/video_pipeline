@@ -7,11 +7,13 @@ import re
 from datetime import datetime
 from typing import Iterable
 
-import httpx
-
-from app.config import NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
 from app.models.article_evidence import ArticleCandidate
 from app import runtime_config
+from app.services.naver_api_hub import (
+    NaverApiHubClient,
+    NaverApiHubUnavailable,
+    naver_api_hub_configured,
+)
 from app.services.article.source_policy import publisher_for_url
 
 logger = logging.getLogger(__name__)
@@ -26,28 +28,22 @@ def _clean(value: str) -> str:
 
 
 class ArticleDiscoveryService:
-    """Naver News API adapter; credentials remain entirely environment-owned."""
-
-    endpoint = "https://openapi.naver.com/v1/search/news.json"
+    """NAVER API HUB 뉴스 검색 결과를 기사 후보로 변환한다."""
 
     def discover(self, query: str, terms: Iterable[str] = (), limit: int = 10) -> list[ArticleCandidate]:
-        if not NAVER_CLIENT_ID or not NAVER_CLIENT_SECRET:
-            raise ArticleDiscoveryUnavailable("NAVER_CLIENT_ID/NAVER_CLIENT_SECRET are not configured")
+        if not naver_api_hub_configured():
+            raise ArticleDiscoveryUnavailable("NAVER API HUB 뉴스 검색이 설정되지 않았습니다")
         query = _clean(query)
         if not query:
             return []
         limit = max(1, min(int(limit), 30))
-        response = httpx.get(
-            self.endpoint,
-            params={"query": query, "display": limit, "sort": "date"},
-            headers={"X-Naver-Client-Id": NAVER_CLIENT_ID, "X-Naver-Client-Secret": NAVER_CLIENT_SECRET},
-            timeout=12,
-            follow_redirects=False,
-        )
-        response.raise_for_status()
+        try:
+            payload = NaverApiHubClient().search_news(query, display=limit, sort="date")
+        except NaverApiHubUnavailable as exc:
+            raise ArticleDiscoveryUnavailable(str(exc)) from exc
         tokens = [term.lower() for term in terms if _clean(term)] or [query.lower()]
         results: list[ArticleCandidate] = []
-        for item in response.json().get("items", []):
+        for item in payload.get("items", []):
             title = _clean(item.get("title", ""))
             summary = _clean(item.get("description", ""))
             url = str(item.get("originallink") or item.get("link") or "").strip()

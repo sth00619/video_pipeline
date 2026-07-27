@@ -763,8 +763,7 @@ class ImagesWorker:
                                         gemini_image_size=image_profile.get("image_size"), gemini_service_tier=runtime_config.value("gemini_service_tier"),
                                         gemini_max_attempts=1, gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"), style_locked=bool(spec),
                                     )
-                                    import shutil
-                                    shutil.copy2(raw_img_path, img_path)
+                                    self._replace_with_regenerated_surface_source(scene, raw_img_path, img_path)
                                     record_cost(job_id, "pro" if image_profile.get("tier") == "pro" else "flash", scene_key=f"template_regen:{i}")
                                     self._apply_image_overlays(scene, img_path)
                                 quality_score = 95 if lora_model_id else 90
@@ -822,6 +821,7 @@ class ImagesWorker:
                                 import shutil
                                 shutil.copy2(img_path, var_img_path)
 
+                    record_cost(job_id, "pro" if image_profile.get("tier") == "pro" else "flash", scene_key=f"image:{i}")
                     generated.append({
                         **scene,
                         "index": i,
@@ -1126,7 +1126,7 @@ class ImagesWorker:
                                 gemini_image_size=image_profile.get("image_size"), gemini_service_tier=runtime_config.value("gemini_service_tier"),
                                 gemini_max_attempts=1, gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"), style_locked=bool(ctx["spec"]),
                             )
-                            shutil.copy2(raw_img_path, img_path)
+                            self._replace_with_regenerated_surface_source(ctx, raw_img_path, img_path)
                             record_cost(job_id, "pro" if tier == "pro" else "flash", scene_key=f"template_regen:{index}")
                             self._apply_image_overlays(ctx, img_path)
                         
@@ -1650,6 +1650,26 @@ class ImagesWorker:
             return
         self._normalize_canvas(img_path)
         self._apply_info_surface_plan(scene, img_path)
+
+    def _replace_with_regenerated_surface_source(self, scene: dict, raw_img_path: str, img_path: str) -> None:
+        """재생성된 보드를 다음 검출·워프의 새 원본으로 확정한다.
+
+        v4 보드 검출 실패 뒤 재생성하는 경우 이전 ``*_source`` 파일을 계속
+        사용하면 새 보드를 검사하지 못하고 빈 패널이 최종 PNG에 남는다.
+        재생성본을 최종 캔버스로 정규화한 뒤 source와 fingerprint를 함께
+        교체해, 한 번만 허용된 재생성도 실제 합성 결과로 이어지게 한다.
+        """
+        import shutil
+
+        shutil.copy2(raw_img_path, img_path)
+        self._normalize_canvas(img_path)
+        final_path = Path(img_path)
+        source_path = final_path.with_name(f"{final_path.stem}_source{final_path.suffix}")
+        shutil.copy2(final_path, source_path)
+        scene["source_image_path"] = str(source_path)
+        scene.pop("info_surface_final_fingerprint", None)
+        scene.pop("info_surface_final_sha256", None)
+        scene.pop("final_image_path", None)
 
     def _compose_layered_scene(
         self,

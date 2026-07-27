@@ -71,7 +71,9 @@ def normalize_korean_numbers_for_tts(text: str) -> str:
     def numeric_reading(whole: str, fraction: str | None = None) -> str:
         if fraction is None:
             return sino_korean_integer(whole)
-        return f"{sino_korean_integer(whole)} 점 {' '.join(_DIGITS[int(char)] for char in fraction)}"
+        # 금융 소수는 "삼 점 칠 오"보다 "삼쩜칠오"가 자연스럽다. 정수부의
+        # 내부 공백도 제거해 "십 칠쩜구일"이 아닌 "십칠쩜구일"로 발음한다.
+        return f"{sino_korean_integer(whole).replace(' ', '')}쩜{''.join(_DIGITS[int(char)] for char in fraction)}"
 
     def percent_replacement(match: re.Match[str]) -> str:
         return f"{numeric_reading(match.group(1), match.group(2))} 퍼센트"

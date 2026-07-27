@@ -3,29 +3,27 @@
 
 한국:
   - RSS 피드: 한국경제, 매일경제, 조선비즈, Google뉴스(주식)
-  - 네이버 검색 API (NAVER_CLIENT_ID/SECRET 필요)
+  - NAVER API HUB 뉴스 검색·검색어 트렌드 (별도 활성화 필요)
   - kiwipiepy 한국어 명사 추출 + TF-IDF 순위화
 
 미국:
   - Finnhub general_news API (FINNHUB_API_KEY 필요)
   - NLTK/기본 파싱으로 영문 키워드 추출
 """
-import os
 import re
 import logging
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from collections import Counter
 from typing import Optional
 
 import requests
 import feedparser
 
-logger = logging.getLogger(__name__)
+from app.config import FINNHUB_API_KEY
+from app.services.naver_api_hub import NaverApiHubClient, naver_api_hub_configured
 
-NAVER_CLIENT_ID = os.environ.get("NAVER_CLIENT_ID", "")
-NAVER_CLIENT_SECRET = os.environ.get("NAVER_CLIENT_SECRET", "")
-FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "")
+logger = logging.getLogger(__name__)
 
 # 한국 경제 뉴스 RSS 피드
 KR_RSS_FEEDS = {
@@ -141,8 +139,8 @@ class NewsKeywordExtractor:
             except Exception as e:
                 logger.warning(f"RSS {fname} 수집 실패: {e}")
 
-        # 2. 네이버 검색 API (설정된 경우)
-        if NAVER_CLIENT_ID and NAVER_CLIENT_SECRET:
+        # 2. NAVER API HUB 뉴스 검색 (설정된 경우)
+        if naver_api_hub_configured():
             naver_articles = self._fetch_naver_news(seed or "주식 코스피")
             headlines.extend(naver_articles)
 
@@ -184,6 +182,7 @@ class NewsKeywordExtractor:
                     item["score"] = min(item["score"] * 1.3, 1.0)
             keyword_data.sort(key=lambda x: x["score"], reverse=True)
 
+        self._attach_naver_trends(keyword_data)
         logger.info(f"한국 뉴스 키워드 {len(keyword_data)}개 추출 (category={category})")
         return keyword_data[:top_n]
 
@@ -191,7 +190,7 @@ class NewsKeywordExtractor:
     # 네이버 검색 API
     # ─────────────────────────────────────────────────────
     def search_recent_news(self, query: str, max_age_hours: int = 2, limit: int = 6) -> list[dict]:
-        """Return time-bounded Google News RSS evidence for a manual topic.
+        """NAVER API HUB를 우선 사용하고 Google News RSS를 보조로 사용한다.
 
         Headline evidence is deliberately kept separate from market causality:
         the interface can confirm freshness without claiming a headline caused
@@ -201,6 +200,29 @@ class NewsKeywordExtractor:
         if not normalized:
             return []
         cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, min(max_age_hours, 24 * 30)))
+        if naver_api_hub_configured():
+            try:
+                items = NaverApiHubClient().search_news(
+                    normalized,
+                    display=min(max(limit * 3, 10), 100),
+                    sort="date",
+                ).get("items", [])
+                articles = []
+                for item in items:
+                    published_at = _parse_naver_published_at(item.get("pubDate"))
+                    if published_at is None or published_at < cutoff:
+                        continue
+                    articles.append({
+                        "title": _clean_text(item.get("title", "")),
+                        "source": "NAVER 뉴스",
+                        "url": str(item.get("originallink") or item.get("link") or ""),
+                        "publishedAt": published_at.isoformat().replace("+00:00", "Z"),
+                        "hoursSincePublish": round((datetime.now(timezone.utc) - published_at).total_seconds() / 3600, 1),
+                    })
+                    if len(articles) >= limit:
+                        return articles
+            except Exception as exc:
+                logger.warning("NAVER API HUB 최근 뉴스 조회 실패(query=%s): %s", normalized, exc)
         try:
             response = requests.get(
                 "https://news.google.com/rss/search",
@@ -238,17 +260,9 @@ class NewsKeywordExtractor:
             return []
 
     def _fetch_naver_news(self, query: str, display: int = 20) -> list[dict]:
-        """네이버 뉴스 검색 API → 헤드라인 리스트"""
-        url = "https://openapi.naver.com/v1/search/news.json"
-        headers = {
-            "X-Naver-Client-Id": NAVER_CLIENT_ID,
-            "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
-        }
-        params = {"query": query, "display": display, "sort": "date"}
+        """NAVER API HUB 뉴스 검색 → 헤드라인 리스트"""
         try:
-            resp = requests.get(url, headers=headers, params=params, timeout=5)
-            resp.raise_for_status()
-            items = resp.json().get("items", [])
+            items = NaverApiHubClient().search_news(query, display=display, sort="date").get("items", [])
             articles = []
             for item in items:
                 title = re.sub(r"<[^>]+>", "", item.get("title", ""))
@@ -258,11 +272,48 @@ class NewsKeywordExtractor:
                     "source": "네이버뉴스",
                     "title": title,
                 })
-            logger.info(f"네이버 뉴스 API: {len(articles)}건 수집 (query={query})")
+            logger.info(f"NAVER API HUB 뉴스: {len(articles)}건 수집 (query={query})")
             return articles
         except Exception as e:
-            logger.warning(f"네이버 뉴스 API 실패: {e}")
+            logger.warning(f"NAVER API HUB 뉴스 실패: {e}")
             return []
+
+    def _attach_naver_trends(self, keyword_data: list[dict]) -> None:
+        """상위 후보에 상대 검색 추이 원본을 덧붙인다. 점수·금융 수치에는 사용하지 않는다."""
+        if not keyword_data or not naver_api_hub_configured():
+            return
+        groups = [
+            {"groupName": str(item["keyword"]), "keywords": [str(item["keyword"])]}
+            for item in keyword_data[:5]
+            if str(item.get("keyword") or "").strip()
+        ]
+        if not groups:
+            return
+        end_date = date.today()
+        start_date = end_date - timedelta(days=28)
+        try:
+            result = NaverApiHubClient().search_trend(
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                time_unit="week",
+                keyword_groups=groups,
+            )
+        except Exception as exc:
+            logger.warning("NAVER API HUB 검색어 트렌드 조회 실패: %s", exc)
+            return
+        trend_by_title = {str(row.get("title") or ""): row.get("data") or [] for row in result.get("results", [])}
+        for item in keyword_data:
+            data = trend_by_title.get(str(item.get("keyword") or ""))
+            if not data:
+                continue
+            item["naver_search_trend"] = {
+                "source": "NAVER API HUB 검색어 트렌드",
+                "start_date": result.get("startDate"),
+                "end_date": result.get("endDate"),
+                "time_unit": result.get("timeUnit"),
+                "data": data,
+                "ratio_note": "절대 검색량이 아닌 요청 결과 내 상대 지표입니다.",
+            }
 
     # ─────────────────────────────────────────────────────
     # 미국 뉴스 키워드 추출
@@ -310,6 +361,13 @@ def _clean_text(text: str) -> str:
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"[^\w\s가-힣]", " ", text)
     return text.strip()
+
+
+def _parse_naver_published_at(value: object) -> datetime | None:
+    try:
+        return datetime.strptime(str(value or ""), "%a, %d %b %Y %H:%M:%S %z").astimezone(timezone.utc)
+    except ValueError:
+        return None
 
 
 def _fallback_noun_extract(text: str) -> list[str]:

@@ -1,0 +1,156 @@
+{
+  "report_date": "2026-07-27",
+  "reference": {
+    "source": "SCRIPT_STYLE_SUPPLEMENT.md 제공 측정값",
+    "benchmark_stock_sentence_chars": [
+      60.8,
+      66.3,
+      22.7,
+      28.6
+    ],
+    "general_econ_sentence_chars": [
+      44.3,
+      33.3,
+      42.5,
+      30.7
+    ],
+    "benchmark_stock_banmal_ratio": 1.0,
+    "general_econ_jondaetmal_ratio": 1.0
+  },
+  "generation_provenance": "claude-sonnet-4-6_live_generation_then_fact_boundary_edit",
+  "production_generation_verified": true,
+  "profile": {
+    "axis1_structure": {
+      "devices_present": {
+        "D1": true,
+        "D2": false,
+        "D3": true,
+        "D4": true,
+        "D5": false,
+        "D6": true,
+        "D7": false,
+        "D8": true,
+        "twist": true,
+        "ending_nondirective": true
+      },
+      "required": [
+        "D1",
+        "D4",
+        "twist",
+        "D6",
+        "D8",
+        "ending_nondirective"
+      ],
+      "order_ok": true,
+      "method": "deterministic"
+    },
+    "axis2_retention": {
+      "fake_reader_q_count": 2,
+      "analogy_count": 1,
+      "fear_reframe_count": 0,
+      "checkpoint_count": 1,
+      "per_1k_chars": {
+        "fake_reader_q": 5.602,
+        "analogy": 2.801
+      },
+      "method": "deterministic"
+    },
+    "axis3_rhythm": {
+      "sent_len_mean": 25.5,
+      "sent_len_p90": 36,
+      "short_emphasis_ratio": 0.2857,
+      "ender_variety": 0.7143,
+      "connective_variety": 0.125,
+      "max_same_ender_run": 2,
+      "method": "deterministic"
+    },
+    "axis4_register": {
+      "banmal_ratio": 0.9286,
+      "second_person_per_1k": 5.602,
+      "stake_framing_count": 1,
+      "method": "deterministic"
+    },
+    "axis5_analogy": {
+      "concept_count": 1,
+      "concepts_with_analogy": 1,
+      "coverage": 1.0,
+      "method": "deterministic"
+    },
+    "axis6_hook": {
+      "type": "number_first",
+      "has_number": true,
+      "has_question": true,
+      "has_direct_address": true,
+      "number_shock_present": false,
+      "opening_three_sentence_number_count": 2,
+      "number_density_per_100_chars": 2.2409,
+      "first3s_char_window": "님들, 3.5퍼센트에서 3.75퍼센트, 연준은 이번 공식 발표에서 왜 그대로 뒀을까? 왜 숫자가 그대로면 뉴",
+      "method": "deterministic"
+    },
+    "axis7_safety": {
+      "buy_sell_directive_count": 0,
+      "banned_phrase_count": 0,
+      "hype_count": 0,
+      "reference_ngram_similarity": 0.0,
+      "method": "deterministic"
+    },
+    "axis8_fact": {
+      "numbers_total": 8,
+      "numbers_traceable": 8,
+      "untraceable": [],
+      "method": "deterministic"
+    },
+    "meta": {
+      "format": "shorts",
+      "kind": "generated",
+      "script_sha256": "2ba38c8b66f7bdf512a7c450eacb4e2436bb2d91078f0087753fee0f297295bf",
+      "char_count": 357
+    }
+  },
+  "rows": [
+    {
+      "item": "반말 비율",
+      "target": "0.8 이상",
+      "actual": 0.9286,
+      "passed": true,
+      "meaning": "주식 타깃의 구어체 레지스터"
+    },
+    {
+      "item": "첫 3문장 숫자",
+      "target": "1개 이상",
+      "actual": 2,
+      "passed": true,
+      "meaning": "초반 사실 기반 훅"
+    },
+    {
+      "item": "숫자 쇼크 또는 직접 호명",
+      "target": "필수",
+      "actual": "충족",
+      "passed": true,
+      "meaning": "콜드오픈의 시청자 진입점"
+    },
+    {
+      "item": "쇼츠 평균 문장 길이",
+      "target": "25~35자",
+      "actual": 25.5,
+      "passed": true,
+      "meaning": "짧은 호흡의 설명 리듬"
+    },
+    {
+      "item": "숫자 출처 추적",
+      "target": "100%",
+      "actual": "8/8",
+      "passed": true,
+      "meaning": "검증 사실 밖 숫자 차단"
+    },
+    {
+      "item": "투자 지시·과장",
+      "target": "0건",
+      "actual": 0,
+      "passed": true,
+      "meaning": "법적·신뢰 안전선"
+    }
+  ],
+  "passed_count": 6,
+  "total_count": 6
+}

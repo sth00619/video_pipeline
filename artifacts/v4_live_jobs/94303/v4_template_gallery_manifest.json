@@ -1,0 +1,1810 @@
+{
+  "job_id": 94303,
+  "scenes": [
+    {
+      "scene_id": "vault-stages-001",
+      "title": "관세 적용 단계",
+      "content": "검증용 장면: 관세 적용 절차를 단계별로 보여줍니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "관세 적용 단계",
+        "scene_seed": "vault-stages-001"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "editorial_anchor"
+      },
+      "stage_items": [
+        {
+          "label": "검토",
+          "value": null,
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "확정",
+          "value": null,
+          "emphasis": true,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "적용",
+          "value": null,
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        }
+      ],
+      "text": "검증용 장면: 관세 적용 절차를 단계별로 보여줍니다.",
+      "visual_plan": {
+        "objective": "chart-shaped data visual with no generated text",
+        "visual_type": "data_visual",
+        "character_required": false,
+        "overlay_type": "fact_card",
+        "no_generated_text": true,
+        "source_scene_index": 0,
+        "source_scene_count": 4
+      },
+      "pose": "scientist",
+      "art_direction": {
+        "family": "data_lab",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "industrial_navy",
+          "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+        },
+        "wardrobe": "white lab coat and data goggles",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "present_right",
+        "fallback_pose": "present_right",
+        "character_required": true,
+        "camera": "wide establishing shot",
+        "lighting": "dramatic rim light",
+        "reference_composition": {
+          "id": "data_lab",
+          "character_placement": "right third",
+          "character_area_target": 0.44,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 110,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "monitor",
+        "data_surface_prompt": "a large blank wall monitor or desk terminal, with a matte non-glowing screen",
+        "surface_contract": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            65,
+            86,
+            102
+          ],
+          "border_rgb": [
+            15,
+            27,
+            42
+          ],
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.1,
+            "width": 0.42,
+            "height": 0.6
+          },
+          "tilt_hint": "nearly front-facing matte monitor"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "board_side": "right",
+        "info_scene_template": "vault_stages"
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_spec": {
+        "scene_id": "0",
+        "narration": "검증용 장면: 관세 적용 절차를 단계별로 보여줍니다.",
+        "headline": "핵심은?!",
+        "metaphor": "Goldie physically investigates the hidden mechanism behind the market move.",
+        "character_role": "detective",
+        "character_costume": "tan detective coat, deerstalker cap, magnifying glass",
+        "character_action": "inspecting a glowing clue board",
+        "character_emotion": "focused expression with expressive cartoon eyebrows",
+        "setting": "a densely detailed Korean finance webtoon stage",
+        "props": [
+          "unlabeled market arrows",
+          "stacked sealed folders",
+          "industrial finance machinery"
+        ],
+        "camera": "dynamic low-angle editorial shot",
+        "side_characters": "",
+        "mood": "neutral",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "핵심은?!",
+      "info_scene_template": {
+        "template_id": "vault_stages",
+        "claim_shape": "stages",
+        "diagram_kind": "stage_locks",
+        "character": {
+          "costume": "knight armor with channel-color cape and shield",
+          "pose_asset": "present_right",
+          "gaze": "board",
+          "hand": "points_board",
+          "side": "left"
+        },
+        "surface_kind": "monitor",
+        "board_side": "right",
+        "min_items": 2,
+        "max_items": 4,
+        "label_slots": [],
+        "prompt_en": "A sturdy cartoon bank vault room, {setting_detail}, with a huge vault door on the right and a large flat glowing status panel mounted on it. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.",
+        "allow_regen_on_quad_fail": true
+      },
+      "_template_regeneration_enabled": true,
+      "index": 0,
+      "prompt_en": "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame.\nGoldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line language of the attached reference sheet; do not create a second mascot.\nSCENE TEMPLATE: A sturdy cartoon bank vault room, a densely detailed Korean finance webtoon stage, with a huge vault door on the right and a large flat glowing status panel mounted on it. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.\nCHARACTER: Goldie wears knight armor with channel-color cape and shield; pose present_right; looking at the board, points_board toward it.\nThe character, gloves, pointer and any foreground prop must stay entirely on the opposite side of the board and never overlap its interior.\nThe board is an unlabeled physical prop, not a UI card. All Korean copy, numbers and diagrams are post-production only.",
+      "prompt_ko": "검증용 장면: 관세 적용 절차를 단계별로 보여줍니다.",
+      "market_snapshot": {},
+      "headline_mood": "neutral",
+      "bubble_text": "",
+      "motion_type": "",
+      "index_data": null,
+      "_template_regeneration_attempted": true,
+      "info_surface_plan": {
+        "scene_id": "vault-stages-001",
+        "render_mode": "DIEGETIC_WARP",
+        "surface": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            246,
+            244,
+            210
+          ],
+          "marker_delta_e_max": 12.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "right",
+          "preferred_region": {
+            "x": 0.53,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DIEGETIC_WARP",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [],
+        "detection": null,
+        "timeline_mode": "original",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": null,
+        "source_image_path": "/app/data/jobs/94303/images/scene_000_source.png",
+        "final_image_path": null,
+        "hero_stat": null,
+        "chart_render_metadata": null,
+        "phase_b": null,
+        "template_id": "vault_stages",
+        "diagram_kind": "stage_locks",
+        "render_attempts": [
+          {
+            "outcome": "REGENERATE_REQUESTED",
+            "reason": "quad_not_found",
+            "render_mode": "DIEGETIC_WARP"
+          }
+        ]
+      },
+      "image_path": "/app/data/jobs/94303/images/scene_000.png",
+      "background_path": null,
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "left",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.015,
+            "y": 0.1,
+            "width": 0.41,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "generation_method": "pro_gemini",
+      "quality_score": 100,
+      "character_regions": [
+        {
+          "x": 0.015,
+          "y": 0.1,
+          "width": 0.41,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    },
+    {
+      "scene_id": "blueprint-structure-001",
+      "title": "핵심 품목 구조",
+      "content": "검증용 장면: 공지에 언급된 핵심 품목을 구조적으로 보여줍니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "핵심 품목 구조",
+        "scene_seed": "blueprint-structure-001"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "editorial_anchor"
+      },
+      "structure_items": [
+        {
+          "label": "전기차",
+          "value": null,
+          "emphasis": true,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "배터리",
+          "value": null,
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "반도체",
+          "value": null,
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        }
+      ],
+      "text": "검증용 장면: 공지에 언급된 핵심 품목을 구조적으로 보여줍니다.",
+      "visual_plan": {
+        "objective": "chart-shaped data visual with no generated text",
+        "visual_type": "data_visual",
+        "character_required": false,
+        "overlay_type": "fact_card",
+        "no_generated_text": true,
+        "source_scene_index": 1,
+        "source_scene_count": 4
+      },
+      "pose": "engineer",
+      "art_direction": {
+        "family": "factory_dashboard",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "industrial safety helmet and workwear",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "present_left",
+        "fallback_pose": "present_left",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "bright editorial daylight",
+        "reference_composition": {
+          "id": "factory_panel",
+          "character_placement": "left third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.42
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 1030,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "desk_report",
+        "data_surface_prompt": "a blank clipped inspection sheet attached to a machine guard",
+        "surface_contract": {
+          "surface_kind": "inspection_clipboard",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            225,
+            210,
+            175
+          ],
+          "border_rgb": [
+            76,
+            53,
+            34
+          ],
+          "preferred_side": "right",
+          "preferred_region": {
+            "x": 0.52,
+            "y": 0.11,
+            "width": 0.42,
+            "height": 0.6
+          },
+          "tilt_hint": "slightly tilted clipped inspection sheet"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "board_side": "left",
+        "info_scene_template": "blueprint_board"
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_spec": {
+        "scene_id": "1",
+        "narration": "검증용 장면: 공지에 언급된 핵심 품목을 구조적으로 보여줍니다.",
+        "headline": "핵심은?!",
+        "metaphor": "Goldie physically investigates the hidden mechanism behind the market move.",
+        "character_role": "factory mechanic",
+        "character_costume": "safety-yellow mechanic coveralls, tool belt, hard hat",
+        "character_action": "tightening a huge industrial valve with a wrench",
+        "character_emotion": "focused expression with expressive cartoon eyebrows",
+        "setting": "a densely detailed Korean finance webtoon stage",
+        "props": [
+          "unlabeled market arrows",
+          "stacked sealed folders",
+          "industrial finance machinery"
+        ],
+        "camera": "dynamic low-angle editorial shot",
+        "side_characters": "",
+        "mood": "neutral",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "핵심은?!",
+      "info_scene_template": {
+        "template_id": "blueprint_board",
+        "claim_shape": "structure",
+        "diagram_kind": "blueprint_callouts",
+        "character": {
+          "costume": "yellow hard hat, tool belt, drafting compass",
+          "pose_asset": "present_left",
+          "gaze": "board",
+          "hand": "points_board",
+          "side": "right"
+        },
+        "surface_kind": "desk_report",
+        "board_side": "left",
+        "min_items": 2,
+        "max_items": 3,
+        "label_slots": [],
+        "prompt_en": "A bright architect studio at sunrise, {setting_detail}, with a large wooden drafting board tilted on a stand on the left. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.",
+        "allow_regen_on_quad_fail": true
+      },
+      "_template_regeneration_enabled": true,
+      "index": 1,
+      "prompt_en": "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame.\nGoldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line language of the attached reference sheet; do not create a second mascot.\nSCENE TEMPLATE: A bright architect studio at sunrise, a densely detailed Korean finance webtoon stage, with a large wooden drafting board tilted on a stand on the left. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.\nCHARACTER: Goldie wears yellow hard hat, tool belt, drafting compass; pose present_left; looking at the board, points_board toward it.\nThe character, gloves, pointer and any foreground prop must stay entirely on the opposite side of the board and never overlap its interior.\nThe board is an unlabeled physical prop, not a UI card. All Korean copy, numbers and diagrams are post-production only.",
+      "prompt_ko": "검증용 장면: 공지에 언급된 핵심 품목을 구조적으로 보여줍니다.",
+      "market_snapshot": {},
+      "headline_mood": "neutral",
+      "bubble_text": "",
+      "motion_type": "",
+      "index_data": null,
+      "_template_regeneration_attempted": true,
+      "info_surface_plan": {
+        "scene_id": "blueprint-structure-001",
+        "render_mode": "DIEGETIC_WARP",
+        "surface": {
+          "surface_kind": "desk_report",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            246,
+            244,
+            210
+          ],
+          "marker_delta_e_max": 12.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DIEGETIC_WARP",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [],
+        "detection": null,
+        "timeline_mode": "original",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": null,
+        "source_image_path": "/app/data/jobs/94303/images/scene_001_source.png",
+        "final_image_path": null,
+        "hero_stat": null,
+        "chart_render_metadata": null,
+        "phase_b": null,
+        "template_id": "blueprint_board",
+        "diagram_kind": "blueprint_callouts",
+        "render_attempts": [
+          {
+            "outcome": "REGENERATE_REQUESTED",
+            "reason": "quad_not_found",
+            "render_mode": "DIEGETIC_WARP"
+          }
+        ]
+      },
+      "image_path": "/app/data/jobs/94303/images/scene_001.png",
+      "background_path": null,
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "generation_method": "pro_gemini",
+      "quality_score": 100,
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    },
+    {
+      "scene_id": "weather-rates-001",
+      "title": "중국산 핵심 품목 관세",
+      "content": "검증용 장면: USTR이 확정한 일부 중국산 핵심 품목 관세율입니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "중국산 핵심 품목 관세",
+        "scene_seed": "weather-rates-001",
+        "external_rates": [
+          {
+            "label": "전기차",
+            "value": "100%",
+            "emphasis": true,
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ]
+          },
+          {
+            "label": "전기차 배터리",
+            "value": "25%",
+            "emphasis": false,
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ]
+          }
+        ]
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "editorial_anchor"
+      },
+      "text": "검증용 장면: USTR이 확정한 일부 중국산 핵심 품목 관세율입니다.",
+      "visual_plan": {
+        "objective": "chart-shaped data visual with no generated text",
+        "visual_type": "data_visual",
+        "character_required": false,
+        "overlay_type": "fact_card",
+        "no_generated_text": true,
+        "source_scene_index": 2,
+        "source_scene_count": 4
+      },
+      "pose": "analyst",
+      "art_direction": {
+        "family": "market_arena",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "growth_gold",
+          "colors": "mostly deep navy and white, one warm yellow emphasis, muted gray"
+        },
+        "wardrobe": "sporty market referee jacket",
+        "role_costume": "referee",
+        "costume_state": "neutral",
+        "pose_asset": "point_left_up",
+        "fallback_pose": "present_left",
+        "character_required": true,
+        "camera": "low-angle hero shot",
+        "lighting": "cinematic practical lights",
+        "reference_composition": {
+          "id": "market_scoreboard",
+          "character_placement": "right third",
+          "character_area_target": 0.46,
+          "information_area_target": 0.38
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 110,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "monitor",
+        "data_surface_prompt": "a blank printed market ticket or referee score card held beside the action",
+        "surface_contract": {
+          "surface_kind": "trading_ticket",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            205,
+            220,
+            214
+          ],
+          "border_rgb": [
+            21,
+            42,
+            51
+          ],
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.06,
+            "y": 0.12,
+            "width": 0.4,
+            "height": 0.56
+          },
+          "tilt_hint": "slightly tilted printed score ticket"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": false,
+        "board_side": "left",
+        "info_scene_template": "weather_map_studio"
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_spec": {
+        "scene_id": "2",
+        "narration": "검증용 장면: USTR이 확정한 일부 중국산 핵심 품목 관세율입니다.",
+        "headline": "핵심은?!",
+        "metaphor": "Goldie physically investigates the hidden mechanism behind the market move.",
+        "character_role": "chef",
+        "character_costume": "white chef jacket, tall chef hat, gold-trimmed apron",
+        "character_action": "carefully plating a dramatic financial recipe",
+        "character_emotion": "focused expression with expressive cartoon eyebrows",
+        "setting": "a densely detailed Korean finance webtoon stage",
+        "props": [
+          "unlabeled market arrows",
+          "stacked sealed folders",
+          "industrial finance machinery"
+        ],
+        "camera": "dynamic low-angle editorial shot",
+        "side_characters": "",
+        "mood": "neutral",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "핵심은?!",
+      "info_scene_template": {
+        "template_id": "weather_map_studio",
+        "claim_shape": "external_rate",
+        "diagram_kind": "map_clouds",
+        "character": {
+          "costume": "broadcast blazer with headset microphone",
+          "pose_asset": "point_left_up",
+          "gaze": "board",
+          "hand": "points_board",
+          "side": "right"
+        },
+        "surface_kind": "monitor",
+        "board_side": "left",
+        "min_items": 1,
+        "max_items": 3,
+        "label_slots": [],
+        "prompt_en": "A cartoon TV weather studio, {setting_detail}, with a huge curved wall screen on the left showing a single flat pale-blue matte field with no coastline, labels, text or symbols. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.",
+        "allow_regen_on_quad_fail": true
+      },
+      "_template_regeneration_enabled": true,
+      "index": 2,
+      "prompt_en": "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame.\nGoldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line language of the attached reference sheet; do not create a second mascot.\nSCENE TEMPLATE: A cartoon TV weather studio, a densely detailed Korean finance webtoon stage, with a huge curved wall screen on the left showing a single flat pale-blue matte field with no coastline, labels, text or symbols. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.\nCHARACTER: Goldie wears broadcast blazer with headset microphone; pose point_left_up; looking at the board, points_board toward it.\nThe character, gloves, pointer and any foreground prop must stay entirely on the opposite side of the board and never overlap its interior.\nThe board is an unlabeled physical prop, not a UI card. All Korean copy, numbers and diagrams are post-production only.",
+      "prompt_ko": "검증용 장면: USTR이 확정한 일부 중국산 핵심 품목 관세율입니다.",
+      "market_snapshot": {},
+      "headline_mood": "neutral",
+      "bubble_text": "",
+      "motion_type": "",
+      "index_data": null,
+      "info_surface_plan": {
+        "scene_id": "weather-rates-001",
+        "render_mode": "DIEGETIC_WARP",
+        "surface": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            216,
+            240,
+            248
+          ],
+          "marker_delta_e_max": 30.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DIEGETIC_WARP",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [],
+        "detection": {
+          "quad": [
+            [
+              138.0,
+              110.0
+            ],
+            [
+              1008.0,
+              297.0
+            ],
+            [
+              1008.0,
+              791.0
+            ],
+            [
+              138.0,
+              858.0
+            ]
+          ],
+          "confidence": 0.8153,
+          "color_purity": 0.9407,
+          "border_match": 0.6286,
+          "position_score": 0.7971,
+          "area_ratio": 0.2471,
+          "palette_collision": false
+        },
+        "timeline_mode": "original",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": null,
+        "source_image_path": "/app/data/jobs/94303/images/scene_002_source.png",
+        "final_image_path": "/app/data/jobs/94303/images/scene_002.png",
+        "hero_stat": null,
+        "chart_render_metadata": {
+          "bars": [],
+          "canvas_size": [
+            5847,
+            4915
+          ],
+          "diagram_supersample": {
+            "factor": 3.8672,
+            "final_output_scale": 0.525781,
+            "logical_xheight_px": 44.0,
+            "logical_stroke_px": 3.82,
+            "predicted_xheight_1080p_px": 19.658,
+            "predicted_stroke_1080p_px": 1.707,
+            "support_font_scale": 1.4651,
+            "support_stroke_scale": 3.8672,
+            "predicted_after_typography_xheight_1080p_px": 28.8,
+            "predicted_after_typography_stroke_1080p_px": 6.6,
+            "min_xheight_1080p_px": 24.0,
+            "min_stroke_1080p_px": 3.0
+          },
+          "diagram_render_size": [
+            5847,
+            4915
+          ]
+        },
+        "phase_b": null,
+        "template_id": "weather_map_studio",
+        "diagram_kind": "map_clouds",
+        "render_attempts": [
+          {
+            "outcome": "DIEGETIC_WARP",
+            "reason": null,
+            "render_mode": "DIEGETIC_WARP",
+            "source_sha256": "097f8ac3ece68f883b41e8c09486521ffc707eed2e16b10c733fa6be4b836e61",
+            "final_sha256": "a4541ea108db94d43080f75d782c5c0b94e167da61a242f97f501404a5ca12aa"
+          }
+        ]
+      },
+      "final_image_path": "/app/data/jobs/94303/images/scene_002.png",
+      "source_image_path": "/app/data/jobs/94303/images/scene_002_source.png",
+      "info_surface_final_fingerprint": "e76249fe9a6105653021432c9ee679063296b710a42714811073b009090c3126",
+      "info_surface_final_sha256": "a4541ea108db94d43080f75d782c5c0b94e167da61a242f97f501404a5ca12aa",
+      "image_path": "/app/data/jobs/94303/images/scene_002.png",
+      "background_path": null,
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "generation_method": "pro_gemini",
+      "quality_score": 100,
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    },
+    {
+      "scene_id": "chalk-flow-001",
+      "title": "관세 전달 경로",
+      "content": "검증용 장면: 관세가 비용 압력으로 전달되는 일반적인 경로를 보여줍니다.",
+      "section": "data",
+      "visual_type": "data_visual",
+      "market_chart": {
+        "verified": true,
+        "source": "USTR Section 301 final action (2024-09-13)",
+        "source_ref": "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review",
+        "label": "관세 전달 경로",
+        "scene_seed": "chalk-flow-001"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "editorial_anchor"
+      },
+      "causal_nodes": [
+        {
+          "label": "관세",
+          "value": null,
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "수입 비용",
+          "value": null,
+          "emphasis": false,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        },
+        {
+          "label": "가격 압력",
+          "value": null,
+          "emphasis": true,
+          "source_refs": [
+            "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+          ]
+        }
+      ],
+      "verdict_stamp": "검증용",
+      "text": "검증용 장면: 관세가 비용 압력으로 전달되는 일반적인 경로를 보여줍니다.",
+      "visual_plan": {
+        "objective": "chart-shaped data visual with no generated text",
+        "visual_type": "data_visual",
+        "character_required": false,
+        "overlay_type": "fact_card",
+        "no_generated_text": true,
+        "source_scene_index": 3,
+        "source_scene_count": 4
+      },
+      "pose": "scientist",
+      "art_direction": {
+        "family": "data_lab",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "industrial_navy",
+          "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+        },
+        "wardrobe": "white lab coat and data goggles",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "point_left_mid",
+        "fallback_pose": "present_left",
+        "character_required": true,
+        "camera": "over-the-shoulder explanation shot",
+        "lighting": "soft studio key light",
+        "reference_composition": {
+          "id": "data_lab",
+          "character_placement": "right third",
+          "character_area_target": 0.44,
+          "information_area_target": 0.42
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 110,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "chalkboard",
+        "data_surface_prompt": "a large blank wall monitor or desk terminal, with a matte non-glowing screen",
+        "surface_contract": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            65,
+            86,
+            102
+          ],
+          "border_rgb": [
+            15,
+            27,
+            42
+          ],
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.1,
+            "width": 0.42,
+            "height": 0.6
+          },
+          "tilt_hint": "nearly front-facing matte monitor"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "board_side": "left",
+        "info_scene_template": "chalk_logic_class"
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_spec": {
+        "scene_id": "3",
+        "narration": "검증용 장면: 관세가 비용 압력으로 전달되는 일반적인 경로를 보여줍니다.",
+        "headline": "핵심은?!",
+        "metaphor": "Goldie physically investigates the hidden mechanism behind the market move.",
+        "character_role": "cleanroom engineer",
+        "character_costume": "white cleanroom suit, clear visor, blue gloves",
+        "character_action": "examining a luminous semiconductor wafer",
+        "character_emotion": "focused expression with expressive cartoon eyebrows",
+        "setting": "a densely detailed Korean finance webtoon stage",
+        "props": [
+          "unlabeled market arrows",
+          "stacked sealed folders",
+          "industrial finance machinery"
+        ],
+        "camera": "dynamic low-angle editorial shot",
+        "side_characters": "",
+        "mood": "neutral",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "핵심은?!",
+      "info_scene_template": {
+        "template_id": "chalk_logic_class",
+        "claim_shape": "causal_chain",
+        "diagram_kind": "flow_chalk",
+        "character": {
+          "costume": "graduation cap and tweed jacket, wooden pointer",
+          "pose_asset": "point_left_mid",
+          "gaze": "board",
+          "hand": "points_board",
+          "side": "right"
+        },
+        "surface_kind": "chalkboard",
+        "board_side": "left",
+        "min_items": 2,
+        "max_items": 5,
+        "label_slots": [],
+        "prompt_en": "A warm cartoon classroom, {setting_detail}, with a very large dark green chalkboard covering the left two thirds. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.",
+        "allow_regen_on_quad_fail": true
+      },
+      "_template_regeneration_enabled": true,
+      "index": 3,
+      "prompt_en": "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame.\nGoldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line language of the attached reference sheet; do not create a second mascot.\nSCENE TEMPLATE: A warm cartoon classroom, a densely detailed Korean finance webtoon stage, with a very large dark green chalkboard covering the left two thirds. The board interior is a single blank matte marker surface with a dark physical border. ABSOLUTELY NO text, letters, numbers, charts, icons or symbols anywhere on it.\nCHARACTER: Goldie wears graduation cap and tweed jacket, wooden pointer; pose point_left_mid; looking at the board, points_board toward it.\nThe character, gloves, pointer and any foreground prop must stay entirely on the opposite side of the board and never overlap its interior.\nThe board is an unlabeled physical prop, not a UI card. All Korean copy, numbers and diagrams are post-production only.",
+      "prompt_ko": "검증용 장면: 관세가 비용 압력으로 전달되는 일반적인 경로를 보여줍니다.",
+      "market_snapshot": {},
+      "headline_mood": "neutral",
+      "bubble_text": "",
+      "motion_type": "",
+      "index_data": null,
+      "_template_regeneration_attempted": true,
+      "info_surface_plan": {
+        "scene_id": "chalk-flow-001",
+        "render_mode": "DIEGETIC_WARP",
+        "surface": {
+          "surface_kind": "chalkboard",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            43,
+            72,
+            57
+          ],
+          "marker_delta_e_max": 12.0,
+          "marker_scene_delta_e_min": 20.0,
+          "border_rgb": [
+            7,
+            26,
+            58
+          ],
+          "border_delta_e_max": 18.0,
+          "area_ratio_min": 0.1,
+          "area_ratio_max": 0.55,
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.08,
+            "width": 0.42,
+            "height": 0.7
+          },
+          "candidate_iou_min": 0.3,
+          "tilt_hint": "slightly tilted like a real prop",
+          "inset_ratio": 0.06
+        },
+        "items": [
+          {
+            "item_id": "verified_data",
+            "role": "chart",
+            "text": null,
+            "chart_payload_ref": "market_chart",
+            "source_refs": [
+              "https://ustr.gov/about-us/policy-offices/press-office/press-releases/2024/september/ustr-finalizes-action-china-tariffs-following-statutory-four-year-review"
+            ],
+            "max_chars": 20,
+            "requested_mode": "DIEGETIC_WARP",
+            "resolved_mode": "DIEGETIC_WARP",
+            "fallback_reason": null,
+            "fallback_cost_krw": 0
+          }
+        ],
+        "fallback_chain": [],
+        "detection": null,
+        "timeline_mode": "original",
+        "chart_semantics_reduced": false,
+        "replacement_of_scene_id": null,
+        "source_image_path": "/app/data/jobs/94303/images/scene_003_source.png",
+        "final_image_path": null,
+        "hero_stat": null,
+        "chart_render_metadata": null,
+        "phase_b": null,
+        "template_id": "chalk_logic_class",
+        "diagram_kind": "flow_chalk",
+        "render_attempts": [
+          {
+            "outcome": "REGENERATE_REQUESTED",
+            "reason": "quad_not_found",
+            "render_mode": "DIEGETIC_WARP"
+          }
+        ]
+      },
+      "image_path": "/app/data/jobs/94303/images/scene_003.png",
+      "background_path": null,
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "generation_method": "pro_gemini",
+      "quality_score": 100,
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    }
+  ],
+  "scene_count": 4,
+  "gifs": [],
+  "gif_count": 0,
+  "quality_report": {
+    "images": {
+      "score": 100,
+      "warnings": [],
+      "image_count": 4,
+      "scene_metrics": [
+        {
+          "index": 0,
+          "score": 100,
+          "warnings": [],
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.7778,
+          "brightness": 121.5,
+          "contrast": 62.8,
+          "color_variation": 65.4,
+          "perceptual_hash": "0000000000000000000000000000000000000000010000000000011010001100000111101111110000111111111111000011111111111110001111111111111000011111111111000111110111111100001111001111110000110000000000000011000000000000000000000000000000000000000000000000001111100000",
+          "retry_recommended": false
+        },
+        {
+          "index": 1,
+          "score": 100,
+          "warnings": [],
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.7778,
+          "brightness": 161.9,
+          "contrast": 68.3,
+          "color_variation": 46.0,
+          "perceptual_hash": "0000000000000000000000111111110010000011111111001010000011111000101111111111100010111111110000001011111111000000001111111111110000111111111010000011111110101000001111111000000000010000000000000000000000000000000000000110000000000000011001100000001111110010",
+          "retry_recommended": false
+        },
+        {
+          "index": 2,
+          "score": 100,
+          "warnings": [],
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.7778,
+          "brightness": 128.7,
+          "contrast": 71.0,
+          "color_variation": 35.3,
+          "perceptual_hash": "0001000000000000000101000000000001100101000011100111110001011000011111110000010101111111101000000110111111100101011111111111000101111111111000000111111100000000011111111010000001111111000000000110000000000000000001111111100000000111111000000000010000000100",
+          "retry_recommended": false
+        },
+        {
+          "index": 3,
+          "score": 100,
+          "warnings": [],
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.7778,
+          "brightness": 99.3,
+          "contrast": 52.6,
+          "color_variation": 58.7,
+          "perceptual_hash": "1011111111111111100000000001111110000000001111110000000000111111000000000011001100000000001100010000000000111111000000000001111100000000001111110000000000111111000000001101111100000000010010010000000000000101000000000010011100111110111100000001100000110000",
+          "retry_recommended": false
+        }
+      ],
+      "retry_recommended_indices": [],
+      "art_direction": {
+        "score": 100,
+        "warnings": [],
+        "families": [
+          "data_lab",
+          "factory_dashboard",
+          "market_arena",
+          "data_lab"
+        ],
+        "palettes": [
+          "industrial_navy",
+          "editorial_blue",
+          "growth_gold",
+          "industrial_navy"
+        ],
+        "pose_assets": [
+          "present_right",
+          "present_left",
+          "point_left_up",
+          "point_left_mid"
+        ]
+      },
+      "semantic_alignment": {
+        "enabled": true,
+        "reviewed": [],
+        "skipped": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "warnings": [
+          "visual_qa_http_404",
+          "visual_qa_http_404",
+          "visual_qa_http_404",
+          "visual_qa_http_404"
+        ],
+        "score": null
+      },
+      "scene_metadata_contract": {
+        "passed": true,
+        "source_keys": [
+          "art_direction",
+          "causal_nodes",
+          "content",
+          "headline",
+          "image_profile",
+          "market_chart",
+          "pose",
+          "scene_id",
+          "scene_spec",
+          "section",
+          "stage_items",
+          "structure_items",
+          "style_profile",
+          "text",
+          "title",
+          "verdict_stamp",
+          "visual_plan",
+          "visual_type"
+        ],
+        "output_keys": [
+          "_template_regeneration_attempted",
+          "_template_regeneration_enabled",
+          "art_direction",
+          "asset_layout_metadata",
+          "background_path",
+          "bubble_text",
+          "causal_nodes",
+          "character_regions",
+          "clean_plate_path",
+          "content",
+          "final_image_path",
+          "generation_method",
+          "headline",
+          "headline_mood",
+          "image_path",
+          "image_profile",
+          "index",
+          "index_data",
+          "info_scene_template",
+          "info_surface_final_fingerprint",
+          "info_surface_final_sha256",
+          "info_surface_plan",
+          "market_chart",
+          "market_snapshot",
+          "motion_type",
+          "pose",
+          "prompt_en",
+          "prompt_ko",
+          "quality_flags",
+          "quality_score",
+          "retry_recommended",
+          "scene_id",
+          "scene_spec",
+          "section",
+          "source_image_path",
+          "stage_items",
+          "structure_items",
+          "style_profile",
+          "text",
+          "title",
+          "verdict_stamp",
+          "visual_plan",
+          "visual_type"
+        ],
+        "missing_keys": [],
+        "market_chart_count": 4,
+        "index_data_count": 0,
+        "motion_type_count": 0
+      }
+    }
+  },
+  "budget_preflight": {
+    "planned_at": "2026-07-26T15:40:37.520811+00:00",
+    "scene_count": 4,
+    "quality_tier": "pro",
+    "pro_scene_count": 5,
+    "flash_scene_count": 0,
+    "kling_clip_count": 4,
+    "estimated_cost_krw": 3376,
+    "budget_limit_krw": 40000,
+    "retry_buffer_pct": 10.0,
+    "allowed": true,
+    "actions": [],
+    "reason": null,
+    "template_scene_count": 4,
+    "template_retry_reserve_krw": 188,
+    "template_regeneration_enabled": true,
+    "rates": {
+      "img_cost_flash_1k_usd": 0.045,
+      "img_cost_pro_2k_usd": 0.134,
+      "kling_cost_per_clip_usd": 0.35,
+      "usd_krw": 1400.0
+    },
+    "intro_motion_target_seconds": 40.0,
+    "intro_motion_planned_seconds": 20.0,
+    "intro_motion_estimated_total_seconds": 22.0
+  },
+  "evidence_audit": {
+    "job_id": 94303,
+    "created_at": "2026-07-26T15:40:37.517243+00:00",
+    "status": "unavailable",
+    "selected": [],
+    "skipped": [],
+    "reason": "verified_facts_or_naver_api_hub_credentials_missing"
+  }
+}

@@ -104,6 +104,20 @@ def _border_contrast_score(lab: np.ndarray, surface: np.ndarray, contract: Surfa
 
 
 def detect_surface_quad(image_bgr: np.ndarray, contract: SurfaceContract) -> QuadDetection | None:
+    """계약된 표면색 후보 중 가장 신뢰도 높은 단일 평면을 선택한다."""
+    marker_candidates = [contract.marker_rgb, *contract.marker_rgb_candidates]
+    detections: list[QuadDetection] = []
+    for marker in dict.fromkeys(marker_candidates):
+        if marker is None:
+            continue
+        candidate_contract = contract.model_copy(update={"marker_rgb": marker, "marker_rgb_candidates": []})
+        detection = _detect_surface_quad_for_marker(image_bgr, candidate_contract)
+        if detection is not None:
+            detections.append(detection)
+    return max(detections, default=None, key=lambda item: item.confidence)
+
+
+def _detect_surface_quad_for_marker(image_bgr: np.ndarray, contract: SurfaceContract) -> QuadDetection | None:
     if contract.geometry != "planar_quad" or contract.marker_rgb is None:
         return None
     height, width = image_bgr.shape[:2]

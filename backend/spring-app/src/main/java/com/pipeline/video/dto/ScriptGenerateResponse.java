@@ -63,6 +63,16 @@ public class ScriptGenerateResponse {
     @JsonProperty("llm_provider_log")
     private List<java.util.Map<String, Object>> llmProviderLog;
 
+    /** 실제 Claude 호출 수. 내러티브 플랜·흐름 QA까지 비용 장부에 반영한다. */
+    @JsonProperty("llm_call_count")
+    private Integer llmCallCount;
+
+    @JsonProperty("narrative_plan")
+    private Map<String, Object> narrativePlan;
+
+    @JsonProperty("flow_qa")
+    private Map<String, Object> flowQa;
+
     @JsonProperty("market_snapshot")
     private Map<String, Object> marketSnapshot;
 

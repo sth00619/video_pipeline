@@ -1,0 +1,171 @@
+{
+  "score": 100,
+  "warnings": [],
+  "image_count": 4,
+  "scene_metrics": [
+    {
+      "index": 0,
+      "score": 100,
+      "warnings": [],
+      "width": 1920,
+      "height": 1080,
+      "aspect_ratio": 1.7778,
+      "brightness": 121.5,
+      "contrast": 62.8,
+      "color_variation": 65.4,
+      "perceptual_hash": "0000000000000000000000000000000000000000010000000000011010001100000111101111110000111111111111000011111111111110001111111111111000011111111111000111110111111100001111001111110000110000000000000011000000000000000000000000000000000000000000000000001111100000",
+      "retry_recommended": false
+    },
+    {
+      "index": 1,
+      "score": 100,
+      "warnings": [],
+      "width": 1920,
+      "height": 1080,
+      "aspect_ratio": 1.7778,
+      "brightness": 161.9,
+      "contrast": 68.3,
+      "color_variation": 46.0,
+      "perceptual_hash": "0000000000000000000000111111110010000011111111001010000011111000101111111111100010111111110000001011111111000000001111111111110000111111111010000011111110101000001111111000000000010000000000000000000000000000000000000110000000000000011001100000001111110010",
+      "retry_recommended": false
+    },
+    {
+      "index": 2,
+      "score": 100,
+      "warnings": [],
+      "width": 1920,
+      "height": 1080,
+      "aspect_ratio": 1.7778,
+      "brightness": 128.7,
+      "contrast": 71.0,
+      "color_variation": 35.3,
+      "perceptual_hash": "0001000000000000000101000000000001100101000011100111110001011000011111110000010101111111101000000110111111100101011111111111000101111111111000000111111100000000011111111010000001111111000000000110000000000000000001111111100000000111111000000000010000000100",
+      "retry_recommended": false
+    },
+    {
+      "index": 3,
+      "score": 100,
+      "warnings": [],
+      "width": 1920,
+      "height": 1080,
+      "aspect_ratio": 1.7778,
+      "brightness": 99.3,
+      "contrast": 52.6,
+      "color_variation": 58.7,
+      "perceptual_hash": "1011111111111111100000000001111110000000001111110000000000111111000000000011001100000000001100010000000000111111000000000001111100000000001111110000000000111111000000001101111100000000010010010000000000000101000000000010011100111110111100000001100000110000",
+      "retry_recommended": false
+    }
+  ],
+  "retry_recommended_indices": [],
+  "art_direction": {
+    "score": 100,
+    "warnings": [],
+    "families": [
+      "data_lab",
+      "factory_dashboard",
+      "market_arena",
+      "data_lab"
+    ],
+    "palettes": [
+      "industrial_navy",
+      "editorial_blue",
+      "growth_gold",
+      "industrial_navy"
+    ],
+    "pose_assets": [
+      "present_right",
+      "present_left",
+      "point_left_up",
+      "point_left_mid"
+    ]
+  },
+  "semantic_alignment": {
+    "enabled": true,
+    "reviewed": [],
+    "skipped": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "warnings": [
+      "visual_qa_http_404",
+      "visual_qa_http_404",
+      "visual_qa_http_404",
+      "visual_qa_http_404"
+    ],
+    "score": null
+  },
+  "scene_metadata_contract": {
+    "passed": true,
+    "source_keys": [
+      "art_direction",
+      "causal_nodes",
+      "content",
+      "headline",
+      "image_profile",
+      "market_chart",
+      "pose",
+      "scene_id",
+      "scene_spec",
+      "section",
+      "stage_items",
+      "structure_items",
+      "style_profile",
+      "text",
+      "title",
+      "verdict_stamp",
+      "visual_plan",
+      "visual_type"
+    ],
+    "output_keys": [
+      "_template_regeneration_attempted",
+      "_template_regeneration_enabled",
+      "art_direction",
+      "asset_layout_metadata",
+      "background_path",
+      "bubble_text",
+      "causal_nodes",
+      "character_regions",
+      "clean_plate_path",
+      "content",
+      "final_image_path",
+      "generation_method",
+      "headline",
+      "headline_mood",
+      "image_path",
+      "image_profile",
+      "index",
+      "index_data",
+      "info_scene_template",
+      "info_surface_final_fingerprint",
+      "info_surface_final_sha256",
+      "info_surface_plan",
+      "market_chart",
+      "market_snapshot",
+      "motion_type",
+      "pose",
+      "prompt_en",
+      "prompt_ko",
+      "quality_flags",
+      "quality_score",
+      "retry_recommended",
+      "scene_id",
+      "scene_spec",
+      "section",
+      "source_image_path",
+      "stage_items",
+      "structure_items",
+      "style_profile",
+      "text",
+      "title",
+      "verdict_stamp",
+      "visual_plan",
+      "visual_type"
+    ],
+    "missing_keys": [],
+    "market_chart_count": 4,
+    "index_data_count": 0,
+    "motion_type_count": 0
+  }
+}

@@ -184,6 +184,101 @@ def assess_subtitles(chunks: list[dict[str, Any]], audio_duration: float, max_ch
     return {"score": score, "warnings": warnings, "cue_count": len(chunks), "coverage": round(coverage, 4)}
 
 
+def assess_script_house_style(
+    script: str,
+    *,
+    format_name: str,
+    verified_facts: list[dict[str, Any]] | None = None,
+    reference_texts: list[str] | None = None,
+    enabled: bool = False,
+    llm_labeling_enabled: bool = False,
+    number_traceability_required: bool = True,
+) -> dict[str, Any]:
+    """대본 확정 전에 적용할 하우스 스타일 하드/어드바이저리 게이트.
+
+    하드 판정은 정규식·수치 추적처럼 재현 가능한 값만 사용한다. 비유와
+    가짜 독자 질문은 LLM 라벨을 보강할 수 있지만 자동 출고를 막지 않는다.
+    """
+    if not enabled:
+        return {
+            "enabled": False,
+            "passed": True,
+            "hard_failures": [],
+            "advisories": [],
+            "profile": None,
+        }
+
+    from app.utils.script_pattern_analyzer import analyze_script
+    from app.utils.script_style import HOUSE_STYLE_V1
+
+    profile = analyze_script(script, {
+        "format": format_name,
+        "verified_facts": verified_facts or [],
+        "kind": "generated",
+        "reference_texts": reference_texts or [],
+        "llm_labeling_enabled": llm_labeling_enabled,
+    }).to_dict()
+    hard_failures: list[dict[str, Any]] = []
+    advisories: list[dict[str, Any]] = []
+    safety = profile["axis7_safety"]
+    facts = profile["axis8_fact"]
+    rhythm = profile["axis3_rhythm"]
+    structure = profile["axis1_structure"]
+    retention = profile["axis2_retention"]
+    analogy = profile["axis5_analogy"]
+    register = profile["axis4_register"]
+    hook = profile["axis6_hook"]
+    targets = HOUSE_STYLE_V1["benchmark_stock_targets"]
+
+    if safety["buy_sell_directive_count"] or safety["hype_count"] or safety["banned_phrase_count"]:
+        hard_failures.append({"code": "FORBIDDEN_INVESTMENT_OR_HYPE", "axis": "axis7", "value": safety})
+    if safety["reference_ngram_similarity"] >= 0.15:
+        hard_failures.append({"code": "REFERENCE_NGRAM_SIMILARITY", "axis": "axis7", "value": safety["reference_ngram_similarity"]})
+    if number_traceability_required and facts["numbers_total"] != facts["numbers_traceable"]:
+        hard_failures.append({"code": "UNTRACEABLE_NUMBER", "axis": "axis8", "value": facts["untraceable"]})
+    # 숫자 선행 훅은 반드시 질문형일 필요가 없다. 숫자 뒤에 직접 호명이나
+    # 자연스러운 대조를 두는 오프닝도 유효하므로, 여기서는 검증 숫자의
+    # 첫 화면 배치만 하드 조건으로 확인하고 대조·호명은 아래 조건에서 본다.
+    if not hook["has_number"]:
+        hard_failures.append({"code": "MISSING_NUMBER_FIRST_HOOK", "axis": "axis6", "value": hook})
+    if hook["opening_three_sentence_number_count"] < targets["opening_number_within_first_three_min"]:
+        hard_failures.append({"code": "MISSING_OPENING_THREE_SENTENCE_NUMBER", "axis": "axis6", "value": hook})
+    if targets["number_shock_or_direct_address_required"] and not (
+        hook["number_shock_present"] or hook["has_direct_address"]
+    ):
+        hard_failures.append({"code": "MISSING_NUMBER_SHOCK_OR_DIRECT_ADDRESS", "axis": "axis6", "value": hook})
+    if rhythm["max_same_ender_run"] > 2:
+        hard_failures.append({"code": "MONOTONOUS_SENTENCE_ENDING", "axis": "axis3", "value": rhythm["max_same_ender_run"]})
+    if register["banmal_ratio"] < 0.90:
+        hard_failures.append({"code": "BANMAL_REGISTER_BELOW_MINIMUM", "axis": "axis4", "value": register["banmal_ratio"]})
+
+    minimums = HOUSE_STYLE_V1["required_devices"]["min_counts"]
+    fake_reader_minimum = minimums["fake_reader_q_shorts"] if format_name == "shorts" else minimums["fake_reader_q_longform"]
+    if retention["fake_reader_q_count"] < fake_reader_minimum:
+        advisories.append({"code": "LOW_FAKE_READER_QUESTION", "axis": "axis2", "value": retention["fake_reader_q_count"], "target": fake_reader_minimum})
+    if analogy["coverage"] < minimums["analogy_coverage_ratio"]:
+        advisories.append({"code": "LOW_ANALOGY_COVERAGE", "axis": "axis5", "value": analogy["coverage"], "target": minimums["analogy_coverage_ratio"]})
+    if format_name == "longform" and retention["fear_reframe_count"] < minimums["fear_reframe_longform"]:
+        advisories.append({"code": "MISSING_FEAR_REFRAME", "axis": "axis2", "value": retention["fear_reframe_count"], "target": minimums["fear_reframe_longform"]})
+    if format_name == "shorts" and not (
+        targets["shorts_sentence_chars_min"] <= rhythm["sent_len_mean"] <= targets["shorts_sentence_chars_max"]
+    ):
+        advisories.append({
+            "code": "SHORTS_SENTENCE_LENGTH_OUT_OF_TARGET",
+            "axis": "axis3",
+            "value": rhythm["sent_len_mean"],
+            "target": [targets["shorts_sentence_chars_min"], targets["shorts_sentence_chars_max"]],
+        })
+
+    return {
+        "enabled": True,
+        "passed": not hard_failures,
+        "hard_failures": hard_failures,
+        "advisories": advisories,
+        "profile": profile,
+    }
+
+
 def _image_metrics(path: Path) -> dict[str, Any]:
     """Measure technical image quality without an extra paid vision-model call."""
     from PIL import Image, ImageStat

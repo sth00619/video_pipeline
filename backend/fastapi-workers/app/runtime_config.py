@@ -116,6 +116,13 @@ _state = {
     "keyword_exclude_live": _cfg.KEYWORD_EXCLUDE_LIVE,
     "keyword_like_rate_benchmark": _cfg.KEYWORD_LIKE_RATE_BENCHMARK,
     "keyword_comment_rate_benchmark": _cfg.KEYWORD_COMMENT_RATE_BENCHMARK,
+    "script_house_style_enabled": _cfg.SCRIPT_HOUSE_STYLE_ENABLED,
+    "script_pattern_numbers_enabled": _cfg.SCRIPT_PATTERN_NUMBERS_ENABLED,
+    "script_pattern_analogy_enabled": _cfg.SCRIPT_PATTERN_ANALOGY_ENABLED,
+    "script_pattern_fake_question_enabled": _cfg.SCRIPT_PATTERN_FAKE_QUESTION_ENABLED,
+    "script_pattern_llm_labeling_enabled": _cfg.SCRIPT_PATTERN_LLM_LABELING_ENABLED,
+    "script_narrative_planning_enabled": _cfg.SCRIPT_NARRATIVE_PLANNING_ENABLED,
+    "script_flow_qa_enabled": _cfg.SCRIPT_FLOW_QA_ENABLED,
 }
 
 _TYPES = {k: type(v) for k, v in _state.items()}
@@ -141,7 +148,10 @@ def update(**kwargs) -> dict:
             raise KeyError(f"알 수 없는 파이프라인 파라미터: {k}")
         expected = _TYPES[k]
         try:
-            _state[k] = expected(v)
+            normalized = expected(v)
+            if k == "max_budget_per_video_krw":
+                normalized = min(normalized, _cfg.MAX_BUDGET_PER_VIDEO_KRW)
+            _state[k] = normalized
         except (TypeError, ValueError):
             raise ValueError(f"{k}는 {expected.__name__} 타입이어야 합니다: 받은 값={v!r}")
     return dict(_state)
