@@ -1,0 +1,38 @@
+﻿[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Main,NanumGothic,72,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,5,0,2,70,70,58,1
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+
+Dialogue: 0,0:00:00.00,0:00:01.93,Main,,0,0,0,,님들, 이번 FOMC 금리입니다.
+Dialogue: 0,0:00:02.00,0:00:03.90,Main,,0,0,0,,3.5에서 3.75퍼센트입니다.
+Dialogue: 0,0:00:03.90,0:00:04.93,Main,,0,0,0,,이번에도 그대로입니다.
+Dialogue: 0,0:00:05.33,0:00:06.83,Main,,0,0,0,,그래서 그냥 넘기기 쉽습니다.
+Dialogue: 0,0:00:06.87,0:00:08.70,Main,,0,0,0,,그런데 정말 중요한 건 따로 있습니다.
+Dialogue: 0,0:00:08.70,0:00:10.13,Main,,0,0,0,,금리 옆에 적힌 문장입니다.
+Dialogue: 0,0:00:10.50,0:00:12.53,Main,,0,0,0,,연준은 경제가 아직 버틴다고 봤습니다.
+Dialogue: 0,0:00:12.57,0:00:14.07,Main,,0,0,0,,기업 투자도 이어진다고 했습니다.
+Dialogue: 0,0:00:14.10,0:00:15.70,Main,,0,0,0,,고용도 크게 흔들리지 않았습니다.
+Dialogue: 0,0:00:16.07,0:00:17.77,Main,,0,0,0,,여기까지만 보면 괜찮아 보입니다.
+Dialogue: 0,0:00:17.80,0:00:19.17,Main,,0,0,0,,그럼 정말 끝난 걸까요?
+Dialogue: 0,0:00:19.57,0:00:20.13,Main,,0,0,0,,아닙니다.
+Dialogue: 0,0:00:20.13,0:00:21.57,Main,,0,0,0,,바로 다음 문장이 중요합니다.
+Dialogue: 0,0:00:21.93,0:00:23.60,Main,,0,0,0,,물가는 아직 목표보다 높습니다.
+Dialogue: 0,0:00:23.63,0:00:24.87,Main,,0,0,0,,목표는 2퍼센트입니다.
+Dialogue: 0,0:00:24.90,0:00:26.50,Main,,0,0,0,,에너지 가격도 영향을 줬습니다.
+Dialogue: 0,0:00:26.90,0:00:28.90,Main,,0,0,0,,좋은 신호와 부담이 함께 있다는 뜻입니다.
+Dialogue: 0,0:00:28.93,0:00:30.63,Main,,0,0,0,,그래서 한 줄만 보면 안 됩니다.
+Dialogue: 0,0:00:30.67,0:00:32.70,Main,,0,0,0,,동결이라는 결과만 보면 안 됩니다.
+Dialogue: 0,0:00:33.17,0:00:34.73,Main,,0,0,0,,왜 동결했는지도 봐야 합니다.
+Dialogue: 0,0:00:34.77,0:00:36.47,Main,,0,0,0,,오늘은 세 가지만 보시면 됩니다.
+Dialogue: 0,0:00:36.47,0:00:37.67,Main,,0,0,0,,금리는 그대로입니다.
+Dialogue: 0,0:00:38.03,0:00:39.30,Main,,0,0,0,,물가는 아직 높습니다.
+Dialogue: 0,0:00:39.33,0:00:41.10,Main,,0,0,0,,경제와 고용은 버티고 있습니다.
+Dialogue: 0,0:00:41.13,0:00:42.23,Main,,0,0,0,,다음 발표도 이 세
+Dialogue: 0,0:00:42.27,0:00:43.83,Main,,0,0,0,,줄만 비교해 보시면 됩니다.

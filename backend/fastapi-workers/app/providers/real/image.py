@@ -35,6 +35,7 @@ from pathlib import Path
 
 from app.providers.base import ImageProvider
 from app.providers.real.prompt_builder import STYLE_LOCK
+from app.utils.budget import ProviderRequestBudgetExceeded
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +183,11 @@ class NanaBananaProvider(ImageProvider):
             logger.info(f"NanaBanana 이미지 생성 요청: prompt_len={len(base_prompt)}, lora={bool(lora_model_id)}")
 
         # 디렉토리 생성
-        if not is_background_only and STYLE_LOCK not in base_prompt:
+        if (
+            not is_background_only
+            and not kwargs.get("suppress_legacy_style_lock", False)
+            and STYLE_LOCK not in base_prompt
+        ):
             base_prompt = STYLE_LOCK + "\n" + base_prompt
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
@@ -232,6 +237,8 @@ class NanaBananaProvider(ImageProvider):
                     service_tier=gemini_service_tier,
                     max_attempts=kwargs.get("gemini_max_attempts"),
                     retry_base_seconds=kwargs.get("gemini_retry_base_seconds"),
+                    request_audit=kwargs.get("gemini_request_audit"),
+                    reference_contract_declared=bool(kwargs.get("gemini_reference_contract_declared", False)),
                 ):
                     logger.info(f"공식 Gemini API 이미지 생성 성공: model={gemini_model}, size={gemini_image_size}, path={output_path}")
                     return True
@@ -240,6 +247,10 @@ class NanaBananaProvider(ImageProvider):
                 if provider_preference == "gemini" and gemini_model == "gemini-3-pro-image":
                     raise
                 logger.warning(f"공식 Gemini API 호출 실패 (GeminiImageGenerationError): {e}")
+            except ProviderRequestBudgetExceeded:
+                # 예산 게이트가 막은 경우에는 다른 제공자로 조용히 우회하거나
+                # 같은 장면을 재시도하지 않는다. 호출 자체가 승인되지 않은 상태다.
+                raise
             except Exception as e:
                 logger.warning(f"공식 Gemini API 호출 실패: {e}")
             return False
@@ -484,6 +495,8 @@ class NanaBananaProvider(ImageProvider):
         service_tier: str = "standard",
         max_attempts: int | None = None,
         retry_base_seconds: float | None = None,
+        request_audit=None,
+        reference_contract_declared: bool = False,
     ) -> bool:
         """Use Gemini Interactions API so Flash and Pro share the same 16:9 contract."""
         import requests
@@ -495,30 +508,25 @@ class NanaBananaProvider(ImageProvider):
             image_size = "1K"
 
         input_parts: list[dict] = []
-        reference_paths = [path for path in (character_image_paths or []) if path and os.path.exists(path)][:2]
-        # Add a secondary approved reference first; the primary sheet below
-        # still supplies the identity instruction exactly once.
-        for extra_reference in reference_paths[1:]:
+        # V5 벤치마크는 캐릭터·스타일·구도 가이드 3장을 의도적으로 함께 쓴다.
+        # Gemini Pro가 허용하는 참조 이미지 범위 내에서 기존 2장 제한을 확장한다.
+        reference_paths = [path for path in (character_image_paths or []) if path and os.path.exists(path)][:3]
+        # 호출 payload의 이미지 순서는 V5 계약과 동일하게 보존한다.
+        # 이전 구현은 style/layout을 먼저 넣어 프롬프트의 character→style→layout
+        # 설명과 실제 이미지 번호가 서로 달랐다.
+        for reference_path in reference_paths:
             try:
-                with open(extra_reference, "rb") as f:
+                with open(reference_path, "rb") as f:
                     encoded = base64.b64encode(f.read()).decode()
-                mime = "image/png" if extra_reference.lower().endswith(".png") else "image/jpeg"
+                mime = "image/png" if reference_path.lower().endswith(".png") else "image/jpeg"
                 input_parts.append({"inlineData": {"mimeType": mime, "data": encoded}})
             except Exception as exc:
-                logger.warning("Secondary character reference load failed: %s", exc)
-        character_image_path = reference_paths[0] if reference_paths else None
-        if character_image_path and os.path.exists(character_image_path):
-            try:
-                with open(character_image_path, "rb") as f:
-                    encoded = base64.b64encode(f.read()).decode()
-                mime = "image/png" if character_image_path.lower().endswith(".png") else "image/jpeg"
-                input_parts.append({"inlineData": {"mimeType": mime, "data": encoded}})
-                prompt = (
-                    "Use the attached image as the fixed channel character identity. Preserve its face, "
-                    "silhouette, color palette and line style. Do not add a second mascot.\n\n" + prompt
-                )
-            except Exception as exc:
-                logger.warning(f"캐릭터 레퍼런스 이미지 로드/인코딩 실패: {exc}")
+                logger.warning("캐릭터 참조 이미지 로드/인코딩 실패: %s", exc)
+        if reference_paths and not reference_contract_declared:
+            prompt = (
+                "Use the first attached image as the fixed channel character identity. Preserve its face, "
+                "silhouette, color palette and line style. Do not add a second mascot.\n\n" + prompt
+            )
         input_parts.append({"text": prompt})
 
         payload = {
@@ -557,9 +565,16 @@ class NanaBananaProvider(ImageProvider):
                 return min(120.0, retry_base_seconds * (2 ** (attempt - 1)))
 
         for attempt in range(1, max_attempts + 1):
+            audit_token = None
             try:
+                # 재시도도 별도 외부 요청이다. POST 직전에만 예약하도록 해
+                # 응답 대기 중 프로세스가 종료돼도 비용 추적이 끊기지 않는다.
+                if request_audit is not None:
+                    audit_token = request_audit.before_attempt(attempt=attempt, model=model)
                 response = requests.post(endpoint, json=payload, headers=headers, timeout=120)
             except requests.RequestException as exc:
+                if request_audit is not None and audit_token is not None:
+                    request_audit.after_attempt(audit_token, outcome="network_error")
                 last_failure = f"network error: {exc.__class__.__name__}: {exc}"
                 if attempt == max_attempts:
                     break
@@ -570,6 +585,19 @@ class NanaBananaProvider(ImageProvider):
                 )
                 time.sleep(wait_time)
                 continue
+
+            if request_audit is not None and audit_token is not None:
+                request_id = (
+                    response.headers.get("x-goog-request-id")
+                    or response.headers.get("x-request-id")
+                    or response.headers.get("request-id")
+                )
+                request_audit.after_attempt(
+                    audit_token,
+                    status_code=response.status_code,
+                    request_id=request_id,
+                    outcome=f"http_{response.status_code}",
+                )
 
             if response.status_code == 200:
                 try:

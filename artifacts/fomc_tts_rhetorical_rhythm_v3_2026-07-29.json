@@ -1,0 +1,252 @@
+{
+  "alignment_mode": "character",
+  "cue_count": 24,
+  "first_start_seconds": 0.466667,
+  "last_end_seconds": 52.533333,
+  "splice_artifacts": {
+    "passed": true,
+    "candidate_count": 29,
+    "suspect_count": 0,
+    "noise_db": -40,
+    "min_silence_seconds": 0.1,
+    "edge_sharpness_threshold": 500.0,
+    "candidates": [
+      {
+        "start": 0.0,
+        "end": 0.371,
+        "duration": 0.371,
+        "is_flat_zero": false,
+        "edge_sharpness": 19952,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 2.886,
+        "end": 3.144,
+        "duration": 0.258,
+        "is_flat_zero": false,
+        "edge_sharpness": 6828,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 5.475,
+        "end": 5.774,
+        "duration": 0.299,
+        "is_flat_zero": false,
+        "edge_sharpness": 23140,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 7.231,
+        "end": 7.636,
+        "duration": 0.405,
+        "is_flat_zero": false,
+        "edge_sharpness": 20354,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 9.02,
+        "end": 9.45,
+        "duration": 0.43,
+        "is_flat_zero": false,
+        "edge_sharpness": 25036,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 10.768,
+        "end": 11.261,
+        "duration": 0.493,
+        "is_flat_zero": false,
+        "edge_sharpness": 24132,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 11.747,
+        "end": 11.916,
+        "duration": 0.169,
+        "is_flat_zero": false,
+        "edge_sharpness": 12292,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 13.388,
+        "end": 13.734,
+        "duration": 0.346,
+        "is_flat_zero": false,
+        "edge_sharpness": 10376,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 15.462,
+        "end": 15.892,
+        "duration": 0.43,
+        "is_flat_zero": false,
+        "edge_sharpness": 21627,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 17.676,
+        "end": 17.966,
+        "duration": 0.29,
+        "is_flat_zero": false,
+        "edge_sharpness": 3106,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 17.967,
+        "end": 18.087,
+        "duration": 0.12,
+        "is_flat_zero": false,
+        "edge_sharpness": 17252,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 18.971,
+        "end": 19.233,
+        "duration": 0.262,
+        "is_flat_zero": false,
+        "edge_sharpness": 15957,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 21.125,
+        "end": 21.573,
+        "duration": 0.449,
+        "is_flat_zero": false,
+        "edge_sharpness": 25118,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 23.046,
+        "end": 23.414,
+        "duration": 0.368,
+        "is_flat_zero": false,
+        "edge_sharpness": 22283,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 25.223,
+        "end": 25.431,
+        "duration": 0.208,
+        "is_flat_zero": false,
+        "edge_sharpness": 14760,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 26.336,
+        "end": 26.458,
+        "duration": 0.122,
+        "is_flat_zero": false,
+        "edge_sharpness": 554,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 26.458,
+        "end": 26.614,
+        "duration": 0.156,
+        "is_flat_zero": false,
+        "edge_sharpness": 24699,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 29.353,
+        "end": 29.635,
+        "duration": 0.283,
+        "is_flat_zero": false,
+        "edge_sharpness": 13076,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 32.132,
+        "end": 32.445,
+        "duration": 0.313,
+        "is_flat_zero": false,
+        "edge_sharpness": 19942,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 35.838,
+        "end": 35.974,
+        "duration": 0.137,
+        "is_flat_zero": false,
+        "edge_sharpness": 3959,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 35.984,
+        "end": 36.102,
+        "duration": 0.118,
+        "is_flat_zero": false,
+        "edge_sharpness": 19495,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 39.684,
+        "end": 39.857,
+        "duration": 0.173,
+        "is_flat_zero": false,
+        "edge_sharpness": 14330,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 41.786,
+        "end": 41.937,
+        "duration": 0.151,
+        "is_flat_zero": false,
+        "edge_sharpness": 15910,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 44.106,
+        "end": 44.209,
+        "duration": 0.103,
+        "is_flat_zero": false,
+        "edge_sharpness": 15099,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 45.191,
+        "end": 45.449,
+        "duration": 0.258,
+        "is_flat_zero": false,
+        "edge_sharpness": 18095,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 47.941,
+        "end": 48.109,
+        "duration": 0.168,
+        "is_flat_zero": false,
+        "edge_sharpness": 10452,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 49.079,
+        "end": 49.189,
+        "duration": 0.11,
+        "is_flat_zero": false,
+        "edge_sharpness": 16787,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 51.469,
+        "end": 51.617,
+        "duration": 0.149,
+        "is_flat_zero": false,
+        "edge_sharpness": 3550,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 52.553,
+        "end": 52.755,
+        "duration": 0.202,
+        "is_flat_zero": false,
+        "edge_sharpness": 1774,
+        "verdict": "자연스러운 저음량 구간입니다."
+      }
+    ]
+  },
+  "source_media": "/tmp/fomc_rhythm_v3.mp3",
+  "subtitle_path": "/tmp/fomc_rhythm_v3.srt",
+  "subtitle_frame_rate": 30.0,
+  "subtitle_start_frame_policy": "nearest"
+}

@@ -27,6 +27,8 @@ _state = {
     "chars_per_minute": _cfg.CHARS_PER_MINUTE,
     "scene_duration_sec": _cfg.SCENE_DURATION_SEC,
     "subtitle_max_chars": _cfg.SUBTITLE_MAX_CHARS,
+    "subtitle_frame_rate": _cfg.SUBTITLE_FRAME_RATE,
+    "subtitle_start_frame_policy": _cfg.SUBTITLE_START_FRAME_POLICY,
     "subtitle_font_size": _cfg.SUBTITLE_FONT_SIZE,
     "subtitle_theme": _cfg.SUBTITLE_THEME,
     "image_headline_overlay": _cfg.IMAGE_HEADLINE_OVERLAY,

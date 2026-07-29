@@ -83,9 +83,16 @@ def test_sentence_pause_preserves_korean_terminal_tail_before_native_whitespace(
     assert TtsWorker._sentence_pause_points(characters) == [(1.94, 0.35)]
 
 
-def test_korean_delivery_groups_short_statements_without_touching_numbers_or_finale():
+def test_korean_delivery_preserves_sentence_boundaries_by_default():
     source = "3.56퍼센트입니다. 첫째입니다. 둘째입니다. 마지막입니다."
     delivery = TtsWorker._soften_korean_delivery_cadence(source)
+
+    assert delivery == source
+
+
+def test_korean_delivery_can_reproduce_legacy_thought_groups_when_explicitly_requested():
+    source = "3.56퍼센트입니다. 첫째입니다. 둘째입니다. 마지막입니다."
+    delivery = TtsWorker._soften_korean_delivery_cadence(source, group_size=3)
 
     assert delivery == "3.56퍼센트입니다, 첫째입니다, 둘째입니다. 마지막입니다."
 
@@ -168,6 +175,98 @@ def test_character_alignment_uses_the_final_spoken_decimal_character():
 
     assert chunks[0]["start"] == 0.0
     assert chunks[0]["end"] == round(len(text) * 0.1, 3)
+
+
+def test_subtitle_split_rebalances_a_short_trailing_phrase():
+    chunks = TtsWorker._split_script_into_chunks(
+        "그래서 이번 발표는 그냥 넘겨도 된다고 생각하는 사람 많아.",
+        max_chars=16,
+        min_chars=8,
+    )
+
+    assert chunks[-2:] == ["넘겨도 된다고", "생각하는 사람 많아."]
+    assert min(len(chunk) for chunk in chunks) >= 7
+
+
+def test_subtitle_split_keeps_korean_modifier_with_its_noun_phrase():
+    chunks = TtsWorker._split_script_into_chunks(
+        "성명 첫 줄만 보면 멈춘 발표처럼 보이지.",
+        max_chars=16,
+        min_chars=8,
+    )
+
+    assert chunks == ["성명 첫 줄만 보면", "멈춘 발표처럼 보이지."]
+
+
+def test_subtitle_split_keeps_a_short_formal_sentence_as_one_meaning_unit():
+    chunks = TtsWorker._split_script_into_chunks(
+        "고용도 크게 흔들리지 않았습니다.",
+        max_chars=16,
+        min_chars=8,
+    )
+
+    assert chunks == ["고용도 크게 흔들리지 않았습니다."]
+
+
+def test_subtitle_split_never_starts_a_cue_with_a_detached_particle():
+    chunks = TtsWorker._split_script_into_chunks(
+        "다음 발표에서는 이 세 줄 만 비교하면 충분히 판단할 수 있습니다.",
+        max_chars=16,
+        min_chars=8,
+    )
+
+    assert all(not chunk.startswith("만 ") for chunk in chunks)
+    assert any("줄만" in chunk for chunk in chunks)
+
+
+def test_subtitle_split_keeps_a_compound_postposition_with_its_noun():
+    chunks = TtsWorker._split_script_into_chunks(
+        "연준은 경제활동이 불확실성 속에서도 견조한 속도로 확대되고 있다고 설명했어.",
+        max_chars=16,
+        min_chars=8,
+    )
+
+    assert chunks[:2] == ["연준은 경제활동이", "불확실성 속에서도 견조한 속도로"]
+
+
+def test_subtitle_split_keeps_a_demonstrative_determiner_separate_from_a_particle():
+    chunks = TtsWorker._split_script_into_chunks(
+        "다음 발표에서도 이 세 가지가 어떻게 달라졌는지만 보면 됩니다.",
+        max_chars=18,
+        min_chars=8,
+    )
+
+    assert all("에서도이" not in chunk for chunk in chunks)
+    assert any("이 세 가지" in chunk for chunk in chunks)
+    assert max(map(len, chunks)) <= 20
+
+
+def test_subtitle_timing_starts_on_or_after_forced_alignment_frame():
+    chunks = TtsWorker._snap_subtitle_timings_to_render_frames(
+        [
+            {"index": 1, "text": "첫 구절", "start": 0.299, "end": 0.801, "duration": 0.502},
+            {"index": 2, "text": "다음 구절", "start": 0.812, "end": 1.101, "duration": 0.289},
+        ],
+        frame_rate=30,
+    )
+
+    assert chunks[0]["start"] == 0.3
+    assert chunks[0]["end"] == 0.833333
+    assert chunks[1]["start"] >= 0.812
+    assert chunks[1]["start"] >= chunks[0]["end"]
+    assert chunks[1]["end"] >= 1.101
+
+
+def test_subtitle_timing_uses_the_nearest_frame_for_a_balanced_start():
+    chunks = TtsWorker._snap_subtitle_timings_to_render_frames(
+        [{"index": 1, "text": "구절", "start": 0.281, "end": 0.401}],
+        frame_rate=30,
+        start_frame_policy="nearest",
+    )
+
+    # 0.281초는 0.267초 프레임에 더 가깝다. ceil 정책의 0.300초보다
+    # 덜 늦고, 한 프레임 앞당김 정책보다도 음성 경계에 가깝다.
+    assert chunks[0]["start"] == 0.266667
 
 
 def test_decimal_is_read_in_natural_korean_tts_form():

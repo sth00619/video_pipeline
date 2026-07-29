@@ -50,6 +50,24 @@ def burn_subtitles(video: Path, srt: Path, output: Path) -> None:
     ], check=True)
 
 
+def detect_video_frame_rate(media_path: Path) -> float:
+    """입력 MP4의 평균 프레임레이트를 읽어 자막 시간을 같은 격자에 맞춘다."""
+    if media_path.suffix.lower() not in VIDEO_EXTENSIONS:
+        return 30.0
+    probe = subprocess.run([
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=avg_frame_rate", "-of", "default=noprint_wrappers=1:nokey=1",
+        str(media_path),
+    ], check=True, capture_output=True, text=True)
+    raw_rate = probe.stdout.strip()
+    try:
+        numerator, denominator = raw_rate.split("/", maxsplit=1)
+        rate = float(numerator) / float(denominator)
+    except (ValueError, ZeroDivisionError):
+        return 30.0
+    return rate if rate > 0 else 30.0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="사람 녹음 MP4/오디오에 원문 자막을 정밀 정렬합니다.")
     parser.add_argument("--media", required=True, help="사람 녹음 MP4, MP3 또는 WAV")
@@ -58,6 +76,8 @@ def main() -> None:
     parser.add_argument("--burned", help="선택: 자막을 번인한 최종 MP4 경로")
     parser.add_argument("--burn-source", help="선택: 번인할 무자막 영상. 생략 시 --media MP4를 사용")
     parser.add_argument("--report", help="선택: 정렬·접합부 QA JSON 경로")
+    parser.add_argument("--fps", type=float, help="선택: 자막을 맞출 영상 프레임레이트(기본: 입력 MP4에서 감지)")
+    parser.add_argument("--start-frame-policy", choices=("nearest", "ceil"), default="nearest", help="선택: 자막 시작 프레임 보정 방식")
     parser.add_argument(
         "--allow-word-fallback", action="store_true",
         help="문자 정렬 실패 시에만 단어 정렬 결과를 허용합니다. 기본값은 실패 처리입니다.",
@@ -82,7 +102,7 @@ def main() -> None:
         except AlignmentError as exc:
             raise RuntimeError(f"강제 정렬에 실패했습니다: {exc}") from exc
 
-        display_chunks = worker._split_script_into_chunks(display_script, max_chars=16)
+        display_chunks = worker._split_script_into_chunks(display_script, max_chars=18)
         chunks = worker._map_display_chunks_to_spoken_characters(display_chunks, characters)
         alignment_mode = "character"
         if not chunks:
@@ -94,6 +114,9 @@ def main() -> None:
             alignment_mode = "word_fallback"
         if not chunks:
             raise RuntimeError("원문 자막 타임라인을 만들 수 없습니다. 낭독 대본 준수 여부를 확인하세요.")
+
+        frame_rate = args.fps or detect_video_frame_rate(media_path)
+        chunks = worker._snap_subtitle_timings_to_render_frames(chunks, frame_rate, args.start_frame_policy)
 
         output_srt.parent.mkdir(parents=True, exist_ok=True)
         cues = [SubtitleCue(item["index"], item["start"], item["end"], item["text"]) for item in chunks]
@@ -108,6 +131,8 @@ def main() -> None:
         "splice_artifacts": splice_report,
         "source_media": str(media_path),
         "subtitle_path": str(output_srt),
+        "subtitle_frame_rate": frame_rate,
+        "subtitle_start_frame_policy": args.start_frame_policy,
     }
     if args.burned:
         burn_source = Path(args.burn_source).resolve() if args.burn_source else media_path

@@ -30,7 +30,7 @@ from app.utils import gemini_batch
 from app.pipeline.scene_director import SceneDirector, SceneSpec
 from app.providers.real.prompt_builder import build_prompt
 from app.postprocess.text_overlay import add_headline
-from app.utils.budget import plan_preflight, record_cost, write_preflight
+from app.utils.budget import ProviderRequestAudit, plan_preflight, record_cost, write_preflight
 from app.utils.intro_motion import infer_total_duration_seconds, select_intro_motion_scene_indices, scene_duration_seconds
 from app.utils.gemini_pressure import gemini_pressure
 from app.utils.image_job_lock import acquire_image_job_lock, release_image_job_lock
@@ -689,7 +689,8 @@ class ImagesWorker:
                         bg_path = str(job_dir / f"scene_{i:03d}_bg.png")
                         background_path = bg_path
                         self._generate_background_layer(
-                            ai_provider, prompt_en, bg_path, section, pose, image_profile
+                            ai_provider, prompt_en, bg_path, section, pose, image_profile,
+                            job_id=job_id, scene_key=f"image:{i}",
                         )
                         self._normalize_canvas(bg_path)
                         self._compose_layered_scene(
@@ -729,13 +730,18 @@ class ImagesWorker:
                                     lora_model_id=lora_model_id,
                                     lora_trigger_word=lora_trigger_word,
                                     lora_scale=lora_scale,
-                                    image_provider=runtime_config.value("image_provider"),
-                                    gemini_model=image_profile.get("model"),
-                                    gemini_image_size=image_profile.get("image_size"),
-                                    gemini_service_tier=runtime_config.value("gemini_service_tier"),
-                                    gemini_max_attempts=runtime_config.value("gemini_pro_max_attempts"),
-                                    gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
-                                    style_locked=bool(spec),
+                                image_provider=runtime_config.value("image_provider"),
+                                gemini_model=image_profile.get("model"),
+                                gemini_image_size=image_profile.get("image_size"),
+                                gemini_service_tier=runtime_config.value("gemini_service_tier"),
+                                gemini_max_attempts=runtime_config.value("gemini_pro_max_attempts"),
+                                gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+                                gemini_request_audit=ProviderRequestAudit.for_job(
+                                    job_id=job_id,
+                                    scene_key=f"image:{i}",
+                                    model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                ),
+                                style_locked=bool(spec),
                                 )
                             finally:
                                 if is_direct_pro_scene:
@@ -761,7 +767,13 @@ class ImagesWorker:
                                         lora_model_id=lora_model_id, lora_trigger_word=lora_trigger_word, lora_scale=lora_scale,
                                         image_provider=runtime_config.value("image_provider"), gemini_model=image_profile.get("model"),
                                         gemini_image_size=image_profile.get("image_size"), gemini_service_tier=runtime_config.value("gemini_service_tier"),
-                                        gemini_max_attempts=1, gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"), style_locked=bool(spec),
+                                        gemini_max_attempts=1, gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+                                        gemini_request_audit=ProviderRequestAudit.for_job(
+                                            job_id=job_id,
+                                            scene_key=f"template_regen:{i}",
+                                            model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                        ),
+                                        style_locked=bool(spec),
                                     )
                                     self._replace_with_regenerated_surface_source(scene, raw_img_path, img_path)
                                     record_cost(job_id, "pro" if image_profile.get("tier") == "pro" else "flash", scene_key=f"template_regen:{i}")
@@ -786,7 +798,8 @@ class ImagesWorker:
                                 if use_composite:
                                     var_bg_path = str(job_dir / f"scene_{i:03d}_bg_var_{v}.png")
                                     self._generate_background_layer(
-                                        ai_provider, var_prompt, var_bg_path, section, pose, image_profile
+                                        ai_provider, var_prompt, var_bg_path, section, pose, image_profile,
+                                        job_id=job_id, scene_key=f"image:{i}:variation:{v}",
                                     )
                                     self._normalize_canvas(var_bg_path)
                                     
@@ -809,6 +822,11 @@ class ImagesWorker:
                                         image_provider=runtime_config.value("image_provider"),
                                         gemini_model=image_profile.get("model"),
                                         gemini_image_size=image_profile.get("image_size"),
+                                        gemini_request_audit=ProviderRequestAudit.for_job(
+                                            job_id=job_id,
+                                            scene_key=f"image:{i}:variation:{v}",
+                                            model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                        ),
                                     )
                                     import shutil
                                     shutil.copy2(var_raw_path, var_img_path)
@@ -1071,6 +1089,7 @@ class ImagesWorker:
                         background_path = bg_path
                         self._generate_background_layer(
                             ai_provider, ctx["prompt_en"], bg_path, ctx["section"], ctx["pose"], image_profile,
+                            job_id=job_id, scene_key=f"image:{index}",
                         )
                         if not valid_image(bg_path):
                             raise RuntimeError("provider returned a missing, undersized, or invalid background")
@@ -1105,6 +1124,11 @@ class ImagesWorker:
                             gemini_service_tier=runtime_config.value("gemini_service_tier"),
                             gemini_max_attempts=1,
                             gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+                            gemini_request_audit=ProviderRequestAudit.for_job(
+                                job_id=job_id,
+                                scene_key=f"image:{index}",
+                                model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                            ),
                             style_locked=bool(ctx["spec"]),
                         )
                         if not valid_image(raw_img_path):
@@ -1124,7 +1148,13 @@ class ImagesWorker:
                                 lora_model_id=lora_model_id, lora_trigger_word=lora_trigger_word, lora_scale=lora_scale,
                                 image_provider=runtime_config.value("image_provider"), gemini_model=image_profile.get("model"),
                                 gemini_image_size=image_profile.get("image_size"), gemini_service_tier=runtime_config.value("gemini_service_tier"),
-                                gemini_max_attempts=1, gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"), style_locked=bool(ctx["spec"]),
+                                gemini_max_attempts=1, gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+                                gemini_request_audit=ProviderRequestAudit.for_job(
+                                    job_id=job_id,
+                                    scene_key=f"template_regen:{index}",
+                                    model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                ),
+                                style_locked=bool(ctx["spec"]),
                             )
                             self._replace_with_regenerated_surface_source(ctx, raw_img_path, img_path)
                             record_cost(job_id, "pro" if tier == "pro" else "flash", scene_key=f"template_regen:{index}")
@@ -1290,7 +1320,8 @@ class ImagesWorker:
     # [S2-3] 배경 레이어 생성
     # ============================
     def _generate_background_layer(self, ai_provider, prompt_en: str, bg_path: str,
-                                    section: str, pose: str, image_profile: dict | None = None):
+                                    section: str, pose: str, image_profile: dict | None = None,
+                                    *, job_id: int = 0, scene_key: str = "background:unknown"):
         """
         캐릭터 없는 순수 배경 이미지 생성.
         character_style_prompt="background_only" 를 전달해 캐릭터 주입을 차단.
@@ -1317,6 +1348,11 @@ class ImagesWorker:
             gemini_service_tier=runtime_config.value("gemini_service_tier"),
             gemini_max_attempts=1,
             gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+            gemini_request_audit=ProviderRequestAudit.for_job(
+                job_id=job_id,
+                scene_key=scene_key,
+                model=str((image_profile or {}).get("model") or "gemini-3.1-flash-image"),
+            ),
             )
         except Exception as exc:
             gemini_pressure.outcome(str(exc))

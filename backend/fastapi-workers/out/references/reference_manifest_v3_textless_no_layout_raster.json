@@ -1,0 +1,16 @@
+{
+  "version": "v3_textless_no_layout_raster",
+  "contract": "텍스트 없는 캐릭터·스타일 참조만 전송하고 배치는 프롬프트 문장으로 지시",
+  "artifacts": [
+    {
+      "role": "character",
+      "path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\references\\character_reference_v2_textless.png",
+      "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+    },
+    {
+      "role": "style",
+      "path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\references\\style_reference_v2_textless.png",
+      "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+    }
+  ]
+}

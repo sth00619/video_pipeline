@@ -1,0 +1,27 @@
+{
+  "asset": "fomc_ivc_preferred_90pct_natural_lines.mp4",
+  "source_audio": "C:/Users/song/Downloads/fomc_ivc_audio_review_precise_sync.mp4",
+  "tempo": 0.9,
+  "tempo_policy": "피치를 바꾸지 않는 atempo 필터로 현재보다 10% 느리게 조정",
+  "subtitle_alignment": {
+    "mode": "character",
+    "cue_count": 72,
+    "overlap_count": 0,
+    "max_inter_cue_gap_seconds": 0.46,
+    "rebalanced_example": {
+      "text": "생각하는 사람 많아.",
+      "start_seconds": 8.139,
+      "end_seconds": 9.079
+    }
+  },
+  "splice_artifact_qa": {
+    "candidate_count": 21,
+    "suspect_count": 0,
+    "passed": true
+  },
+  "av_duration": {
+    "video_seconds": 105.083333,
+    "audio_seconds": 105.095011,
+    "difference_seconds": 0.011678
+  }
+}

@@ -27,6 +27,7 @@ Phase 3-3 v5 — TTS + faster-whisper 역방향 정렬
 """
 import os
 import re
+import math
 import logging
 import subprocess
 from pathlib import Path
@@ -351,12 +352,28 @@ class TtsWorker:
                 "저정밀 자막으로 영상 조립하지 말고 TTS 검토 후 재생성하세요."
             )
 
+        # SRT/ASS 렌더러는 임의 밀리초가 아니라 영상 프레임에서 자막을 그린다.
+        # 시작을 문자 경계에 가장 가까운 출력 프레임에 맞춰, 앞당김과 지연이
+        # 한쪽으로 누적되지 않게 한다.
+        chunks = self._snap_subtitle_timings_to_render_frames(
+            chunks,
+            runtime_config.value("subtitle_frame_rate"),
+            runtime_config.value("subtitle_start_frame_policy"),
+        )
         subtitle_quality = assess_subtitles(chunks, actual_duration, subtitle_max_chars)
         quality_report = {
             "subtitles": subtitle_quality,
             "tts_verification": tts_verification,
             "splice_artifacts": splice_artifacts,
             "subtitle_alignment_mode": self._last_subtitle_alignment_mode,
+            "delivery_profile": {
+                "speed": speed,
+                "stability": runtime_config.value("tts_stability_body"),
+                "sentence_micro_breath_ms": runtime_config.value("tts_thought_group_pause_ms"),
+                "subtitle_target_chars": subtitle_max_chars,
+                "question_mark_count": clean_script.count("?"),
+                "caption_timing_source": "elevenlabs_character_timestamps",
+            },
         }
         persist_quality_report(job_id, "tts", quality_report)
         logger.info(
@@ -389,15 +406,13 @@ class TtsWorker:
         return voice_id
 
     @staticmethod
-    def _soften_korean_delivery_cadence(text: str, group_size: int = 3) -> str:
-        """Join short Korean statements into natural three-sentence thought groups.
+    def _soften_korean_delivery_cadence(text: str, group_size: int = 1) -> str:
+        """문장 경계는 보존하고, 필요한 경우에만 이전 묶음 방식을 적용한다.
 
-        ElevenLabs treats every full stop as a strong final cadence.  Finance
-        narration often contains short factual sentences, so that delivery can
-        sound like a repeated sequence of endings.  Replace only intervening
-        sentence periods with commas; keep each third close, questions,
-        exclamations, decimals, and the final sentence intact.  The spoken
-        words and character count are preserved for timing/subtitle mapping.
+        자연스러운 연결은 음성 모델의 억양과 짧은 호흡으로 만든다. 마침표를
+        쉼표로 바꾸면 다음 문장으로 넘어갔는지 듣기 어려워지므로, 기본값은
+        문장 종결을 그대로 유지한다. ``group_size``는 과거 대본을 재현할 때만
+        명시적으로 2 이상을 지정한다.
         """
         if not text or group_size < 2:
             return text
@@ -636,6 +651,8 @@ class TtsWorker:
             # The provider text must therefore begin with the real script.
             mode = self._stability_mode(model_id, stability)
             tts_text = self._prepare_elevenlabs_text(chunk_text, model_id, mode)
+            if tts_text.count("?") != chunk_text.count("?"):
+                raise AssertionError("provider copy must preserve every Korean question mark")
             has_tag = bool(re.search(r"\[[^\[\]]{1,40}\]", tts_text))
             if mode != "natural" and has_tag:
                 raise AssertionError("unsupported ElevenLabs audio tag survived provider-copy sanitization")
@@ -648,7 +665,7 @@ class TtsWorker:
                     "first_sentence": first_sentence,
                     "first_30_chars": tts_text[:30],
                     "pause_boundary_policy": "next_spoken_character",
-                    "cadence_policy": "three_sentence_thought_groups",
+                    "cadence_policy": "native_question_intonation_with_micro_breaths",
                 }
             logger.info(
                 "ElevenLabs transmission model=%s mode=%s has_tag=%s first30=%r",
@@ -1196,6 +1213,57 @@ class TtsWorker:
                 result[-1]["duration"] = round(result[-1]["end"] - result[-1]["start"], 3)
         return result
 
+    @staticmethod
+    def _snap_subtitle_timings_to_render_frames(
+        chunks: List[dict],
+        frame_rate: float = 30.0,
+        start_frame_policy: str = "nearest",
+    ) -> List[dict]:
+        """자막이 음성보다 먼저 그려지지 않도록 출력 프레임에 맞춘다.
+
+        강제 정렬 API의 시간은 연속적인 초 단위지만 영상은 이산 프레임으로
+        출력된다. SRT/ASS의 시작 시간을 그대로 두면 렌더러가 이전 프레임에서
+        이벤트를 활성화할 수 있다. 시작은 문자 경계에 가장 가까운 프레임으로
+        맞추고, 끝은 다음 프레임으로 올림해 음성 꼬리가 먼저 사라지지 않게 한다.
+        """
+        if not chunks:
+            return []
+        try:
+            rate = float(frame_rate)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("subtitle_frame_rate must be a positive number") from exc
+        if rate <= 0:
+            raise ValueError("subtitle_frame_rate must be a positive number")
+        policy = str(start_frame_policy or "nearest").lower()
+        if policy not in {"nearest", "ceil"}:
+            raise ValueError("subtitle_start_frame_policy must be 'nearest' or 'ceil'")
+
+        frame = 1.0 / rate
+
+        def ceil_to_frame(value: float) -> float:
+            # 부동소수점 0.30000000000000004 때문에 이미 정확한 프레임을
+            # 불필요하게 한 프레임 더 늦추지 않도록 작은 허용 오차를 둔다.
+            return math.ceil((value / frame) - 1e-9) * frame
+
+        def nearest_frame(value: float) -> float:
+            return math.floor((value / frame) + 0.5) * frame
+
+        snapped: List[dict] = []
+        previous_end = 0.0
+        for source in chunks:
+            raw_start = max(0.0, float(source.get("start", 0.0) or 0.0))
+            raw_end = max(raw_start, float(source.get("end", 0.0) or 0.0))
+            rounded_start = nearest_frame(raw_start) if policy == "nearest" else ceil_to_frame(raw_start)
+            start = max(rounded_start, previous_end)
+            end = max(ceil_to_frame(raw_end), start + frame)
+            item = dict(source)
+            item["start"] = round(start, 6)
+            item["end"] = round(end, 6)
+            item["duration"] = round(end - start, 6)
+            snapped.append(item)
+            previous_end = end
+        return snapped
+
     def _assess_splice_artifacts(self, audio_path: str, job_id: int) -> Dict:
         """최종 오디오의 디지털 무음 접합부를 경고용으로 검사한다."""
         from app.tts.splice_artifact_detector import analyze_audio
@@ -1332,8 +1400,13 @@ class TtsWorker:
     # 자막 청크 분할 (단어 잘림 방지 + 마크다운 제거)
     # ============================
     @staticmethod
-    def _split_script_into_chunks(script: str, max_chars: int = 22) -> list[str]:
-        """원본 스크립트에서 마크다운 헤더(##)를 제거하고, 단어가 중간에 잘리지 않도록 문장/구절 단위로 깔끔하게 분할"""
+    def _split_script_into_chunks(script: str, max_chars: int = 22, min_chars: int = 8) -> list[str]:
+        """원문을 읽기 좋은 길이와 자연스러운 구절 단위로 분할한다.
+
+        최대 글자 수만 기준으로 자르면 문장 끝에 ``많아`` 같은 짧은 조각이
+        남는다. 마지막 조각이 너무 짧으면 앞 조각의 단어를 옮겨 두 줄 모두가
+        읽을 수 있는 길이가 되게 하되, 단어 자체는 절대 자르지 않는다.
+        """
         clean_script = re.sub(r'^##\s*.+$', '', script, flags=re.MULTILINE).strip()
         
         # 문장 종결 부호 및 어미, 쉼표 등 자연스러운 호흡 지점에서 분리 (파이썬 re 모듈의 고정폭 lookbehind 제한 준수)
@@ -1354,22 +1427,101 @@ class TtsWorker:
         # source of truth for TTS chunking, captions, and timestamp mapping.
         raw_sentences = split_sentences(clean_script)
         
+        def has_modifier_ending(word: str) -> bool:
+            """관형형 어미(한·는·ㄴ·ㄹ)로 끝나는 단어인지 판별한다."""
+            if not word:
+                return False
+            if word.endswith("는"):
+                return True
+            last = ord(word[-1])
+            if not (0xAC00 <= last <= 0xD7A3):
+                return False
+            jongseong = (last - 0xAC00) % 28
+            return jongseong in {4, 8}  # ㄴ, ㄹ
+
+        def requires_left_context(word: str) -> bool:
+            """줄 첫머리에 단독으로 두면 어색한 조사·연결 표현을 찾는다."""
+            return bool(re.search(
+                r"(?:에서도|에서|에게|에도|으로|부터|까지|처럼|보다|만|은|는|이|가|을|를|와|과|의)$",
+                word,
+            ))
+
+        # 한 줄 자막은 15~20자 안팎을 목표로 한다. 조사·종결어미를 보존할 때만
+        # 최대 두 글자를 더 허용하며, 긴 문장을 통째로 화면에 올리지는 않는다.
+        natural_sentence_max = min(max_chars + 2, 20)
         text_chunks = []
         for sent in raw_sentences:
-            words = sent.split()
-            current_line = []
+            if len(sent) <= natural_sentence_max:
+                text_chunks.append(sent)
+                continue
+            # 전사본에는 "줄 만"처럼 조사가 띄어 쓰인 경우가 있다. 이 상태로
+            # 줄을 나누면 "줄 / 만 비교하면 됩니다"가 되어 의미 단위가 깨진다.
+            # 독립 조사는 앞 어절에 붙여 한 덩어리로 분할한다.
+            bound_particles = {
+                "은", "는", "이", "가", "을", "를", "와", "과", "의", "만", "도",
+                "에", "에서", "에게", "에도", "으로", "부터", "까지", "보다", "처럼",
+                "라도", "마저", "조차", "밖에",
+            }
+            source_words = sent.split()
+            words: list[str] = []
+            for word_index, raw_word in enumerate(source_words):
+                next_word = source_words[word_index + 1] if word_index + 1 < len(source_words) else ""
+                # ``이 세 가지``의 ``이``는 조사보다 지시 관형사로 쓰인다.
+                # 이를 앞 단어에 붙이면 화면 자막이 ``발표에서도이``처럼 훼손된다.
+                demonstrative_determiner = raw_word == "이" and bool(re.match(
+                    r"^(?:한|두|세|네|몇|모든|각|다음|이전|첫|마지막|같은|다른)",
+                    next_word,
+                ))
+                if raw_word in bound_particles and words and not demonstrative_determiner:
+                    words[-1] += raw_word
+                else:
+                    words.append(raw_word)
+            lines: list[list[str]] = []
+            current_line: list[str] = []
             current_len = 0
             for w in words:
                 new_len = current_len + len(w) + (1 if current_line else 0)
                 if new_len > max_chars and current_line:
-                    text_chunks.append(" ".join(current_line))
+                    lines.append(current_line)
                     current_line = [w]
                     current_len = len(w)
                 else:
                     current_line.append(w)
                     current_len = new_len
             if current_line:
-                text_chunks.append(" ".join(current_line))
+                lines.append(current_line)
+
+            # 문장 자체가 짧은 경우는 그대로 둔다. 다만 길이 제한 때문에 생긴
+            # 마지막 파편은 앞줄의 마지막 단어를 옮겨 자연스러운 호흡으로 만든다.
+            if len(lines) > 1 and len(" ".join(lines[-1])) < min_chars:
+                previous, trailing = lines[-2], lines[-1]
+                while len(" ".join(trailing)) < min_chars and len(previous) > 1:
+                    current_shortest = min(len(" ".join(previous)), len(" ".join(trailing)))
+                    moved_shortest = min(
+                        len(" ".join(previous[:-1])),
+                        len(" ".join([previous[-1], *trailing])),
+                    )
+                    if moved_shortest <= current_shortest:
+                        break
+                    trailing.insert(0, previous.pop())
+
+            # 최대 글자 수 때문에 관형어와 피수식어(예: "멈춘 / 발표처럼")나
+            # 명사와 조사(예: "불확실성 / 속에서도")가 갈라지지 않게 한다.
+            # 이 경우는 한 문장으로 읽을 수 있는 범위까지 여유를 둬 의미를 우선한다.
+            semantic_hard_max = natural_sentence_max
+            for line_index in range(len(lines) - 1):
+                previous, following = lines[line_index], lines[line_index + 1]
+                if len(previous) <= 1 or not following:
+                    continue
+                candidate = previous[-1]
+                if not (has_modifier_ending(candidate) or requires_left_context(following[0])):
+                    continue
+                remaining = " ".join(previous[:-1])
+                bound_following = " ".join([candidate, *following])
+                if len(remaining) < min_chars or len(bound_following) > semantic_hard_max:
+                    continue
+                following.insert(0, previous.pop())
+            text_chunks.extend(" ".join(line) for line in lines)
                 
         return text_chunks
 

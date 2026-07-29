@@ -159,15 +159,25 @@ def assess_subtitles(chunks: list[dict[str, Any]], audio_duration: float, max_ch
     long_cues = 0
     large_gaps = 0
     bad_durations = 0
+    fast_reading_cues = 0
+    max_reading_speed = 0.0
     for chunk in chunks:
         start = float(chunk.get("start", 0.0) or 0.0)
         duration = float(chunk.get("duration", 0.0) or 0.0)
         end = start + duration
         text = str(chunk.get("text", "")).strip()
-        if len(re.sub(r"\s+", "", text)) > max_chars * 2:
+        visible_characters = len(re.sub(r"\s+", "", text))
+        if visible_characters > max_chars * 2:
             long_cues += 1
         if duration < 0.45 or duration > 3.5:
             bad_durations += 1
+        if duration > 0:
+            reading_speed = visible_characters / duration
+            max_reading_speed = max(max_reading_speed, reading_speed)
+            # 한국어 자막의 읽기 속도 상한(초당 12자)을 넘으면, 의미 단위는
+            # 유지하되 대본 길이 또는 TTS 속도를 검토할 수 있도록 경고한다.
+            if reading_speed > 12.0:
+                fast_reading_cues += 1
         if start - last_end > 0.5:
             large_gaps += 1
         last_end = max(last_end, end)
@@ -180,8 +190,16 @@ def assess_subtitles(chunks: list[dict[str, Any]], audio_duration: float, max_ch
         warnings.append(f"subtitle_gaps_over_500ms:{large_gaps}")
     if bad_durations:
         warnings.append(f"subtitle_duration_outliers:{bad_durations}")
+    if fast_reading_cues:
+        warnings.append(f"subtitle_reading_speed_over_12cps:{fast_reading_cues}")
     score = max(0, 100 - 20 * len(warnings))
-    return {"score": score, "warnings": warnings, "cue_count": len(chunks), "coverage": round(coverage, 4)}
+    return {
+        "score": score,
+        "warnings": warnings,
+        "cue_count": len(chunks),
+        "coverage": round(coverage, 4),
+        "max_reading_speed_cps": round(max_reading_speed, 2),
+    }
 
 
 def assess_script_house_style(
@@ -249,8 +267,13 @@ def assess_script_house_style(
         hard_failures.append({"code": "MISSING_NUMBER_SHOCK_OR_DIRECT_ADDRESS", "axis": "axis6", "value": hook})
     if rhythm["max_same_ender_run"] > 2:
         hard_failures.append({"code": "MONOTONOUS_SENTENCE_ENDING", "axis": "axis3", "value": rhythm["max_same_ender_run"]})
-    if register["banmal_ratio"] < 0.90:
-        hard_failures.append({"code": "BANMAL_REGISTER_BELOW_MINIMUM", "axis": "axis4", "value": register["banmal_ratio"]})
+    if register["formal_polite_ratio"] < targets["formal_polite_ratio_min"]:
+        hard_failures.append({
+            "code": "FORMAL_POLITE_REGISTER_BELOW_MINIMUM",
+            "axis": "axis4",
+            "value": register["formal_polite_ratio"],
+            "target": targets["formal_polite_ratio_min"],
+        })
 
     minimums = HOUSE_STYLE_V1["required_devices"]["min_counts"]
     fake_reader_minimum = minimums["fake_reader_q_shorts"] if format_name == "shorts" else minimums["fake_reader_q_longform"]

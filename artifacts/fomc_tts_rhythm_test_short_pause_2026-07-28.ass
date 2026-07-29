@@ -1,0 +1,56 @@
+﻿[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Main,NanumGothic,72,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,5,0,2,70,70,58,1
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+
+Dialogue: 0,0:00:00.00,0:00:01.70,Main,,0,0,0,,님들, 이번 FOMC
+Dialogue: 0,0:00:01.70,0:00:02.37,Main,,0,0,0,,결과입니다.
+Dialogue: 0,0:00:02.40,0:00:03.47,Main,,0,0,0,,금리는 3.5에서
+Dialogue: 0,0:00:03.47,0:00:04.87,Main,,0,0,0,,3.75퍼센트입니다.
+Dialogue: 0,0:00:04.90,0:00:05.67,Main,,0,0,0,,이번에도 금리는
+Dialogue: 0,0:00:05.70,0:00:06.67,Main,,0,0,0,,그대로 유지됩니다.
+Dialogue: 0,0:00:07.07,0:00:08.10,Main,,0,0,0,,그래서 이번 발표를
+Dialogue: 0,0:00:08.13,0:00:09.13,Main,,0,0,0,,넘기기 쉽습니다.
+Dialogue: 0,0:00:09.20,0:00:10.17,Main,,0,0,0,,하지만 금리 숫자만
+Dialogue: 0,0:00:10.20,0:00:11.00,Main,,0,0,0,,보면 안 됩니다.
+Dialogue: 0,0:00:11.00,0:00:12.20,Main,,0,0,0,,바로 옆에 적힌 문장이
+Dialogue: 0,0:00:12.20,0:00:13.03,Main,,0,0,0,,더 중요합니다.
+Dialogue: 0,0:00:13.43,0:00:14.43,Main,,0,0,0,,연준은 경제가 아직
+Dialogue: 0,0:00:14.43,0:00:15.43,Main,,0,0,0,,버틴다고 봤습니다.
+Dialogue: 0,0:00:15.47,0:00:16.40,Main,,0,0,0,,기업의 투자도 계속
+Dialogue: 0,0:00:16.47,0:00:17.33,Main,,0,0,0,,이어지고 있습니다.
+Dialogue: 0,0:00:17.37,0:00:18.30,Main,,0,0,0,,고용도 큰 변화
+Dialogue: 0,0:00:18.33,0:00:19.60,Main,,0,0,0,,없이 이어졌습니다.
+Dialogue: 0,0:00:20.03,0:00:20.90,Main,,0,0,0,,여기까지만 보면
+Dialogue: 0,0:00:20.93,0:00:21.90,Main,,0,0,0,,괜찮아 보입니다.
+Dialogue: 0,0:00:21.93,0:00:23.23,Main,,0,0,0,,그런데 물가는 아직
+Dialogue: 0,0:00:23.23,0:00:24.30,Main,,0,0,0,,목표보다 높습니다.
+Dialogue: 0,0:00:24.37,0:00:25.40,Main,,0,0,0,,연준의 물가 목표는
+Dialogue: 0,0:00:25.53,0:00:26.40,Main,,0,0,0,,2퍼센트입니다.
+Dialogue: 0,0:00:26.80,0:00:28.13,Main,,0,0,0,,에너지 가격도 물가에
+Dialogue: 0,0:00:28.13,0:00:29.20,Main,,0,0,0,,영향을 줬습니다.
+Dialogue: 0,0:00:29.23,0:00:30.43,Main,,0,0,0,,좋은 신호와 부담이
+Dialogue: 0,0:00:30.50,0:00:31.30,Main,,0,0,0,,함께 있습니다.
+Dialogue: 0,0:00:31.33,0:00:32.30,Main,,0,0,0,,그래서 한 줄만 골라
+Dialogue: 0,0:00:32.33,0:00:33.37,Main,,0,0,0,,보면 안 됩니다.
+Dialogue: 0,0:00:33.77,0:00:34.90,Main,,0,0,0,,금리 동결은 결과만
+Dialogue: 0,0:00:34.93,0:00:35.60,Main,,0,0,0,,보여줍니다.
+Dialogue: 0,0:00:35.60,0:00:36.30,Main,,0,0,0,,그 결과가 나온
+Dialogue: 0,0:00:36.33,0:00:37.40,Main,,0,0,0,,배경도 봐야 합니다.
+Dialogue: 0,0:00:37.43,0:00:38.33,Main,,0,0,0,,오늘은 세 가지만
+Dialogue: 0,0:00:38.37,0:00:39.37,Main,,0,0,0,,차례로 보겠습니다.
+Dialogue: 0,0:00:39.77,0:00:40.73,Main,,0,0,0,,첫째, 금리는
+Dialogue: 0,0:00:40.80,0:00:41.80,Main,,0,0,0,,그대로 유지됩니다.
+Dialogue: 0,0:00:41.83,0:00:42.77,Main,,0,0,0,,둘째, 물가는
+Dialogue: 0,0:00:42.77,0:00:43.83,Main,,0,0,0,,목표보다 높습니다.
+Dialogue: 0,0:00:43.83,0:00:44.77,Main,,0,0,0,,마지막, 경제와
+Dialogue: 0,0:00:44.80,0:00:46.03,Main,,0,0,0,,고용은 버티고 있습니다.
+Dialogue: 0,0:00:46.40,0:00:47.27,Main,,0,0,0,,다음 발표도 세
+Dialogue: 0,0:00:47.30,0:00:48.57,Main,,0,0,0,,줄만 비교하면 됩니다.

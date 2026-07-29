@@ -1,0 +1,21 @@
+{
+  "version": "v2_textless",
+  "contract": "텍스트·숫자·로고·자막이 없는 순수 픽셀 참조 자산",
+  "artifacts": [
+    {
+      "role": "character",
+      "path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\references\\character_reference_v2_textless.png",
+      "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+    },
+    {
+      "role": "style",
+      "path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\references\\style_reference_v2_textless.png",
+      "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+    },
+    {
+      "role": "layout",
+      "path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\references\\layout_reference_v2_textless.png",
+      "sha256": "79d501fdd8c0d3f25ed807de5055f5f0df7e547b9d3f6bc6ccc130befa9c4977"
+    }
+  ]
+}

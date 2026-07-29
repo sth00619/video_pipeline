@@ -89,6 +89,18 @@ def _ends_with_banmal(sentence: str) -> bool:
     ))
 
 
+def _ends_with_formal_polite(sentence: str) -> bool:
+    """합니다체·습니다체 문장인지 판별한다.
+
+    질문형 ``일까요?``도 존댓말 리듬의 일부이므로 포함한다. 대본의 문장
+    역할을 판정하는 것이 아니라 반말 혼입 여부만 확인한다.
+    """
+    return bool(re.search(
+        r"(?:습니다|합니다|됩니다|입니다|습니까|일까요|까요|인가요|세요)[.!?…]?$",
+        sentence.strip(),
+    ))
+
+
 def _ending(sentence: str) -> str:
     match = re.search(
         r"(습니다|세요|해요|어요|아요|네요|거든|거야|같아|했어|였어|있어|없어|"
@@ -243,6 +255,7 @@ def analyze_script(text: str, meta: dict[str, Any] | None = None) -> ScriptProfi
     sorted_lengths = sorted(lengths)
     p90 = sorted_lengths[max(0, int(len(sorted_lengths) * .9) - 1)] if sorted_lengths else 0
     banmal_sentences = sum(_ends_with_banmal(sentence) for sentence in sentences)
+    formal_polite_sentences = sum(_ends_with_formal_polite(sentence) for sentence in sentences)
     second_person_count = len(SECOND_PERSON_RE.findall(normalized))
     stake_count = sum(normalized.count(term) for term in HOUSE_STYLE_V1["register"]["stake_framing"])
     numbers = _numbers(normalized)
@@ -294,6 +307,7 @@ def analyze_script(text: str, meta: dict[str, Any] | None = None) -> ScriptProfi
         },
         axis4_register={
             "banmal_ratio": round(banmal_sentences / len(sentences), 4) if sentences else 0.0,
+            "formal_polite_ratio": round(formal_polite_sentences / len(sentences), 4) if sentences else 0.0,
             "second_person_per_1k": round(second_person_count * 1000 / char_count, 3),
             "stake_framing_count": stake_count,
             "method": "deterministic",

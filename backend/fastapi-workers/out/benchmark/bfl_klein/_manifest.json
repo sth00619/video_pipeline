@@ -1,0 +1,207 @@
+{
+  "provider": "bfl",
+  "model": "flux-2-klein-9b",
+  "purpose": "background_style_only",
+  "estimated_total_usd": 0.12,
+  "scenes": [
+    {
+      "scene_id": "bench_01_port",
+      "archetype": "port_emergency",
+      "status": "ok",
+      "actual_cost_usd": 0.015,
+      "actual_cost_krw": 25,
+      "seconds": 6.8,
+      "seed": 41
+    },
+    {
+      "scene_id": "bench_02_retail",
+      "archetype": "retail_shock",
+      "status": "ok",
+      "actual_cost_usd": 0.015,
+      "actual_cost_krw": 25,
+      "seconds": 6.8,
+      "seed": 42
+    },
+    {
+      "scene_id": "bench_03_classroom",
+      "archetype": "classroom",
+      "status": "ok",
+      "actual_cost_usd": 0.015,
+      "actual_cost_krw": 25,
+      "seconds": 4.7,
+      "seed": 43
+    },
+    {
+      "scene_id": "bench_04_classroom2",
+      "archetype": "classroom",
+      "status": "ok",
+      "actual_cost_usd": 0.015,
+      "actual_cost_krw": 25,
+      "seconds": 5.9,
+      "seed": 44
+    },
+    {
+      "scene_id": "bench_05_weather",
+      "archetype": "weather_map",
+      "status": "ok",
+      "actual_cost_usd": 0.015,
+      "actual_cost_krw": 25,
+      "seconds": 4.4,
+      "seed": 45
+    },
+    {
+      "scene_id": "bench_06_split",
+      "archetype": "split_stage",
+      "status": "ok",
+      "actual_cost_usd": 0.015,
+      "actual_cost_krw": 25,
+      "seconds": 6.5,
+      "seed": 46
+    },
+    {
+      "scene_id": "bench_07_trade",
+      "archetype": "trade_calculator",
+      "status": "ok",
+      "actual_cost_usd": 0.015,
+      "actual_cost_krw": 25,
+      "seconds": 4.1,
+      "seed": 47
+    },
+    {
+      "scene_id": "bench_08_datalab",
+      "archetype": "data_lab",
+      "status": "ok",
+      "actual_cost_usd": 0.015,
+      "actual_cost_krw": 25,
+      "seconds": 4.4,
+      "seed": 48
+    }
+  ],
+  "ledger": {
+    "video_id": "p1a_bfl_klein",
+    "total_spent_krw": 200,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 200,
+      "image_final": 0,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "bench_01_port",
+        "provider": "bfl",
+        "model": "flux-2-klein-9b",
+        "request_kind": "generate",
+        "bucket": "image_draft",
+        "estimated_cost_usd": 0.015,
+        "actual_cost_usd": 0.015,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 25,
+        "actual_cost_krw": 25,
+        "status": "ok",
+        "ts": 1785180381.9087636
+      },
+      {
+        "scene_id": "bench_02_retail",
+        "provider": "bfl",
+        "model": "flux-2-klein-9b",
+        "request_kind": "generate",
+        "bucket": "image_draft",
+        "estimated_cost_usd": 0.015,
+        "actual_cost_usd": 0.015,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 25,
+        "actual_cost_krw": 25,
+        "status": "ok",
+        "ts": 1785180388.7162607
+      },
+      {
+        "scene_id": "bench_03_classroom",
+        "provider": "bfl",
+        "model": "flux-2-klein-9b",
+        "request_kind": "generate",
+        "bucket": "image_draft",
+        "estimated_cost_usd": 0.015,
+        "actual_cost_usd": 0.015,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 25,
+        "actual_cost_krw": 25,
+        "status": "ok",
+        "ts": 1785180393.465937
+      },
+      {
+        "scene_id": "bench_04_classroom2",
+        "provider": "bfl",
+        "model": "flux-2-klein-9b",
+        "request_kind": "generate",
+        "bucket": "image_draft",
+        "estimated_cost_usd": 0.015,
+        "actual_cost_usd": 0.015,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 25,
+        "actual_cost_krw": 25,
+        "status": "ok",
+        "ts": 1785180399.3207998
+      },
+      {
+        "scene_id": "bench_05_weather",
+        "provider": "bfl",
+        "model": "flux-2-klein-9b",
+        "request_kind": "generate",
+        "bucket": "image_draft",
+        "estimated_cost_usd": 0.015,
+        "actual_cost_usd": 0.015,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 25,
+        "actual_cost_krw": 25,
+        "status": "ok",
+        "ts": 1785180403.6985643
+      },
+      {
+        "scene_id": "bench_06_split",
+        "provider": "bfl",
+        "model": "flux-2-klein-9b",
+        "request_kind": "generate",
+        "bucket": "image_draft",
+        "estimated_cost_usd": 0.015,
+        "actual_cost_usd": 0.015,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 25,
+        "actual_cost_krw": 25,
+        "status": "ok",
+        "ts": 1785180410.1811848
+      },
+      {
+        "scene_id": "bench_07_trade",
+        "provider": "bfl",
+        "model": "flux-2-klein-9b",
+        "request_kind": "generate",
+        "bucket": "image_draft",
+        "estimated_cost_usd": 0.015,
+        "actual_cost_usd": 0.015,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 25,
+        "actual_cost_krw": 25,
+        "status": "ok",
+        "ts": 1785180414.296011
+      },
+      {
+        "scene_id": "bench_08_datalab",
+        "provider": "bfl",
+        "model": "flux-2-klein-9b",
+        "request_kind": "generate",
+        "bucket": "image_draft",
+        "estimated_cost_usd": 0.015,
+        "actual_cost_usd": 0.015,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 25,
+        "actual_cost_krw": 25,
+        "status": "ok",
+        "ts": 1785180418.6820004
+      }
+    ]
+  }
+}

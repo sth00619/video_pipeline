@@ -46,11 +46,77 @@ def test_flow_qa_surfaces_semantic_review_without_rewriting_facts():
         }, ensure_ascii=False)
 
     result = review_flow(fake_call, script=(
-        "님들, 금리 목표 범위는 3.5퍼센트에서 3.75퍼센트야. 또 그대로야. "
-        "그럼 아무 일도 없는 걸까? 아니야. 물가는 2퍼센트 목표보다 높아. "
-        "다음 발표에서 금리와 물가 설명을 함께 보면 돼."
+        "여러분, 금리 목표 범위는 3.5퍼센트에서 3.75퍼센트입니다. 이번에도 그대로입니다. "
+        "그렇다면 아무 일도 없는 걸까요? 꼭 그렇지는 않은 겁니다. 물가는 2퍼센트 목표보다 높습니다. "
+        "그래서 다음 발표에서는 금리와 물가 설명을 함께 봐야 합니다."
     ), narrative_plan={"plan_id": "test", "story_beats": []})
 
     assert result["passed"]
     assert result["question_answer_issues"] == []
     assert result["deterministic"]["repetitions"] == []
+
+
+def test_flow_qa_rejects_three_plain_declarative_sentences_in_a_row():
+    def fake_call(_system, _messages, _max_tokens):
+        return json.dumps({
+            "passed": True,
+            "question_answer_issues": [],
+            "repetition_issues": [],
+            "ending_issue": None,
+            "transition_issues": [],
+            "rhythm_issues": [],
+            "revision_instruction": "문장 역할을 섞으세요.",
+        }, ensure_ascii=False)
+
+    result = review_flow(fake_call, script=(
+        "금리는 그대로입니다. 경제는 버티고 있습니다. 물가는 아직 높습니다."
+    ), narrative_plan={"plan_id": "test", "story_beats": []})
+
+    assert not result["passed"]
+    assert result["deterministic"]["rhetorical_rhythm"]["plain_declarative_runs"] == [
+        {"role": "description", "sentence_indexes": [1, 2, 3], "length": 3}
+    ]
+
+
+def test_flow_qa_rejects_repeated_formal_endings_even_when_sentence_roles_differ():
+    def fake_call(_system, _messages, _max_tokens):
+        return json.dumps({
+            "passed": True,
+            "question_answer_issues": [],
+            "repetition_issues": [],
+            "ending_issue": None,
+            "transition_issues": [],
+            "rhythm_issues": [],
+            "revision_instruction": "종결 리듬을 섞으세요.",
+        }, ensure_ascii=False)
+
+    result = review_flow(fake_call, script=(
+        "에너지 가격도 영향을 줬습니다. 좋은 신호만 있는 건 아닙니다. "
+        "그래서 동결만 보면 안 됩니다. 왜 동결했는지도 봐야 합니다."
+    ), narrative_plan={"plan_id": "test", "story_beats": []})
+
+    assert not result["passed"]
+    assert result["deterministic"]["rhetorical_rhythm"]["formal_ending_runs"] == [
+        {"ending": "formal_declarative", "sentence_indexes": [1, 2, 3, 4], "length": 4}
+    ]
+
+
+def test_flow_qa_requires_question_mark_for_spoken_korean_question():
+    def fake_call(_system, _messages, _max_tokens):
+        return json.dumps({
+            "passed": True,
+            "question_answer_issues": [],
+            "repetition_issues": [],
+            "ending_issue": None,
+            "transition_issues": [],
+            "rhythm_issues": [],
+            "revision_instruction": "물음표를 보완하세요.",
+        }, ensure_ascii=False)
+
+    result = review_flow(fake_call, script=(
+        "이번 발표를 그냥 넘겨도 될까요. 그렇지 않습니다. "
+        "금리 옆의 조건까지 같이 봐야 합니다."
+    ), narrative_plan={"plan_id": "test", "story_beats": []})
+
+    assert not result["passed"]
+    assert result["deterministic"]["spoken_pacing"]["question_punctuation_issues"] == [1]

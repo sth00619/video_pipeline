@@ -16,8 +16,8 @@ DEFAULT_SCRIPT_STYLE_PROFILE = "original_finance_storyteller_v1"
 # signature_phrases는 권리 검수를 마친 사람이 별도 설정으로 추가한다.
 HOUSE_STYLE_V1 = {
     "register": {
-        "person": "banmal_2nd",
-        "audience_terms": ["님들", "우리", "너"],
+        "person": "formal_polite",
+        "audience_terms": ["여러분", "우리"],
         "stake_framing": ["우리 계좌", "내 돈"],
     },
     "required_devices": {
@@ -39,11 +39,11 @@ HOUSE_STYLE_V1 = {
     # 제공된 측정 보충 노트에서 확정한 주식 타깃의 구조 수치다. 특정 채널의
     # 문장·표현을 복제하지 않고, 생성물의 호흡과 오프닝만 비교한다.
     "benchmark_stock_targets": {
-        "banmal_ratio_min": 0.8,
+        "formal_polite_ratio_min": 0.9,
         "opening_number_within_first_three_min": 1,
         "number_shock_or_direct_address_required": True,
-        "shorts_sentence_chars_min": 25,
-        "shorts_sentence_chars_max": 35,
+        "shorts_sentence_chars_min": 15,
+        "shorts_sentence_chars_max": 22,
     },
 }
 
@@ -68,9 +68,28 @@ Narrative architecture:
    with one memorable monitoring point and a natural next-question.
 
 Spoken Korean craft:
-- Write as a calm, perceptive narrator speaking to one viewer. Prefer natural
-  conversational endings such as "그런데 여기서 봐야 할 건…" only when they
-  genuinely advance the reasoning; do not repeat a stock catchphrase.
+- Write as a calm, perceptive narrator speaking to one viewer in consistent,
+  natural formal-polite Korean (습니다체). Do not mix banmal or 해요체.
+- Write for one continuous TTS performance, not for line-by-line reading.
+  Keep periods and question marks in the narration text; never replace a
+  sentence boundary with a comma merely to make the delivery faster.
+- Let most spoken sentences land in a natural 12-32 Korean-character range
+  excluding spaces. Use a short emphasis line only as an occasional beat, and
+  never stack three short lines in a row.
+- A real question must end in ``?`` and use a Korean interrogative ending such
+  as ``~까요?`` or ``~습니까?`` so the narrator can lift the final intonation.
+  Follow it immediately with a fact-based answer. Do not turn statements into
+  questions just to add rhythm.
+- Captions are a separate display layer: they will be split after synthesis at
+  comma and meaning boundaries into 15-20-character phrases. Do not insert
+  unnatural line breaks, extra punctuation, or filler into the narration to
+  control caption length.
+- Keep most sentences around 15–20 Korean characters excluding spaces. Do not
+  split a short, semantically complete sentence merely to meet a length target.
+- Do not place three descriptive declarative sentences in a row. Alternate
+  the factual role where appropriate: explanation → question → reversal →
+  emphasis → reason. A question must receive its evidence-based answer in the
+  immediately following sentence or scene.
 - Mix short emphasis sentences with medium explanatory sentences. One scene
   must carry one idea, one emotional beat, and one transition to the next.
 - Translate a number into scale, comparison, cause, or consequence in the
@@ -109,12 +128,12 @@ def get_script_style_guide(
 이 규칙은 특정 창작자의 문장이나 시그니처를 따라 하라는 뜻이 아니다.
 검증된 사실을 설명하는 우리 채널의 편집 규칙으로만 사용한다.
 
-- 레지스터: 반말 2인칭으로 자연스럽게 말한다. "님들", "우리", "너"를 과용하지 말고,
+- 레지스터: 자연스러운 존댓말·습니다체로 말한다. "여러분", "우리"를 과용하지 말고,
   사실의 영향을 "우리 계좌" 또는 "내 돈" 관점으로 연결할 때만 사용한다.
 - 필수 장치: {", ".join(required)}.
 - D1은 첫 3초 안에 검증된 숫자 하나와 질문 또는 대조를 함께 둔다. 숫자는 verified_facts의 값만 쓴다.
 - 쇼츠는 첫 3문장 안에 검증된 숫자를 하나 이상 두고, 숫자 쇼크 또는 "님들" 같은 직접 호명 중 하나로 시작한다.
-- 쇼츠의 평균 문장 길이는 대체로 25~35자로 유지하되, 숫자 쇼크 한 문장은 더 짧을 수 있다.
+- 쇼츠의 평균 문장 길이는 대체로 15~22자로 유지하되, 뜻이 완결된 짧은 문장을 자막 폭 때문에 분절하지 않는다.
 - D2는 롱폼에서만 초반에 일반적인 말로 오늘 다룰 항목 수를 예고한다.
 - D3은 초보자가 헷갈릴 질문 한 줄을 새로 만들고, 바로 검증된 근거로 답한다.
 - D4 비유는 추상 개념의 이해를 돕는 새 일상 비유만 쓴다. 다른 대본의 비유나 표현을 재사용하지 않는다.

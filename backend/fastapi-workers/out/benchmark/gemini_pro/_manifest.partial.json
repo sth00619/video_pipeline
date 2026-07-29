@@ -1,0 +1,218 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "run_status": "interrupted",
+  "cost_status": "unverified_until_console_reconciliation",
+  "console_reconciliation_required_before_retry": true,
+  "scenes": [
+    {
+      "scene_id": "bench_01_port",
+      "archetype": "port_emergency",
+      "status": "recovered_saved_output",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation"
+    },
+    {
+      "scene_id": "bench_02_retail",
+      "archetype": "retail_shock",
+      "status": "recovered_saved_output",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation"
+    },
+    {
+      "scene_id": "bench_03_classroom",
+      "archetype": "classroom",
+      "status": "recovered_saved_output",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation"
+    },
+    {
+      "scene_id": "bench_04_classroom2",
+      "archetype": "classroom",
+      "status": "recovered_saved_output",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation"
+    },
+    {
+      "scene_id": "bench_05_weather",
+      "archetype": "weather_map",
+      "status": "recovered_saved_output",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation"
+    },
+    {
+      "scene_id": "bench_06_split",
+      "archetype": "split_stage",
+      "status": "recovered_saved_output",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation"
+    },
+    {
+      "scene_id": "bench_07_trade",
+      "archetype": "trade_calculator",
+      "status": "recovered_saved_output",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation"
+    },
+    {
+      "scene_id": "bench_08_datalab",
+      "archetype": "data_lab",
+      "status": "missing_or_interrupted"
+    }
+  ],
+  "ledger": {
+    "video_id": "p1b_gemini_pro_interrupted",
+    "total_spent_krw": 1617,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 1617,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "bench_01_port",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 231,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 231,
+        "status": "recovered_saved_output",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "recovered_from_saved_file": true
+        },
+        "ts": 1785182127.7438157
+      },
+      {
+        "scene_id": "bench_02_retail",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 231,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 231,
+        "status": "recovered_saved_output",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "recovered_from_saved_file": true
+        },
+        "ts": 1785182127.7439778
+      },
+      {
+        "scene_id": "bench_03_classroom",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 231,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 231,
+        "status": "recovered_saved_output",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "recovered_from_saved_file": true
+        },
+        "ts": 1785182127.7440753
+      },
+      {
+        "scene_id": "bench_04_classroom2",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 231,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 231,
+        "status": "recovered_saved_output",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "recovered_from_saved_file": true
+        },
+        "ts": 1785182127.744138
+      },
+      {
+        "scene_id": "bench_05_weather",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 231,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 231,
+        "status": "recovered_saved_output",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "recovered_from_saved_file": true
+        },
+        "ts": 1785182127.7441936
+      },
+      {
+        "scene_id": "bench_06_split",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 231,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 231,
+        "status": "recovered_saved_output",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "recovered_from_saved_file": true
+        },
+        "ts": 1785182127.7447426
+      },
+      {
+        "scene_id": "bench_07_trade",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1650.0,
+        "estimated_cost_krw": 231,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 231,
+        "status": "recovered_saved_output",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "recovered_from_saved_file": true
+        },
+        "ts": 1785182127.744881
+      }
+    ]
+  }
+}

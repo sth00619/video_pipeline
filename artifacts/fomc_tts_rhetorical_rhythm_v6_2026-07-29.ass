@@ -1,0 +1,40 @@
+﻿[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Main,NanumGothic,72,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,5,0,2,70,70,58,1
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+
+Dialogue: 0,0:00:00.00,0:00:02.53,Main,,0,0,0,,이번 FOMC, 금리 동결입니다.
+Dialogue: 0,0:00:02.53,0:00:05.00,Main,,0,0,0,,3.5에서 3.75퍼센트입니다.
+Dialogue: 0,0:00:05.00,0:00:06.57,Main,,0,0,0,,여러분, 달라진 게 없을까요?
+Dialogue: 0,0:00:06.60,0:00:07.90,Main,,0,0,0,,꼭 그렇지는 않습니다.
+Dialogue: 0,0:00:07.90,0:00:09.73,Main,,0,0,0,,봐야 할 건 옆 문장입니다.
+Dialogue: 0,0:00:09.73,0:00:11.73,Main,,0,0,0,,연준은 경제가 버틴다고 봤습니다.
+Dialogue: 0,0:00:11.73,0:00:13.63,Main,,0,0,0,,기업 투자도 이어진다고 했습니다.
+Dialogue: 0,0:00:13.63,0:00:15.33,Main,,0,0,0,,그럼 이제 안심해도 될까요?
+Dialogue: 0,0:00:15.33,0:00:16.43,Main,,0,0,0,,아직은 아닙니다.
+Dialogue: 0,0:00:16.43,0:00:17.87,Main,,0,0,0,,물가는 목표보다 높습니다.
+Dialogue: 0,0:00:17.87,0:00:19.23,Main,,0,0,0,,목표는 2퍼센트입니다.
+Dialogue: 0,0:00:19.23,0:00:21.00,Main,,0,0,0,,그럼 물가 부담은 끝났을까요?
+Dialogue: 0,0:00:21.00,0:00:21.90,Main,,0,0,0,,그렇지 않습니다.
+Dialogue: 0,0:00:21.90,0:00:23.53,Main,,0,0,0,,에너지 가격까지 물가에
+Dialogue: 0,0:00:23.53,0:00:24.97,Main,,0,0,0,,영향을 주고 있습니다.
+Dialogue: 0,0:00:24.97,0:00:25.93,Main,,0,0,0,,좋은 신호만 있는
+Dialogue: 0,0:00:25.93,0:00:27.10,Main,,0,0,0,,상황은 아닌 겁니다.
+Dialogue: 0,0:00:27.10,0:00:28.87,Main,,0,0,0,,그러니 동결이라는 결과만 보고
+Dialogue: 0,0:00:28.87,0:00:30.13,Main,,0,0,0,,넘어가면 안 됩니다.
+Dialogue: 0,0:00:30.17,0:00:31.53,Main,,0,0,0,,왜 금리를 그대로 뒀는지,
+Dialogue: 0,0:00:31.60,0:00:33.27,Main,,0,0,0,,그 이유까지 같이 봐야겠죠.
+Dialogue: 0,0:00:33.27,0:00:35.73,Main,,0,0,0,,그럼 세 가지만 정리해보겠습니다.
+Dialogue: 0,0:00:35.73,0:00:37.17,Main,,0,0,0,,금리는 그대로, 물가는
+Dialogue: 0,0:00:37.17,0:00:38.80,Main,,0,0,0,,여전히 높은 상태입니다.
+Dialogue: 0,0:00:38.80,0:00:40.43,Main,,0,0,0,,경제와 고용은 예상보다
+Dialogue: 0,0:00:40.50,0:00:41.57,Main,,0,0,0,,잘 버티고 있고요.
+Dialogue: 0,0:00:41.57,0:00:43.43,Main,,0,0,0,,다음 발표에서도 이 세 가지가
+Dialogue: 0,0:00:43.43,0:00:45.97,Main,,0,0,0,,어떻게 달라졌는지만 보면 됩니다.

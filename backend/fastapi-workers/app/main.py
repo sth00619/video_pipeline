@@ -18,7 +18,7 @@ from app.workers.longform_worker import LongformWorker
 from app.workers.sfx_worker import SfxWorker
 from app.workers.bgm_worker import BgmWorker
 from app.workers.pronunciation_manager import PronunciationManager
-from app.config import APP_MODE, CLAUDE_MODEL
+from app.config import APP_MODE, BFL_API_KEY, CLAUDE_MODEL, V5_BFL_ENABLED
 from app import runtime_config
 from app.utils.fal_billing import get_fal_credit_status
 from app.utils.art_direction import compile_editorial_prompt
@@ -103,7 +103,11 @@ def get_evidence_capture_service() -> EvidenceCaptureService:
 
 @app.on_event("startup")
 async def startup_event():
-    """서버 시작 시 발음 사전 초기화"""
+    """서버 시작 시 발음 사전을 초기화한다."""
+    if not BFL_API_KEY:
+        logger.warning("BFL_API_KEY가 설정되지 않았습니다. V5 실제 이미지 생성은 비활성입니다.")
+    elif V5_BFL_ENABLED:
+        logger.info("V5 BFL 이미지 생성 경로가 활성화되었습니다.")
     try:
         result = PronunciationManager.get_instance().initialize()
         logger.info(f"발음 사전 초기화: {result}")
@@ -148,6 +152,8 @@ class PipelineConfigUpdate(BaseModel):
     chars_per_minute: Optional[int] = None
     scene_duration_sec: Optional[float] = None
     subtitle_max_chars: Optional[int] = None
+    subtitle_frame_rate: Optional[float] = None
+    subtitle_start_frame_policy: Optional[str] = None
     subtitle_font_size: Optional[int] = None
     subtitle_theme: Optional[str] = None
     image_headline_overlay: Optional[bool] = None

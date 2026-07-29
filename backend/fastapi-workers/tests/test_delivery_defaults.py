@@ -13,10 +13,10 @@ class DeliveryDefaultsTests(unittest.TestCase):
         self.assertEqual(contract["target_chars"], 2225)
 
     def test_default_voice_delivery_matches_reference_breaths(self):
-        self.assertEqual(runtime_config.value("tts_speed"), 1.0)
+        self.assertEqual(runtime_config.value("tts_speed"), 0.9)
         self.assertEqual(runtime_config.value("tts_sentence_pause_ms"), 350)
         self.assertEqual(runtime_config.value("tts_paragraph_pause_ms"), 400)
-        self.assertEqual(runtime_config.value("tts_thought_group_pause_ms"), 1100)
+        self.assertEqual(runtime_config.value("tts_thought_group_pause_ms"), 70)
         characters = [
             {"text": "A", "start": 0.0, "end": 0.1},
             {"text": ".", "start": 0.1, "end": 0.2},

@@ -19,6 +19,10 @@ ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2
 KLING_API_KEY = os.getenv("KLING_API_KEY", "")
 GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY", "")
 FAL_KEY = os.getenv("FAL_KEY", "")
+BFL_API_KEY = os.getenv("BFL_API_KEY", "")
+V5_BFL_ENABLED = os.getenv("V5_BFL_ENABLED", "false").lower() in {"1", "true", "yes"}
+if V5_BFL_ENABLED and not BFL_API_KEY:
+    raise RuntimeError("V5_BFL_ENABLED=true이면 BFL_API_KEY가 필요합니다.")
 
 # ─── 신규: 시장 데이터 / 뉴스 API Keys ─────────────────
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")       # 미국 주식 뉴스·시세
@@ -77,7 +81,14 @@ TTS_SPEED = float(os.getenv("TTS_SPEED", "1.0"))
 # dates, prices and ticker-like terms that are expanded before synthesis.
 CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "400"))
 SCENE_DURATION_SEC = float(os.getenv("SCENE_DURATION_SEC", "5.5"))
-SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "16"))
+# 한국어 한 줄 자막은 의미 단위를 해치지 않는 15~20자 범위를 목표로 한다.
+SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "18"))
+# 최종 조립 영상은 30fps CFR로 인코딩한다. 자막 시작점을 이 프레임 격자에
+# 맞춰야 렌더러가 강제 정렬 시각보다 한 프레임 먼저 표시하지 않는다.
+SUBTITLE_FRAME_RATE = float(os.getenv("SUBTITLE_FRAME_RATE", "30"))
+# nearest는 이전 프레임으로만 당기던 방식과 다음 프레임으로만 미루던 방식의
+# 중간값이다. 최종 음성 문자 경계에 가장 가까운 출력 프레임을 선택한다.
+SUBTITLE_START_FRAME_POLICY = os.getenv("SUBTITLE_START_FRAME_POLICY", "nearest").lower()
 SUBTITLE_FONT_SIZE = int(os.getenv("SUBTITLE_FONT_SIZE", "72"))
 SUBTITLE_THEME = os.getenv("SUBTITLE_THEME", "economy")  # economy | knowledge
 IMAGE_HEADLINE_OVERLAY = os.getenv("IMAGE_HEADLINE_OVERLAY", "false").lower() in {"1", "true", "yes"}
@@ -137,18 +148,22 @@ ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.0"))
 # 감정 연기가 필요한 구간만 환경 변수로 v3를 명시적으로 선택할 수 있다.
 TTS_MODEL_INTRO = os.getenv("TTS_MODEL_INTRO", "eleven_multilingual_v2")
 TTS_MODEL_BODY = os.getenv("TTS_MODEL_BODY", "eleven_multilingual_v2")
-TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.35"))
-TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "0.35"))
+# v7 검수 기준: 같은 목소리의 정체성은 유지하면서 질문 끝과 설명부의
+# 미세한 높낮이를 살릴 수 있도록 안정성을 과도하게 고정하지 않는다.
+TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.25"))
+TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "0.25"))
 TTS_CER_THRESHOLD = float(os.getenv("TTS_CER_THRESHOLD", "0.15"))
 TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
-TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "true").lower() in {"1", "true", "yes"}
+# AI 음성은 과한 압축·정규화만으로도 합성음처럼 들릴 수 있다. 원본 성우의
+# 미세한 높낮이와 호흡을 보존하기 위해 기본 마스터링은 끈다.
+TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "false").lower() in {"1", "true", "yes"}
 # ElevenLabs already supplies natural Korean sentence breaths.  Do not splice
 # extra silence at every punctuation mark; it makes narration staccato.
 TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "350"))
 TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "400"))
-# When short factual statements are joined into a thought group, use one
-# editorial beat at the group boundary instead of a stop after every sentence.
-TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "1100"))
+# ElevenLabs의 원래 억양은 보존하되, 문장 경계가 붙어 들리지 않도록 70ms만
+# 더한다. 이 값은 호흡을 구별하는 수준이며 장면 전환처럼 길게 쉬지 않는다.
+TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "70"))
 TTS_DURATION_TOLERANCE = float(os.getenv("TTS_DURATION_TOLERANCE", "0.15"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))

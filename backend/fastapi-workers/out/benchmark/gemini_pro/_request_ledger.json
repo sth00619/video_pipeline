@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_08_datalab",
+      "attempt": 1,
+      "attempt_id": "c61618b7f5eb4df998a9cf8a18968f0c",
+      "estimated_usd": 0.14,
+      "amount_krw": 231,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_503",
+      "reserved_at": "2026-07-28T13:37:54.125619+00:00",
+      "completed_at": "2026-07-28T13:38:09.258785+00:00",
+      "status_code": 503
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_08_datalab",
+      "attempt": 1,
+      "attempt_id": "565e47e30a65432db9b8cf0557584ccb",
+      "estimated_usd": 0.14,
+      "amount_krw": 231,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_503",
+      "reserved_at": "2026-07-28T14:30:31.168660+00:00",
+      "completed_at": "2026-07-28T14:30:48.334927+00:00",
+      "status_code": 503
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_08_datalab",
+      "attempt": 1,
+      "attempt_id": "3a2f0c4bc36143c3a84ffdcf92dde832",
+      "estimated_usd": 0.14,
+      "amount_krw": 231,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-28T14:31:17.535476+00:00",
+      "completed_at": "2026-07-28T14:31:50.805322+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 693,
+  "budget_overrun_krw": 0
+}

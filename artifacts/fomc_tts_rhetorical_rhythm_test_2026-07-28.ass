@@ -1,0 +1,33 @@
+﻿[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Main,NanumGothic,72,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,5,0,2,70,70,58,1
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+
+Dialogue: 0,0:00:00.00,0:00:02.60,Main,,0,0,0,,이번 FOMC, 금리 동결입니다.
+Dialogue: 0,0:00:02.60,0:00:05.10,Main,,0,0,0,,3.5에서 3.75퍼센트입니다.
+Dialogue: 0,0:00:05.10,0:00:06.90,Main,,0,0,0,,여러분, 달라진 게 없을까요?
+Dialogue: 0,0:00:06.90,0:00:08.47,Main,,0,0,0,,꼭 그렇지는 않습니다.
+Dialogue: 0,0:00:08.47,0:00:10.43,Main,,0,0,0,,봐야 할 건 옆 문장입니다.
+Dialogue: 0,0:00:10.43,0:00:12.60,Main,,0,0,0,,연준은 경제가 버틴다고 봤습니다.
+Dialogue: 0,0:00:12.60,0:00:14.70,Main,,0,0,0,,기업 투자도 이어진다고 했습니다.
+Dialogue: 0,0:00:14.70,0:00:16.53,Main,,0,0,0,,그럼 이제 안심해도 될까요?
+Dialogue: 0,0:00:16.53,0:00:17.83,Main,,0,0,0,,아직은 아닙니다.
+Dialogue: 0,0:00:17.83,0:00:19.47,Main,,0,0,0,,물가는 목표보다 높습니다.
+Dialogue: 0,0:00:19.47,0:00:21.00,Main,,0,0,0,,목표는 2퍼센트입니다.
+Dialogue: 0,0:00:21.00,0:00:22.97,Main,,0,0,0,,그럼 물가 부담은 끝났을까요?
+Dialogue: 0,0:00:22.97,0:00:24.13,Main,,0,0,0,,그렇지 않습니다.
+Dialogue: 0,0:00:24.13,0:00:26.37,Main,,0,0,0,,에너지 가격도 영향을 줬습니다.
+Dialogue: 0,0:00:26.37,0:00:28.23,Main,,0,0,0,,좋은 신호만 있는 건 아닙니다.
+Dialogue: 0,0:00:28.23,0:00:30.33,Main,,0,0,0,,그래서 동결만 보면 안 됩니다.
+Dialogue: 0,0:00:30.37,0:00:32.33,Main,,0,0,0,,왜 동결했는지도 봐야 합니다.
+Dialogue: 0,0:00:32.33,0:00:34.17,Main,,0,0,0,,먼저 금리는 그대로입니다.
+Dialogue: 0,0:00:34.17,0:00:36.43,Main,,0,0,0,,하지만 물가는 아직 높습니다.
+Dialogue: 0,0:00:36.43,0:00:38.50,Main,,0,0,0,,경제와 고용은 버티고 있습니다.
+Dialogue: 0,0:00:38.50,0:00:40.40,Main,,0,0,0,,다음 발표도 세 줄만 보면 됩니다.
