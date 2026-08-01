@@ -1,0 +1,20 @@
+{
+  "input_background": "/app/out/v5_pilot/kospi_july_2026/actual_four_scene/v5_datalab_benchmark_style_20260802/kospi_july_01_background.png",
+  "output_image": "/app/out/v5_pilot/verified_physical_surface_20260802/kospi_verified_data_lab_surface.png",
+  "source_url": "https://www.yna.co.kr/view/AKR20260723141400008",
+  "source_ref": "article_d557e25890a6480c",
+  "verified_values": {
+    "KOSPI CLOSE": "7,096.89",
+    "meaning": "UP +4.40%"
+  },
+  "render_mode": "DIEGETIC_WARP",
+  "surface_kind": "holographic_map_screen",
+  "primary_surface_region": [
+    0.12,
+    0.12,
+    0.47,
+    0.48
+  ],
+  "floating_card_used": false,
+  "image_generation_api_calls": 0
+}

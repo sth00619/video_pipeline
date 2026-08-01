@@ -1,5 +1,9 @@
 # V5 스타일 회복 최소 수정안
 
+> 상태 갱신(2026-08-02): 사용자는 변수 통제를 위해 선택 B(엄격 benchmark 복원)를 선택했다.
+> 실제 실행 전 검토해야 하는 최신 프롬프트는 `V5_R1_RUNTIME_PROMPT_REVIEW_2026-08-02.md`이며,
+> 이 문서의 R1 추가 보정 문구와 예시는 역사적 제안으로만 보관한다.
+
 ## 결론
 
 현재 결과의 문제는 두 층으로 나뉜다.
@@ -184,4 +188,3 @@ Keep a slim lower band and a small upper-right corner free of foreground subject
 DO NOT INCLUDE Korean text, Korean subtitles, a channel logo, watermark, or a generic floating dashboard card. Do not create a detached rectangular UI widget, free-floating data card, isolated LCD panel, presentation slide, or a separate POS-style number screen placed on top of the scene. All gauges, screens, maps, placards, documents, signs, and consoles OTHER THAN one central holographic map panel must show only needles, color blocks, abstract shapes, or non-writing material texture. Do not make empty monitors, empty boards, blank title cards, layout-guide frames, split screens, comic panels, inset images, picture-in-picture windows, framing gutters, or collages. The gold coin mascot is the only anthropomorphic character. The scene must be complete, busy, and meaningful.
 </exclusions>
 ```
-

@@ -8,7 +8,7 @@ import pytest
 cv2 = pytest.importorskip("cv2")
 
 from app.services.info_surface.contracts import InfoItem, InfoSurfacePlan, SurfaceContract
-from app.services.info_surface.detector import detect_surface_quad
+from app.services.info_surface.detector import detect_surface_quad, detection_from_normalized_region
 from app.services.info_surface.warp_compositor import composite_planar, diegetic_supersample_factor, render_data_cutaway
 from app.workers.images_worker import ImagesWorker
 from app.workers.longform_worker import _ffmpeg_static_image
@@ -23,6 +23,21 @@ def _input():
     cv2.fillConvexPoly(image, inner, marker[::-1])
     cv2.line(image, (680, 80), (700, 430), (12, 12, 12), 8)
     return image, marker, border
+
+
+def test_v5_primary_region_detection_is_exact_and_rejects_out_of_bounds():
+    image = np.zeros((720, 1280, 3), dtype=np.uint8)
+    detection = detection_from_normalized_region(image, (.25, .20, .50, .40))
+    assert detection.confidence == 1.0
+    assert detection.quad.tolist() == [
+        [320.0, 144.0],
+        [960.0, 144.0],
+        [960.0, 432.0],
+        [320.0, 432.0],
+    ]
+    assert cv2.countNonZero(detection.surface_mask) > 0
+    with pytest.raises(ValueError, match="캔버스"):
+        detection_from_normalized_region(image, (.90, .20, .20, .40))
 
 
 def test_diegetic_supersample_is_derived_from_quad_size():

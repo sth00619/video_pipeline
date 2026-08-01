@@ -17,7 +17,7 @@ def test_all_benchmark_prompts_request_a_textless_image():
         assert "no writing-like strokes anywhere" in prompt
         assert "roman letters such as x or x" in prompt
         assert "equation fragments" in prompt
-        assert "one continuous full-bleed illustrated scene" in prompt
+        assert "do not make a split screen, comic panels, inset images" in prompt
         assert "comic panels" in prompt
         # 금지 대상은 exclusions에서 언급되어야 하므로, 장식 텍스트를 긍정적으로
         # 요구하는 문구만 없는지 확인한다.

@@ -236,8 +236,14 @@ def _validate_v5_primary_surface(scene: dict[str, Any], facts: tuple[VerifiedFac
             )
 
 
-def apply_verified_scene_facts(base_png: bytes, scene: dict[str, Any]) -> bytes:
-    """검증 씬의 소품-표면 오버레이를 합성한다. 오버레이가 없으면 원본을 유지한다."""
+def validated_facts_from_verified_scene(scene: dict[str, Any]) -> tuple[VerifiedFact, ...]:
+    """검증 원문과 V5 primary 표면 계약을 모두 통과한 사실만 반환한다."""
     facts = facts_from_verified_scene(scene)
     _validate_v5_primary_surface(scene, facts)
+    return facts
+
+
+def apply_verified_scene_facts(base_png: bytes, scene: dict[str, Any]) -> bytes:
+    """검증 씬의 소품-표면 오버레이를 합성한다. 오버레이가 없으면 원본을 유지한다."""
+    facts = validated_facts_from_verified_scene(scene)
     return apply_facts_to_surfaces(base_png, facts)

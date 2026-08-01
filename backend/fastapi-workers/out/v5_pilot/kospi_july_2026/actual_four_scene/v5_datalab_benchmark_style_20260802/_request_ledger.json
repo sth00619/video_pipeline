@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_july_01",
+      "attempt": 1,
+      "attempt_id": "7377acf4accb4452841b3da33ec7ce34",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-01T19:54:46.193489+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "scene_type": "graph",
+        "selected_archetype": "data_lab",
+        "visual_text_policy": "diegetic_decorative",
+        "verified_overlay_mode": "apply_verified_values_after_generation"
+      },
+      "completed_at": "2026-08-01T19:55:17.035678+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 254,
+  "budget_overrun_krw": 0
+}

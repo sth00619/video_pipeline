@@ -21,14 +21,21 @@ MASCOT_STYLE_BIBLE = (
 
 # 기존 8종 승인본의 미감을 현재 실전 경로에서도 명시적으로 고정한다. 이 계약은
 # 사실값·수치의 생성 지시가 아니라 선·명암·무대 밀도에 관한 그림체 계약이다.
-V5_STYLE_CONTRACT_VERSION = "2026-08-02-cinematic-cartoon-recovery"
+V5_STYLE_CONTRACT_VERSION = "2026-08-02-r1b-datalab-benchmark-v1"
 V5_CINEMATIC_CARTOON_STYLE_CONTRACT = (
-    "NON-NEGOTIABLE VISUAL STYLE CONTRACT: hand-illustrated 2D Korean economic-explainer cartoon, not a premium semi-realistic illustration. "
-    "Use a uniform, bold dark-brown ink outline on the mascot, props, and set; keep the line weight deliberately clean and consistent rather than variable or painterly. "
-    "Use clear cel-shading with readable, discrete shadow shapes. Soft gradients are allowed only for controlled rim light, metal shine, holographic glow, rain glow, or stage haze; they must not replace the cel-shaded forms. "
-    "Build a theatrical three-depth stage with dense scene-native props, strong foreground-to-background separation, and an intentional limited vivid palette chosen for the scene. "
-    "Preserve the playful round gold-coin mascot proportions and the simple broadcast-cartoon readability of the approved V5 benchmark images. "
-    "Avoid glossy 3D-toy rendering, painterly editorial illustration, airbrushed facial modelling, thin sketchy outlines, muted corporate infographic styling, or a generic premium concept-art finish."
+    "ART STYLE: bold thick black ink outlines, flat cel-shading, high contrast, rich prop density, theatrical composition, editorial cartoon quality, limited vivid palette."
+)
+
+# 정보형 data_lab은 7/30 벤치마크의 짙고 촘촘한 무대 미감을 기준으로 삼는다.
+# 검증 수치의 위치·내용을 AI에게 맡기는 지시가 아니라, 배경의 재질과 밀도를 고정하는 계약이다.
+DATA_LAB_BENCHMARK_VISUAL_TREATMENT = (
+    " DATA-LAB BENCHMARK VISUAL TREATMENT: render an inky midnight-navy control room with edge-to-edge, "
+    "hand-illustrated operational detail. Frame the central map with many small physical console, gauge, cable, "
+    "and luminous-circuit details; use strong theatrical cyan-and-warm-orange rim lights and crisp red alert accents. "
+    "Keep outlines visibly thick and uniform, and use crisp two- or three-tone cel-shaded regions rather than soft "
+    "airbrushed gradients. The central map remains the single clear information surface, but the surrounding set stays "
+    "deep, layered, high-contrast, and richly dressed. Do not simplify it into a clean minimal light-blue tech room, "
+    "a soft vector dashboard, or broad empty wall space."
 )
 
 EMOTION_MAP = {
@@ -413,14 +420,9 @@ def build_prompt(
         f"STAGE: {archetype.stage}. KEY PROPS: {archetype.props}. "
         f"LIGHTING: {archetype.lighting}. DECORATIVE DETAIL: {archetype.visual_detail}."
     )
-    art_direction = (
-        f"{V5_CINEMATIC_CARTOON_STYLE_CONTRACT} "
-        "ART STYLE: bold thick black ink outlines, flat cel-shading, high contrast, rich prop density, "
-        "theatrical composition, editorial cartoon quality, limited vivid palette. "
-        "FRAME CONTINUITY: make one continuous full-bleed illustrated scene from edge to edge. Do not use a split screen, "
-        "comic-panel gutter, inset picture, internal frame border, filmstrip, collage, or a large rectangular overlay that "
-        "visually divides the composition. Physical props may be detailed, but they must be naturally integrated into one stage."
-    )
+    art_direction = V5_CINEMATIC_CARTOON_STYLE_CONTRACT
+    if spec.archetype == "data_lab" and is_selected_information_scene:
+        art_direction += DATA_LAB_BENCHMARK_VISUAL_TREATMENT
     if visual_text_policy == "diegetic_decorative" and is_general_scene:
         background_information_density = (
             "BACKGROUND INFORMATION DENSITY: build a fully dressed narrative set, not a simple backdrop. "
@@ -445,9 +447,7 @@ def build_prompt(
             nonprimary_surface_types = "gauges, screens, maps, placards, documents, signs, and consoles"
         background_information_density = (
             "BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. "
-            f"Make {primary_surface} the single visual-information focal prop. It MUST visibly contain at least two or three short, "
-            "clearly readable decorative English labels or sample figures, plus a simple chart silhouette or diagram line, all as "
-            "material integrated into that exact prop. "
+            f"Make {primary_surface} the single visual-information focal prop. "
             f"Every surface OTHER THAN {primary_surface} must remain visually rich only through needles, color blocks, signal lights, "
             "abstract geometry, maps without writing, and non-writing material texture. Do not distribute labels across multiple props. "
             "All AI-drawn writing and values are atmospheric decoration only, never factual information. "
@@ -459,7 +459,6 @@ def build_prompt(
             "Do not create a detached rectangular UI widget, free-floating data card, isolated LCD panel, presentation slide, "
             "or a separate POS-style number screen placed on top of the scene. "
             f"{substitute_ban}{screenless_nonprimary_contract}{third_attempt_layout_ban}"
-            f"{primary_surface} MUST contain two or three short, clearly readable decorative English labels or sample figures. "
             f"All {nonprimary_surface_types} OTHER THAN {primary_surface} must show only needles, "
             "color blocks, abstract shapes, or non-writing material texture: "
             "no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations on them. "

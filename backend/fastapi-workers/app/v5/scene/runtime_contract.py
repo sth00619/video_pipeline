@@ -9,6 +9,7 @@ from dataclasses import asdict
 from typing import Any
 
 from app.v5.providers.router import RENDER_BLOCKED_ARCHETYPES
+from app.v5.scene.layout_sketcher import LayoutSketcher
 from app.v5.scene.prompt_builder import (
     V5_STYLE_CONTRACT_VERSION,
     SceneSpec,
@@ -49,9 +50,9 @@ def _is_information_scene(scene_type: str) -> bool:
 def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
     """한 씬의 V5 배경·사실층 계약을 반환한다.
 
-    ``v5_verified_overlays``의 사실성 검증 및 실제 합성은 렌더 후
-    ``diegetic_fact_overlay``가 담당한다. 이 함수는 좌표를 추정하거나
-    수치를 만들어 넣지 않는다.
+    ``v5_verified_overlays``의 사실성 검증과 실제 표면 교체는
+    ``verified_surface_payload``와 info-surface 원근 합성기가 담당한다.
+    이 함수는 좌표를 추정하거나 수치를 만들어 넣지 않는다.
     """
     scene_type = str(scene.get("scene_type") or "").strip().lower()
     if scene_type not in SCENE_TYPES:
@@ -74,8 +75,29 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         character_position=character_position,
     )
     information_scene = _is_information_scene(scene_type)
-    policy = "diegetic_decorative" if information_scene else "strict_textless"
-    prompt = build_prompt(spec, scene_type_selection=selection, visual_text_policy=policy)
+    verified_chart = scene.get("market_chart")
+    has_verified_surface_content = bool(scene.get("v5_verified_overlays")) or (
+        isinstance(verified_chart, dict) and verified_chart.get("verified") is True
+    )
+    # 실제 사실을 합성할 씬에서는 Gemini가 가짜 문구를 먼저 쓰지 못하게
+    # 한다. 최종 프레임은 비어 있지 않으며, 생성 직후 물리 표면 합성기가
+    # 검증된 문구·수치·차트를 같은 소품 안에 채운다.
+    policy = (
+        "strict_textless"
+        if not information_scene or has_verified_surface_content
+        else "diegetic_decorative"
+    )
+    layout = LayoutSketcher.for_mascot_position(
+        spec.scene_id,
+        occupancy=spec.frame_occupancy,
+        position=spec.character_position,
+    )
+    prompt = build_prompt(
+        spec,
+        scene_type_selection=selection,
+        visual_text_policy=policy,
+        layout_instruction=layout.prompt_instruction(),
+    )
 
     # hero/body는 Router가 Gemini Pro 우선 lane을 선택한다. draft에서만 klein
     # 후보가 될 수 있으며, 운영 계획은 draft를 지정하지 않는다.
@@ -96,9 +118,9 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         "style_contract_version": V5_STYLE_CONTRACT_VERSION,
         "primary_surface_region": primary_surface_region(selection.archetype),
         "verified_overlay_mode": (
-            "apply_verified_values_after_generation" if information_scene else "not_applicable"
+            "replace_primary_surface_from_verified_data" if information_scene else "not_applicable"
         ),
-        "verified_overlay_present": bool(scene.get("v5_verified_overlays")),
+        "verified_overlay_present": has_verified_surface_content,
     }
 
 

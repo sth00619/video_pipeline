@@ -133,7 +133,9 @@ def render_chart_content(chart: dict[str, Any], size: tuple[int, int], *, return
 
     headline_y = int(height * .27)
     draw_display_text(image, (width // 2, headline_y), hero.headline_value, role=_fit_role(width, "hero"), fill=accent, align="center", scale=scale)
-    draw_display_text(image, (width // 2, headline_y + int(height * .18)), hero.headline_unit_label, role=_fit_role(width, "support"), fill=INK, align="center", scale=scale)
+    # 제목과 단위 라벨이 같으면 물리 소품 안에서 같은 문구를 반복하지 않는다.
+    if hero.headline_unit_label.strip().casefold() != title.strip().casefold():
+        draw_display_text(image, (width // 2, headline_y + int(height * .18)), hero.headline_unit_label, role=_fit_role(width, "support"), fill=INK, align="center", scale=scale)
 
     arrow_up = hero.direction != "down"
     start = (int(width * .76), int(height * (.62 if arrow_up else .47)))

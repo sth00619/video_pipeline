@@ -32,7 +32,7 @@ def test_information_scene_prompt_requires_one_in_world_physical_surface():
     assert "in-scene fact-surface contract" in prompt
     assert "the only permitted information-bearing prop is the single large central analog gauge dial face" in prompt
     assert "every other gauge, screen, map, placard, document, and console must show only needles" in prompt
-    assert "single large central analog gauge dial face embedded at eye level in the curved operations wall must contain two or three short, clearly readable decorative english labels" in prompt
+    assert "the designated primary prop must visibly include at least two or three short, clearly readable decorative english labels" in prompt
     assert "do not distribute labels across multiple props" in prompt
     assert "diegetic text placement" not in prompt
     assert "populated analog gauges, labeled control dials" not in prompt
@@ -41,8 +41,8 @@ def test_information_scene_prompt_requires_one_in_world_physical_surface():
     assert "never place a number or text in a floating card" in prompt
     assert "exact verified facts are composited later by deterministic rendering" in prompt
     assert "do not include any visible typographic mark" not in prompt
-    assert "non-negotiable visual style contract" in prompt
-    assert "uniform, bold dark-brown ink outline" in prompt
+    assert "art style: bold thick black ink outlines, flat cel-shading, high contrast" in prompt
+    assert "art style: bold thick black ink outlines, flat cel-shading, high contrast" in prompt
 
 
 def test_strict_textless_contract_reserves_the_same_prop_without_text_conflict():
@@ -78,6 +78,21 @@ def test_general_scene_does_not_receive_a_number_or_fact_surface_instruction():
     assert "does not request numbers, chart ticks, metric displays, or factual data readouts" in prompt
     assert "do not include korean text, korean subtitles, a channel logo, watermark, numbers" in prompt
     assert "sample figures" not in prompt
+    assert "data-lab benchmark visual treatment" not in prompt
+
+
+def test_information_data_lab_uses_the_approved_dense_benchmark_visual_treatment_only():
+    selection = _new_archetype_selection("data_lab")
+    prompt = build_prompt(
+        SceneSpec("data-lab-benchmark-style", selection.archetype, "explain", "reporter", "present"),
+        scene_type_selection=selection,
+    ).lower()
+
+    assert selection.archetype == "data_lab"
+    assert "data-lab benchmark visual treatment" in prompt
+    assert "inky midnight-navy control room" in prompt
+    assert "crisp two- or three-tone cel-shaded regions" in prompt
+    assert "clean minimal light-blue tech room" in prompt
 
 
 def test_mismatched_archetype_selection_fails_before_prompt_generation():

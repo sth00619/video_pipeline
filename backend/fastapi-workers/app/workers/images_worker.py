@@ -1734,13 +1734,16 @@ class ImagesWorker:
             return
         self._normalize_canvas(img_path)
         # V5 정보 씬의 실제 값은 AI 프롬프트가 아니라 검증된 사실 원문과
-        # 명시 좌표를 통과한 Pillow 합성만 사용한다. 일반 씬은 이 경로를 타지 않는다.
+        # 명시 좌표를 통과한 물리 표면 교체만 사용한다. 일반 씬은 이 경로를 타지 않는다.
         if isinstance(scene.get("v5_render_contract"), dict):
-            if scene.get("v5_verified_overlays"):
-                from app.v5.overlay.diegetic_fact_overlay import apply_verified_scene_facts
+            if scene.get("v5_verified_overlays") or scene.get("market_chart"):
+                from app.v5.overlay.verified_surface_payload import market_chart_from_verified_scene
 
-                image_bytes = Path(img_path).read_bytes()
-                Path(img_path).write_bytes(apply_verified_scene_facts(image_bytes, scene))
+                chart = market_chart_from_verified_scene(scene)
+                if chart is None:
+                    raise ValueError("V5 정보형 씬에는 검증된 물리 표면 데이터가 필요합니다.")
+                scene["market_chart"] = chart
+                self._apply_info_surface_plan(scene, img_path)
             return
         self._apply_info_surface_plan(scene, img_path)
 
@@ -1879,7 +1882,7 @@ class ImagesWorker:
                 MIN_DIEGETIC_CHART_SHORT_SIDE_PX,
                 plan_from_scene,
             )
-            from app.services.info_surface.detector import detect_surface_quad
+            from app.services.info_surface.detector import detect_surface_quad, detection_from_normalized_region
             from app.services.info_surface.warp_compositor import composite_planar, render_data_cutaway
 
             plan = plan_from_scene(scene)
@@ -1984,7 +1987,12 @@ class ImagesWorker:
                 scene["info_surface_final_sha256"] = sha256(final_path)
                 return str(final_path)
             bgr = cv2.cvtColor(np.asarray(Image.open(source_path).convert("RGB")), cv2.COLOR_RGB2BGR)
-            detection = detect_surface_quad(bgr, plan.surface)
+            v5_contract = scene.get("v5_render_contract")
+            v5_region = v5_contract.get("primary_surface_region") if isinstance(v5_contract, dict) else None
+            if isinstance(v5_region, (list, tuple)) and len(v5_region) == 4:
+                detection = detection_from_normalized_region(bgr, tuple(float(value) for value in v5_region))
+            else:
+                detection = detect_surface_quad(bgr, plan.surface)
             if detection is None or detection.confidence < float(runtime_config.value("info_surface_quad_min_confidence")):
                 if request_template_regeneration("quad_not_found"):
                     return str(final_path)
@@ -2060,6 +2068,17 @@ class ImagesWorker:
             return str(final_path)
         except Exception as exc:
             logger.warning("info-surface composition skipped for %s: %s", img_path, exc)
+            v5_contract = scene.get("v5_render_contract")
+            chart = scene.get("market_chart")
+            has_verified_v5_surface = isinstance(v5_contract, dict) and (
+                bool(scene.get("v5_verified_overlays"))
+                or (isinstance(chart, dict) and chart.get("verified") is True)
+            )
+            if has_verified_v5_surface:
+                # 검증 사실이 있어야 하는 V5 정보 씬은 합성 실패를 숨기면 안 된다.
+                # 빈 정보면이나 과거 AI 장식값을 최종 산출물로 내보내는 대신
+                # 호출자가 명시적으로 실패를 처리하도록 예외를 유지한다.
+                raise
             return img_path
 
     def _apply_phase_b_harmonizer(self, scene: dict, final_path: Path, plan, detection) -> None:

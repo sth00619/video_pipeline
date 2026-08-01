@@ -107,7 +107,14 @@ def plan_from_scene(scene: dict) -> InfoSurfacePlan | None:
         template = None
     # 서사형 템플릿은 HeroStat 수치가 아니라 검증된 구조 항목을 렌더한다.
     # trend/comparison 경로에서만 기존 HeroStat 계약을 유지한다.
-    hero = None if template and template.diagram_kind not in {"none", "hero_stat"} else hero_stat_from_chart(chart)
+    raw_hero = chart.get("hero_stat")
+    hero = (
+        None
+        if template and template.diagram_kind not in {"none", "hero_stat"}
+        else HeroStatPlan.model_validate(raw_hero)
+        if isinstance(raw_hero, dict)
+        else hero_stat_from_chart(chart)
+    )
     if template and template.diagram_kind not in {"none", "hero_stat"}:
         # v4 보드의 실제 생성 계약: 칠판만 어둡고, 금고 패널·설계도·날씨
         # 스크린은 그림을 넣기 위한 밝은 무문자 매트 표면이다.
@@ -123,13 +130,52 @@ def plan_from_scene(scene: dict) -> InfoSurfacePlan | None:
             "area_ratio_min": .10, "area_ratio_max": .55,
             "marker_delta_e_max": 12.0 if template.template_id == "weather_map_studio" else 30.0,
         }
+    # V5는 이미 검증된 archetype별 primary 영역을 갖는다. 이 경로에서는
+    # 임의의 HUD 좌표를 만들지 않고 해당 물리 표면 자체를 합성 대상으로
+    # 사용한다. marker_rgb는 모델 계약 필수값일 뿐, 실제 검출은 worker의
+    # 명시 좌표 검출 경로가 담당한다.
+    v5_contract = scene.get("v5_render_contract")
+    if isinstance(v5_contract, dict):
+        selection = v5_contract.get("selection")
+        region = v5_contract.get("primary_surface_region")
+        archetype = str(selection.get("archetype") or "") if isinstance(selection, dict) else ""
+        if isinstance(region, (list, tuple)) and len(region) == 4 and archetype:
+            surface_kinds = {
+                "port_emergency": "painted_container",
+                "retail_shock": "checkout_screen",
+                "classroom": "chalkboard",
+                "weather_map": "broadcast_map_screen",
+                "risk_control_room": "analog_gauge",
+                "trade_calculator": "engraved_scale_plinth",
+                "data_lab": "holographic_map_screen",
+                "briefing_podium": "briefing_screen",
+                "real_estate_office": "wall_guidance_board",
+                "job_market_hall": "wall_guidance_board",
+            }
+            x, y, width, height = (float(value) for value in region)
+            raw_contract = {
+                "surface_kind": surface_kinds.get(archetype, "physical_information_surface"),
+                "geometry": "planar_quad",
+                "marker_rgb": (0, 0, 0),
+                "preferred_side": "center",
+                "preferred_region": {"x": x, "y": y, "width": width, "height": height},
+                "area_ratio_min": max(.01, min(.90, width * height * .45)),
+                "area_ratio_max": max(.02, min(.95, width * height * 1.55)),
+                "candidate_iou_min": .0,
+                "inset_ratio": .06,
+            }
+
     try:
         contract = SurfaceContract.model_validate(raw_contract) if isinstance(raw_contract, dict) else None
     except ValueError:
         # Older jobs can contain a partial surface payload.  It must take the
         # same safe fallback as an absent contract, not skip verified data.
         contract = None
-    role: InfoRole = "chart" if str(chart.get("visual_kind") or "") not in {"change_arrow"} else "metric"
+    role: InfoRole = (
+        "metric"
+        if str(chart.get("visual_kind") or "") in {"change_arrow", "verified_fact", "stock_movers"}
+        else "chart"
+    )
     # P0 only owns planar warps.  Treat every other geometry as a typed
     # fallback, rather than pretending a rectangular chart belongs on it.
     if contract is None or contract.geometry != "planar_quad":

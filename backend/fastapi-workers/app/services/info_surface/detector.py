@@ -41,6 +41,40 @@ class QuadDetection:
         }
 
 
+def detection_from_normalized_region(
+    image_bgr: np.ndarray,
+    region: tuple[float, float, float, float],
+) -> QuadDetection:
+    """사람이 승인한 V5 primary 영역을 추측 없는 평면 검출 결과로 만든다."""
+    height, width = image_bgr.shape[:2]
+    x, y, region_width, region_height = region
+    if not (
+        0.0 <= x < 1.0
+        and 0.0 <= y < 1.0
+        and region_width > 0.0
+        and region_height > 0.0
+        and x + region_width <= 1.0
+        and y + region_height <= 1.0
+    ):
+        raise ValueError("V5 primary 표면 좌표가 캔버스 범위를 벗어났습니다.")
+    left, top = float(x * width), float(y * height)
+    right, bottom = float((x + region_width) * width), float((y + region_height) * height)
+    quad = np.asarray([[left, top], [right, top], [right, bottom], [left, bottom]], dtype=np.float32)
+    surface_mask = np.zeros((height, width), dtype=np.uint8)
+    cv2.fillConvexPoly(surface_mask, quad.astype(np.int32), 255)
+    return QuadDetection(
+        quad=quad,
+        surface_mask=surface_mask,
+        occluder_mask=np.zeros_like(surface_mask),
+        confidence=1.0,
+        color_purity=1.0,
+        border_match=1.0,
+        position_score=1.0,
+        area_ratio=float(region_width * region_height),
+        palette_collision=False,
+    )
+
+
 def _lab_distance(image_lab: np.ndarray, rgb: tuple[int, int, int]) -> np.ndarray:
     sample = np.uint8([[[rgb[2], rgb[1], rgb[0]]]])
     target = cv2.cvtColor(sample, cv2.COLOR_BGR2LAB).astype(np.float32)[0, 0]

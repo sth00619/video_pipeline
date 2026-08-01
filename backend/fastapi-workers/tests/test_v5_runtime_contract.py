@@ -30,10 +30,10 @@ def test_runtime_contract_uses_gemini_for_general_and_information_scenes():
     assert metric["tier"] == graph["tier"] == "hero"
     assert general["visual_text_policy"] == "strict_textless"
     assert metric["visual_text_policy"] == graph["visual_text_policy"] == "diegetic_decorative"
-    assert general["style_contract_version"] == "2026-08-02-cinematic-cartoon-recovery"
+    assert general["style_contract_version"] == "2026-08-02-r1b-datalab-benchmark-v1"
     assert metric["style_contract_version"] == general["style_contract_version"]
     assert general["verified_overlay_mode"] == "not_applicable"
-    assert metric["verified_overlay_mode"] == "apply_verified_values_after_generation"
+    assert metric["verified_overlay_mode"] == "replace_primary_surface_from_verified_data"
     assert v5_provider_options(scenes[0]) == {
         "image_provider": "gemini",
         "gemini_model": "gemini-3-pro-image",
@@ -60,6 +60,22 @@ def test_runtime_contract_preserves_primary_surface_and_does_not_invent_verified
     assert "exact verified facts are composited later by deterministic rendering" in prompt_for_scene(planned).lower()
 
 
+def test_runtime_contract_restores_text_only_layout_contract_for_general_and_information_scenes():
+    general = plan_v5_scene_contract(
+        _scene("general-layout", "general", "항만 물류 차질의 배경을 설명합니다."),
+        0,
+    )
+    information = plan_v5_scene_contract(
+        _scene("graph-layout", "graph", "시장 추이 막대그래프를 비교합니다."),
+        1,
+    )
+
+    for contract in (general, information):
+        prompt = contract["prompt_en"]
+        assert "<layout_contract>" in prompt
+        assert "Do not draw any layout guide, safe-area outline, placeholder, or empty display." in prompt
+
+
 def test_runtime_contract_keeps_verified_overlay_input_unchanged_when_present():
     source = _scene("graph-01", "graph", "시장 추이 막대그래프를 비교합니다.")
     source["verified_facts"] = [{"fact": "종가 100.0", "figure": "100.0"}]
@@ -73,6 +89,8 @@ def test_runtime_contract_keeps_verified_overlay_input_unchanged_when_present():
     planned = attach_v5_scene_contracts([source])[0]
     assert planned["v5_verified_overlays"] == source["v5_verified_overlays"]
     assert planned["v5_render_contract"]["verified_overlay_present"] is True
+    assert planned["v5_render_contract"]["visual_text_policy"] == "strict_textless"
+    assert "do not draw text, digits" in planned["v5_render_contract"]["prompt_en"].lower()
 
 
 def test_earnings_stage_is_not_an_automatic_candidate_and_remains_blocked():

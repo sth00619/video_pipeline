@@ -53,3 +53,32 @@ def test_cartoon_ink_is_seeded_and_has_no_dashboard_grid_requirement():
     second = render_chart_content(chart, (720, 405))
     assert first.tobytes() == second.tobytes()
     assert first.getchannel("A").getbbox() is not None
+
+
+def test_physical_surface_renderer_does_not_repeat_identical_title_and_unit(monkeypatch):
+    calls: list[str] = []
+
+    def record_text(_image, _position, text, **_kwargs):
+        calls.append(text)
+
+    monkeypatch.setattr(
+        "app.services.info_surface.channel_chart_style.draw_display_text",
+        record_text,
+    )
+    render_chart_content(
+        {
+            "verified": True,
+            "source_ref": "fixture",
+            "label": "KOSPI CLOSE",
+            "hero_stat": {
+                "headline_value": "7,096.89",
+                "headline_unit_label": "KOSPI CLOSE",
+                "direction": "up",
+                "meaning_line": "UP +4.40%",
+                "comparison_basis": "2026-07-23 CLOSE",
+                "source_refs": ["fixture"],
+            },
+        },
+        (960, 540),
+    )
+    assert calls.count("KOSPI CLOSE") == 1
