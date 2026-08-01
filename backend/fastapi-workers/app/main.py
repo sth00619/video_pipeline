@@ -22,7 +22,7 @@ from app.config import APP_MODE, BFL_API_KEY, CLAUDE_MODEL, V5_BFL_ENABLED
 from app import runtime_config
 from app.utils.fal_billing import get_fal_credit_status
 from app.utils.art_direction import compile_editorial_prompt
-from app.models.article_evidence import EvidenceCaptureRequest, QuoteCardRequest
+from app.models.article_evidence import EvidenceCaptureRequest, QuoteCardRequest, UserImageEvidenceRequest
 from app.services.article_discovery import ArticleDiscoveryService, ArticleDiscoveryUnavailable
 from app.services.evidence_capture import EvidenceCaptureError, EvidenceCaptureService
 
@@ -271,6 +271,41 @@ def capture_article_evidence(request: EvidenceCaptureRequest):
     """Capture one public HTML article quote using DOM text coordinates."""
     try:
         return get_evidence_capture_service().capture_dom(request).model_dump(mode="json")
+    except EvidenceCaptureError as exc:
+        raise HTTPException(exc.status_code, str(exc))
+
+
+@app.post("/workers/evidence/capture-upload")
+async def capture_uploaded_article_evidence(
+    image: UploadFile = File(..., description="사람이 확보한 기사 또는 차트 캡처 이미지"),
+    job_id: int = Form(...),
+    source_url: str = Form(...),
+    quote: str = Form(...),
+    target_bbox_json: str = Form(...),
+    quote_bboxes_json: str = Form(...),
+    source_title: str = Form(default=""),
+    publisher: str = Form(default=""),
+    published_at: str | None = Form(default=None),
+    key_phrase: str | None = Form(default=None),
+    key_phrase_bboxes_json: str = Form(default="[]"),
+):
+    """OCR 추측 없이 사용자가 검증한 좌표로 업로드 캡처를 등록한다."""
+    try:
+        payload = UserImageEvidenceRequest(
+            job_id=job_id,
+            source_url=source_url,
+            quote=quote,
+            source_title=source_title,
+            publisher=publisher,
+            published_at=published_at,
+            target_bbox=json.loads(target_bbox_json),
+            quote_bboxes=json.loads(quote_bboxes_json),
+            key_phrase=key_phrase,
+            key_phrase_bboxes=json.loads(key_phrase_bboxes_json),
+        )
+        return get_evidence_capture_service().capture_user_image(payload, await image.read()).model_dump(mode="json")
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(422, f"invalid verified evidence input: {exc}") from exc
     except EvidenceCaptureError as exc:
         raise HTTPException(exc.status_code, str(exc))
 

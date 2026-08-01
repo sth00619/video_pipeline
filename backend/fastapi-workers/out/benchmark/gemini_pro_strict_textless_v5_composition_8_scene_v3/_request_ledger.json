@@ -1,0 +1,262 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_01_port",
+      "attempt": 1,
+      "attempt_id": "3d1b476de9274f91a8f1457f06fc8557",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T16:18:52.503304+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "strict_textless"
+      },
+      "completed_at": "2026-07-29T16:19:26.367608+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_02_retail",
+      "attempt": 1,
+      "attempt_id": "8a8214b15db042af95f1c344338a5271",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T16:19:27.042718+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the left-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "strict_textless"
+      },
+      "completed_at": "2026-07-29T16:20:02.332100+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_03_classroom",
+      "attempt": 1,
+      "attempt_id": "66d3738a87284481a13ebdad1ff9ddcc",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T16:20:03.179953+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "strict_textless"
+      },
+      "completed_at": "2026-07-29T16:20:35.711867+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_04_classroom2",
+      "attempt": 1,
+      "attempt_id": "bcf58d2c66c94bd19d301520a1730d52",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T16:20:36.533230+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the left-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "strict_textless"
+      },
+      "completed_at": "2026-07-29T16:21:17.541095+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_05_weather",
+      "attempt": 1,
+      "attempt_id": "efbcd670b4ca4f60a4bb46b353df387d",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T16:21:18.262683+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "strict_textless"
+      },
+      "completed_at": "2026-07-29T16:21:50.258116+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_06_split",
+      "attempt": 1,
+      "attempt_id": "74989bc32e6c46878f3c6e3f8d67c383",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T16:21:51.053448+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the center foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "strict_textless"
+      },
+      "completed_at": "2026-07-29T16:22:19.568357+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_07_trade",
+      "attempt": 1,
+      "attempt_id": "eebf831af3394eaca609d5d9233a2b97",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T16:22:20.387177+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the left-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "strict_textless"
+      },
+      "completed_at": "2026-07-29T16:22:53.562372+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_08_datalab",
+      "attempt": 1,
+      "attempt_id": "ba36afd7566f4983a09921bcf079f8c5",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T16:22:54.608852+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the center foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "strict_textless"
+      },
+      "completed_at": "2026-07-29T16:23:45.029936+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 2032,
+  "budget_overrun_krw": 0
+}

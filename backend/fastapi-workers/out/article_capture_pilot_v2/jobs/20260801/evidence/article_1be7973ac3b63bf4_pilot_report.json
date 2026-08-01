@@ -1,0 +1,65 @@
+{
+  "status": "passed",
+  "capture_mode": "dom",
+  "source_url": "https://www.yna.co.kr/view/AKR20260723141400008",
+  "publisher": "연합뉴스",
+  "capture_png": "out\\article_capture_pilot_v2\\jobs\\20260801\\evidence\\article_1be7973ac3b63bf4.png",
+  "emphasized_png": "out\\article_capture_pilot_v2\\jobs\\20260801\\evidence\\article_1be7973ac3b63bf4_emphasized.png",
+  "image_sha256": "1be7973ac3b63bf49ac7f9fb331b3f230d13f58c269318a1d73b62f843c72b79",
+  "bbox_source": "dom_range",
+  "quote_bbox_count": 2,
+  "key_phrase_bbox_count": 0,
+  "annotations": [
+    {
+      "type": "highlighter",
+      "bbox": {
+        "x": 0.14313597918022122,
+        "y": 0.39799626245847175,
+        "width": 0.7135857189329864,
+        "height": 0.07973421926910298
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#FFE146",
+      "stroke_width": 8
+    },
+    {
+      "type": "highlighter",
+      "bbox": {
+        "x": 0.14313597918022122,
+        "y": 0.48769725913621265,
+        "width": 0.2180383864671438,
+        "height": 0.07973421926910298
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#FFE146",
+      "stroke_width": 8
+    },
+    {
+      "type": "underline",
+      "bbox": null,
+      "bboxes": [
+        {
+          "x": 0.14313597918022122,
+          "y": 0.39799626245847175,
+          "width": 0.7135857189329864,
+          "height": 0.07973421926910298
+        },
+        {
+          "x": 0.14313597918022122,
+          "y": 0.48769725913621265,
+          "width": 0.2180383864671438,
+          "height": 0.07973421926910298
+        }
+      ],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#E60023",
+      "stroke_width": 8
+    }
+  ],
+  "storage": "local_artifact_only"
+}

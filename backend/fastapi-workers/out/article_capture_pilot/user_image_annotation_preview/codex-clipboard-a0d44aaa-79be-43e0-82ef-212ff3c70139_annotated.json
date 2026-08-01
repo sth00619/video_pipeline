@@ -1,0 +1,62 @@
+{
+  "status": "preview_only",
+  "source_image": "C:\\Users\\song\\AppData\\Local\\Temp\\codex-clipboard-a0d44aaa-79be-43e0-82ef-212ff3c70139.png",
+  "source_sha256": "5036cffa755dce8728195d0fc11531075f8db09d9df70168656944e866133fa0",
+  "source_size": {
+    "width": 459,
+    "height": 352
+  },
+  "target_label": "지도 내부 장식 수치 영역 시안",
+  "target_bbox": {
+    "x": 0.73,
+    "y": 0.39,
+    "width": 0.25,
+    "height": 0.22
+  },
+  "coordinate_source": "pilot_human_demo_not_verified_fact",
+  "annotations": [
+    {
+      "type": "highlighter",
+      "bbox": {
+        "x": 0.73,
+        "y": 0.39,
+        "width": 0.25,
+        "height": 0.22
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#FFE146",
+      "stroke_width": 8
+    },
+    {
+      "type": "underline",
+      "bbox": {
+        "x": 0.73,
+        "y": 0.39,
+        "width": 0.25,
+        "height": 0.22
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#E60023",
+      "stroke_width": 8
+    },
+    {
+      "type": "ellipse",
+      "bbox": {
+        "x": 0.73,
+        "y": 0.39,
+        "width": 0.25,
+        "height": 0.22
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#E60023",
+      "stroke_width": 6
+    }
+  ],
+  "output_image": "out\\article_capture_pilot\\user_image_annotation_preview\\codex-clipboard-a0d44aaa-79be-43e0-82ef-212ff3c70139_annotated.png"
+}

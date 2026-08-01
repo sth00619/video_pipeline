@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_05_weather",
+      "attempt": 1,
+      "attempt_id": "413e77bac35b492e9e0f4e89232f2ec5",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T08:24:51.153033+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ]
+      },
+      "completed_at": "2026-07-29T08:25:20.979147+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 254,
+  "budget_overrun_krw": 0
+}

@@ -1,0 +1,68 @@
+{
+  "topic": "KOSPI July visual-style validation",
+  "scenes": [
+    {
+      "scene_id": "kospi_july_01",
+      "scene_type": "graph",
+      "narration": "The verified KOSPI closing value is 5663.24.",
+      "visual_intent": "A KOSPI comparison graph with a verified closing figure.",
+      "verified_facts": [
+        {
+          "fact": "The verified KOSPI closing value is 5663.24.",
+          "figure": "5663.24",
+          "source_url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18"
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "코스피 종가",
+          "value": "5663.24",
+          "source_ref": "facts[0]",
+          "anchor": {"x": 0.25, "y": 0.43, "width": 0.22, "height": 0.13, "kind": "embedded_monitor"}
+        }
+      ]
+    },
+    {
+      "scene_id": "kospi_july_02",
+      "scene_type": "graph",
+      "narration": "The verified monthly decline figure is 33.18 percent.",
+      "visual_intent": "A comparison graph for the verified monthly decline.",
+      "verified_facts": [
+        {
+          "fact": "The verified monthly decline figure is 33.18%.",
+          "figure": "33.18%",
+          "source_url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1"
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "7월 월간 낙폭",
+          "value": "33.18%",
+          "source_ref": "facts[0]",
+          "anchor": {"x": 0.43, "y": 0.78, "width": 0.23, "height": 0.10, "kind": "gauge_caption"}
+        }
+      ]
+    },
+    {
+      "scene_id": "kospi_july_03",
+      "scene_type": "metric",
+      "narration": "The verified peak market-capitalization figure is 7810 trillion won.",
+      "visual_intent": "A market-capitalization metric explanation.",
+      "verified_facts": [
+        {
+          "fact": "The verified peak market-capitalization figure is 7810 trillion won.",
+          "figure": "7810",
+          "source_url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1"
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "증시 시총 고점",
+          "value": "7810조 원",
+          "source_ref": "facts[0]",
+          "anchor": {"x": 0.43, "y": 0.39, "width": 0.18, "height": 0.10, "kind": "gauge_caption"}
+        }
+      ]
+    }
+  ]
+}

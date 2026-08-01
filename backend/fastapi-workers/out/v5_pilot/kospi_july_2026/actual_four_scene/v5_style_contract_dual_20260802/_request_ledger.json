@@ -1,0 +1,74 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_july_01",
+      "attempt": 1,
+      "attempt_id": "5a6fd023b9764790925487dd78446ed0",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-01T17:22:35.128727+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "scene_type": "graph",
+        "selected_archetype": "data_lab",
+        "visual_text_policy": "diegetic_decorative",
+        "verified_overlay_mode": "apply_verified_values_after_generation"
+      },
+      "completed_at": "2026-08-01T17:23:02.772582+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "general_port_narrative_04",
+      "attempt": 1,
+      "attempt_id": "ffa787f618ae4b1f8c82d3b012fd5e13",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-01T17:23:05.748306+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "scene_type": "general",
+        "selected_archetype": "port_emergency",
+        "visual_text_policy": "strict_textless",
+        "verified_overlay_mode": "not_applicable"
+      },
+      "completed_at": "2026-08-01T17:23:36.888698+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 508,
+  "budget_overrun_krw": 0
+}

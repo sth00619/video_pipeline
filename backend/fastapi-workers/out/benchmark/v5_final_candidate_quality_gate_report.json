@@ -1,0 +1,160 @@
+{
+  "set": "v5_final_candidate_with_identity_continuity_replacements",
+  "automatic_passed": 8,
+  "scene_count": 8,
+  "text_leak_detection": "not_available: OCR 엔진 부재. 자동 통과는 무문자 통과를 뜻하지 않음",
+  "cards": [
+    {
+      "scene_id": "bench_01_port",
+      "source": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_identity_continuity_01_port\\bench_01_port.png",
+      "position": "right",
+      "passed": true,
+      "score": 100,
+      "edge_density": 0.0917,
+      "blank_tile_ratio": 0.0,
+      "prop_detail_regions": 49,
+      "gold_signal_ratio": 0.0921,
+      "safe_zone_noise_ratio": 0.068,
+      "failures": [],
+      "human_review": [
+        "마스코트의 실제 면적·얼굴·손 위치는 사람 또는 후속 비전 모델이 확인해야 합니다.",
+        "AI가 만든 영어·숫자는 장식인지 여부를 사람이 확인해야 합니다.",
+        "한 장의 연속된 무대인지, 만화 분할컷·삽입 패널·내부 프레임처럼 보이는 경계가 없는지 사람이 확인해야 합니다.",
+        "마스코트의 동공·얼굴·테두리 비율이 기준 캐릭터와 같은지 사람이 확인해야 합니다."
+      ]
+    },
+    {
+      "scene_id": "bench_02_retail",
+      "source": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_composition_8_scene_v3\\bench_02_retail.png",
+      "position": "left",
+      "passed": true,
+      "score": 100,
+      "edge_density": 0.106,
+      "blank_tile_ratio": 0.0,
+      "prop_detail_regions": 49,
+      "gold_signal_ratio": 0.1556,
+      "safe_zone_noise_ratio": 0.0879,
+      "failures": [],
+      "human_review": [
+        "마스코트의 실제 면적·얼굴·손 위치는 사람 또는 후속 비전 모델이 확인해야 합니다.",
+        "AI가 만든 영어·숫자는 장식인지 여부를 사람이 확인해야 합니다.",
+        "한 장의 연속된 무대인지, 만화 분할컷·삽입 패널·내부 프레임처럼 보이는 경계가 없는지 사람이 확인해야 합니다.",
+        "마스코트의 동공·얼굴·테두리 비율이 기준 캐릭터와 같은지 사람이 확인해야 합니다."
+      ]
+    },
+    {
+      "scene_id": "bench_03_classroom",
+      "source": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_composition_8_scene_v3\\bench_03_classroom.png",
+      "position": "right",
+      "passed": true,
+      "score": 100,
+      "edge_density": 0.1106,
+      "blank_tile_ratio": 0.0,
+      "prop_detail_regions": 49,
+      "gold_signal_ratio": 0.2918,
+      "safe_zone_noise_ratio": 0.1076,
+      "failures": [],
+      "human_review": [
+        "마스코트의 실제 면적·얼굴·손 위치는 사람 또는 후속 비전 모델이 확인해야 합니다.",
+        "AI가 만든 영어·숫자는 장식인지 여부를 사람이 확인해야 합니다.",
+        "한 장의 연속된 무대인지, 만화 분할컷·삽입 패널·내부 프레임처럼 보이는 경계가 없는지 사람이 확인해야 합니다.",
+        "마스코트의 동공·얼굴·테두리 비율이 기준 캐릭터와 같은지 사람이 확인해야 합니다."
+      ]
+    },
+    {
+      "scene_id": "bench_04_classroom2",
+      "source": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_composition_8_scene_v3\\bench_04_classroom2.png",
+      "position": "left",
+      "passed": true,
+      "score": 95,
+      "edge_density": 0.0715,
+      "blank_tile_ratio": 0.0469,
+      "prop_detail_regions": 43,
+      "gold_signal_ratio": 0.3509,
+      "safe_zone_noise_ratio": 0.0316,
+      "failures": [],
+      "human_review": [
+        "마스코트의 실제 면적·얼굴·손 위치는 사람 또는 후속 비전 모델이 확인해야 합니다.",
+        "AI가 만든 영어·숫자는 장식인지 여부를 사람이 확인해야 합니다.",
+        "한 장의 연속된 무대인지, 만화 분할컷·삽입 패널·내부 프레임처럼 보이는 경계가 없는지 사람이 확인해야 합니다.",
+        "마스코트의 동공·얼굴·테두리 비율이 기준 캐릭터와 같은지 사람이 확인해야 합니다."
+      ]
+    },
+    {
+      "scene_id": "bench_05_weather",
+      "source": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_composition_8_scene_v3\\bench_05_weather.png",
+      "position": "right",
+      "passed": true,
+      "score": 100,
+      "edge_density": 0.076,
+      "blank_tile_ratio": 0.0,
+      "prop_detail_regions": 49,
+      "gold_signal_ratio": 0.0853,
+      "safe_zone_noise_ratio": 0.058,
+      "failures": [],
+      "human_review": [
+        "마스코트의 실제 면적·얼굴·손 위치는 사람 또는 후속 비전 모델이 확인해야 합니다.",
+        "AI가 만든 영어·숫자는 장식인지 여부를 사람이 확인해야 합니다.",
+        "한 장의 연속된 무대인지, 만화 분할컷·삽입 패널·내부 프레임처럼 보이는 경계가 없는지 사람이 확인해야 합니다.",
+        "마스코트의 동공·얼굴·테두리 비율이 기준 캐릭터와 같은지 사람이 확인해야 합니다."
+      ]
+    },
+    {
+      "scene_id": "bench_06_split",
+      "source": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_composition_8_scene_v3\\bench_06_split.png",
+      "position": "center",
+      "passed": true,
+      "score": 100,
+      "edge_density": 0.0454,
+      "blank_tile_ratio": 0.0,
+      "prop_detail_regions": 53,
+      "gold_signal_ratio": 0.4243,
+      "safe_zone_noise_ratio": 0.0433,
+      "failures": [],
+      "human_review": [
+        "마스코트의 실제 면적·얼굴·손 위치는 사람 또는 후속 비전 모델이 확인해야 합니다.",
+        "AI가 만든 영어·숫자는 장식인지 여부를 사람이 확인해야 합니다.",
+        "한 장의 연속된 무대인지, 만화 분할컷·삽입 패널·내부 프레임처럼 보이는 경계가 없는지 사람이 확인해야 합니다.",
+        "마스코트의 동공·얼굴·테두리 비율이 기준 캐릭터와 같은지 사람이 확인해야 합니다."
+      ]
+    },
+    {
+      "scene_id": "bench_07_trade",
+      "source": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_identity_continuity_07_trade\\bench_07_trade.png",
+      "position": "left",
+      "passed": true,
+      "score": 100,
+      "edge_density": 0.0522,
+      "blank_tile_ratio": 0.0,
+      "prop_detail_regions": 45,
+      "gold_signal_ratio": 0.1285,
+      "safe_zone_noise_ratio": 0.0446,
+      "failures": [],
+      "human_review": [
+        "마스코트의 실제 면적·얼굴·손 위치는 사람 또는 후속 비전 모델이 확인해야 합니다.",
+        "AI가 만든 영어·숫자는 장식인지 여부를 사람이 확인해야 합니다.",
+        "한 장의 연속된 무대인지, 만화 분할컷·삽입 패널·내부 프레임처럼 보이는 경계가 없는지 사람이 확인해야 합니다.",
+        "마스코트의 동공·얼굴·테두리 비율이 기준 캐릭터와 같은지 사람이 확인해야 합니다."
+      ]
+    },
+    {
+      "scene_id": "bench_08_datalab",
+      "source": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_composition_8_scene_v3\\bench_08_datalab.png",
+      "position": "center",
+      "passed": true,
+      "score": 100,
+      "edge_density": 0.0785,
+      "blank_tile_ratio": 0.0,
+      "prop_detail_regions": 54,
+      "gold_signal_ratio": 0.0514,
+      "safe_zone_noise_ratio": 0.107,
+      "failures": [],
+      "human_review": [
+        "마스코트의 실제 면적·얼굴·손 위치는 사람 또는 후속 비전 모델이 확인해야 합니다.",
+        "AI가 만든 영어·숫자는 장식인지 여부를 사람이 확인해야 합니다.",
+        "한 장의 연속된 무대인지, 만화 분할컷·삽입 패널·내부 프레임처럼 보이는 경계가 없는지 사람이 확인해야 합니다.",
+        "마스코트의 동공·얼굴·테두리 비율이 기준 캐릭터와 같은지 사람이 확인해야 합니다."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "purpose": "V5 scene_type routing dry run only; no image or LLM API call",
+  "source_pilot": "v5_pilot_input.json",
+  "scenes": [
+    {
+      "scene_id": "kospi_july_01",
+      "narration": "The market trend is explained with a chart comparison.",
+      "visual_intent": "Use a market chart and a trend line.",
+      "verified_facts": [{"source_ref": "existing_pilot_fact_01"}],
+      "v5_verified_overlays": [{"source_ref": "existing_pilot_fact_01"}]
+    },
+    {
+      "scene_id": "kospi_july_02",
+      "narration": "Compare two market periods using a bar chart.",
+      "visual_intent": "Use a comparison bar graph.",
+      "verified_facts": [{"source_ref": "existing_pilot_fact_02"}],
+      "v5_verified_overlays": [{"source_ref": "existing_pilot_fact_02"}]
+    },
+    {
+      "scene_id": "kospi_july_03",
+      "narration": "A market index decline and volatility are explained.",
+      "visual_intent": "Show the market-risk metric without inventing values.",
+      "verified_facts": [{"source_ref": "existing_pilot_fact_03"}],
+      "v5_verified_overlays": [{"source_ref": "existing_pilot_fact_03"}]
+    },
+    {
+      "scene_id": "general_port_narrative_04",
+      "narration": "The mascot walks through a busy port while explaining the background.",
+      "visual_intent": "Character-focused narrative setting; no verified information overlay.",
+      "verified_facts": [],
+      "v5_verified_overlays": []
+    },
+    {
+      "scene_id": "text_key_message_05",
+      "narration": "Key phrase: wait for verified evidence before making a decision.",
+      "visual_intent": "Present one short key message as an in-world text element.",
+      "verified_facts": [],
+      "v5_verified_overlays": []
+    }
+  ]
+}

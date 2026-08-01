@@ -1,0 +1,79 @@
+{
+  "status": "passed",
+  "capture_mode": "dom",
+  "source_url": "https://www.yna.co.kr/view/AKR20260723141400008",
+  "publisher": "연합뉴스",
+  "capture_png": "out\\article_capture_pilot_v4\\jobs\\20260802\\evidence\\article_d557e25890a6480c.png",
+  "emphasized_png": "out\\article_capture_pilot_v4\\jobs\\20260802\\evidence\\article_d557e25890a6480c_emphasized.png",
+  "image_sha256": "d557e25890a6480c3be9355c47092fb2c703891869c7d146ac6333a1a42d1561",
+  "bbox_source": "dom_range",
+  "quote_bbox_count": 2,
+  "key_phrase_bbox_count": 1,
+  "annotations": [
+    {
+      "type": "highlighter",
+      "bbox": {
+        "x": 0.1522491349480969,
+        "y": 0.40200293624161076,
+        "width": 0.695393598615917,
+        "height": 0.07046979865771812
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#FFE146",
+      "stroke_width": 8
+    },
+    {
+      "type": "highlighter",
+      "bbox": {
+        "x": 0.1522491349480969,
+        "y": 0.49260696308724833,
+        "width": 0.1882136678200692,
+        "height": 0.07046979865771812
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#FFE146",
+      "stroke_width": 8
+    },
+    {
+      "type": "underline",
+      "bbox": null,
+      "bboxes": [
+        {
+          "x": 0.1522491349480969,
+          "y": 0.40200293624161076,
+          "width": 0.695393598615917,
+          "height": 0.07046979865771812
+        },
+        {
+          "x": 0.1522491349480969,
+          "y": 0.49260696308724833,
+          "width": 0.1882136678200692,
+          "height": 0.07046979865771812
+        }
+      ],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#E60023",
+      "stroke_width": 8
+    },
+    {
+      "type": "ellipse",
+      "bbox": {
+        "x": 0.1522491349480969,
+        "y": 0.49260696308724833,
+        "width": 0.09282006920415226,
+        "height": 0.07046979865771812
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#E60023",
+      "stroke_width": 6
+    }
+  ],
+  "storage": "local_artifact_only"
+}

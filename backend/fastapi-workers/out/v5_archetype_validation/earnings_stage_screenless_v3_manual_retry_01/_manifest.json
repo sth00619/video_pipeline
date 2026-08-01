@@ -1,0 +1,62 @@
+{
+  "status": "completed",
+  "scene_id": "earnings_stage_primary_validation",
+  "archetype": "earnings_stage",
+  "scene_type": "graph",
+  "primary_physical_surface": "the single broad earnings-briefing surface embedded flush into the center back wall directly behind the presentation podium",
+  "estimated_cost_usd": 0.14,
+  "estimated_cost_krw": 254,
+  "automatic_retry": false,
+  "reference_artifacts": [
+    {
+      "role": "character",
+      "filename": "character_reference_v2_textless.png",
+      "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+    },
+    {
+      "role": "style",
+      "filename": "style_reference_v2_textless.png",
+      "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+    }
+  ],
+  "request_ledger_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_archetype_validation\\earnings_stage_screenless_v3_manual_retry_01\\_request_ledger.json",
+  "prompt_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_archetype_validation\\earnings_stage_screenless_v3_manual_retry_01\\prompt.txt",
+  "image_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_archetype_validation\\earnings_stage_screenless_v3_manual_retry_01\\earnings_stage_primary_validation.png",
+  "seconds": 35.3,
+  "cost_status": "unverified_until_console_reconciliation",
+  "ledger": {
+    "video_id": "earnings_stage_screenless_v3_manual_retry_01",
+    "total_spent_krw": 254,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 254,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "earnings_stage_primary_validation",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785496122.569379
+      }
+    ]
+  }
+}

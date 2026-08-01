@@ -1,0 +1,62 @@
+{
+  "status": "preview_only",
+  "source_image": "C:\\Users\\song\\AppData\\Local\\Temp\\codex-clipboard-cc5dcbe3-1f32-4c23-8925-45a971dc9ff5.png",
+  "source_sha256": "676c47706b6035575735809f22ac5d83330400d1191032679affcd8ad1eb390e",
+  "source_size": {
+    "width": 207,
+    "height": 659
+  },
+  "target_label": "위험 패널 장식 수치 영역 시안",
+  "target_bbox": {
+    "x": 0.08,
+    "y": 0.25,
+    "width": 0.84,
+    "height": 0.12
+  },
+  "coordinate_source": "pilot_human_demo_not_verified_fact",
+  "annotations": [
+    {
+      "type": "highlighter",
+      "bbox": {
+        "x": 0.08,
+        "y": 0.25,
+        "width": 0.84,
+        "height": 0.12
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#FFE146",
+      "stroke_width": 8
+    },
+    {
+      "type": "underline",
+      "bbox": {
+        "x": 0.08,
+        "y": 0.25,
+        "width": 0.84,
+        "height": 0.12
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#E60023",
+      "stroke_width": 8
+    },
+    {
+      "type": "ellipse",
+      "bbox": {
+        "x": 0.08,
+        "y": 0.25,
+        "width": 0.84,
+        "height": 0.12
+      },
+      "bboxes": [],
+      "from_xy": null,
+      "to_xy": null,
+      "color": "#E60023",
+      "stroke_width": 6
+    }
+  ],
+  "output_image": "out\\article_capture_pilot\\user_image_annotation_preview\\codex-clipboard-cc5dcbe3-1f32-4c23-8925-45a971dc9ff5_annotated.png"
+}

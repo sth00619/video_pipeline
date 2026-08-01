@@ -1,0 +1,31 @@
+{
+  "topic": "코스피 7월 전망",
+  "requires_image_generation": false,
+  "scenes": [
+    {
+      "scene_id": "kospi_july_embedded_monitor_preview",
+      "background_path": "out/v5_pilot/kospi_july_2026/generated_backgrounds/kospi_july_2026_verified_backgrounds/kospi_july_01.png",
+      "verified_facts": [
+        {
+          "fact": "7월 29일 코스피 종가는 5,663.24였다.",
+          "figure": "5663.24",
+          "source_url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18"
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "코스피 종가",
+          "value": "5663.24",
+          "source_ref": "facts[0]",
+          "anchor": {
+            "x": 0.39,
+            "y": 0.52,
+            "width": 0.20,
+            "height": 0.16,
+            "kind": "embedded_monitor"
+          }
+        }
+      ]
+    }
+  ]
+}

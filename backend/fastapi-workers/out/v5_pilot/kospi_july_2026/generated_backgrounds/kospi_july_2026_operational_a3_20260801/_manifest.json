@@ -1,0 +1,35 @@
+{
+  "status": "incomplete_or_blocked",
+  "scene_count": 3,
+  "model": "gemini-3-pro-image",
+  "estimated_per_image_usd": 0.14,
+  "estimated_total_usd": 0.42,
+  "estimated_total_krw": 762,
+  "automatic_retry": false,
+  "reference_count": 2,
+  "all_pilot_backgrounds_saved": false,
+  "cost_status": "unverified_until_console_reconciliation",
+  "console_reconciliation_required_before_next_paid_stage": true,
+  "request_ledger_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\generated_backgrounds\\kospi_july_2026_operational_a3_20260801\\_request_ledger.json",
+  "scenes": [
+    {
+      "scene_id": "kospi_july_01",
+      "status": "failed:GeminiProviderError",
+      "message": "Gemini Pro 이미지 생성 실패: GeminiImageGenerationError"
+    }
+  ],
+  "ledger": {
+    "video_id": "kospi_july_2026_operational_a3_20260801",
+    "total_spent_krw": 0,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 0,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": []
+  }
+}

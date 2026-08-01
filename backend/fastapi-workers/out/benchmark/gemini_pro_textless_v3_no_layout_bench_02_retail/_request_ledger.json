@@ -10,7 +10,7 @@
       "estimated_usd": 0.14,
       "amount_krw": 254,
       "cost_status": "unverified_until_console_reconciliation",
-      "status": "reserved",
+      "status": "http_200",
       "reserved_at": "2026-07-29T08:23:35.009707+00:00",
       "request_metadata": {
         "reference_contract": "v3_textless_no_layout_raster",
@@ -26,7 +26,9 @@
             "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
           }
         ]
-      }
+      },
+      "completed_at": "2026-07-29T08:24:10.915884+00:00",
+      "status_code": 200
     }
   ],
   "total_krw": 254,

@@ -53,9 +53,10 @@ class ArticleCapture(BaseModel):
     title_text_bbox: NormalizedBBox | None = None
     source_bbox: NormalizedBBox | None = None
     article_container_bbox: NormalizedBBox | None = None
-    bbox_source: Literal["dom_range", "pdf_text", "ocr_estimate"] = "dom_range"
+    bbox_source: Literal["dom_range", "pdf_text", "ocr_estimate", "verified_input"] = "dom_range"
     approval_required: bool = False
     local_path: str | None = None
+    annotation_preview_path: str | None = None
     object_key: str | None = None
 
 
@@ -104,6 +105,36 @@ class EvidenceCaptureRequest(BaseModel):
         if not value.startswith(("http://", "https://")):
             raise ValueError("source_url must use http or https")
         return value
+
+
+class UserImageEvidenceRequest(BaseModel):
+    """사용자가 올린 기사 캡처에 사람이 검증한 좌표만 연결한다."""
+
+    job_id: int = Field(ge=0)
+    source_url: str = Field(min_length=8, max_length=2048)
+    quote: str = Field(min_length=2, max_length=1000)
+    source_title: str = ""
+    publisher: str = ""
+    published_at: str | None = None
+    target_bbox: NormalizedBBox
+    quote_bboxes: list[NormalizedBBox] = Field(min_length=1)
+    key_phrase: str | None = Field(default=None, max_length=240)
+    key_phrase_bboxes: list[NormalizedBBox] = Field(default_factory=list)
+
+    @field_validator("source_url")
+    @classmethod
+    def http_url_only(cls, value: str) -> str:
+        if not value.startswith(("http://", "https://")):
+            raise ValueError("source_url must use http or https")
+        return value
+
+    @model_validator(mode="after")
+    def requires_matching_key_phrase_geometry(self) -> "UserImageEvidenceRequest":
+        if self.key_phrase and not self.key_phrase_bboxes:
+            raise ValueError("key_phrase requires verified key_phrase_bboxes")
+        if self.key_phrase_bboxes and not self.key_phrase:
+            raise ValueError("key_phrase_bboxes require key_phrase")
+        return self
 
 
 class ArticleSource(BaseModel):

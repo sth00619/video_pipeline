@@ -1,0 +1,66 @@
+{
+  "status": "completed",
+  "scene_count": 1,
+  "model": "gemini-3-pro-image",
+  "estimated_per_image_usd": 0.14,
+  "estimated_total_usd": 0.14,
+  "estimated_total_krw": 254,
+  "automatic_retry": false,
+  "reference_count": 2,
+  "all_pilot_backgrounds_saved": false,
+  "cost_status": "unverified_until_console_reconciliation",
+  "console_reconciliation_required_before_next_paid_stage": true,
+  "request_ledger_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\generated_backgrounds\\kospi_july_2026_risk_primary_v6\\_request_ledger.json",
+  "scenes": [
+    {
+      "scene_id": "kospi_july_03",
+      "status": "ok",
+      "seconds": 33.6,
+      "scene_type": "metric",
+      "selected_archetype": "risk_control_room",
+      "physical_surfaces": [
+        "the single large central analog gauge dial face embedded at eye level in the curved operations wall",
+        "metal warning plaques",
+        "control console"
+      ],
+      "primary_physical_surface": "the single large central analog gauge dial face embedded at eye level in the curved operations wall",
+      "estimated_cost_usd": 0.14,
+      "cost_status": "unverified_until_console_reconciliation"
+    }
+  ],
+  "ledger": {
+    "video_id": "kospi_july_2026_risk_primary_v6",
+    "total_spent_krw": 254,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 254,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "kospi_july_03",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785436422.2126327
+      }
+    ]
+  }
+}

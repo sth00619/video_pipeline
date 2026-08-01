@@ -1,0 +1,118 @@
+{
+  "status": "completed",
+  "run_id": "v5_style_contract_dual_20260802",
+  "scene_count": 2,
+  "model": "gemini-3-pro-image",
+  "estimated_per_image_usd": 0.14,
+  "estimated_total_usd": 0.28,
+  "estimated_total_krw": 508,
+  "automatic_retry": false,
+  "reference_artifacts": [
+    {
+      "role": "character",
+      "filename": "character_reference_v4_identity_clean.png",
+      "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+    },
+    {
+      "role": "style",
+      "filename": "style_reference_v4_medium_clean.png",
+      "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+    }
+  ],
+  "scenes": [
+    {
+      "scene_id": "kospi_july_01",
+      "scene_type": "graph",
+      "archetype": "data_lab",
+      "tier": "hero",
+      "visual_text_policy": "diegetic_decorative",
+      "style_contract_version": "2026-08-02-cinematic-cartoon-recovery",
+      "verified_overlay_present": true
+    },
+    {
+      "scene_id": "general_port_narrative_04",
+      "scene_type": "general",
+      "archetype": "port_emergency",
+      "tier": "body",
+      "visual_text_policy": "strict_textless",
+      "style_contract_version": "2026-08-02-cinematic-cartoon-recovery",
+      "verified_overlay_present": false
+    }
+  ],
+  "cost_status": "unverified_until_console_reconciliation",
+  "console_reconciliation_required_before_next_paid_stage": true,
+  "request_ledger_path": "/app/out/v5_pilot/kospi_july_2026/actual_four_scene/v5_style_contract_dual_20260802/_request_ledger.json",
+  "results": [
+    {
+      "scene_id": "kospi_july_01",
+      "status": "ok",
+      "seconds": 30.6,
+      "background_path": "/app/out/v5_pilot/kospi_july_2026/actual_four_scene/v5_style_contract_dual_20260802/kospi_july_01_background.png",
+      "final_path": "/app/out/v5_pilot/kospi_july_2026/actual_four_scene/v5_style_contract_dual_20260802/kospi_july_01.png",
+      "cost_status": "unverified_until_console_reconciliation"
+    },
+    {
+      "scene_id": "general_port_narrative_04",
+      "status": "ok",
+      "seconds": 32.7,
+      "background_path": "/app/out/v5_pilot/kospi_july_2026/actual_four_scene/v5_style_contract_dual_20260802/general_port_narrative_04_background.png",
+      "final_path": "/app/out/v5_pilot/kospi_july_2026/actual_four_scene/v5_style_contract_dual_20260802/general_port_narrative_04.png",
+      "cost_status": "unverified_until_console_reconciliation"
+    }
+  ],
+  "ledger": {
+    "video_id": "v5_style_contract_dual_20260802",
+    "total_spent_krw": 508,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 508,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "kospi_july_01",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785604985.7400935
+      },
+      {
+        "scene_id": "general_port_narrative_04",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785605018.4032192
+      }
+    ]
+  }
+}

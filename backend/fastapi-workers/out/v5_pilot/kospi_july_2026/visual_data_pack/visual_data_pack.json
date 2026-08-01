@@ -1,0 +1,331 @@
+{
+  "schema_version": "v5.visual-data-pack.v1",
+  "topic": "코스피 7월 전망",
+  "collected_at": "2026-07-30T08:13:35.911243+00:00",
+  "data_contract": {
+    "numeric_policy": "뉴스 수치는 검증 사실 원문에 존재하는 값만 사용",
+    "trend_policy": "NAVER ratio는 상대 검색 관심도이며 주가 변동률로 해석 금지",
+    "render_policy": "값과 그래프는 Pillow/SVG가 그림 속 지정 소품 내부에 결정론적으로 합성"
+  },
+  "metric_surfaces": [
+    {
+      "surface_id": "metric_surface_01",
+      "surface_family": "checkout_total",
+      "metric_ref": "news_fact_01",
+      "display": {
+        "label": "코스피 종가",
+        "value": "5663.24"
+      },
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18",
+        "title": "정부 \"단일종목 레버리지, 개인별 투자한도로 총량 관리\"…즉시 추진",
+        "published_at": "2026-07-29T22:46:00+09:00",
+        "source_field": "news[4]"
+      }
+    },
+    {
+      "surface_id": "metric_surface_02",
+      "surface_family": "engraved_metric",
+      "metric_ref": "news_fact_02",
+      "display": {
+        "label": "코스피 사상 최고치",
+        "value": "9,114.55"
+      },
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+        "title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+        "published_at": "2026-07-29T22:36:00+09:00",
+        "source_field": "news[5]"
+      }
+    },
+    {
+      "surface_id": "metric_surface_03",
+      "surface_family": "risk_plaque",
+      "metric_ref": "news_fact_03",
+      "display": {
+        "label": "코스피 고점 대비 낙폭",
+        "value": "37.87%"
+      },
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+        "title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+        "published_at": "2026-07-29T22:36:00+09:00",
+        "source_field": "news[5]"
+      }
+    },
+    {
+      "surface_id": "metric_surface_04",
+      "surface_family": "risk_plaque",
+      "metric_ref": "news_fact_04",
+      "display": {
+        "label": "7월 월간 낙폭",
+        "value": "33.18%"
+      },
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+        "title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+        "published_at": "2026-07-29T22:36:00+09:00",
+        "source_field": "news[5]"
+      }
+    },
+    {
+      "surface_id": "metric_surface_05",
+      "surface_family": "warning_gauge",
+      "metric_ref": "news_fact_05",
+      "display": {
+        "label": "코스피 일별 변동률",
+        "value": "-10.84%"
+      },
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18",
+        "title": "정부 \"단일종목 레버리지, 개인별 투자한도로 총량 관리\"…즉시 추진",
+        "published_at": "2026-07-29T22:46:00+09:00",
+        "source_field": "news[4]"
+      }
+    },
+    {
+      "surface_id": "metric_surface_06",
+      "surface_family": "engraved_metric",
+      "metric_ref": "news_fact_06",
+      "display": {
+        "label": "증시 시총 고점",
+        "value": "7810조 원"
+      },
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+        "title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+        "published_at": "2026-07-29T22:36:00+09:00",
+        "source_field": "news[5]"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "id": "news_fact_01",
+      "label": "코스피 종가",
+      "value": "5663.24",
+      "fact": "7월 29일 코스피 종가는 5,663.24였다.",
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18",
+        "title": "정부 \"단일종목 레버리지, 개인별 투자한도로 총량 관리\"…즉시 추진",
+        "published_at": "2026-07-29T22:46:00+09:00",
+        "source_field": "news[4]"
+      }
+    },
+    {
+      "id": "news_fact_02",
+      "label": "코스피 사상 최고치",
+      "value": "9,114.55",
+      "fact": "코스피의 6월 22일 사상 최고치는 9,114.55였다.",
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+        "title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+        "published_at": "2026-07-29T22:36:00+09:00",
+        "source_field": "news[5]"
+      }
+    },
+    {
+      "id": "news_fact_03",
+      "label": "코스피 고점 대비 낙폭",
+      "value": "37.87%",
+      "fact": "7월 29일 코스피는 사상 최고치(6월 22일 9,114.55) 대비 37.87% 하락했다.",
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+        "title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+        "published_at": "2026-07-29T22:36:00+09:00",
+        "source_field": "news[5]"
+      }
+    },
+    {
+      "id": "news_fact_04",
+      "label": "7월 월간 낙폭",
+      "value": "33.18%",
+      "fact": "7월 월간 코스피 낙폭은 33.18%로, 1997년 10월 IMF 외환위기 당시 낙폭(-27.24%)보다 컸다.",
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+        "title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+        "published_at": "2026-07-29T22:36:00+09:00",
+        "source_field": "news[5]"
+      }
+    },
+    {
+      "id": "news_fact_05",
+      "label": "코스피 일별 변동률",
+      "value": "-10.84%",
+      "fact": "코스피 변동률은 7월 24일 -5.72%, 27일 +0.97%, 28일 -10.84%, 29일 -5.98%였다.",
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18",
+        "title": "정부 \"단일종목 레버리지, 개인별 투자한도로 총량 관리\"…즉시 추진",
+        "published_at": "2026-07-29T22:46:00+09:00",
+        "source_field": "news[4]"
+      }
+    },
+    {
+      "id": "news_fact_06",
+      "label": "증시 시총 고점",
+      "value": "7810조 원",
+      "fact": "국내 증시 합산 시가총액은 지난달 25일 7,810조 원까지 올랐다가 최근 급락세로 한 달 새 2,800조 원 이상 증발했다.",
+      "source": {
+        "type": "news_article_verified_fact",
+        "url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+        "title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+        "published_at": "2026-07-29T22:36:00+09:00",
+        "source_field": "news[5]"
+      }
+    }
+  ],
+  "trend_charts": [
+    {
+      "chart_id": "search_interest_comparison",
+      "chart_family": "diegetic_line_chart",
+      "series_refs": [
+        "search_trend_01",
+        "search_trend_02",
+        "search_trend_03",
+        "search_trend_04"
+      ],
+      "source": "naver_search_trend",
+      "ratio_note": "상대 검색 관심도 차트이며 투자 성과 또는 주가 차트가 아닙니다."
+    }
+  ],
+  "trend_series": [
+    {
+      "id": "search_trend_01",
+      "title": "코스피",
+      "points": [
+        {
+          "period": "2026-06-29",
+          "ratio": 81.262
+        },
+        {
+          "period": "2026-07-06",
+          "ratio": 89.97546
+        },
+        {
+          "period": "2026-07-13",
+          "ratio": 89.21781
+        },
+        {
+          "period": "2026-07-20",
+          "ratio": 79.71174
+        },
+        {
+          "period": "2026-07-27",
+          "ratio": 75.62063
+        }
+      ],
+      "source": "naver_search_trend",
+      "ratio_note": "ratio는 절대 검색량이나 주가 변동률이 아닌 요청 결과 내 상대 검색 관심도입니다."
+    },
+    {
+      "id": "search_trend_02",
+      "title": "삼성전자",
+      "points": [
+        {
+          "period": "2026-06-29",
+          "ratio": 97.64212
+        },
+        {
+          "period": "2026-07-06",
+          "ratio": 99.02303
+        },
+        {
+          "period": "2026-07-13",
+          "ratio": 76.73506
+        },
+        {
+          "period": "2026-07-20",
+          "ratio": 74.19448
+        },
+        {
+          "period": "2026-07-27",
+          "ratio": 54.66264
+        }
+      ],
+      "source": "naver_search_trend",
+      "ratio_note": "ratio는 절대 검색량이나 주가 변동률이 아닌 요청 결과 내 상대 검색 관심도입니다."
+    },
+    {
+      "id": "search_trend_03",
+      "title": "SK하이닉스",
+      "points": [
+        {
+          "period": "2026-06-29",
+          "ratio": 87.10841
+        },
+        {
+          "period": "2026-07-06",
+          "ratio": 90.25968
+        },
+        {
+          "period": "2026-07-13",
+          "ratio": 100
+        },
+        {
+          "period": "2026-07-20",
+          "ratio": 76.07931
+        },
+        {
+          "period": "2026-07-27",
+          "ratio": 67.0556
+        }
+      ],
+      "source": "naver_search_trend",
+      "ratio_note": "ratio는 절대 검색량이나 주가 변동률이 아닌 요청 결과 내 상대 검색 관심도입니다."
+    },
+    {
+      "id": "search_trend_04",
+      "title": "엔비디아",
+      "points": [
+        {
+          "period": "2026-06-29",
+          "ratio": 1.38978
+        },
+        {
+          "period": "2026-07-06",
+          "ratio": 1.58531
+        },
+        {
+          "period": "2026-07-13",
+          "ratio": 1.40705
+        },
+        {
+          "period": "2026-07-20",
+          "ratio": 1.36976
+        },
+        {
+          "period": "2026-07-27",
+          "ratio": 1.23804
+        }
+      ],
+      "source": "naver_search_trend",
+      "ratio_note": "ratio는 절대 검색량이나 주가 변동률이 아닌 요청 결과 내 상대 검색 관심도입니다."
+    }
+  ],
+  "diagram_candidates": [
+    {
+      "diagram_id": "news_fact_to_market_context",
+      "diagram_family": "diegetic_flow_map",
+      "node_refs": [
+        "news_fact_01",
+        "news_fact_02",
+        "news_fact_03",
+        "news_fact_04",
+        "news_fact_05",
+        "news_fact_06"
+      ],
+      "rule": "노드 문구는 각 검증 사실의 label과 value만 사용하며, 인과관계 화살표는 대본 검토자가 별도 승인할 때만 표시"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 2,
+  "source_url": "https://www.yna.co.kr/view/AKR20260723141400008",
+  "source_title": "코스피, 5거래일 만에 '7천피' 재탈환…코스닥 5% 상승 | 연합뉴스",
+  "publisher": "연합뉴스",
+  "published_at": "2026-07-23T15:36:05+09:00",
+  "captured_at": "2026-07-31T19:46:10.574983Z",
+  "capture_mode": "dom",
+  "quote": "한국거래소에 따르면 이날 코스피는 전장보다 299.19포인트(4.40%) 오른 7,096.89로 마쳤다.",
+  "image_sha256": "1be7973ac3b63bf49ac7f9fb331b3f230d13f58c269318a1d73b62f843c72b79",
+  "target_bbox": {
+    "x": 0.14313597918022122,
+    "y": 0.39799626245847175,
+    "width": 0.7135857189329864,
+    "height": 0.16943521594684385
+  },
+  "quote_bboxes": [
+    {
+      "x": 0.14313597918022122,
+      "y": 0.39799626245847175,
+      "width": 0.7135857189329864,
+      "height": 0.07973421926910298
+    },
+    {
+      "x": 0.14313597918022122,
+      "y": 0.48769725913621265,
+      "width": 0.2180383864671438,
+      "height": 0.07973421926910298
+    }
+  ],
+  "key_phrase": "한국거래소에 따르면 이날 코스피는 전장보다 299.19포인트(4.40%) 오른 7,096.89로 마쳤다.",
+  "key_phrase_bboxes": [
+    {
+      "x": 0.14313597918022122,
+      "y": 0.39799626245847175,
+      "width": 0.7135857189329864,
+      "height": 0.07973421926910298
+    },
+    {
+      "x": 0.14313597918022122,
+      "y": 0.48769725913621265,
+      "width": 0.2180383864671438,
+      "height": 0.07973421926910298
+    }
+  ],
+  "title_text_bbox": null,
+  "source_bbox": null,
+  "article_container_bbox": null,
+  "bbox_source": "dom_range",
+  "approval_required": false,
+  "local_path": "out\\article_capture_pilot_v2\\jobs\\20260802\\evidence\\article_1be7973ac3b63bf4.png",
+  "object_key": "jobs/20260802/evidence/article_1be7973ac3b63bf4.png"
+}

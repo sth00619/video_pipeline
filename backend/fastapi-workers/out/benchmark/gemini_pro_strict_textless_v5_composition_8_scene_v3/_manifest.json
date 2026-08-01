@@ -1,0 +1,531 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "batch": false,
+  "visual_text_policy": "strict_textless",
+  "run_status": "completed",
+  "estimated_total_usd": 1.12,
+  "cost_status": "unverified_until_console_reconciliation",
+  "console_reconciliation_required_before_next_paid_stage": true,
+  "request_ledger_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_composition_8_scene_v3\\_request_ledger.json",
+  "request_ledger": {
+    "items": [
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_01_port",
+        "attempt": 1,
+        "attempt_id": "3d1b476de9274f91a8f1457f06fc8557",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T16:18:52.503304+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T16:19:26.367608+00:00",
+        "status_code": 200
+      },
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_02_retail",
+        "attempt": 1,
+        "attempt_id": "8a8214b15db042af95f1c344338a5271",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T16:19:27.042718+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the left-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T16:20:02.332100+00:00",
+        "status_code": 200
+      },
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_03_classroom",
+        "attempt": 1,
+        "attempt_id": "66d3738a87284481a13ebdad1ff9ddcc",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T16:20:03.179953+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T16:20:35.711867+00:00",
+        "status_code": 200
+      },
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_04_classroom2",
+        "attempt": 1,
+        "attempt_id": "bcf58d2c66c94bd19d301520a1730d52",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T16:20:36.533230+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the left-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T16:21:17.541095+00:00",
+        "status_code": 200
+      },
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_05_weather",
+        "attempt": 1,
+        "attempt_id": "efbcd670b4ca4f60a4bb46b353df387d",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T16:21:18.262683+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T16:21:50.258116+00:00",
+        "status_code": 200
+      },
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_06_split",
+        "attempt": 1,
+        "attempt_id": "74989bc32e6c46878f3c6e3f8d67c383",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T16:21:51.053448+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the center foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T16:22:19.568357+00:00",
+        "status_code": 200
+      },
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_07_trade",
+        "attempt": 1,
+        "attempt_id": "eebf831af3394eaca609d5d9233a2b97",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T16:22:20.387177+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the left-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T16:22:53.562372+00:00",
+        "status_code": 200
+      },
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_08_datalab",
+        "attempt": 1,
+        "attempt_id": "ba36afd7566f4983a09921bcf079f8c5",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T16:22:54.608852+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the center foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T16:23:45.029936+00:00",
+        "status_code": 200
+      }
+    ],
+    "total_krw": 2032,
+    "budget_overrun_krw": 0
+  },
+  "scenes": [
+    {
+      "scene_id": "bench_01_port",
+      "archetype": "port_emergency",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 34.6,
+      "seed": 101
+    },
+    {
+      "scene_id": "bench_02_retail",
+      "archetype": "retail_shock",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 36.1,
+      "seed": 102
+    },
+    {
+      "scene_id": "bench_03_classroom",
+      "archetype": "classroom",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 33.3,
+      "seed": 103
+    },
+    {
+      "scene_id": "bench_04_classroom2",
+      "archetype": "classroom",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 41.7,
+      "seed": 104
+    },
+    {
+      "scene_id": "bench_05_weather",
+      "archetype": "weather_map",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 32.8,
+      "seed": 105
+    },
+    {
+      "scene_id": "bench_06_split",
+      "archetype": "split_stage",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 29.3,
+      "seed": 106
+    },
+    {
+      "scene_id": "bench_07_trade",
+      "archetype": "trade_calculator",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 34.2,
+      "seed": 107
+    },
+    {
+      "scene_id": "bench_08_datalab",
+      "archetype": "data_lab",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 51.2,
+      "seed": 108
+    }
+  ],
+  "ledger": {
+    "video_id": "p1b_gemini_pro",
+    "total_spent_krw": 2032,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 2032,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "bench_01_port",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785341967.0253248
+      },
+      {
+        "scene_id": "bench_02_retail",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785342003.1577864
+      },
+      {
+        "scene_id": "bench_03_classroom",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785342036.510402
+      },
+      {
+        "scene_id": "bench_04_classroom2",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785342078.2421422
+      },
+      {
+        "scene_id": "bench_05_weather",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785342111.0361278
+      },
+      {
+        "scene_id": "bench_06_split",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785342140.3609204
+      },
+      {
+        "scene_id": "bench_07_trade",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785342174.5738292
+      },
+      {
+        "scene_id": "bench_08_datalab",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785342225.7803187
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "scenes": [
+    {
+      "scene_id": "kospi_july_embedded_monitor_preview",
+      "png": "out\\v5_pilot\\kospi_july_2026\\embedded_monitor_preview_v2\\kospi_july_embedded_monitor_preview.png"
+    }
+  ],
+  "contact_sheet": "out\\v5_pilot\\kospi_july_2026\\embedded_monitor_preview_v2\\contact_sheet.png"
+}

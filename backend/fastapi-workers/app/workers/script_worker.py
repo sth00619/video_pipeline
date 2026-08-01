@@ -485,6 +485,7 @@ class ScriptWorker:
                 logger.warning("대본 흐름 QA 실패: %s", exc)
                 flow_qa = {"passed": False, "method": "unavailable", "transition_issues": ["흐름 QA 호출 실패"]}
             sections = direct_scenes(enrich_scene_plans(sections))
+            sections = _classify_scene_types(sections)
             if data_visuals_enabled:
                 for scene in sections:
                     scene["market_snapshot"] = market_data
@@ -501,6 +502,7 @@ class ScriptWorker:
             logger.error(f"LLM API 호출 실패: {e} — Mock으로 폴백")
             full_script, sections = self._mock_script(keyword, category_label, target_minutes)
             sections = direct_scenes(enrich_scene_plans(sections))
+            sections = _classify_scene_types(sections)
             if data_visuals_enabled:
                 for scene in sections:
                     scene["market_snapshot"] = market_data
@@ -753,6 +755,7 @@ class ScriptWorker:
 
     def _mock_generate(self, keyword, category_label, target_minutes, job_id):
         script_text, sections = self._mock_script(keyword, category_label, target_minutes)
+        sections = _classify_scene_types(sections)
         length_contract = make_length_contract(
             target_minutes,
             float(runtime_config.value("chars_per_minute")),
@@ -1408,6 +1411,74 @@ def _count_text(content_blocks) -> int:
             elif isinstance(block, str):
                 total += len(block)
     return total
+
+
+SCENE_TYPES = {"general", "metric", "graph", "diagram", "text"}
+
+# 장면 유형은 검증된 대본과 이미 작성된 시각 의도만 보고 결정한다. 이 규칙은
+# 수치·등락률을 만들거나 사실 여부를 판단하지 않으며, 이후 단계가 어떤 무대를
+# 선택해야 하는지 설명 가능한 신호만 남긴다.
+_GRAPH_SIGNALS = (
+    "차트", "그래프", "추이", "타임라인", "그래프", "막대", "선 그래프",
+    "chart", "graph", "trend", "timeline", "bar chart", "line chart",
+)
+_DIAGRAM_SIGNALS = (
+    "공급망", "흐름도", "구조", "단계", "과정", "경로", "인과", "연결",
+    "supply chain", "flow", "process", "structure", "diagram", "causal",
+)
+_METRIC_SIGNALS = (
+    "지수", "종가", "고점", "저점", "시가총액", "등락", "변동률", "낙폭", "비율", "규모",
+    "index", "close", "high", "low", "market cap", "change", "percent", "rate",
+)
+_TEXT_SIGNALS = (
+    "뜻", "의미", "정의", "용어", "핵심 문구", "한마디", "요약",
+    "definition", "meaning", "term", "key phrase", "quote", "summary",
+)
+
+
+def _scene_type_source_text(scene: dict) -> str:
+    """분류 근거가 된 기존 대본·시각 의도 텍스트만 합친다."""
+    fields = ("title", "content", "text", "prompt_ko", "prompt_en", "visual_intent")
+    return "\n".join(str(scene.get(field) or "") for field in fields).lower()
+
+
+def _has_any_signal(text: str, signals: tuple[str, ...]) -> bool:
+    return any(signal in text for signal in signals)
+
+
+def _classify_scene_type(scene: dict) -> tuple[str, str]:
+    """한 장면의 표현 목적과 사람이 읽을 수 있는 선택 근거를 반환한다."""
+    text = _scene_type_source_text(scene)
+    section = str(scene.get("section") or "").lower()
+
+    if _has_any_signal(text, _GRAPH_SIGNALS):
+        return "graph", "대본 또는 기존 시각 의도에 차트·추이·시간축 표현이 있어 그래프형으로 분류"
+    if _has_any_signal(text, _DIAGRAM_SIGNALS):
+        return "diagram", "대본 또는 기존 시각 의도에 흐름·구조·단계 관계가 있어 다이어그램형으로 분류"
+    if re.search(r"\d", text) or _has_any_signal(text, _METRIC_SIGNALS) or section == "data":
+        return "metric", "대본에 검증 대상 수치·등락·규모 표현이 있어 지표형으로 분류"
+    if _has_any_signal(text, _TEXT_SIGNALS):
+        return "text", "대본에 정의·핵심 문구 중심 설명이 있어 텍스트형으로 분류"
+    return "general", "수치·그래프·구조·핵심 문구 신호가 없어 일반 설명형으로 분류"
+
+
+def _classify_scene_types(sections: list[dict]) -> list[dict]:
+    """모든 씬에 표준 scene_type과 근거를 기록한다.
+
+    이 단계는 이미지 프롬프트, V5 archetype, 오버레이 또는 영상 조립을 바꾸지
+    않는다. 다음 설계 단계에서 동일한 계약을 소비할 수 있도록 대본 메타데이터에
+    분류 결과만 남긴다.
+    """
+    classified: list[dict] = []
+    for original in sections:
+        scene = dict(original)
+        scene_type, selection_reason = _classify_scene_type(scene)
+        if scene_type not in SCENE_TYPES:
+            raise ValueError(f"지원하지 않는 scene_type: {scene_type}")
+        scene["scene_type"] = scene_type
+        scene["selection_reason"] = selection_reason
+        classified.append(scene)
+    return classified
 
 
 def _attach_verified_index_overlays(sections: list[dict], market_data: dict) -> list[dict]:

@@ -1,0 +1,18 @@
+{
+  "purpose": "수치가 장면 속 소품에 자연스럽게 들어가는지 검증",
+  "market_data_status": "mock_only_not_for_script_or_publication",
+  "mock_metrics": {
+    "KOSPI": "+0.63%",
+    "SAMSUNG": "+2.84%",
+    "SK HYNIX": "-3.16%",
+    "NVIDIA": "+1.72%",
+    "KOSPI CLOSE": "5,663.24"
+  },
+  "outputs": [
+    "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\mock_market_metric_placement_preview\\01_weather_map_mock_changes.png",
+    "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\mock_market_metric_placement_preview\\02_risk_plaque_mock_change_v2.png",
+    "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\mock_market_metric_placement_preview\\03_calculator_lcd_mock_close_v2.png",
+    "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\mock_market_metric_placement_preview\\mock_metric_placement_contact_sheet.png"
+  ],
+  "cost_usd": 0
+}

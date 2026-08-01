@@ -29,6 +29,12 @@ from app.utils.visual_qa import assess_visual_alignment
 from app.utils import gemini_batch
 from app.pipeline.scene_director import SceneDirector, SceneSpec
 from app.providers.real.prompt_builder import build_prompt
+from app.v5.scene.runtime_contract import (
+    attach_v5_scene_contracts,
+    is_v5_final_lane_scene,
+    prompt_for_scene,
+    v5_provider_options,
+)
 from app.postprocess.text_overlay import add_headline
 from app.utils.budget import ProviderRequestAudit, plan_preflight, record_cost, write_preflight
 from app.utils.intro_motion import infer_total_duration_seconds, select_intro_motion_scene_indices, scene_duration_seconds
@@ -398,6 +404,10 @@ class ImagesWorker:
                 enrich_scene_plan(scene, i, len(scenes_meta))
                 for i, scene in enumerate(scenes_meta)
             ])
+        # ScriptWorker가 이미 확정한 scene_type을 운영 이미지 경로까지
+        # 보존한다. 이 단계는 순수 계획만 만들며 이미지 API를 호출하지 않는다.
+        if scenes_meta and all(scene.get("scene_type") for scene in scenes_meta):
+            scenes_meta = attach_v5_scene_contracts(scenes_meta)
         budget_preflight = None
         if scenes_meta:
             billable_scenes = [scene for scene in scenes_meta if not _article_evidence_path(scene)]
@@ -463,6 +473,10 @@ class ImagesWorker:
             )
             tiered_iter = iter(tiered_billable_scenes)
             scenes_meta = [scene if _article_evidence_path(scene) else next(tiered_iter) for scene in scenes_meta]
+            # 품질 분배기가 적용된 뒤에도 V5 최종 lane의 Gemini Pro 계약은
+            # 하향되지 않도록 다시 명시한다.
+            if all(scene.get("scene_type") for scene in scenes_meta):
+                scenes_meta = attach_v5_scene_contracts(scenes_meta)
 
         # Visual direction is deliberately separate from script writing. One
         # coordinated request assigns a distinct role/costume/action to every
@@ -505,6 +519,11 @@ class ImagesWorker:
         # foreground character.  The legacy integrated path remains only for
         # old jobs without a library and is never marked identity-locked.
         use_composite = bool(character_poses_dir and Path(character_poses_dir).is_dir())
+        if use_composite and any(is_v5_final_lane_scene(scene) for scene in scenes_meta):
+            # V5는 Gemini가 완성한 동일 매체의 캐릭터·무대·primary 표면을
+            # 한 장으로 받는다. 기존 포즈 PNG 합성은 이 계약을 깨므로 사용하지 않는다.
+            use_composite = False
+            logger.info("V5 final lane: legacy pose composite를 비활성화하고 Gemini 통합 씬을 사용합니다.")
         if use_composite:
             logger.info(f"[합성모드] 이중 레이어 합성 활성화: poses_dir={character_poses_dir}")
         else:
@@ -534,7 +553,10 @@ class ImagesWorker:
             narration = scene.get("content") or scene.get("text") or ""
             spec = directed_specs.get(index)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt)
+            prompt_en = (
+                prompt_for_scene(scene)
+                or (build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt))
+            )
             return {
                 **scene,
                 "index": index,
@@ -567,6 +589,9 @@ class ImagesWorker:
             and runtime_config.value("image_provider") == "gemini"
             and bool(scenes_meta)
             and not article_evidence_indices
+            # V5 운영 씬은 request 단위 가드·표준 tier·max_attempts=1을
+            # 유지해야 하므로 기존 Batch 경로로 우회하지 않는다.
+            and not any(is_v5_final_lane_scene(scene) for scene in scenes_meta)
             and all((scene.get("image_profile") or {}).get("tier") == "pro" for scene in scenes_meta)
             and not lora_model_id
         )
@@ -627,18 +652,26 @@ class ImagesWorker:
                 continue
             scene = enrich_scene_plan(scene, i, len(scenes_meta))
             scene, template = _apply_info_scene_template(scene)
-            scene["_template_regeneration_enabled"] = bool((budget_preflight or {}).get("template_regeneration_enabled"))
+            scene["_template_regeneration_enabled"] = (
+                bool((budget_preflight or {}).get("template_regeneration_enabled"))
+                and not is_v5_final_lane_scene(scene)
+            )
             section = scene.get("section", f"scene_{i}")
             narration = scene.get("content") or scene.get("text") or ""
 
             spec = directed_specs.get(i)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt)
+            prompt_en = (
+                prompt_for_scene(scene)
+                or (build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt))
+            )
             prompt_ko = scene.get("prompt_ko") or narration or scene.get("title") or ""
             pose = scene.get("pose", "neutral")
             art_direction = scene.get("art_direction") or {}
             image_profile = scene.get("image_profile") or {}
-            is_direct_pro_scene = (
+            is_v5_scene = is_v5_final_lane_scene(scene)
+            provider_options = v5_provider_options(scene)
+            is_direct_pro_scene = is_v5_scene or (
                 image_profile.get("tier") == "pro"
                 and runtime_config.value("image_provider") == "gemini"
             )
@@ -702,7 +735,7 @@ class ImagesWorker:
                             add_headline(img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
                     else:
                         # [Sprint 3 & S5] LoRA 또는 기본 일체형 모드 + AI 품질 검수 자동 재생성
-                        max_retries = 2
+                        max_retries = 1 if is_v5_scene else 2
                         for attempt in range(max_retries):
                             if is_direct_pro_scene and last_pro_request_finished_at is not None:
                                 delay_seconds = max(
@@ -730,18 +763,20 @@ class ImagesWorker:
                                     lora_model_id=lora_model_id,
                                     lora_trigger_word=lora_trigger_word,
                                     lora_scale=lora_scale,
-                                image_provider=runtime_config.value("image_provider"),
-                                gemini_model=image_profile.get("model"),
-                                gemini_image_size=image_profile.get("image_size"),
-                                gemini_service_tier=runtime_config.value("gemini_service_tier"),
-                                gemini_max_attempts=runtime_config.value("gemini_pro_max_attempts"),
+                                image_provider=provider_options.get("image_provider", runtime_config.value("image_provider")),
+                                gemini_model=provider_options.get("gemini_model", image_profile.get("model")),
+                                gemini_image_size=provider_options.get("gemini_image_size", image_profile.get("image_size")),
+                                gemini_service_tier=provider_options.get("gemini_service_tier", runtime_config.value("gemini_service_tier")),
+                                gemini_max_attempts=provider_options.get("gemini_max_attempts", runtime_config.value("gemini_pro_max_attempts")),
                                 gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
                                 gemini_request_audit=ProviderRequestAudit.for_job(
                                     job_id=job_id,
                                     scene_key=f"image:{i}",
                                     model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
                                 ),
-                                style_locked=bool(spec),
+                                style_locked=bool(spec) or bool(provider_options.get("style_locked")),
+                                suppress_legacy_style_lock=bool(provider_options.get("suppress_legacy_style_lock")),
+                                gemini_reference_contract_declared=bool(provider_options.get("gemini_reference_contract_declared")),
                                 )
                             finally:
                                 if is_direct_pro_scene:
@@ -787,7 +822,9 @@ class ImagesWorker:
 
                     # Generate variations if hold time exceeds limit
                     duration = scene_duration_seconds(scene, float(runtime_config.value("scene_duration_sec")))
-                    max_hold = float(runtime_config.value("max_image_hold_seconds"))
+                    # V5 운영 씬은 한 요청이 한 검증 단위다. 노출 길이 때문에
+                    # 자동 변주 이미지를 추가 호출하지 않고, 영상 조립 단계가 시간을 처리한다.
+                    max_hold = float("inf") if is_v5_scene else float(runtime_config.value("max_image_hold_seconds"))
                     if duration > max_hold:
                         import math
                         num_vars = math.ceil(duration / max_hold)
@@ -1000,11 +1037,17 @@ class ImagesWorker:
         def make_context(original: dict, index: int) -> dict:
             scene = enrich_scene_plan(original, index, len(scenes_meta))
             scene, template = _apply_info_scene_template(scene)
-            scene["_template_regeneration_enabled"] = bool((budget_preflight or {}).get("template_regeneration_enabled"))
+            scene["_template_regeneration_enabled"] = (
+                bool((budget_preflight or {}).get("template_regeneration_enabled"))
+                and not is_v5_final_lane_scene(scene)
+            )
             narration = scene.get("content") or scene.get("text") or ""
             spec = directed_specs.get(index)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt)
+            prompt_en = (
+                prompt_for_scene(scene)
+                or (build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt))
+            )
             image_profile = scene.get("image_profile") or {}
             return {
                 **scene,
@@ -1029,6 +1072,7 @@ class ImagesWorker:
                 "motion_type": scene.get("motion_type", ""),
                 "market_chart": scene.get("market_chart"),
                 "index_data": scene.get("index_data"),
+                "v5_provider_options": v5_provider_options(scene),
             }
 
         contexts = [make_context(scene, index) for index, scene in enumerate(scenes_meta)]
@@ -1075,7 +1119,9 @@ class ImagesWorker:
                         "asset_layout_metadata": _asset_layout_metadata(ctx, resumed_clean_plate),
                         "generation_method": "resumed_existing", "quality_score": 90, "_fingerprint": scene_fingerprint}
 
-            max_retries = max(1, min(int(runtime_config.value("gemini_retry_max")), 8))
+            is_v5_scene = is_v5_final_lane_scene(ctx)
+            provider_options = dict(ctx.get("v5_provider_options") or {})
+            max_retries = 1 if is_v5_scene else max(1, min(int(runtime_config.value("gemini_retry_max")), 8))
             base_backoff = max(0.25, float(runtime_config.value("gemini_pro_retry_base_seconds")))
             last_error = None
             for attempt in range(max_retries):
@@ -1118,18 +1164,20 @@ class ImagesWorker:
                             lora_model_id=lora_model_id,
                             lora_trigger_word=lora_trigger_word,
                             lora_scale=lora_scale,
-                            image_provider=runtime_config.value("image_provider"),
-                            gemini_model=image_profile.get("model"),
-                            gemini_image_size=image_profile.get("image_size"),
-                            gemini_service_tier=runtime_config.value("gemini_service_tier"),
-                            gemini_max_attempts=1,
+                            image_provider=provider_options.get("image_provider", runtime_config.value("image_provider")),
+                            gemini_model=provider_options.get("gemini_model", image_profile.get("model")),
+                            gemini_image_size=provider_options.get("gemini_image_size", image_profile.get("image_size")),
+                            gemini_service_tier=provider_options.get("gemini_service_tier", runtime_config.value("gemini_service_tier")),
+                            gemini_max_attempts=provider_options.get("gemini_max_attempts", 1),
                             gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
                             gemini_request_audit=ProviderRequestAudit.for_job(
                                 job_id=job_id,
                                 scene_key=f"image:{index}",
                                 model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
                             ),
-                            style_locked=bool(ctx["spec"]),
+                            style_locked=bool(ctx["spec"]) or bool(provider_options.get("style_locked")),
+                            suppress_legacy_style_lock=bool(provider_options.get("suppress_legacy_style_lock")),
+                            gemini_reference_contract_declared=bool(provider_options.get("gemini_reference_contract_declared")),
                         )
                         if not valid_image(raw_img_path):
                             raise RuntimeError("provider returned a missing, undersized, or invalid image")
@@ -1685,6 +1733,15 @@ class ImagesWorker:
             self._resume_layered_scene(scene, img_path, layered)
             return
         self._normalize_canvas(img_path)
+        # V5 정보 씬의 실제 값은 AI 프롬프트가 아니라 검증된 사실 원문과
+        # 명시 좌표를 통과한 Pillow 합성만 사용한다. 일반 씬은 이 경로를 타지 않는다.
+        if isinstance(scene.get("v5_render_contract"), dict):
+            if scene.get("v5_verified_overlays"):
+                from app.v5.overlay.diegetic_fact_overlay import apply_verified_scene_facts
+
+                image_bytes = Path(img_path).read_bytes()
+                Path(img_path).write_bytes(apply_verified_scene_facts(image_bytes, scene))
+            return
         self._apply_info_surface_plan(scene, img_path)
 
     def _replace_with_regenerated_surface_source(self, scene: dict, raw_img_path: str, img_path: str) -> None:

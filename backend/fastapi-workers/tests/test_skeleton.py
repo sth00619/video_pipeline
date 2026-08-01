@@ -12,19 +12,19 @@ from app.v5.scene.prompt_builder import ARCHETYPES, BENCHMARK_SCENES, SceneSpec,
 
 def test_prompt_excludes_blank_board():
     prompt = build_prompt(BENCHMARK_SCENES[2])
-    assert "empty placeholder" in prompt and "DO NOT INCLUDE" in prompt
+    assert "empty boards" in prompt and "DO NOT INCLUDE" in prompt
     assert "teaching wall" in prompt and "wooden pointer" in prompt
 
 
 def test_prompt_no_korean_requested():
-    assert "no writing-like strokes anywhere" in build_prompt(BENCHMARK_SCENES[0])
+    assert "DO NOT INCLUDE Korean text" in build_prompt(BENCHMARK_SCENES[0])
 
 
 def test_prompt_requires_dense_non_factual_background_information():
     prompt = build_prompt(BENCHMARK_SCENES[0])
     assert "BACKGROUND INFORMATION DENSITY" in prompt
-    assert "color-only control dials" in prompt
-    assert "non-linguistic" in prompt
+    assert "populated analog gauges" in prompt
+    assert "sample figures" in prompt
 
 
 def test_all_benchmark_scenes_valid():
@@ -60,8 +60,9 @@ def test_budget_records_and_accumulates():
     assert ledger.total_spent_krw() == round(0.015 * 1500)
 
 
-def test_archetypes_cover_all_seven_references():
-    assert {"port_emergency", "retail_shock", "classroom", "weather_map", "split_stage", "trade_calculator", "data_lab"}.issubset(ARCHETYPES)
+def test_archetypes_cover_diverse_sets_without_a_split_frame_requirement():
+    assert {"port_emergency", "retail_shock", "classroom", "weather_map", "risk_control_room", "trade_calculator", "data_lab"}.issubset(ARCHETYPES)
+    assert all(scene.archetype != "split_stage" for scene in BENCHMARK_SCENES)
 
 
 if __name__ == "__main__":

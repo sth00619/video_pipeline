@@ -1,0 +1,17 @@
+{
+  "scenes": [
+    {
+      "scene_id": "kospi_july_01",
+      "png": "out\\v5_pilot\\kospi_july_2026\\final_rendered\\kospi_july_01.png"
+    },
+    {
+      "scene_id": "kospi_july_02",
+      "png": "out\\v5_pilot\\kospi_july_2026\\final_rendered\\kospi_july_02.png"
+    },
+    {
+      "scene_id": "kospi_july_03",
+      "png": "out\\v5_pilot\\kospi_july_2026\\final_rendered\\kospi_july_03.png"
+    }
+  ],
+  "contact_sheet": "out\\v5_pilot\\kospi_july_2026\\final_rendered\\contact_sheet.png"
+}

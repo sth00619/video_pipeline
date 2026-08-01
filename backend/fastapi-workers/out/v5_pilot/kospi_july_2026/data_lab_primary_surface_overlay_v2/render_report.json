@@ -1,0 +1,21 @@
+{
+  "status": "rendered_without_external_image_api",
+  "source_background": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\v5_actual_four_scene_pilot_20260801a\\kospi_july_01_background.png",
+  "output_image": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\data_lab_primary_surface_overlay_v2\\kospi_july_01_data_lab_primary_v2.png",
+  "archetype": "data_lab",
+  "primary_surface_region": {
+    "x": 0.12,
+    "y": 0.12,
+    "width": 0.47,
+    "height": 0.48
+  },
+  "overlay_anchor": {
+    "x": 0.25,
+    "y": 0.43,
+    "width": 0.22,
+    "height": 0.13,
+    "kind": "embedded_monitor"
+  },
+  "fact_value_origin": "existing verified_facts[0]",
+  "gemini_or_fal_called": false
+}

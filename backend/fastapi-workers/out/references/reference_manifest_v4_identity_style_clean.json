@@ -1,0 +1,16 @@
+{
+  "version": "v4_identity_style_clean",
+  "contract": "Gemini에는 완성 장면 크롭이 아닌 캐릭터 정체성 시트와 연출 없는 매체 스타일 시트만 전달한다. 배치와 장면 소품은 프롬프트 계약이 결정한다.",
+  "artifacts": [
+    {
+      "role": "character",
+      "path": "out/references/character_reference_v4_identity_clean.png",
+      "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+    },
+    {
+      "role": "style",
+      "path": "out/references/style_reference_v4_medium_clean.png",
+      "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+    }
+  ]
+}

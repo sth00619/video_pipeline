@@ -1,0 +1,29 @@
+{
+  "scenes": [
+    {
+      "scene_id": "pilot_scene_01",
+      "background_path": "out/benchmark/gemini_pro_strict_textless_v5_identity_continuity_01_port/bench_01_port.png",
+      "verified_facts": [
+        {
+          "fact": "검증을 마친 대본 문장을 그대로 입력합니다.",
+          "figure": "검증을 마친 표시값을 그대로 입력합니다.",
+          "source_url": "https://검증-출처-URL을-입력하세요"
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "표시 항목",
+          "value": "verified_facts[0]의 fact 또는 figure에 실제로 포함된 값만 입력합니다.",
+          "source_ref": "facts[0]",
+          "anchor": {
+            "x": 0.1,
+            "y": 0.2,
+            "width": 0.26,
+            "height": 0.14,
+            "kind": "placard"
+          }
+        }
+      ]
+    }
+  ]
+}

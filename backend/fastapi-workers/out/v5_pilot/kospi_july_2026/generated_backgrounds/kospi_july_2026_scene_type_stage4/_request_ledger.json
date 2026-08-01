@@ -1,0 +1,129 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_july_01",
+      "attempt": 1,
+      "attempt_id": "86a54da986b84c918b2092062ff189de",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-30T15:47:24.051561+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "diegetic_decorative",
+        "scene_type": "graph",
+        "selected_archetype": "data_lab",
+        "physical_surfaces": [
+          "holographic map paths",
+          "translucent gauge faces",
+          "console etchings"
+        ],
+        "selection_reason": "일반 시계열·시장 그래프이므로 지도 경로·계기면·콘솔이 있는 data_lab을 추천",
+        "automatic_retry": false
+      },
+      "completed_at": "2026-07-30T15:47:54.842230+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_july_02",
+      "attempt": 1,
+      "attempt_id": "326aea42d92a43cfae0fd8ee27be29a4",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-30T15:47:55.639284+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the left-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "diegetic_decorative",
+        "scene_type": "graph",
+        "selected_archetype": "trade_calculator",
+        "physical_surfaces": [
+          "balance-scale base",
+          "printed documents",
+          "wall diagrams"
+        ],
+        "selection_reason": "비교·막대·비율 표현이므로 저울·문서·벽면 다이어그램이 있는 trade_calculator를 추천",
+        "automatic_retry": false
+      },
+      "completed_at": "2026-07-30T15:48:26.724334+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_july_03",
+      "attempt": 1,
+      "attempt_id": "ad4dc4869fc5489eb88626106f5ce094",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-30T15:48:27.507361+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the center foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "diegetic_decorative",
+        "scene_type": "metric",
+        "selected_archetype": "risk_control_room",
+        "physical_surfaces": [
+          "analog gauge faces",
+          "metal warning plaques",
+          "control console"
+        ],
+        "selection_reason": "하락·위험·변동 지표이므로 계기판·경고 명판·콘솔이 있는 risk_control_room을 추천",
+        "automatic_retry": false
+      },
+      "completed_at": "2026-07-30T15:48:56.377548+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 762,
+  "budget_overrun_krw": 0
+}

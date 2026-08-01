@@ -1,0 +1,97 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "batch": false,
+  "visual_text_policy": "strict_textless",
+  "run_status": "completed",
+  "estimated_total_usd": 0.14,
+  "cost_status": "unverified_until_console_reconciliation",
+  "console_reconciliation_required_before_next_paid_stage": true,
+  "request_ledger_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_revalidation_05_weather\\_request_ledger.json",
+  "request_ledger": {
+    "items": [
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "bench_05_weather",
+        "attempt": 1,
+        "attempt_id": "073d625a5f5649aeaae3394cbe26da05",
+        "estimated_usd": 0.14,
+        "amount_krw": 254,
+        "cost_status": "unverified_until_console_reconciliation",
+        "status": "http_200",
+        "reserved_at": "2026-07-29T12:48:40.026390+00:00",
+        "request_metadata": {
+          "reference_contract": "v3_textless_no_layout_raster",
+          "reference_artifacts": [
+            {
+              "role": "character",
+              "filename": "character_reference_v2_textless.png",
+              "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+            },
+            {
+              "role": "style",
+              "filename": "style_reference_v2_textless.png",
+              "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+            }
+          ],
+          "layout_contract": "LAYOUT CONTRACT: keep the mascot in the assigned foreground side and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the opposite mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+          "visual_text_policy": "strict_textless"
+        },
+        "completed_at": "2026-07-29T12:49:19.848455+00:00",
+        "status_code": 200
+      }
+    ],
+    "total_krw": 254,
+    "budget_overrun_krw": 0
+  },
+  "scenes": [
+    {
+      "scene_id": "bench_05_weather",
+      "archetype": "weather_map",
+      "status": "ok",
+      "estimated_cost_usd": 0.14,
+      "actual_cost_usd": null,
+      "cost_status": "unverified_until_console_reconciliation",
+      "seconds": 40.6,
+      "seed": 105
+    }
+  ],
+  "ledger": {
+    "video_id": "p1b_gemini_pro",
+    "total_spent_krw": 254,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 254,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "bench_05_weather",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785329360.6376462
+      }
+    ]
+  }
+}

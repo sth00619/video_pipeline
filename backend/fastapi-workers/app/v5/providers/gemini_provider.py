@@ -65,7 +65,10 @@ class GeminiProvider:
         prompt = (
             "Reference image order is fixed: image 1 is the channel mascot identity; "
             "image 2 is the approved line, palette, and cel-shading style. "
-            "Preserve the mascot identity from image 1 and use image 2 only as visual style. "
+            "Preserve the mascot identity from image 1 exactly: one round gold-coin silhouette, the same face proportions, "
+            "eye shape, iris treatment, rim thickness, and dark outline weight in every scene. Wardrobe and expression may change, "
+            "but never redesign or restyle the mascot. Use image 2 only as visual style. "
+            "Render one continuous full-bleed scene, never a split screen, comic panel, inset image, or internal frame. "
             "Follow the placement instructions in the written prompt; do not invent framing guides. "
             "Do not reproduce marks from any reference image.\n\n" + prompt
         )

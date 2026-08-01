@@ -46,3 +46,5 @@ def test_p1_comparison_forces_one_provider_attempt(tmp_path: Path, monkeypatch):
     assert observed["gemini_reference_contract_declared"] is True
     assert observed["character_style_prompt"] == "none"
     assert observed["suppress_legacy_style_lock"] is True
+    assert "same face proportions" in observed["prompt"]
+    assert "one continuous full-bleed scene" in observed["prompt"]

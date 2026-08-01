@@ -1,0 +1,103 @@
+{
+  "topic": "코스피 7월 전망",
+  "generated_at": "2026-07-30T02:41:29.142155+09:00",
+  "requires_image_generation": false,
+  "scenes": [
+    {
+      "scene_id": "kospi_july_01",
+      "background_path": "out/v5_pilot/kospi_july_2026/generated_backgrounds/kospi_july_2026_verified_backgrounds/kospi_july_01.png",
+      "narration": "6월 22일, 코스피는 9,114.55라는 사상 최고치를 기록했습니다. 그러나 7월 29일 종가는 5,663.24로, 고점 대비 37.87% 하락한 수준입니다. 보도에 따르면 불과 한 달 만에 이 같은 낙폭이 나타났습니다.",
+      "visual_intent": "6월 22일 사상 최고치 9,114.55와 7월 29일 종가 5,663.24를 대비하는 코스피 차트 그래픽, 하락 폭 37.87% 강조 표시",
+      "verified_facts": [
+        {
+          "fact": "7월 29일 코스피 종가는 5,663.24였다.",
+          "figure": "5663.24",
+          "source_field": "news[4]",
+          "source_url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18",
+          "source_title": "정부 \"단일종목 레버리지, 개인별 투자한도로 총량 관리\"…즉시 추진",
+          "published_at": "2026-07-29T22:46:00+09:00",
+          "overlay_label": "코스피 종가",
+          "confidence": 0.99
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "코스피 종가",
+          "value": "5663.24",
+          "source_ref": "facts[0]",
+          "anchor": {
+            "x": 0.06,
+            "y": 0.18,
+            "width": 0.3,
+            "height": 0.16,
+            "kind": "monitor"
+          }
+        }
+      ]
+    },
+    {
+      "scene_id": "kospi_july_02",
+      "background_path": "out/v5_pilot/kospi_july_2026/generated_backgrounds/kospi_july_2026_risk_replacement_02/kospi_july_02.png",
+      "narration": "7월 월간 낙폭은 33.18%로, 1997년 10월 IMF 외환위기 당시의 월간 낙폭 27.24%보다 컸다고 관련 보도는 전하고 있습니다. 일별로는 7월 24일 -5.72%, 27일 +0.97%, 28일 -10.84%, 29일 -5.98%로 극심한 변동성이 관측됐습니다.",
+      "visual_intent": "IMF 외환위기 1997년 10월 낙폭 27.24%와 2026년 7월 낙폭 33.18%를 나란히 비교하는 막대그래프, 일별 등락률 타임라인 표시",
+      "verified_facts": [
+        {
+          "fact": "7월 월간 코스피 낙폭은 33.18%로, 1997년 10월 IMF 외환위기 당시 낙폭(-27.24%)보다 컸다.",
+          "figure": "33.18%",
+          "source_field": "news[5]",
+          "source_url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+          "source_title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+          "published_at": "2026-07-29T22:36:00+09:00",
+          "overlay_label": "7월 월간 낙폭",
+          "confidence": 0.98
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "7월 월간 낙폭",
+          "value": "33.18%",
+          "source_ref": "facts[0]",
+          "anchor": {
+            "x": 0.06,
+            "y": 0.18,
+            "width": 0.28,
+            "height": 0.16,
+            "kind": "placard"
+          }
+        }
+      ]
+    },
+    {
+      "scene_id": "kospi_july_03",
+      "background_path": "out/v5_pilot/kospi_july_2026/generated_backgrounds/kospi_july_2026_verified_backgrounds/kospi_july_03.png",
+      "narration": "국내 증시 합산 시가총액은 지난달 25일 7,810조 원까지 올랐다가, 이후 급락세로 한 달 새 2,800조 원 이상이 증발한 것으로 보도됐습니다. 시장은 극심한 불확실성 속에 있으며, 향후 흐름에 대해서는 신중한 관찰이 필요하다는 점이 강조되고 있습니다.",
+      "visual_intent": "7,810조 원에서 2,800조 원 이상 감소하는 시가총액 변화를 시각화한 인포그래픽, 투자자 우려 심리를 나타내는 이미지",
+      "verified_facts": [
+        {
+          "fact": "국내 증시 합산 시가총액은 지난달 25일 7,810조 원까지 올랐다가 최근 급락세로 한 달 새 2,800조 원 이상 증발했다.",
+          "figure": "7810조 원",
+          "source_field": "news[5]",
+          "source_url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+          "source_title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+          "published_at": "2026-07-29T22:36:00+09:00",
+          "overlay_label": "증시 시총 고점",
+          "confidence": 0.97
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "증시 시총 고점",
+          "value": "7810조 원",
+          "source_ref": "facts[0]",
+          "anchor": {
+            "x": 0.62,
+            "y": 0.18,
+            "width": 0.3,
+            "height": 0.16,
+            "kind": "gauge_caption"
+          }
+        }
+      ]
+    }
+  ]
+}

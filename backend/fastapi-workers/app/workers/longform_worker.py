@@ -48,7 +48,7 @@ from app.utils.market_charts import render_market_chart
 from app.utils.data_surface_locator import locate_data_surface
 from app.services.overlay.surface_detector import detect_surface
 from app.utils.budget import load_preflight, record_cost
-from app.utils.intro_motion import select_intro_motion_scene_indices
+from app.utils.intro_motion import scene_duration_seconds, select_intro_motion_scene_indices
 from app.utils.output_qc import build_output_qc_report
 from app.services.kling_prompt_builder import build_kling_motion_prompt
 from app.services.bubble_overlay import write_speech_bubble_overlay
@@ -269,6 +269,24 @@ class LongformWorker:
         intro_kling_indices, intro_motion_target, intro_motion_actual = _select_intro_kling_scenes(
             scenes, total_duration, max_clips_cap
         )
+        # V5 검증 수치는 Pillow로 완성된 PNG에 이미 합성된다. 이 PNG를
+        # image-to-video 모델에 보내면 글자와 숫자가 변형될 수 있으므로,
+        # 사실 오버레이가 있는 씬은 보수적으로 정지 이미지 경로만 사용한다.
+        protected_fact_indices = {
+            index for index, scene in enumerate(scenes)
+            if _has_v5_verified_fact_overlay(scene)
+        }
+        excluded_fact_indices = intro_kling_indices & protected_fact_indices
+        if excluded_fact_indices:
+            intro_kling_indices -= excluded_fact_indices
+            intro_motion_actual = sum(
+                min(float(runtime_config.value("intro_motion_clip_seconds")), 5.0)
+                for index in intro_kling_indices
+            )
+            logger.info(
+                "V5 사실 오버레이 보호: FAL 후보에서 정보 씬 제외 indices=%s",
+                sorted(excluded_fact_indices),
+            )
         logger.info(
             "Opening Fal motion plan: target=%.1fs, actual=%.1fs, scenes=%s/%s, indices=%s",
             intro_motion_target, intro_motion_actual, len(intro_kling_indices), len(scenes),
@@ -296,9 +314,13 @@ class LongformWorker:
             futures = {
                 executor.submit(
                     self._process_scene, i, scene, video_provider,
-                    i in intro_kling_indices and not _article_capture_for_scene(scene) and (
-                        bool(scene.get("use_kling")) if has_manual_kling_selection else True
-                    ), temp_dir, job_id
+                    _should_request_kling_for_scene(
+                        scene,
+                        selected_for_intro_motion=i in intro_kling_indices,
+                        has_manual_kling_selection=has_manual_kling_selection,
+                    ),
+                    temp_dir,
+                    job_id,
                 ): i
                 for i, scene in enumerate(scenes)
             }
@@ -676,6 +698,10 @@ class LongformWorker:
                 raise RuntimeError(f"scene {i} article evidence is missing source_credit/publisher/date")
             # Evidence screenshots must never be sent to Kling.  They retain
             # DOM/PDF pixel geometry and therefore cost no Gemini/Kling call.
+            use_kling = False
+        if _has_v5_verified_fact_overlay(scene):
+            # 호출자 분기와 독립적으로 한 번 더 막아, 향후 호출 경로가 바뀌어도
+            # 검증 수치가 포함된 PNG가 FAL 입력으로 전달되지 않게 한다.
             use_kling = False
         raw_dur = scene.get("duration")
         duration = float(raw_dur) if raw_dur is not None else 15.0
@@ -1286,6 +1312,26 @@ def _write_scene_clip_meta(clip_path: str, source_type: str, fingerprint: str) -
 def _has_manual_kling_selection(scenes: list[dict]) -> bool:
     """Treat only an explicit boolean as an editor motion selection."""
     return any(scene.get("use_kling") is not None for scene in scenes)
+
+
+def _has_v5_verified_fact_overlay(scene: dict) -> bool:
+    """검증 사실 오버레이가 있는 V5 씬은 FAL 입력에서 제외한다."""
+    overlays = scene.get("v5_verified_overlays")
+    return isinstance(overlays, list) and bool(overlays)
+
+
+def _should_request_kling_for_scene(
+    scene: dict,
+    *,
+    selected_for_intro_motion: bool,
+    has_manual_kling_selection: bool,
+) -> bool:
+    """일반 장면만 FAL 후보로 남기고 검증 사실 화면은 정지로 보호한다."""
+    if not selected_for_intro_motion:
+        return False
+    if _article_capture_for_scene(scene) or _has_v5_verified_fact_overlay(scene):
+        return False
+    return bool(scene.get("use_kling")) if has_manual_kling_selection else True
 
 
 def _minimum_motion_delivery(requested_count: int) -> int:

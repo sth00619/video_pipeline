@@ -1,0 +1,36 @@
+{
+  "source": "naver_search_trend",
+  "ratio_note": "표기 값은 NAVER 상대 검색 관심도이며 주가 변동률이 아닙니다.",
+  "background": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_diegetic_v5_bench_05_weather\\bench_05_weather.png",
+  "annotations": [
+    {
+      "label": "KOSPI",
+      "ratio_text": "75.62063",
+      "x": 0.19,
+      "y": 0.34,
+      "source_series_id": "search_trend_01"
+    },
+    {
+      "label": "SAMSUNG",
+      "ratio_text": "54.66264",
+      "x": 0.35,
+      "y": 0.49,
+      "source_series_id": "search_trend_02"
+    },
+    {
+      "label": "SK HYNIX",
+      "ratio_text": "67.0556",
+      "x": 0.5,
+      "y": 0.34,
+      "source_series_id": "search_trend_03"
+    },
+    {
+      "label": "NVIDIA",
+      "ratio_text": "1.23804",
+      "x": 0.36,
+      "y": 0.62,
+      "source_series_id": "search_trend_04"
+    }
+  ],
+  "cost_usd": 0
+}

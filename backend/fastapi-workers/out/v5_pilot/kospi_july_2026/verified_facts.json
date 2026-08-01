@@ -1,0 +1,76 @@
+{
+  "facts": [
+    {
+      "fact": "7월 29일 코스피 종가는 5,663.24였다.",
+      "figure": "5663.24",
+      "source_field": "news[4]",
+      "source_url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18",
+      "source_title": "정부 \"단일종목 레버리지, 개인별 투자한도로 총량 관리\"…즉시 추진",
+      "published_at": "2026-07-29T22:46:00+09:00",
+      "overlay_label": "코스피 종가",
+      "confidence": 0.99
+    },
+    {
+      "fact": "코스피의 6월 22일 사상 최고치는 9,114.55였다.",
+      "figure": "9,114.55",
+      "source_field": "news[5]",
+      "source_url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+      "source_title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+      "published_at": "2026-07-29T22:36:00+09:00",
+      "overlay_label": "코스피 사상 최고치",
+      "confidence": 0.99
+    },
+    {
+      "fact": "7월 29일 코스피는 사상 최고치(6월 22일 9,114.55) 대비 37.87% 하락했다.",
+      "figure": "37.87%",
+      "source_field": "news[5]",
+      "source_url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+      "source_title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+      "published_at": "2026-07-29T22:36:00+09:00",
+      "overlay_label": "코스피 고점 대비 낙폭",
+      "confidence": 0.99
+    },
+    {
+      "fact": "7월 월간 코스피 낙폭은 33.18%로, 1997년 10월 IMF 외환위기 당시 낙폭(-27.24%)보다 컸다.",
+      "figure": "33.18%",
+      "source_field": "news[5]",
+      "source_url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+      "source_title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+      "published_at": "2026-07-29T22:36:00+09:00",
+      "overlay_label": "7월 월간 낙폭",
+      "confidence": 0.98
+    },
+    {
+      "fact": "코스피 변동률은 7월 24일 -5.72%, 27일 +0.97%, 28일 -10.84%, 29일 -5.98%였다.",
+      "figure": "-10.84%",
+      "source_field": "news[4]",
+      "source_url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18",
+      "source_title": "정부 \"단일종목 레버리지, 개인별 투자한도로 총량 관리\"…즉시 추진",
+      "published_at": "2026-07-29T22:46:00+09:00",
+      "overlay_label": "코스피 일별 변동률",
+      "confidence": 0.99
+    },
+    {
+      "fact": "국내 증시 합산 시가총액은 지난달 25일 7,810조 원까지 올랐다가 최근 급락세로 한 달 새 2,800조 원 이상 증발했다.",
+      "figure": "7810조 원",
+      "source_field": "news[5]",
+      "source_url": "https://www.donga.com/news/Economy/article/all/20260729/134389638/1",
+      "source_title": "코스피 한달새 9114→5663… 공포 휩싸인 개미들 손해봐도 ‘투매’",
+      "published_at": "2026-07-29T22:36:00+09:00",
+      "overlay_label": "증시 시총 고점",
+      "confidence": 0.97
+    }
+  ],
+  "rejected": [
+    {
+      "candidate": {
+        "fact": "구윤철 부총리는 7월 29일 오후 7시 정부서울청사에서 관계기관 합동 긴급 시장상황점검회의를 개최했다.",
+        "figure": "7월 29일",
+        "source_field": "news[4]",
+        "confidence": 0.99,
+        "overlay_label": "긴급 시장점검회의 개최"
+      },
+      "reason": "figure가 기사 원문에 없습니다."
+    }
+  ]
+}

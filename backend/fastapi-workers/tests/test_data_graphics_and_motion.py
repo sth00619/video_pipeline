@@ -19,6 +19,7 @@ from app.workers.longform_worker import (
     _can_reuse_scene_clip,
     _cleanup_scene_clips,
     _has_manual_kling_selection,
+    _should_request_kling_for_scene,
     _minimum_motion_delivery,
     _requires_verified_market_chart,
     _requires_verified_index_card,
@@ -72,8 +73,22 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
     def test_motion_templates_forbid_camera_motion(self):
         for motion_type in ("chart_shock", "pointing_explain", "thinking_desk", "walking_intro", "celebration"):
             prompt = build_kling_motion_prompt(motion_type)["prompt"].lower()
-            self.assertNotIn("zoom", prompt)
-            self.assertIn("camera: locked, no movement", prompt)
+            self.assertIn("camera is locked", prompt)
+            self.assertIn("do not", prompt)
+            self.assertIn("overlay", prompt)
+
+    def test_v5_verified_fact_overlay_scene_is_never_a_kling_candidate(self):
+        general_scene = {"scene_type": "general"}
+        information_scene = {
+            "scene_type": "graph",
+            "v5_verified_overlays": [{"label": "검증값", "value": "1"}],
+        }
+        self.assertTrue(_should_request_kling_for_scene(
+            general_scene, selected_for_intro_motion=True, has_manual_kling_selection=False,
+        ))
+        self.assertFalse(_should_request_kling_for_scene(
+            information_scene, selected_for_intro_motion=True, has_manual_kling_selection=False,
+        ))
 
     def test_static_retry_cache_cannot_bypass_requested_kling_motion(self):
         self.assertFalse(

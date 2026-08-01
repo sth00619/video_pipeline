@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "bench_04_classroom2",
+      "attempt": 1,
+      "attempt_id": "4c602603189d45bab8152cf59e795f57",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-29T10:29:58.316884+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the assigned foreground side and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the opposite mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display."
+      },
+      "completed_at": "2026-07-29T10:30:29.229092+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 254,
+  "budget_overrun_krw": 0
+}

@@ -28,8 +28,10 @@ from app.models.article_evidence import (
     EvidenceCaptureRequest,
     NormalizedBBox,
     QuoteCardRequest,
+    UserImageEvidenceRequest,
 )
 from app.services.article.source_policy import assert_article_source, korean_mirror_url
+from app.services.annotate import render_annotations
 
 logger = logging.getLogger(__name__)
 DATA_DIR = Path(os.getenv("DATA_DIR", "/app/data"))
@@ -88,7 +90,10 @@ def _font(size: int) -> ImageFont.ImageFont:
 
 
 _DOM_QUOTE_RECTS = r"""
-(quote) => {
+(payload) => {
+  const request = typeof payload === 'string' ? {needle: payload} : payload;
+  const quote = request.needle || '';
+  const within = typeof request.within === 'string' ? request.within.trim() : '';
   const skipped = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG']);
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -104,28 +109,54 @@ _DOM_QUOTE_RECTS = r"""
   // captures. Whitespace-flexible matching remains the fallback for article
   // DOMs which insert line breaks between words.
   const exactQuote = quote.trim();
-  const exactIndex = joined.indexOf(exactQuote);
   const pattern = exactQuote.split(/\s+/).map(escape).join('\\s+');
-  const match = exactIndex >= 0 ? {index: exactIndex, 0: exactQuote} : new RegExp(pattern).exec(joined);
-  if (!match) return {found: false, title: document.title, bodyText: document.body.innerText.slice(0, 4000)};
-  const offsetToNode = (offset) => {
-    const item = nodes.find(entry => offset >= entry.start && offset <= entry.end);
+  const offsetToNode = (offset, preferNextAtBoundary = false) => {
+    // 시작 위치가 두 텍스트 노드의 경계와 정확히 겹치면 다음 노드를
+    // 선택한다. 이전 노드의 끝을 시작점으로 잡으면 숫자만 감싼 Range가
+    // 빈 Range로 해석될 수 있다.
+    const item = nodes.find(entry => offset >= entry.start && (
+      offset < entry.end || (offset === entry.end && !preferNextAtBoundary)
+    ));
     if (!item) return null;
     return {node: item.node, offset: Math.min(item.node.nodeValue.length, Math.max(0, offset - item.start))};
   };
-  const start = offsetToNode(match.index), end = offsetToNode(match.index + match[0].length);
-  if (!start || !end) return {found: false, title: document.title, bodyText: document.body.innerText.slice(0, 4000)};
-  const range = document.createRange(); range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
-  const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 1 && rect.height > 1).map(rect => ({x: rect.x, y: rect.y, width: rect.width, height: rect.height}));
-  const container = range.commonAncestorContainer.parentElement?.closest('article, [itemprop="articleBody"], .article-body, .article-content') || range.commonAncestorContainer.parentElement;
-  const containerBox = container?.getBoundingClientRect();
-  const published = document.querySelector('meta[property="article:published_time"], meta[name="date"], time')?.getAttribute('content') || document.querySelector('time')?.dateTime || '';
-  const publisher = document.querySelector('meta[property="og:site_name"], meta[name="author"]')?.getAttribute('content') || '';
-  return {
-    found: rects.length > 0, rects, title: document.title, published, publisher,
-    containerRect: containerBox ? {x: containerBox.x, y: containerBox.y, width: containerBox.width, height: containerBox.height} : null,
-    viewport: {width: innerWidth, height: innerHeight}
+  const findExactMatches = value => {
+    const found = [];
+    let exactIndex = joined.indexOf(value);
+    while (exactIndex >= 0) {
+      found.push({index: exactIndex, length: value.length});
+      exactIndex = joined.indexOf(value, exactIndex + Math.max(1, value.length));
+    }
+    return found;
   };
+  const matches = findExactMatches(exactQuote);
+  const contextMatches = within ? findExactMatches(within) : [];
+  if (!matches.length) {
+    const fallback = new RegExp(pattern).exec(joined);
+    if (fallback) matches.push({index: fallback.index, length: fallback[0].length});
+  }
+  for (const match of matches) {
+    // 숫자처럼 짧은 구절은 이미지 캡션·관련 기사에도 반복된다. 검증자가
+    // 지정한 원문 인용 안에 있는 동일 구절만 좌표화한다.
+    if (contextMatches.length && !contextMatches.some(context => (
+      match.index >= context.index && match.index + match.length <= context.index + context.length
+    ))) continue;
+    const start = offsetToNode(match.index, true), end = offsetToNode(match.index + match.length);
+    if (!start || !end) continue;
+    const range = document.createRange(); range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
+    const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 1 && rect.height > 1).map(rect => ({x: rect.x, y: rect.y, width: rect.width, height: rect.height}));
+    if (!rects.length) continue;
+    const container = range.commonAncestorContainer.parentElement?.closest('article, [itemprop="articleBody"], .article-body, .article-content') || range.commonAncestorContainer.parentElement;
+    const containerBox = container?.getBoundingClientRect();
+    const published = document.querySelector('meta[property="article:published_time"], meta[name="date"], time')?.getAttribute('content') || document.querySelector('time')?.dateTime || '';
+    const publisher = document.querySelector('meta[property="og:site_name"], meta[name="author"]')?.getAttribute('content') || '';
+    return {
+      found: true, rects, title: document.title, published, publisher,
+      containerRect: containerBox ? {x: containerBox.x, y: containerBox.y, width: containerBox.width, height: containerBox.height} : null,
+      viewport: {width: innerWidth, height: innerHeight}
+    };
+  }
+  return {found: false, title: document.title, bodyText: document.body.innerText.slice(0, 4000)};
 }
 """
 
@@ -222,7 +253,7 @@ class EvidenceCaptureService:
                     f"{selectors} p,{selectors} div{{font-size:46px!important;line-height:1.58!important;color:#111!important}}"
                 ))
                 page.wait_for_timeout(150)
-            found = page.evaluate(_DOM_QUOTE_RECTS, request.quote)
+            found = page.evaluate(_DOM_QUOTE_RECTS, {"needle": request.quote})
             if not found.get("found"):
                 raise EvidenceCaptureError("the requested quote was not found in the public article DOM")
             rects = found["rects"]
@@ -230,10 +261,10 @@ class EvidenceCaptureService:
             min_y = min(rect["y"] for rect in rects); max_y = max(rect["y"] + rect["height"] for rect in rects)
             page.evaluate("([x, y]) => window.scrollTo(Math.max(0, x), Math.max(0, y))", [0, max(0, min_y - 180)])
             # The range geometry changes after scrolling, so obtain final viewport coordinates.
-            found = page.evaluate(_DOM_QUOTE_RECTS, request.quote)
+            found = page.evaluate(_DOM_QUOTE_RECTS, {"needle": request.quote})
             rects = found["rects"]
             key_found = (
-                page.evaluate(_DOM_QUOTE_RECTS, request.key_phrase)
+                page.evaluate(_DOM_QUOTE_RECTS, {"needle": request.key_phrase, "within": request.quote})
                 if request.key_phrase
                 else {"found": False, "rects": []}
             )
@@ -291,6 +322,71 @@ class EvidenceCaptureService:
             raise EvidenceCaptureError(f"DOM article capture failed: {exc}") from exc
         finally:
             context.close()
+
+    def capture_user_image(self, request: UserImageEvidenceRequest, image_bytes: bytes) -> ArticleCapture:
+        """업로드된 원본을 보존하고, 사람이 검증한 좌표 계약만 저장한다."""
+        if not image_bytes or len(image_bytes) > 25 * 1024 * 1024:
+            raise EvidenceCaptureError("uploaded evidence image must be between 1 byte and 25 MiB", 400)
+        try:
+            with Image.open(io.BytesIO(image_bytes)) as source:
+                source.load()
+                if source.width < 320 or source.height < 180:
+                    raise EvidenceCaptureError("uploaded evidence image is too small", 400)
+                if source.width > 7680 or source.height > 7680:
+                    raise EvidenceCaptureError("uploaded evidence image exceeds 7680 pixels on one edge", 400)
+                normalized = source.convert("RGBA")
+        except EvidenceCaptureError:
+            raise
+        except Exception as exc:
+            raise EvidenceCaptureError("uploaded evidence file is not a readable image", 400) from exc
+
+        # 원본 포맷 차이와 무관하게 이후 합성 입력을 PNG로 고정한다.
+        data = io.BytesIO()
+        normalized.save(data, "PNG")
+        canonical_png = data.getvalue()
+        sha256 = hashlib.sha256(canonical_png).hexdigest()
+        evidence_dir = DATA_DIR / "jobs" / str(request.job_id) / "evidence"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        image_path = evidence_dir / f"user_upload_{sha256[:16]}.png"
+        preview_path = evidence_dir / f"user_upload_{sha256[:16]}_annotation_preview.png"
+        metadata_path = evidence_dir / f"user_upload_{sha256[:16]}.json"
+        with tempfile.NamedTemporaryFile(dir=evidence_dir, delete=False) as temp:
+            temp.write(canonical_png)
+            temp_path = Path(temp.name)
+        temp_path.replace(image_path)
+        # 미리보기는 사람이 준 좌표가 의도한 기사 문구를 가리키는지 즉시 확인하는 용도다.
+        annotations = [
+            {"type": "highlighter", "bbox": box.model_dump(), "color": "#FFE146"}
+            for box in request.quote_bboxes
+        ]
+        annotations.append({"type": "underline", "bboxes": [box.model_dump() for box in request.quote_bboxes]})
+        annotations.extend(
+            {"type": "ellipse", "bbox": box.model_dump()}
+            for box in request.key_phrase_bboxes
+        )
+        preview = Image.alpha_composite(normalized, render_annotations(normalized.size, annotations))
+        preview.save(preview_path, "PNG")
+        capture = ArticleCapture(
+            source_url=request.source_url,
+            source_title=request.source_title,
+            publisher=request.publisher,
+            published_at=request.published_at,
+            captured_at=datetime.now(timezone.utc),
+            capture_mode="user_image",
+            quote=request.quote,
+            image_sha256=sha256,
+            target_bbox=request.target_bbox,
+            quote_bboxes=request.quote_bboxes,
+            key_phrase=request.key_phrase,
+            key_phrase_bboxes=request.key_phrase_bboxes,
+            bbox_source="verified_input",
+            local_path=str(image_path),
+            annotation_preview_path=str(preview_path),
+            object_key=f"jobs/{request.job_id}/evidence/{image_path.name}",
+        )
+        self._upload_minio(image_path, capture.object_key)
+        metadata_path.write_text(capture.model_dump_json(indent=2), encoding="utf-8")
+        return capture
 
     def _persist_capture(
         self,

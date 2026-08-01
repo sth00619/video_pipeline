@@ -1,0 +1,46 @@
+{
+  "run_id": "general_port_walking_intro_20260801",
+  "created_at": "2026-07-31T16:58:48.037298+00:00",
+  "request_kind": "single_general_scene_motion_pilot",
+  "provider": "fal",
+  "model": "fal-ai/kling-video/v2.6/pro/image-to-video",
+  "automatic_retry": false,
+  "fal_only": true,
+  "scene": {
+    "scene_id": "v5_general_port_motion_01",
+    "scene_type": "general",
+    "archetype": "port_emergency",
+    "motion_type": "walking_intro",
+    "use_kling": true,
+    "v5_verified_overlays": []
+  },
+  "safety_checks": {
+    "has_v5_verified_fact_overlay": false,
+    "article_capture": false,
+    "kling_candidate": true
+  },
+  "source": {
+    "path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\benchmark\\gemini_pro_strict_textless_v5_revalidation_01_port\\bench_01_port.png",
+    "sha256": "95982c576f1726f502e98e11c5ac621808d6cb23e6e86a4b11b9f3d77d47b5a8"
+  },
+  "motion": {
+    "duration_seconds": 5,
+    "generate_audio": false,
+    "camera": "locked",
+    "motion_type": "walking_intro",
+    "prompt": "2D cel-shaded cartoon animation. Preserve the exact source image composition, character identity, line weight, palette, and all existing scene objects. Camera is locked: no pan, zoom, dolly, roll, shake, reframing, or crop change. Animate only the mascot, one existing reactive prop, and one light or particle effect. Preserve every existing written mark, number, chart shape, and factual overlay exactly; do not create, erase, translate, redraw, morph, or animate any text or number. 0–3s: the mascot makes exactly two small in-place walking steps within its original footprint; do not approach the camera or change framing. 3–5s: the mascot stops and gives one short wave. If an existing physical prop can naturally react, make only that prop sway slightly; otherwise use only a few background particles. Do not create or change signs, text, numbers, charts, labels, or overlays. Camera remains locked.",
+    "negative_prompt": "no 3D rendering, no photorealism, no face morphing, no outfit change, no color shift, no extra characters, no warped hands, no jitter, no camera movement, no background redesign, no new screen, no new panel, no text distortion, no number distortion, no chart redraw, no changing labels, no changing factual overlay"
+  },
+  "cost": {
+    "estimated_usd": 0.35,
+    "estimated_krw": 490,
+    "usd_krw_snapshot": 1400.0,
+    "cost_status": "unverified_until_fal_console_reconciliation"
+  },
+  "status": "success_unverified_until_fal_console_reconciliation",
+  "result": {
+    "path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_motion_pilot\\general_port_walking_intro_20260801\\general_port_walking_intro.mp4",
+    "bytes": 10835212,
+    "fal_request_id": "019fb91d-4eae-7321-b0a5-24f34763e897"
+  }
+}

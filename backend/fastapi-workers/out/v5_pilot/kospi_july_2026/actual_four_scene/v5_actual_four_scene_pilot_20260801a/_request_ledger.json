@@ -1,0 +1,142 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_july_01",
+      "attempt": 1,
+      "attempt_id": "8483a9c233784b4587764d499f96a07c",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-31T20:09:26.492939+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "scene_type": "graph",
+        "selected_archetype": "data_lab",
+        "visual_text_policy": "diegetic_decorative",
+        "verified_overlay_mode": "apply_verified_values_after_generation"
+      },
+      "completed_at": "2026-07-31T20:09:58.466509+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_july_02",
+      "attempt": 1,
+      "attempt_id": "221a814932c94f409d7efde71b8abb2b",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-31T20:09:59.808804+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "scene_type": "graph",
+        "selected_archetype": "trade_calculator",
+        "visual_text_policy": "diegetic_decorative",
+        "verified_overlay_mode": "apply_verified_values_after_generation"
+      },
+      "completed_at": "2026-07-31T20:10:28.186877+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_july_03",
+      "attempt": 1,
+      "attempt_id": "7e1d3d270478470a8d9223654f625d33",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-31T20:10:29.607786+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "scene_type": "metric",
+        "selected_archetype": "risk_control_room",
+        "visual_text_policy": "diegetic_decorative",
+        "verified_overlay_mode": "apply_verified_values_after_generation"
+      },
+      "completed_at": "2026-07-31T20:11:04.732735+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "general_port_narrative_04",
+      "attempt": 1,
+      "attempt_id": "b9f70f43af1843179e6805a20943c2d0",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-07-31T20:11:06.168232+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v2_textless.png",
+            "sha256": "d4f39ae039d1b1dd33010c5c4d56dd78e118df9a729cfa0dc627ad6a0c70e797"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v2_textless.png",
+            "sha256": "867fce78732b3603df709479a67366987bda34642e515123f51aab00c75fae87"
+          }
+        ],
+        "scene_type": "general",
+        "selected_archetype": "port_emergency",
+        "visual_text_policy": "strict_textless",
+        "verified_overlay_mode": "not_applicable"
+      },
+      "completed_at": "2026-07-31T20:11:32.421917+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 1016,
+  "budget_overrun_krw": 0
+}

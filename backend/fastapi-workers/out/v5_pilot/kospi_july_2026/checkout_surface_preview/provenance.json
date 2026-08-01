@@ -1,0 +1,15 @@
+{
+  "template": "checkout_total",
+  "source_url": "https://www.fntimes.com/html/view.php?ud=202607292207124325179ad43907_18",
+  "source_title": "정부 \"단일종목 레버리지, 개인별 투자한도로 총량 관리\"…즉시 추진",
+  "value": "5663.24",
+  "heading": "KOSPI CLOSE",
+  "reference_image": "C:\\Users\\song\\Downloads\\사용자 첨부 파일 (1).png",
+  "edited_region": {
+    "x": 0.225,
+    "y": 0.414,
+    "width": 0.125,
+    "height": 0.145
+  },
+  "cost_usd": 0
+}

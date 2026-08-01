@@ -1,0 +1,188 @@
+{
+  "status": "passed",
+  "job_id": 990801,
+  "cost_policy": "이미 생성된 PNG, 로컬 WAV, FFmpeg만 사용 — 외부 API 호출 없음",
+  "scenes": [
+    {
+      "scene_id": "smoke_information",
+      "kind": "generated_image",
+      "image_path": "/app/data/jobs/990801/images/scene_000_info.png"
+    },
+    {
+      "scene_id": "smoke_general",
+      "kind": "generated_image",
+      "image_path": "/app/data/jobs/990801/images/scene_001_general.png"
+    },
+    {
+      "scene_id": "smoke_article_evidence",
+      "kind": "article_scene",
+      "image_path": null
+    }
+  ],
+  "checks": {
+    "final_video_exists": true,
+    "information_input_exists": true,
+    "general_input_exists": true,
+    "article_plain_frame_exists": true,
+    "article_emphasized_frame_exists": true,
+    "motion_disabled_for_all_three": true
+  },
+  "result": {
+    "job_id": 990801,
+    "video_path": "/app/data/jobs/990801/longform/final.mp4",
+    "duration_seconds": 6.0,
+    "scene_count": 3,
+    "gif_count": 0,
+    "data_card_count": 0,
+    "market_chart_count": 0,
+    "planned_kling_clip_count": 0,
+    "kling_clip_count": 0,
+    "has_subtitles": true,
+    "resolution": "1920x1080",
+    "quality_report": {
+      "score": 100,
+      "duration_delta_seconds": 0.0,
+      "duration_ok": true,
+      "subtitles": {
+        "score": 100,
+        "warnings": [],
+        "cue_count": 3,
+        "coverage": 1.0,
+        "max_reading_speed_cps": 12.0
+      },
+      "images": {
+        "score": 100,
+        "warnings": [],
+        "image_count": 3,
+        "scene_metrics": [
+          {
+            "index": 0,
+            "score": 100,
+            "warnings": [],
+            "width": 2752,
+            "height": 1536,
+            "aspect_ratio": 1.7917,
+            "brightness": 128.5,
+            "contrast": 60.4,
+            "color_variation": 67.3,
+            "perceptual_hash": "0111111111111111101111111111111010000111111000110000001001000011100000010000000101101011100000001110101110111100111000100011111011100110001111111101111110111110010111111011110001111111000110001011101100000000100000000000000000000000000000000011111111100000",
+            "retry_recommended": false
+          },
+          {
+            "index": 1,
+            "score": 100,
+            "warnings": [],
+            "width": 2752,
+            "height": 1536,
+            "aspect_ratio": 1.7917,
+            "brightness": 101.5,
+            "contrast": 45.6,
+            "color_variation": 57.6,
+            "perceptual_hash": "0000000000000000000111000000000011111100000001101111110000000100111111111011000001111111111110000010000111111000001000001111100010100000011110011011000001111000000111111111111111001111111110100100011111111000011000111111100000000011110000000000000110000000",
+            "retry_recommended": false
+          },
+          {
+            "index": 2,
+            "score": 100,
+            "warnings": [],
+            "width": 1920,
+            "height": 1080,
+            "aspect_ratio": 1.7778,
+            "brightness": 232.2,
+            "contrast": 48.6,
+            "color_variation": 13.6,
+            "perceptual_hash": "1111111111111111000001111111111100000111111111110000011111111111111111111111111100000000000011110000000000000111000000000000011111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+            "retry_recommended": false
+          }
+        ],
+        "retry_recommended_indices": []
+      },
+      "art_direction": {
+        "score": 100,
+        "warnings": [],
+        "families": [
+          "",
+          "",
+          ""
+        ],
+        "palettes": [
+          "",
+          "",
+          ""
+        ],
+        "pose_assets": [
+          "",
+          "",
+          ""
+        ]
+      },
+      "has_subtitles": true,
+      "data_card_count": 0,
+      "market_chart_count": 0,
+      "verified_data_cards_expected": 0,
+      "verified_data_cards_rendered": 0,
+      "verified_market_charts_expected": 0,
+      "verified_market_charts_rendered": 0,
+      "planned_kling_clip_count": 0,
+      "kling_clip_count": 0,
+      "motion_delivery_ok": true,
+      "output_qc": {
+        "passed": false,
+        "score": 86,
+        "checks": {
+          "verified_overlays": {
+            "passed": true,
+            "data_cards": {
+              "expected": 0,
+              "rendered": 0
+            },
+            "market_charts": {
+              "expected": 0,
+              "rendered": 0
+            }
+          },
+          "fal_delivery": {
+            "passed": true,
+            "planned": 0,
+            "actual": 0,
+            "failures": {}
+          },
+          "tts_opening": {
+            "passed": false,
+            "first_sentence_sent": "검증된 수치가 포함된 정보형 장면입니다.",
+            "voice_id": null,
+            "model_id": null,
+            "mode": null,
+            "has_audio_tag": null,
+            "metadata_provenance": "persisted_tts_chunks",
+            "measured_leading_silence_seconds": 0.464
+          },
+          "integrated_generation": {
+            "passed": true,
+            "legacy_bg_files": []
+          },
+          "style_contract": {
+            "passed": true,
+            "style_profiles": []
+          },
+          "media_contract": {
+            "passed": true,
+            "width": 1920,
+            "height": 1080,
+            "frame_rate": "30/1",
+            "audio_sample_rate": "44100",
+            "audio_channels": 2
+          },
+          "intro_motion_frame_diff": {
+            "passed": true,
+            "normalized_difference": 0.00016
+          }
+        }
+      }
+    },
+    "assembly_manifest_path": "/app/data/jobs/990801/longform/assembly_manifest.json"
+  },
+  "final_video": "/app/data/jobs/990801/longform/final.mp4",
+  "article_plain_frame": "/app/data/jobs/990801/longform/temp/deterministic_scene_002_plain.png",
+  "article_emphasized_frame": "/app/data/jobs/990801/longform/temp/deterministic_scene_002.png"
+}
