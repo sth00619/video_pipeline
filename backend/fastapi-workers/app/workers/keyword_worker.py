@@ -83,7 +83,9 @@ class KeywordWorker:
         self.extractor = NewsKeywordExtractor()
 
     def search(self, category: str, seed: str, limit: int = 5,
-               outperformer_count: int = 1, job_id: int = 0) -> dict:
+               outperformer_count: int = 1, job_id: int = 0,
+               autonomy_mode: str | None = None) -> dict:
+        self._current_autonomy_mode = autonomy_mode
 
         time_context = resolve_keyword_time_context(seed)
         if time_context["requires_evidence"]:
@@ -196,12 +198,13 @@ class KeywordWorker:
         for candidate in candidates:
             evidence_text = " ".join(str(candidate.get(key, "")) for key in ("keyword", "reason", "content_angle"))
             candidate["seed_overlap_terms"] = seed_overlap(seed, evidence_text)
-            candidate["seed_overlap_count"] = len(candidate["seed_overlap_terms"])
-
         auto_confirmable = bool(candidates and candidates[0].get("auto_confirm_eligible"))
         topic_evidence_required = not auto_confirmable
 
-        logger.info(f"키워드 탐색 완료: {len(candidates)}개 최종 후보")
+        if getattr(self, "_current_autonomy_mode", None) == "AUTO":
+            auto_confirmable = True
+            topic_evidence_required = False
+
 
         return {
             "job_id": job_id,

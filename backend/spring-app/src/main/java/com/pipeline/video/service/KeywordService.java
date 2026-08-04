@@ -60,7 +60,7 @@ public class KeywordService {
 
         // FastAPI 호출
         KeywordSearchResponse result = fastApiClient.searchKeywords(
-                seedKeyword, limit, effectiveCategory.name(), outperformerCount, jobId);
+                seedKeyword, limit, effectiveCategory.name(), outperformerCount, jobId, job.getAutonomy().name());
 
         // 비용 기록 (Mock $0)
         costService.record(jobId, "YOUTUBE_API", BigDecimal.ZERO, "USD", "키워드 트렌드 분석");

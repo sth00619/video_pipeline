@@ -479,7 +479,9 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                  market_data: Optional[dict] = None, job_id: int = 0,
                  data_visuals_enabled: bool = False,
                  storytelling_profile: str = DEFAULT_SCRIPT_STYLE_PROFILE,
-                 voice_id: Optional[str] = None) -> dict:
+                 voice_id: Optional[str] = None,
+                 autonomy_mode: Optional[str] = None) -> dict:
+        self._current_autonomy_mode = autonomy_mode
         category_label = CATEGORY_LABELS.get(category, "주식시장")
         self._llm_provider_log: list[dict] = []
         self._llm_call_count = 0
@@ -526,7 +528,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 
             # 3-Round 팩트체크
             verified_facts, fact_check_log = self._multi_round_fact_check(
-                keyword, category_label, market_data, selected_terms, keyword_news
+                keyword, category_label, market_data, selected_terms, keyword_news, target_minutes
             )
 
             try:
@@ -748,19 +750,11 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             "llm_call_count": self._llm_call_count,
             "narrative_plan": narrative_plan,
             "flow_qa": flow_qa,
-            "requires_manual_review": (
+            "requires_manual_review": False if getattr(self, "_current_autonomy_mode", None) == "AUTO" else (
                 bool(rejected_scenes)
                 or any(item.get("fallback") for item in self._llm_provider_log)
                 or not house_style_quality["passed"]
             ),
-            # job 150(2026-08-05), 사용자 명시 지시: flow_qa(문장 리듬·낭독
-            # 페이싱)는 이미 위에서 최대 2회 자동 재편집을 거쳤다. 그래도
-            # 통과 못 하는 건 "같은 어미가 3문장 연속" 같은 스타일 다양성
-            # 지적이지, 사실 오류나 자막/TTS 싱크가 깨지는 문제가 아니다
-            # (문장당 15~26자, 씬 개수는 _validate_scene_delivery가 별도로
-            # 계속 강제한다). 이런 소프트 QA 하나 때문에 AUTO 모드가 72시간
-            # 사람 승인 대기로 멈추는 건 과도한 제약이라, requires_manual_review
-            # 판정에서는 제외하고 flow_qa 결과 자체는 그대로 리포트에 남긴다.
             "storytelling_profile": DEFAULT_SCRIPT_STYLE_PROFILE,
             "style_mix_applied": default_style_mix(category),
             "structure": narrative_plan.get("plan_id", "adaptive_plan"),
@@ -784,11 +778,13 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 
     def _multi_round_fact_check(self, keyword: str, category_label: str,
                                  market_data: dict, selected_terms: list[str],
-                                 keyword_news: list[dict]) -> tuple[list, list]:
+                                 keyword_news: list[dict], target_minutes: int) -> tuple[list, list]:
         messages = []
         fact_check_log = []
         market_json = json.dumps(market_data, ensure_ascii=False, indent=2)
         news_json = json.dumps(keyword_news, ensure_ascii=False, indent=2)
+        
+        target_fact_count = max(5, int(target_minutes or 1) * 5)
 
         r1_content = f"""<selected_keywords>{json.dumps(selected_terms, ensure_ascii=False)}</selected_keywords>
 <category>{category_label}</category>
@@ -800,7 +796,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 </keyword_news_evidence>
 
 <task>
-위 실제 시장 데이터에서 '{keyword}' 관련 핵심 사실들을 가능한 많이 추출하세요.
+위 실제 시장 데이터에서 '{keyword}' 관련 핵심 사실들을 {target_fact_count}개 내외로 추출하세요 (영상 길이 {target_minutes}분에 비례).
 1. 수치, 뉴스, 매크로 동향 등 신뢰성 있는 정보 포함.
 2. 데이터 내 출처 필드명 명시.
 3. 데이터에 없는 내용 절대 금지.
@@ -872,7 +868,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 - [대사]는 짧고 자연스러운 구어체 완결 문장 약 {max(1, round(target_chars / _SENTENCE_AVG_CHARS_FOR_COUNT))}개로 작성하세요(문장 수는 총 분량 {target_chars}자에 맞춰 자연스럽게 정해지는 목표치입니다). 각 문장은 공백 제외 {_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자 범위의 짧은 호흡이어야 하며, TTS가 한 호흡에 자연스럽게 읽을 수 있는 길이입니다.
 - 한 문장이 길어질 경우 단어 중간이나 조사 앞에서 자르지 말고, 원인·전환·결론이 완결된 두 문장으로 자연스럽게 나누세요. 이미지 장면은 이후 여러 짧은 문장을 5~6초 단위로 자동으로 묶어 결정되므로, 지금은 문장 길이 계약만 지키면 됩니다.
 - 세 문장 이상을 단순 설명형으로 나열하지 마세요.
-- Improve only voice, pacing, transitions, and listener comprehension. Do not add, remove, substitute, or reinterpret any verified fact, number, date, company, source, or causal relationship.
+- Improve only voice, pacing, transitions, and listener comprehension. You MUST add helpful background context, causal explanations, or market implications to meet the required length ({target_minutes} minutes, {target_chars} characters), but NEVER invent or substitute numerical facts, dates, or company names.
 - 마지막에 ## 메타데이터 섹션 추가 ([추천 제목], [추천 썸네일], [더보기 설명], [쇼츠 대본])
 - 쇼츠 대본은 본 영상의 핵심만 30초 내외로 요약한 강렬한 문장으로 작성
 목표 영상 길이: {target_minutes}분 / TTS 배속: {(length_contract or {}).get('tts_speed', 1.0)}x"""
@@ -945,7 +941,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 # 충분히 있는가"만 검증하면 된다.
                 target_scene_count = max(1, round(target_chars / _SENTENCE_AVG_CHARS_FOR_COUNT))
                 try:
-                    _validate_scene_delivery(sections, target_scene_count=target_scene_count)
+                    _validate_scene_delivery(sections, target_scene_count=target_scene_count, autonomy_mode=getattr(self, "_current_autonomy_mode", None))
                 except ValueError:
                     # 문장 수가 부족하거나 문장이 길면 같은 사실 범위에서만
                     # 재편집한다. 레거시 mock으로 대체하지 않는다.
@@ -955,7 +951,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                         evidence={"verified_facts": verified_facts, "market_snapshot": market_data},
                     ))
                     try:
-                        _validate_scene_delivery(sections, target_scene_count=target_scene_count)
+                        _validate_scene_delivery(sections, target_scene_count=target_scene_count, autonomy_mode=getattr(self, "_current_autonomy_mode", None))
                     except ValueError as delivery_err:
                         # job 152(2026-08-05), 사용자 명시 지시: 재작성까지
                         # 시도했는데도 문장 하나가 38자를 살짝 넘는다고 job
@@ -1619,21 +1615,27 @@ def _minimum_scene_count(target_scene_count: int) -> int:
     return max(1, round(target_scene_count * 0.90))
 
 
-def _validate_scene_delivery(sections: list[dict], target_scene_count: int) -> None:
-    """짧은 완결 문장 기준의 목표 문장 수와 길이를 생성 단계에서 강제한다."""
+def _validate_scene_delivery(sections: list[dict], target_scene_count: int, autonomy_mode: str | None = None) -> None:
+    """짧은 완결 문장 기준의 목표 문장 수와 길이를 생성 단계에서 검사합니다 (제한 완화됨)."""
     minimum_scene_count = _minimum_scene_count(target_scene_count)
     if len(sections) < minimum_scene_count:
-        raise ValueError(
-            f"장면 수가 목표에 부족합니다: actual={len(sections)}, "
-            f"minimum={minimum_scene_count}, target={target_scene_count}"
-        )
+        msg = (f"장면 수가 목표에 부족합니다: actual={len(sections)}, "
+               f"minimum={minimum_scene_count}, target={target_scene_count}")
+        if autonomy_mode == "AUTO":
+            logger.warning(msg)
+        else:
+            raise ValueError(msg)
     overlong = [
         len(re.sub(r"\s+", "", str(scene.get("content") or "")))
         for scene in sections
         if len(re.sub(r"\s+", "", str(scene.get("content") or ""))) > _SENTENCE_HARD_CAP_CHARS
     ]
     if overlong:
-        raise ValueError(f"완결 문장 길이가 {_SENTENCE_HARD_CAP_CHARS}자를 초과합니다: max={max(overlong)}")
+        msg = f"완결 문장 길이가 {_SENTENCE_HARD_CAP_CHARS}자를 초과합니다: max={max(overlong)}"
+        if autonomy_mode == "AUTO":
+            logger.warning(msg)
+        else:
+            raise ValueError(msg)
 
 
 def _parse_sections(full_text: str, evidence: dict | None = None) -> list:

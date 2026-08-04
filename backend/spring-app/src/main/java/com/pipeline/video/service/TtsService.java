@@ -80,7 +80,7 @@ public class TtsService {
 
         // FastAPI 호출
         TtsGenerateResponse result = fastApiClient.generateTts(
-                jobId, script, finalVoiceId, ttsSpeed, job.getLongformTargetMinutes());
+                jobId, script, finalVoiceId, ttsSpeed, job.getLongformTargetMinutes(), job.getAutonomy().name());
 
         // [버그 수정] 기존에는 BigDecimal.ZERO 하드코딩. 실제 ElevenLabs API를
         // 호출한 경우에만 요금이 실제로 발생하므로, used_elevenlabs=true 일 때만

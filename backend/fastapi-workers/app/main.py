@@ -492,11 +492,19 @@ class KeywordSearchRequest(BaseModel):
     category: str = "CUSTOM"
     outperformer_count: int = 1
     job_id: Optional[int] = 0
+    autonomy_mode: Optional[str] = None
 
 @app.post("/workers/keyword/search")
 def keyword_search(request: KeywordSearchRequest):
     try:
-        return get_keyword_worker().search(category=request.category, seed=request.seed, limit=request.limit, outperformer_count=request.outperformer_count, job_id=request.job_id or 0)
+        return get_keyword_worker().search(
+            category=request.category,
+            seed=request.seed,
+            limit=request.limit,
+            outperformer_count=request.outperformer_count,
+            job_id=request.job_id or 0,
+            autonomy_mode=request.autonomy_mode
+        )
     except Exception as e:
         raise HTTPException(500, f"키워드 탐색 실패: {str(e)}")
 
@@ -649,6 +657,7 @@ class ScriptGenerateRequest(BaseModel):
     job_id: Optional[int] = 0
     voice_id: Optional[str] = None
     market_data: Optional[dict] = None  # KeywordWorker에서 전달된 market_snapshot
+    autonomy_mode: Optional[str] = None
 
     # 숫자 카드·차트는 명시적으로 켠 레거시 작업에서만 사용한다.
     data_visuals_enabled: bool = False
@@ -675,6 +684,7 @@ def script_generate(request: ScriptGenerateRequest):
             data_visuals_enabled=request.data_visuals_enabled,
             storytelling_profile=request.storytelling_profile,
             voice_id=request.voice_id,
+            autonomy_mode=request.autonomy_mode,
         )
     except ScriptResearchRequiredError as exc:
         return JSONResponse(status_code=422, content={
@@ -712,6 +722,7 @@ class TtsGenerateRequest(BaseModel):
     job_id: Optional[int] = 0
     tts_speed: Optional[float] = None  # 생략 시 runtime_config의 현재 기본값 사용
     target_seconds: Optional[float] = None
+    autonomy_mode: Optional[str] = None
 
 
 class TtsPreviewRequest(BaseModel):
@@ -725,6 +736,7 @@ def tts_generate(request: TtsGenerateRequest):
             request.script, request.voice_id, request.job_id or 0,
             tts_speed=request.tts_speed,
             target_seconds=request.target_seconds,
+            autonomy_mode=request.autonomy_mode,
         )
     except Exception as e:
         raise HTTPException(500, f"TTS 생성 실패: {str(e)}")

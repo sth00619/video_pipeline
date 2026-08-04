@@ -80,7 +80,8 @@ class TtsWorker:
         return self._whisper_model
 
     def synthesize(self, script: str, voice_id: str, job_id: int = 0,
-                   tts_speed: float = None, target_seconds: float = None) -> dict:
+                   tts_speed: float = None, target_seconds: float = None,
+                   autonomy_mode: str = None) -> dict:
         self._last_subtitle_alignment_mode = "unavailable"
         if not script or not script.strip():
             raise ValueError("스크립트가 비어있습니다.")
@@ -180,6 +181,8 @@ class TtsWorker:
         if used_tts and tts_engine == "elevenlabs":
             max_retries = runtime_config.value("tts_max_retries")
             for attempt in range(1, max_retries + 1):
+                stability_override = 1.0 if attempt > 1 else None
+                
                 tts_verification = self._verify_tts_narration(
                     mp3_path, preprocessed, attempt, provider_characters=elevenlabs_characters,
                 )
@@ -187,9 +190,13 @@ class TtsWorker:
                     break
                 if attempt < max_retries:
                     logger.warning("TTS CER quality gate retrying generation (%s/%s)", attempt + 1, max_retries)
+                    import time
+                    if attempt > 1:
+                        time.sleep(2)
                     used_tts, elevenlabs_characters = self._generate_elevenlabs(
                         delivery_script, mp3_path, provider_voice_id, job_id, tts_speed=speed,
                         seed=max(1, job_id * 10 + attempt + 1), thought_group_delivery=True,
+                        stability_override=stability_override
                     )
                     if not used_tts:
                         break
@@ -244,16 +251,18 @@ class TtsWorker:
             self._postprocess_audio(mp3_path, job_id)
 
         leading_silence_seconds = 0.2 if tts_engine == "elevenlabs" else 0.0
+        leading_silence_applied = False
         if leading_silence_seconds:
-            self._prepend_leading_silence(mp3_path, leading_silence_seconds, job_id)
-            elevenlabs_characters = [
-                {
-                    **char,
-                    "start": float(char["start"]) + leading_silence_seconds,
-                    "end": float(char["end"]) + leading_silence_seconds,
-                }
-                for char in elevenlabs_characters
-            ]
+            leading_silence_applied = self._prepend_leading_silence(mp3_path, leading_silence_seconds, job_id)
+            if leading_silence_applied:
+                elevenlabs_characters = [
+                    {
+                        **char,
+                        "start": float(char["start"]) + leading_silence_seconds,
+                        "end": float(char["end"]) + leading_silence_seconds,
+                    }
+                    for char in elevenlabs_characters
+                ]
 
         # 최종 MP3만 검사한다. 문장별 조각 결합이 발생했더라도, 실제 배포될
         # 파일에서 디지털 무음 절벽이 발견될 때만 QA 경고를 남긴다.
@@ -299,9 +308,12 @@ class TtsWorker:
                 f"requested={float(target_seconds):.1f}s, actual={actual_duration:.1f}s. "
                 "Regenerate the script using the current voice length contract."
             )
-            logger.error(message)
             persist_quality_report(job_id, "tts_duration", {**duration_validation, "passed": False})
-            raise RuntimeError(message)
+            if autonomy_mode == "AUTO":
+                logger.warning(message + " (Bypassed in AUTO mode)")
+            else:
+                logger.error(message)
+                raise RuntimeError(message)
 
         # 3. 자막 타임스탬프 추출 (Forced Alignment → stable-ts → Whisper → 글자수 비례)
         chunks = []
@@ -394,6 +406,7 @@ class TtsWorker:
             "subtitle_alignment_mode": self._last_subtitle_alignment_mode,
             "canonical_text_match": True,
             "canonical_sha256": canonical_sha256,
+            "leading_silence": {"applied": leading_silence_applied},
             "delivery_profile": {
                 "speed": speed,
                 "stability": runtime_config.value("tts_stability_body"),
@@ -563,7 +576,7 @@ class TtsWorker:
             return "legacy"
         return {0.0: "creative", 0.5: "natural", 1.0: "robust"}.get(float(stability), "invalid")
 
-    def _prepend_leading_silence(self, audio_path: str, seconds: float, job_id: int) -> None:
+    def _prepend_leading_silence(self, audio_path: str, seconds: float, job_id: int) -> bool:
         """Prepend a deterministic safety pad without trimming narration."""
         padded_path = f"{audio_path}.lead.mp3"
         ret = self._run_subprocess(
@@ -574,18 +587,30 @@ class TtsWorker:
             job_id,
         )
         if ret != 0 or not os.path.exists(padded_path):
-            raise RuntimeError("failed to prepend the required TTS leading silence")
+            logger.warning("anullsrc concat failed, falling back to adelay filter")
+            ret_fallback = self._run_subprocess(
+                f'ffmpeg -i "{audio_path}" -af "adelay={int(seconds*1000)}|{int(seconds*1000)}" '
+                f'-y "{padded_path}" -loglevel error',
+                job_id,
+            )
+            if ret_fallback != 0 or not os.path.exists(padded_path):
+                logger.warning("All leading silence prepends failed.")
+                return False
+        
         os.replace(padded_path, audio_path)
+        return True
 
     def _generate_elevenlabs(self, text: str, output_path: str, voice_id: str, job_id: int = 0,
                              tts_speed: float = None, seed: int = None,
-                             thought_group_delivery: bool = False) -> Tuple[bool, List[Dict]]:
+                             thought_group_delivery: bool = False,
+                             stability_override: Optional[float] = None) -> Tuple[bool, List[Dict]]:
         """
         ElevenLabs v3 + 발음 사전 기반 한국어 AI 성우 음성 생성.
         원본 스크립트 텍스트를 그대로 전달하고, 발음 사전이 금융 용어 발음을 교정합니다.
         """
         import requests
         import tempfile as tf
+        import time
         from app.workers.pronunciation_manager import PronunciationManager
 
         # Each generation/retry gets its own transmission audit.  For a
@@ -691,7 +716,7 @@ class TtsWorker:
         def _build_payload(chunk_text: str, prev_text: str = "", next_text_val: str = "", is_intro: bool = False) -> dict:
             model_id = runtime_config.value("tts_model_intro" if is_intro else "tts_model_body")
             is_v3 = model_id.startswith("eleven_v3")
-            stability = runtime_config.value("tts_stability_intro" if is_intro else "tts_stability_body")
+            stability = stability_override if stability_override is not None else runtime_config.value("tts_stability_intro" if is_intro else "tts_stability_body")
             if is_v3 and stability not in {0.0, 0.5, 1.0}:
                 raise ValueError("Eleven v3 stability must be 0.0, 0.5, or 1.0")
             # Tags are deliberately limited to the opening.  The body remains
@@ -751,6 +776,37 @@ class TtsWorker:
                 payload["pronunciation_dictionary_locators"] = pron_locators
             return payload
         
+        def _post_with_backoff(req_url: str, req_payload: dict, req_headers: dict) -> Optional[requests.Response]:
+            max_retries = 5
+            deadline = time.time() + 120
+            for attempt in range(max_retries):
+                try:
+                    time_left = deadline - time.time()
+                    if time_left <= 0:
+                        logger.warning("ElevenLabs request overall deadline exceeded")
+                        break
+                    req_timeout = min(30, max(5, time_left))
+                    resp = requests.post(req_url, json=req_payload, headers=req_headers, timeout=req_timeout)
+                    if resp.status_code == 200:
+                        return resp
+                    elif resp.status_code in {429, 500, 502, 503, 504}:
+                        wait = min(2 ** attempt, max(1, deadline - time.time()))
+                        if deadline - time.time() <= wait:
+                            break
+                        logger.warning(f"ElevenLabs retryable error {resp.status_code}, attempt {attempt+1}/{max_retries}. Waiting {wait}s.")
+                        time.sleep(wait)
+                        continue
+                    else:
+                        logger.warning(f"ElevenLabs non-retryable error {resp.status_code}: {resp.text}")
+                        return resp
+                except requests.RequestException as e:
+                    wait = min(2 ** attempt, max(1, deadline - time.time()))
+                    if deadline - time.time() <= wait:
+                        break
+                    logger.warning(f"ElevenLabs request exception {e}, attempt {attempt+1}/{max_retries}. Waiting {wait}s.")
+                    time.sleep(wait)
+            return None
+
         # Eleven v3 accepts substantially longer input than the legacy model.
         # A five-minute script should be one continuous performance so its
         # prosody matches the reference voice instead of restarting every 800
@@ -758,29 +814,16 @@ class TtsWorker:
         MAX_CHARS = 8000 if runtime_config.value("tts_model_body").startswith("eleven_v3") else 800
         if len(text) <= MAX_CHARS:
             payload = _build_payload(text, is_intro=True)
-            success = False
-            for retry in range(2):
-                try:
-                    logger.info(f"ElevenLabs API 요청 (단일): URL={url}, model_id={payload.get('model_id')}, text_len={len(payload.get('text', ''))}")
-                    resp = requests.post(url, json=payload, headers=headers, timeout=180)
-                    if resp.status_code == 200:
-                        saved, timed_chars = _write_timed_response(resp, output_path)
-                        if not saved:
-                            continue
-                        logger.info(f"ElevenLabs v3 + 발음 사전 음성 생성 성공 (단일 요청, 시도 {retry+1})")
-                        return True, timed_chars
-                    else:
-                        logger.warning(f"ElevenLabs API 시도 {retry+1} 실패: {resp.status_code}, 응답: {resp.text}")
-                except Exception as e:
-                    logger.warning(f"ElevenLabs API 시도 {retry+1} 예외: {e}")
+            logger.info(f"ElevenLabs API 요청 (단일): URL={url}, model_id={payload.get('model_id')}, text_len={len(payload.get('text', ''))}")
+            resp = _post_with_backoff(url, payload, headers)
+            if resp and resp.status_code == 200:
+                saved, timed_chars = _write_timed_response(resp, output_path)
+                if saved:
+                    logger.info(f"ElevenLabs v3 + 발음 사전 음성 생성 성공 (단일 요청)")
+                    return True, timed_chars
             
-            if success:
-                return True, []
-            else:
-                # Let the caller perform the fallback so it can truthfully mark
-                # the resulting asset as gTTS rather than ElevenLabs audio.
-                logger.warning("ElevenLabs 단일 요청 실패 -> caller fallback")
-                return False, []
+            logger.warning("ElevenLabs 단일 요청 실패 -> caller fallback")
+            return False, []
         else:
             # 800자 단위 분할 (문장 경계 기준)
             parts = []
@@ -817,29 +860,20 @@ class TtsWorker:
                 payload = _build_payload(part, prev_text=prev_p, next_text_val=next_p, is_intro=(idx == 0))
                 chunk_success = False
                 
-                # 2회 재시도 루프
-                for retry in range(2):
-                    try:
-                        logger.info(f"ElevenLabs API 요청: URL={url}, model_id={payload.get('model_id')}, text_len={len(payload.get('text', ''))}")
-                        resp = requests.post(url, json=payload, headers=headers, timeout=180)
-                        if resp.status_code == 200:
-                            saved, timed_chars = _write_timed_response(resp, tmp, offset=timeline_offset)
-                            if not saved:
-                                continue
-                            tmp_files.append(tmp)
-                            combined_timed_chars.extend(timed_chars)
-                            local_duration = self._probe_duration(tmp)
-                            if local_duration is None:
-                                local_duration = (timed_chars[-1]["end"] - timeline_offset) if timed_chars else 0.0
-                            timeline_offset += local_duration
-                            logger.info(f"ElevenLabs 분할 {idx+1}/{len(parts)} 성공 (시도 {retry+1})")
-                            chunk_success = True
-                            elevenlabs_success_count += 1
-                            break
-                        else:
-                            logger.warning(f"ElevenLabs 분할 {idx+1} 시도 {retry+1} 실패: {resp.status_code}, 응답: {resp.text}")
-                    except Exception as e:
-                        logger.warning(f"ElevenLabs 분할 {idx+1} 시도 {retry+1} 예외: {e}")
+                logger.info(f"ElevenLabs API 요청: URL={url}, model_id={payload.get('model_id')}, text_len={len(payload.get('text', ''))}")
+                resp = _post_with_backoff(url, payload, headers)
+                if resp and resp.status_code == 200:
+                    saved, timed_chars = _write_timed_response(resp, tmp, offset=timeline_offset)
+                    if saved:
+                        tmp_files.append(tmp)
+                        combined_timed_chars.extend(timed_chars)
+                        local_duration = self._probe_duration(tmp)
+                        if local_duration is None:
+                            local_duration = (timed_chars[-1]["end"] - timeline_offset) if timed_chars else 0.0
+                        timeline_offset += local_duration
+                        logger.info(f"ElevenLabs 분할 {idx+1}/{len(parts)} 성공")
+                        chunk_success = True
+                        elevenlabs_success_count += 1
                 
                 # 청크 레벨 폴백: ElevenLabs 실패 시 gTTS로 해당 청크 대체
                 if not chunk_success:

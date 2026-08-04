@@ -172,7 +172,7 @@ public class FastApiClient {
 
     // Phase 3-1 — 키워드
     public KeywordSearchResponse searchKeywords(String seed, int limit, String category,
-                                                int outperformerCount, Long jobId) {
+                                                int outperformerCount, Long jobId, String autonomyMode) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("seed", seed != null ? seed : "");
@@ -180,6 +180,9 @@ public class FastApiClient {
             bodyMap.put("category", category);
             bodyMap.put("outperformer_count", outperformerCount);
             bodyMap.put("job_id", jobId);
+            if (autonomyMode != null && !autonomyMode.isBlank()) {
+                bodyMap.put("autonomy_mode", autonomyMode);
+            }
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/keyword/search", bodyMap),
                     KeywordSearchResponse.class);
@@ -191,7 +194,7 @@ public class FastApiClient {
     // Phase 3-2 — 스크립트
     public ScriptGenerateResponse generateScript(Long jobId, String keyword, int targetMinutes,
                                                   String category, String marketSnapshotJson, boolean dataVisualsEnabled,
-                                                  String voiceId) {
+                                                  String voiceId, String autonomyMode) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -201,6 +204,9 @@ public class FastApiClient {
             bodyMap.put("data_visuals_enabled", dataVisualsEnabled);
             if (voiceId != null && !voiceId.isBlank()) {
                 bodyMap.put("voice_id", voiceId);
+            }
+            if (autonomyMode != null && !autonomyMode.isBlank()) {
+                bodyMap.put("autonomy_mode", autonomyMode);
             }
             
             if (marketSnapshotJson != null && !marketSnapshotJson.isBlank()) {
@@ -269,7 +275,7 @@ public class FastApiClient {
 
     // Phase 3-3 — TTS
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId) {
-        return generateTts(jobId, script, voiceId, null, null);
+        return generateTts(jobId, script, voiceId, null, null, null);
     }
 
     /**
@@ -280,11 +286,11 @@ public class FastApiClient {
      * /pipeline/config API로 전역 기본값을 낮추면 됩니다.
      */
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId, Double ttsSpeed) {
-        return generateTts(jobId, script, voiceId, ttsSpeed, null);
+        return generateTts(jobId, script, voiceId, ttsSpeed, null, null);
     }
 
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId, Double ttsSpeed,
-                                           Integer targetMinutes) {
+                                           Integer targetMinutes, String autonomyMode) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -295,6 +301,9 @@ public class FastApiClient {
             }
             if (targetMinutes != null && targetMinutes > 0) {
                 bodyMap.put("target_seconds", targetMinutes * 60.0);
+            }
+            if (autonomyMode != null) {
+                bodyMap.put("autonomy_mode", autonomyMode);
             }
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/tts/generate", bodyMap),
