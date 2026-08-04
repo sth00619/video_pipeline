@@ -1,6 +1,6 @@
 import pytest
 
-from app.v5.scene.prompt_builder import SceneSpec, build_prompt
+from app.v5.scene.prompt_builder import MASCOT_IDENTITY_LOCK, SceneSpec, build_prompt
 from app.v5.scene.scene_type_archetypes import (
     ARCHETYPE_SURFACES,
     ArchetypeSelection,
@@ -41,8 +41,89 @@ def test_information_scene_prompt_requires_one_in_world_physical_surface():
     assert "never place a number or text in a floating card" in prompt
     assert "exact verified facts are composited later by deterministic rendering" in prompt
     assert "do not include any visible typographic mark" not in prompt
-    assert "art style: bold thick black ink outlines, flat cel-shading, high contrast" in prompt
-    assert "art style: bold thick black ink outlines, flat cel-shading, high contrast" in prompt
+    assert "thick bold black ink outlines (3-5px equivalent)" in prompt
+    assert "no floating text overlays separate from props" in prompt
+
+
+def test_script_captioned_contract_embeds_exact_caption_on_the_primary_prop():
+    selection = _new_archetype_selection("data_lab")
+    prompt = build_prompt(
+        SceneSpec("captioned-data-lab", selection.archetype, "explain", "reporter", "present"),
+        scene_type_selection=selection,
+        visual_text_policy="script_captioned",
+        semantic_caption="SEMICONDUCTOR GOES DOWN",
+        semantic_direction="down",
+    ).lower()
+
+    assert "the exact english words 'semiconductor goes down'" in prompt
+    assert "physically part of that prop" in prompt
+    assert "no korean characters, no numerals, no other english words" in prompt
+    # costume="reporter" always keeps its brown fedora; only the newer
+    # role costumes (professor/tuxedo_host/architect_planner) replace it.
+    assert "exactly one brown fedora hat as its only headwear" in prompt
+
+
+def test_captioned_prompt_puts_the_physical_surface_contract_before_other_sections():
+    selection = _new_archetype_selection("weather_map")
+    prompt = build_prompt(
+        SceneSpec("caption-first", selection.archetype, "explain", "reporter", "present"),
+        scene_type_selection=selection,
+        visual_text_policy="script_captioned",
+        semantic_caption="FEAR IS COOLING",
+        semantic_direction="down",
+    )
+
+    assert prompt.index("<prop_surface_priority>") < prompt.index("<character>")
+    assert "PHYSICALLY PART OF THE" in prompt
+    assert "not floating in mid-air" in prompt
+    assert "exact caption exactly once" in prompt.lower()
+    assert "no partial repetition" in prompt.lower()
+
+
+def test_v5_costumes_declare_exactly_one_headwear_and_never_stack_two():
+    """2026-08-04: 채널 관찰(07 문서)에 맞춰 의상별로 다른 헤드웨어를 허용한다.
+
+    페도라를 전부 강제하던 이전 규칙과 달리, 이제 각 의상은 정확히 하나의
+    헤드웨어(또는 tuxedo_host처럼 명시적으로 맨머리)만 선언해야 하고,
+    비-페도라 의상은 반드시 "no fedora"로 겹쳐 그려지는 것을 차단해야 한다.
+    """
+    from app.v5.scene.prompt_builder import COSTUME_MAP
+
+    fedora_headwear = {
+        "brown fedora hat", "graduation mortarboard cap", "yellow hard hat",
+    }
+    non_fedora_costumes = {"professor", "tuxedo_host", "architect_planner"}
+    assert non_fedora_costumes <= COSTUME_MAP.keys()
+
+    for name, costume in COSTUME_MAP.items():
+        lowered = costume.lower()
+        headwear_mentions = sum(phrase in lowered for phrase in fedora_headwear) + int("bare-headed" in lowered)
+        assert headwear_mentions == 1, f"{name} costume must declare exactly one headwear: {costume}"
+        if name in non_fedora_costumes:
+            assert "no fedora" in lowered or "bare-headed" in lowered
+        else:
+            assert "brown fedora hat" in lowered
+    # 새 의상이 기존 채널 캐릭터의 얼굴·손·발 정체성 락과 별개인지 확인한다:
+    # 새 헤드웨어는 얼굴형·눈·볼터치 같은 identity-lock 문구를 건드리지 않는다.
+    from app.v5.scene.prompt_builder import MASCOT_IDENTITY_LOCK
+    for costume in COSTUME_MAP.values():
+        assert "round coin silhouette" not in costume.lower()
+    assert "round coin silhouette" in MASCOT_IDENTITY_LOCK.lower()
+
+
+def test_prompt_contains_the_fixed_character_identity_contract():
+    prompt = build_prompt(SceneSpec("identity", "weather_map", "explain", "reporter", "present"))
+
+    assert MASCOT_IDENTITY_LOCK in prompt
+    assert "Do not add eyelashes" in prompt
+
+
+def test_weather_map_locks_one_map_surface_and_keeps_the_mascot_small():
+    prompt = build_prompt(SceneSpec("weather-small-mascot", "weather_map", "explain", "reporter", "present"))
+
+    assert "occupies no more than 35% of the total frame width" in prompt
+    assert "one large curved map wall is the only map or information surface" in prompt
+    assert "Do not add any small map screen, chart card, dashboard" in prompt
 
 
 def test_strict_textless_contract_reserves_the_same_prop_without_text_conflict():
@@ -81,7 +162,7 @@ def test_general_scene_does_not_receive_a_number_or_fact_surface_instruction():
     assert "data-lab benchmark visual treatment" not in prompt
 
 
-def test_information_data_lab_uses_the_approved_dense_benchmark_visual_treatment_only():
+def test_information_data_lab_uses_the_approved_channel_broadcast_visual_treatment_only():
     selection = _new_archetype_selection("data_lab")
     prompt = build_prompt(
         SceneSpec("data-lab-benchmark-style", selection.archetype, "explain", "reporter", "present"),
@@ -90,9 +171,10 @@ def test_information_data_lab_uses_the_approved_dense_benchmark_visual_treatment
 
     assert selection.archetype == "data_lab"
     assert "data-lab benchmark visual treatment" in prompt
-    assert "inky midnight-navy control room" in prompt
-    assert "crisp two- or three-tone cel-shaded regions" in prompt
-    assert "clean minimal light-blue tech room" in prompt
+    assert "tactile hand-drawn broadcast analysis studio" in prompt
+    assert "flat high-contrast cel shading" in prompt
+    assert "soft painterly" not in prompt
+    assert "neon sci-fi control room" in prompt
 
 
 def test_mismatched_archetype_selection_fails_before_prompt_generation():

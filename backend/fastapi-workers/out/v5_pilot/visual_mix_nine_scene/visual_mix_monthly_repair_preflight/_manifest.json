@@ -1,0 +1,90 @@
+{
+  "run_id": "visual_mix_monthly_repair_preflight",
+  "status": "preflight_passed_no_api_call",
+  "mode_counts": {
+    "article_evidence": 3,
+    "semantic_illustration": 3,
+    "archetype_explainer": 3
+  },
+  "article_assets": [
+    {
+      "scene_id": "article_kospi",
+      "source_url": "https://www.yna.co.kr/amp/view/AKR20260617148400008",
+      "image_path": "C:\\app\\data\\jobs\\820261\\evidence\\article_fb003d8ec5a32896.png"
+    },
+    {
+      "scene_id": "article_us_market",
+      "source_url": "https://www.yna.co.kr/view/AKR20260227179400008",
+      "image_path": "C:\\app\\data\\jobs\\820262\\evidence\\article_57fcc70904c7a813.png"
+    },
+    {
+      "scene_id": "article_sector",
+      "source_url": "https://www.yna.co.kr/amp/view/AKR20260630149500008",
+      "image_path": "C:\\app\\data\\jobs\\820263\\evidence\\article_8bfa33730fae79df.png"
+    }
+  ],
+  "gemini_budget_preflight": {
+    "planned_at": "2026-08-02T14:53:55.823037+00:00",
+    "scene_count": 6,
+    "quality_tier": "pro",
+    "pro_scene_count": 6,
+    "flash_scene_count": 0,
+    "kling_clip_count": 0,
+    "estimated_cost_krw": 1239,
+    "budget_limit_krw": 40000,
+    "retry_buffer_pct": 10.0,
+    "allowed": true,
+    "policy_version": "runtime-default",
+    "actions": [],
+    "reason": null,
+    "template_scene_count": 0,
+    "template_retry_reserve_krw": 0,
+    "template_regeneration_enabled": true,
+    "rates": {
+      "img_cost_pro_2k_usd": 0.134,
+      "kling_cost_per_clip_usd": 0.35,
+      "usd_krw": 1400.0
+    }
+  },
+  "generated_scenes": [
+    {
+      "scene_id": "semantic_large_small",
+      "visual_mode": "semantic_illustration",
+      "archetype": "classroom",
+      "caption": null
+    },
+    {
+      "scene_id": "semantic_us_korea",
+      "visual_mode": "semantic_illustration",
+      "archetype": "port_emergency",
+      "caption": null
+    },
+    {
+      "scene_id": "semantic_monthly",
+      "visual_mode": "semantic_illustration",
+      "archetype": "risk_control_room",
+      "caption": null
+    },
+    {
+      "scene_id": "info_semiconductor",
+      "visual_mode": "archetype_explainer",
+      "archetype": "data_lab",
+      "caption": "SEMICONDUCTOR GOES DOWN"
+    },
+    {
+      "scene_id": "info_buy_signal",
+      "visual_mode": "archetype_explainer",
+      "archetype": "weather_map",
+      "caption": "BUY SIGNAL"
+    },
+    {
+      "scene_id": "info_fear",
+      "visual_mode": "archetype_explainer",
+      "archetype": "risk_control_room",
+      "caption": "FEAR IS COOLING"
+    }
+  ],
+  "article_policy": "verified_source_capture_only",
+  "numeric_financial_overlay": "prohibited",
+  "automatic_retry": false
+}

@@ -39,6 +39,9 @@ public class LongformGenerateResponse {
     @JsonProperty("market_chart_count")
     private Integer marketChartCount;
 
+    @JsonProperty("kling_motion_plan")
+    private Map<String, Object> klingMotionPlan;
+
     @JsonProperty("quality_report")
     private Map<String, Object> qualityReport;
 }

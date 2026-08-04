@@ -237,6 +237,17 @@ public class FastApiClient {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getKlingMotionPolicy() {
+        try {
+            String response = restTemplate.getForObject(fastApiUrl + "/pipeline/motion-policy", String.class);
+            if (response == null || response.isBlank()) return Map.of();
+            return objectMapper.readValue(response, Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("FastAPI Kling 모션 정책 조회 실패: " + e.getMessage(), e);
+        }
+    }
+
     /**
      * 수동 편집 대본도 생성 경로와 같은 하우스 스타일 하드 게이트로 검증한다.
      * 실제 활성화 여부와 숫자 추적 정책은 FastAPI 런타임 설정이 결정한다.
@@ -298,7 +309,7 @@ public class FastApiClient {
                                                   String characterImagePath, String characterStylePrompt,
                                                   String characterPosesDir) {
         return generateImages(jobId, ttsMetaJson, scriptMetaJson, characterImagePath,
-                characterStylePrompt, characterPosesDir, null, null, null);
+                characterStylePrompt, characterPosesDir, null, null, null, null, null, null);
     }
 
     public ImagesGenerateResponse getImageBatchStatus(Long jobId) {
@@ -323,7 +334,8 @@ public class FastApiClient {
                                                   String characterImagePath, String characterStylePrompt,
                                                   String characterPosesDir,
                                                   String loraModelId, String loraTriggerWord,
-                                                  Float loraScale) {
+                                                  Float loraScale, String autonomyMode,
+                                                  java.math.BigDecimal budgetLimitKrw, String budgetPolicyVersion) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -342,6 +354,13 @@ public class FastApiClient {
                     bodyMap.put("lora_trigger_word", loraTriggerWord);
                 }
                 bodyMap.put("lora_scale", loraScale != null ? loraScale : 1.0f);
+            }
+            if (autonomyMode != null && !autonomyMode.isBlank()) {
+                bodyMap.put("autonomy_mode", autonomyMode);
+            }
+            if (budgetLimitKrw != null) {
+                bodyMap.put("budget_limit_krw", budgetLimitKrw.intValueExact());
+                bodyMap.put("budget_policy_version", budgetPolicyVersion);
             }
             return objectMapper.readValue(
                     postJson(fastApiUrl + "/workers/images/generate", bodyMap),
@@ -778,6 +797,18 @@ public class FastApiClient {
     public Map<String, Object> generateCharacterLibrary(
             String channelId, String characterDescription, boolean regenerate) {
         return generateCharacterLibrary(channelId, characterDescription, regenerate, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getWorkerCostLedger(Long jobId) {
+        try {
+            Map<String, Object> response = restTemplate.getForObject(
+                    fastApiUrl + "/workers/jobs/" + jobId + "/cost-ledger", Map.class);
+            return response == null ? Map.of() : response;
+        } catch (Exception e) {
+            log.warn("FastAPI 비용 원장 조회 실패: jobId={}, error={}", jobId, e.getMessage());
+            return Map.of();
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -1,0 +1,65 @@
+{
+  "run_id": "visual_mix_nine_scene_20260802_final",
+  "status": "reviewed_selection",
+  "article_policy": "verified_source_capture_only",
+  "numeric_financial_overlay": "prohibited",
+  "scenes": [
+    {
+      "scene_id": "article_kospi",
+      "visual_mode": "article_evidence",
+      "final_path": "../visual_mix_identity_emphasis_repair_20260803/article_kospi.png",
+      "source_url": "https://www.yna.co.kr/amp/view/AKR20260617148400008"
+    },
+    {
+      "scene_id": "article_us_market",
+      "visual_mode": "article_evidence",
+      "final_path": "../visual_mix_identity_emphasis_repair_20260803/article_us_market.png",
+      "source_url": "https://www.yna.co.kr/view/AKR20260227179400008"
+    },
+    {
+      "scene_id": "article_sector",
+      "visual_mode": "article_evidence",
+      "final_path": "../visual_mix_identity_emphasis_repair_20260803/article_sector.png",
+      "source_url": "https://www.yna.co.kr/amp/view/AKR20260630149500008"
+    },
+    {
+      "scene_id": "semantic_large_small",
+      "visual_mode": "semantic_illustration",
+      "archetype": "classroom",
+      "final_path": "semantic_large_small.png"
+    },
+    {
+      "scene_id": "semantic_us_korea",
+      "visual_mode": "semantic_illustration",
+      "archetype": "port_emergency",
+      "final_path": "semantic_us_korea.png"
+    },
+    {
+      "scene_id": "semantic_monthly",
+      "visual_mode": "semantic_illustration",
+      "archetype": "risk_control_room",
+      "final_path": "../visual_mix_monthly_repair_actual/semantic_monthly.png"
+    },
+    {
+      "scene_id": "info_semiconductor",
+      "visual_mode": "archetype_explainer",
+      "archetype": "data_lab",
+      "caption": "SEMICONDUCTOR GOES DOWN",
+      "final_path": "../visual_mix_semiconductor_identity_repair_v2_20260803/info_semiconductor.png"
+    },
+    {
+      "scene_id": "info_buy_signal",
+      "visual_mode": "archetype_explainer",
+      "archetype": "weather_map",
+      "caption": "BUY SIGNAL",
+      "final_path": "../visual_mix_identity_emphasis_repair_20260803/info_buy_signal.png"
+    },
+    {
+      "scene_id": "info_fear",
+      "visual_mode": "archetype_explainer",
+      "archetype": "risk_control_room",
+      "caption": "FEAR IS COOLING",
+      "final_path": "../visual_mix_fear_outline_repair_20260803/info_fear.png"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ package com.pipeline.video.service;
 import com.pipeline.video.domain.CostLedger;
 import com.pipeline.video.domain.JobStatus;
 import com.pipeline.video.domain.VideoJob;
+import com.pipeline.video.config.PricingConfig;
 import com.pipeline.video.exception.BudgetExceededException;
 import com.pipeline.video.repository.CostLedgerRepository;
 import com.pipeline.video.repository.VideoJobRepository;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 비용 원장 기록 + 누적 + 예산 가드 통합 서비스.
@@ -36,8 +39,9 @@ public class CostService {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        BigDecimal current = job.getCostAccumulated() != null ? job.getCostAccumulated() : BigDecimal.ZERO;
-        BigDecimal newTotal = current.add(amount);
+        BigDecimal current = totalInBudgetKrw(jobId);
+        BigDecimal budgetAmount = toBudgetKrw(amount, currency);
+        BigDecimal newTotal = current.add(budgetAmount);
 
         // 예산 가드
         if (job.getBudgetCap() != null && newTotal.compareTo(job.getBudgetCap()) > 0) {
@@ -45,7 +49,7 @@ public class CostService {
             jobRepository.save(job);
             log.warn("예산 초과로 BUDGET_BLOCKED 전이: jobId={}, new={}, cap={}",
                     jobId, newTotal, job.getBudgetCap());
-            throw new BudgetExceededException(jobId, current, amount, job.getBudgetCap());
+            throw new BudgetExceededException(jobId, current, budgetAmount, job.getBudgetCap());
         }
 
         // 원장 기록
@@ -59,6 +63,7 @@ public class CostService {
         ledgerRepository.save(ledger);
 
         // 누적 업데이트
+        // VideoJob.costAccumulated와 budgetCap은 모두 KRW로 비교한다.
         job.setCostAccumulated(newTotal);
         jobRepository.save(job);
 
@@ -77,7 +82,7 @@ public class CostService {
         if (job.getBudgetCap() == null) return;
         if (estimatedCost == null || estimatedCost.compareTo(BigDecimal.ZERO) <= 0) return;
 
-        BigDecimal current = job.getCostAccumulated() != null ? job.getCostAccumulated() : BigDecimal.ZERO;
+        BigDecimal current = totalInBudgetKrw(jobId);
         BigDecimal projected = current.add(estimatedCost);
 
         if (projected.compareTo(job.getBudgetCap()) > 0) {
@@ -95,7 +100,24 @@ public class CostService {
 
     public BigDecimal getTotal(Long jobId) {
         return ledgerRepository.findByJobIdOrderByCreatedAtDesc(jobId).stream()
-                .map(CostLedger::getAmount)
+                .map(ledger -> toBudgetKrw(ledger.getAmount(), ledger.getCurrency()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal totalInBudgetKrw(Long jobId) {
+        return ledgerRepository.findByJobIdOrderByCreatedAtDesc(jobId).stream()
+                .map(ledger -> toBudgetKrw(ledger.getAmount(), ledger.getCurrency()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal toBudgetKrw(BigDecimal amount, String currency) {
+        BigDecimal safeAmount = amount == null ? BigDecimal.ZERO : amount;
+        String normalized = currency == null ? "USD" : currency.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "KRW" -> safeAmount;
+            case "USD" -> safeAmount.multiply(PricingConfig.USD_TO_KRW_BUDGET_RATE)
+                    .setScale(0, RoundingMode.HALF_UP);
+            default -> throw new IllegalArgumentException("지원하지 않는 비용 통화: " + currency);
+        };
     }
 }

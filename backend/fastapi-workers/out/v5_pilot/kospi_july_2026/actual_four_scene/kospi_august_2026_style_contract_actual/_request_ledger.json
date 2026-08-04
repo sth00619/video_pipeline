@@ -1,0 +1,142 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_august_semiconductor",
+      "attempt": 1,
+      "attempt_id": "6b2557eb5d11448bb1fe80656656e0f3",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T13:50:29.922827+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "scene_type": "graph",
+        "selected_archetype": "data_lab",
+        "visual_text_policy": "script_captioned",
+        "verified_overlay_mode": "prompt_embedded_script_caption"
+      },
+      "completed_at": "2026-08-02T13:51:06.078157+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_august_dollar",
+      "attempt": 1,
+      "attempt_id": "4770136f53c2464398690d19185475f6",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T13:51:06.723383+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "scene_type": "graph",
+        "selected_archetype": "data_lab",
+        "visual_text_policy": "script_captioned",
+        "verified_overlay_mode": "prompt_embedded_script_caption"
+      },
+      "completed_at": "2026-08-02T13:51:43.281446+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "kospi_august_fear",
+      "attempt": 1,
+      "attempt_id": "bf5cf654bfc04c23915f3bb577900716",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T13:51:43.900213+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "scene_type": "metric",
+        "selected_archetype": "risk_control_room",
+        "visual_text_policy": "script_captioned",
+        "verified_overlay_mode": "prompt_embedded_script_caption"
+      },
+      "completed_at": "2026-08-02T13:52:14.920771+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "general_port_narrative_04",
+      "attempt": 1,
+      "attempt_id": "814000c9bda24f7ab4f8f11a9db559b5",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T13:52:15.533234+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "scene_type": "general",
+        "selected_archetype": "port_emergency",
+        "visual_text_policy": "strict_textless",
+        "verified_overlay_mode": "not_applicable"
+      },
+      "completed_at": "2026-08-02T13:52:55.291789+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 1016,
+  "budget_overrun_krw": 0
+}

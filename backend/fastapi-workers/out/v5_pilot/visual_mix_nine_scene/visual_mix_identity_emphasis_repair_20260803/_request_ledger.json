@@ -1,0 +1,82 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "info_buy_signal",
+      "attempt": 1,
+      "attempt_id": "fb009d6c929b4c52a759ed8a12ca9b90",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T16:02:37.665072+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "visual_mode": "archetype_explainer",
+        "selected_archetype": "weather_map",
+        "surface_caption": {
+          "english": "BUY SIGNAL",
+          "korean": "매수 신호를 확인할 때 보는 흐름을 설명",
+          "direction": "up",
+          "target": "the broad central geographic region of the single large curved illuminated map wall"
+        }
+      },
+      "completed_at": "2026-08-02T16:03:07.800532+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "info_fear",
+      "attempt": 1,
+      "attempt_id": "e42a10d843574a5da161e7ed3f1aa25f",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T16:03:10.139837+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "visual_mode": "archetype_explainer",
+        "selected_archetype": "risk_control_room",
+        "surface_caption": {
+          "english": "FEAR IS COOLING",
+          "korean": "시장의 공포가 진정되는 과정과 남은 변동",
+          "direction": "down",
+          "target": "the single large central analog gauge dial face embedded at eye level in the curved operations wall"
+        }
+      },
+      "completed_at": "2026-08-02T16:03:37.943198+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 508,
+  "budget_overrun_krw": 0
+}

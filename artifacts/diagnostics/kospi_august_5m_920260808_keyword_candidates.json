@@ -1,0 +1,808 @@
+{
+  "job_id": 920260808,
+  "seed": "8월 코스피 전망",
+  "category": "KOSPI",
+  "candidates": [
+    {
+      "keyword": "코스피",
+      "search_volume": 5900,
+      "competition": "MEDIUM",
+      "reason": "뉴스 59회 등장 · 모건스탠리, 코스피 '비중 확대'로 상향…\"'구천피' 간다\"",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": true,
+      "source_videos": [],
+      "score": 55,
+      "news_score": 0,
+      "market_data_score": 27,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": true,
+      "seed_overlap_terms": [
+        "KOSPI",
+        "코스피"
+      ],
+      "seed_overlap_count": 2
+    },
+    {
+      "keyword": "증시",
+      "search_volume": 1600,
+      "competition": "MEDIUM",
+      "reason": "뉴스 16회 등장 · 귀환한 '엔캐리 청산' 공포…2년 전 '블랙먼데이' 악몽, 韓 증시 또 덮치나",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": true,
+      "source_videos": [],
+      "score": 55,
+      "news_score": 0,
+      "market_data_score": 27,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": true,
+      "seed_overlap_terms": [],
+      "seed_overlap_count": 0
+    },
+    {
+      "keyword": "주식",
+      "search_volume": 1300,
+      "competition": "MEDIUM",
+      "reason": "뉴스 13회 등장 · 모건스탠리, 韓 주식 비중 확대로 상향…\"코스피 9,000 다시 간다\" - 연합인포맥스",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": true,
+      "source_videos": [],
+      "score": 55,
+      "news_score": 0,
+      "market_data_score": 27,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": true,
+      "seed_overlap_terms": [
+        "KOSPI",
+        "코스피"
+      ],
+      "seed_overlap_count": 2
+    },
+    {
+      "keyword": "한국",
+      "search_volume": 1000,
+      "competition": "MEDIUM",
+      "reason": "뉴스 10회 등장 · 한국 주식 ‘사팔사팔’... 외국인들 왜 이러나? - 조선일보",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": true,
+      "source_videos": [],
+      "score": 55,
+      "news_score": 0,
+      "market_data_score": 27,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": true,
+      "seed_overlap_terms": [],
+      "seed_overlap_count": 0
+    },
+    {
+      "keyword": "반도체",
+      "search_volume": 1200,
+      "competition": "MEDIUM",
+      "reason": "뉴스 12회 등장 · 한국 코스피지수, 2008년 이후 최악의 달 보낸 뒤 반도체주 하락에 4% 급락 - Investing.com",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": true,
+      "source_videos": [],
+      "score": 53,
+      "news_score": 0,
+      "market_data_score": 25,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": true,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": false,
+      "seed_overlap_terms": [
+        "KOSPI"
+      ],
+      "seed_overlap_count": 1
+    },
+    {
+      "keyword": "하락",
+      "search_volume": 900,
+      "competition": "MEDIUM",
+      "reason": "뉴스 9회 등장 · 팬오션, 2분기 호실적에도 9% 하락...증권가 \"밸류에이션 재평가 기대\"",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": false,
+      "source_videos": [],
+      "score": 53,
+      "news_score": 0,
+      "market_data_score": 25,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": true,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": false,
+      "seed_overlap_terms": [],
+      "seed_overlap_count": 0
+    },
+    {
+      "keyword": "급락",
+      "search_volume": 1900,
+      "competition": "MEDIUM",
+      "reason": "뉴스 19회 등장 · 엔화 급락 후 또 나온 '엔캐리 청산' 공포…현 시점 투자전략은",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": false,
+      "source_videos": [],
+      "score": 44,
+      "news_score": 0,
+      "market_data_score": 17,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": false,
+      "seed_overlap_terms": [],
+      "seed_overlap_count": 0
+    },
+    {
+      "keyword": "모건스탠리",
+      "search_volume": 1000,
+      "competition": "MEDIUM",
+      "reason": "뉴스 10회 등장 · 모건스탠리, 코스피 '비중 확대'로 상향…\"'구천피' 간다\"",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": false,
+      "source_videos": [],
+      "score": 44,
+      "news_score": 0,
+      "market_data_score": 17,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": false,
+      "seed_overlap_terms": [
+        "KOSPI",
+        "코스피"
+      ],
+      "seed_overlap_count": 2
+    },
+    {
+      "keyword": "비중",
+      "search_volume": 1000,
+      "competition": "MEDIUM",
+      "reason": "뉴스 10회 등장 · 모건스탠리, 코스피 '비중 확대'로 상향…\"'구천피' 간다\"",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": false,
+      "source_videos": [],
+      "score": 44,
+      "news_score": 0,
+      "market_data_score": 17,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": false,
+      "seed_overlap_terms": [
+        "KOSPI",
+        "코스피"
+      ],
+      "seed_overlap_count": 2
+    },
+    {
+      "keyword": "반등",
+      "search_volume": 900,
+      "competition": "MEDIUM",
+      "reason": "뉴스 9회 등장 · 안전자산 지위 상실한 금…가격 반등 요건 3가지는?",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": false,
+      "source_videos": [],
+      "score": 44,
+      "news_score": 0,
+      "market_data_score": 17,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": false,
+      "seed_overlap_terms": [],
+      "seed_overlap_count": 0
+    },
+    {
+      "keyword": "확대",
+      "search_volume": 800,
+      "competition": "MEDIUM",
+      "reason": "뉴스 8회 등장 · 모건스탠리, 코스피 '비중 확대'로 상향…\"'구천피' 간다\"",
+      "content_angle": "",
+      "source": "news",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "is_outperformer": false,
+      "source_videos": [],
+      "score": 44,
+      "news_score": 0,
+      "market_data_score": 17,
+      "category_score": 20,
+      "youtube_score": null,
+      "metrics_available": false,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": false,
+      "seed_overlap_terms": [
+        "KOSPI",
+        "코스피"
+      ],
+      "seed_overlap_count": 2
+    },
+    {
+      "keyword": "8월 코스피 전망",
+      "search_volume": 0,
+      "competition": "UNAVAILABLE",
+      "reason": "입력 주제입니다. 최신 직접 근거가 부족하면 자동 확정하지 않습니다.",
+      "content_angle": "입력 주제를 최신 뉴스와 시장 데이터로 검증합니다.",
+      "source": "input",
+      "estimated_interest": "medium",
+      "engagement_ratio": 0.0,
+      "outperformance_index": 0.0,
+      "velocity_vph": 0.0,
+      "evidence_video_ids": [],
+      "is_outperformer": false,
+      "source_videos": [],
+      "seed_priority": true,
+      "metrics_available": false,
+      "score": 44,
+      "news_score": 0,
+      "market_data_score": 17,
+      "category_score": 20,
+      "youtube_score": null,
+      "evidence": {
+        "news_count": 0,
+        "latest_news_at": null,
+        "news_sources": [],
+        "numeric_claims_verified": null,
+        "market_metrics": [
+          "kr.index.kospi",
+          "kr.market_indicators.usd_krw"
+        ],
+        "youtube_data_available": false,
+        "evidence_video_ids": [],
+        "news_lookup_failed": false
+      },
+      "auto_confirm_eligible": false,
+      "seed_overlap_terms": [
+        "KOSPI",
+        "코스피"
+      ],
+      "seed_overlap_count": 2
+    }
+  ],
+  "market_snapshot": {
+    "category": "KOSPI",
+    "keyword": "8월 코스피 전망",
+    "collected_at": "2026-08-03T14:30:00.662290",
+    "kr": {
+      "index": {
+        "kospi": {
+          "close": 6257.45,
+          "change": -338.0,
+          "change_pct": -5.12,
+          "volume": 272959301,
+          "trading_value": 26334639979834
+        },
+        "kosdaq": {
+          "close": 737.35,
+          "change": 17.590000000000032,
+          "change_pct": 2.44,
+          "volume": 431221416
+        }
+      },
+      "chart_series": {
+        "kospi": [
+          {
+            "date": "2026-06-22",
+            "close": 9114.55
+          },
+          {
+            "date": "2026-06-23",
+            "close": 8203.84
+          },
+          {
+            "date": "2026-06-24",
+            "close": 8471.02
+          },
+          {
+            "date": "2026-06-25",
+            "close": 8930.3
+          },
+          {
+            "date": "2026-06-26",
+            "close": 8411.21
+          },
+          {
+            "date": "2026-06-29",
+            "close": 8394.65
+          },
+          {
+            "date": "2026-06-30",
+            "close": 8476.48
+          },
+          {
+            "date": "2026-07-01",
+            "close": 8303.41
+          },
+          {
+            "date": "2026-07-02",
+            "close": 7648.09
+          },
+          {
+            "date": "2026-07-03",
+            "close": 8088.34
+          },
+          {
+            "date": "2026-07-06",
+            "close": 8051.33
+          },
+          {
+            "date": "2026-07-07",
+            "close": 7656.31
+          },
+          {
+            "date": "2026-07-08",
+            "close": 7246.79
+          },
+          {
+            "date": "2026-07-09",
+            "close": 7291.91
+          },
+          {
+            "date": "2026-07-10",
+            "close": 7475.94
+          },
+          {
+            "date": "2026-07-13",
+            "close": 6806.93
+          },
+          {
+            "date": "2026-07-14",
+            "close": 6856.83
+          },
+          {
+            "date": "2026-07-15",
+            "close": 7284.41
+          },
+          {
+            "date": "2026-07-16",
+            "close": 6820.6
+          },
+          {
+            "date": "2026-07-20",
+            "close": 6516.27
+          },
+          {
+            "date": "2026-07-21",
+            "close": 6747.95
+          },
+          {
+            "date": "2026-07-22",
+            "close": 6797.7
+          },
+          {
+            "date": "2026-07-23",
+            "close": 7096.89
+          },
+          {
+            "date": "2026-07-24",
+            "close": 6690.62
+          },
+          {
+            "date": "2026-07-27",
+            "close": 6755.75
+          },
+          {
+            "date": "2026-07-28",
+            "close": 6023.66
+          },
+          {
+            "date": "2026-07-29",
+            "close": 5663.24
+          },
+          {
+            "date": "2026-07-30",
+            "close": 5593.56
+          },
+          {
+            "date": "2026-07-31",
+            "close": 6595.45
+          },
+          {
+            "date": "2026-08-03",
+            "close": 6257.45
+          }
+        ],
+        "kosdaq": [
+          {
+            "date": "2026-06-22",
+            "close": 968.4
+          },
+          {
+            "date": "2026-06-23",
+            "close": 891.52
+          },
+          {
+            "date": "2026-06-24",
+            "close": 909.31
+          },
+          {
+            "date": "2026-06-25",
+            "close": 887.81
+          },
+          {
+            "date": "2026-06-26",
+            "close": 851.37
+          },
+          {
+            "date": "2026-06-29",
+            "close": 920.57
+          },
+          {
+            "date": "2026-06-30",
+            "close": 916.18
+          },
+          {
+            "date": "2026-07-01",
+            "close": 929.35
+          },
+          {
+            "date": "2026-07-02",
+            "close": 866.72
+          },
+          {
+            "date": "2026-07-03",
+            "close": 868.41
+          },
+          {
+            "date": "2026-07-06",
+            "close": 847.07
+          },
+          {
+            "date": "2026-07-07",
+            "close": 831.23
+          },
+          {
+            "date": "2026-07-08",
+            "close": 785.0
+          },
+          {
+            "date": "2026-07-09",
+            "close": 794.0
+          },
+          {
+            "date": "2026-07-10",
+            "close": 837.43
+          },
+          {
+            "date": "2026-07-13",
+            "close": 799.36
+          },
+          {
+            "date": "2026-07-14",
+            "close": 783.98
+          },
+          {
+            "date": "2026-07-15",
+            "close": 829.43
+          },
+          {
+            "date": "2026-07-16",
+            "close": 791.84
+          },
+          {
+            "date": "2026-07-20",
+            "close": 749.64
+          },
+          {
+            "date": "2026-07-21",
+            "close": 753.34
+          },
+          {
+            "date": "2026-07-22",
+            "close": 751.09
+          },
+          {
+            "date": "2026-07-23",
+            "close": 790.28
+          },
+          {
+            "date": "2026-07-24",
+            "close": 748.22
+          },
+          {
+            "date": "2026-07-27",
+            "close": 764.86
+          },
+          {
+            "date": "2026-07-28",
+            "close": 705.85
+          },
+          {
+            "date": "2026-07-29",
+            "close": 662.68
+          },
+          {
+            "date": "2026-07-30",
+            "close": 644.78
+          },
+          {
+            "date": "2026-07-31",
+            "close": 719.76
+          },
+          {
+            "date": "2026-08-03",
+            "close": 737.35
+          }
+        ]
+      },
+      "supply_demand": {},
+      "top_stocks": [
+        {
+          "name": "삼성전자",
+          "symbol": "005930",
+          "market_cap": "+14,001,837억원",
+          "market_cap_value": 1400183726616000.0
+        },
+        {
+          "name": "SK하이닉스",
+          "symbol": "000660",
+          "market_cap": "+11,446,815억원",
+          "market_cap_value": 1144681535955000.0
+        },
+        {
+          "name": "삼성전자우",
+          "symbol": "005935",
+          "market_cap": "+1,428,220억원",
+          "market_cap_value": 142822074134000.0
+        },
+        {
+          "name": "SK스퀘어",
+          "symbol": "402340",
+          "market_cap": "+1,352,573억원",
+          "market_cap_value": 135257345650000.0
+        },
+        {
+          "name": "삼성전기",
+          "symbol": "009150",
+          "market_cap": "+882,132억원",
+          "market_cap_value": 88213254976000.0
+        },
+        {
+          "name": "현대차",
+          "symbol": "005380",
+          "market_cap": "+804,698억원",
+          "market_cap_value": 80469802038000.0
+        },
+        {
+          "name": "LG에너지솔루션",
+          "symbol": "373220",
+          "market_cap": "+739,440억원",
+          "market_cap_value": 73944000000000.0
+        },
+        {
+          "name": "삼성바이오로직스",
+          "symbol": "207940",
+          "market_cap": "+658,720억원",
+          "market_cap_value": 65872023273000.0
+        },
+        {
+          "name": "KB금융",
+          "symbol": "105560",
+          "market_cap": "+601,195억원",
+          "market_cap_value": 60119570913000.0
+        },
+        {
+          "name": "삼성생명",
+          "symbol": "032830",
+          "market_cap": "+575,000억원",
+          "market_cap_value": 57500000000000.0
+        }
+      ],
+      "market_indicators": {
+        "usd_krw": 1427.85
+      },
+      "data_date": "2026-08-03"
+    },
+    "us": null,
+    "associated_data": null
+  },
+  "news_keyword_count": 15,
+  "yt_candidate_count": 1,
+  "time_interpretation": {
+    "detected": false,
+    "requires_evidence": false,
+    "message": "시간 조건 없음"
+  },
+  "top_candidate_keyword": "코스피",
+  "auto_confirmable": true,
+  "topic_evidence_required": false
+}

@@ -156,10 +156,6 @@ public class LongformService {
                 String.format("롱폼 조립: %.0f초, %d씬",
                         result.getDurationSeconds(), result.getSceneCount()));
 
-        java.math.BigDecimal klingCost = CostEstimator.falKling(introSeconds);
-        costService.record(jobId, "FAL_KLING_INTRO", klingCost, "USD",
-                String.format("인트로 움짤 %.0f초", introSeconds));
-
         // Asset 저장
         Asset asset = Asset.builder()
                 .jobId(jobId)
@@ -190,7 +186,7 @@ public class LongformService {
         // [체크리스트 피드백 반영] 유튜브 패키지(썸네일, 제목, 더보기글, 태그) 자동 생성 추가
         try {
             log.info("유튜브 패키지(썸네일, 제목, 더보기글) 자동 생성 시작: jobId={}", jobId);
-            jobService.generateYoutubePackage(jobId);
+            log.info("미리보기 승인 전 썸네일 자동 생성을 건너뜁니다: jobId={}", jobId);
         } catch (Exception e) {
             log.error("유튜브 패키지 자동 생성 실패: {}", e.getMessage());
         }
@@ -474,7 +470,7 @@ public class LongformService {
         try {
             log.info("수정 반영(재조립): 유튜브 패키지(썸네일, 제목, 더보기글) 자동 생성 시작: jobId={}", jobId);
             // 기존 메타데이터/썸네일이 있을 수 있으므로 덮어쓰기 생성
-            jobService.generateYoutubePackage(jobId);
+            log.info("재조립 후 썸네일 자동 생성을 건너뜁니다: jobId={}", jobId);
         } catch (Exception e) {
             log.error("수정 반영(재조립): 유튜브 패키지 자동 생성 실패: {}", e.getMessage());
         }

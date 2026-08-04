@@ -1,0 +1,107 @@
+{
+  "status": "completed_recovered_no_api_call",
+  "run_id": "kospi_august_2026_style_contract_actual",
+  "scene_count": 4,
+  "model": "gemini-3-pro-image",
+  "estimated_per_image_usd": 0.14,
+  "estimated_total_usd": 0.56,
+  "estimated_total_krw": 1016,
+  "automatic_retry": false,
+  "reference_artifacts": [
+    {
+      "role": "character",
+      "filename": "character_reference_v4_identity_clean.png",
+      "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+    },
+    {
+      "role": "style",
+      "filename": "style_reference_v4_medium_clean.png",
+      "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+    }
+  ],
+  "scenes": [
+    {
+      "scene_id": "kospi_august_semiconductor",
+      "scene_type": "graph",
+      "archetype": "data_lab",
+      "tier": "hero",
+      "visual_text_policy": "script_captioned",
+      "style_contract_version": "2026-08-02-r2-target-cartoon-style-lock-v1",
+      "verified_overlay_present": false
+    },
+    {
+      "scene_id": "kospi_august_dollar",
+      "scene_type": "graph",
+      "archetype": "data_lab",
+      "tier": "hero",
+      "visual_text_policy": "script_captioned",
+      "style_contract_version": "2026-08-02-r2-target-cartoon-style-lock-v1",
+      "verified_overlay_present": false
+    },
+    {
+      "scene_id": "kospi_august_fear",
+      "scene_type": "metric",
+      "archetype": "risk_control_room",
+      "tier": "hero",
+      "visual_text_policy": "script_captioned",
+      "style_contract_version": "2026-08-02-r2-target-cartoon-style-lock-v1",
+      "verified_overlay_present": false
+    },
+    {
+      "scene_id": "general_port_narrative_04",
+      "scene_type": "general",
+      "archetype": "port_emergency",
+      "tier": "body",
+      "visual_text_policy": "strict_textless",
+      "style_contract_version": "2026-08-02-r2-target-cartoon-style-lock-v1",
+      "verified_overlay_present": false
+    }
+  ],
+  "cost_status": "unverified_until_console_reconciliation",
+  "console_reconciliation_required_before_next_paid_stage": true,
+  "request_ledger_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\_request_ledger.json",
+  "results": [
+    {
+      "scene_id": "kospi_august_semiconductor",
+      "status": "recovered_existing_file",
+      "background_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\kospi_august_semiconductor_background.png",
+      "final_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\kospi_august_semiconductor.png",
+      "cost_status": "request_ledger_reconciliation_required"
+    },
+    {
+      "scene_id": "kospi_august_dollar",
+      "status": "recovered_existing_file",
+      "background_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\kospi_august_dollar_background.png",
+      "final_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\kospi_august_dollar.png",
+      "cost_status": "request_ledger_reconciliation_required"
+    },
+    {
+      "scene_id": "kospi_august_fear",
+      "status": "recovered_existing_file",
+      "background_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\kospi_august_fear_background.png",
+      "final_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\kospi_august_fear.png",
+      "cost_status": "request_ledger_reconciliation_required"
+    },
+    {
+      "scene_id": "general_port_narrative_04",
+      "status": "recovered_existing_file",
+      "background_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\general_port_narrative_04_background.png",
+      "final_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\kospi_july_2026\\actual_four_scene\\kospi_august_2026_style_contract_actual\\general_port_narrative_04.png",
+      "cost_status": "request_ledger_reconciliation_required"
+    }
+  ],
+  "ledger": {
+    "video_id": "kospi_august_2026_style_contract_actual",
+    "total_spent_krw": 0,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 0,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": []
+  }
+}

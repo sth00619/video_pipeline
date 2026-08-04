@@ -16,11 +16,27 @@ from .bfl_flux_provider import ImageResult
 
 class GeminiModel(str, Enum):
     PRO = "gemini-3-pro-image"
-    FLASH = "gemini-3.1-flash-image"
 
 
 class GeminiProviderError(RuntimeError):
     """Gemini 생성 또는 비용 계약 준비 실패."""
+
+
+class ReferenceAssetMissingError(GeminiProviderError):
+    """V5 화풍 계약에 필요한 승인 참조 자산이 없을 때 발생한다."""
+
+
+def _load_default_references() -> list[str]:
+    """캐릭터·화풍 승인 참조를 고정 순서로 반환한다."""
+    root = Path(__file__).resolve().parents[3] / "out" / "references"
+    paths = [
+        root / "character_reference_v4_identity_clean.png",
+        root / "style_reference_v4_medium_clean.png",
+    ]
+    for path in paths:
+        if not path.is_file():
+            raise ReferenceAssetMissingError(f"V5 승인 참조 자산 없음: {path}")
+    return [str(path) for path in paths]
 
 
 class GeminiProvider:
@@ -36,7 +52,9 @@ class GeminiProvider:
         Gemini가 응답으로 실비를 주지 않으므로 기본값을 코드에 숨기지 않는다.
         P1-b 실행 전 현재 계약 단가를 환경변수로 명시해야 한다.
         """
-        name = "V5_GEMINI_PRO_IMAGE_2K_ESTIMATE_USD" if model == GeminiModel.PRO else "V5_GEMINI_FLASH_IMAGE_2K_ESTIMATE_USD"
+        if model != GeminiModel.PRO:
+            raise GeminiProviderError("V5 이미지는 gemini-3-pro-image만 허용합니다.")
+        name = "V5_GEMINI_PRO_IMAGE_2K_ESTIMATE_USD"
         raw = os.environ.get(name, "").strip()
         if not raw:
             raise GeminiProviderError(f"{name}가 필요합니다. 승인된 현재 계약 단가를 설정하세요.")
@@ -57,18 +75,45 @@ class GeminiProvider:
             raise GeminiProviderError("GEMINI_API_KEY 미설정")
         if self._use_batch:
             raise GeminiProviderError("V5 Gemini batch 생성은 P1-b 비교 범위 밖입니다.")
+        if reference_image_paths is None:
+            reference_image_paths = _load_default_references()
 
         # 기존 이미지 프로바이더는 image_provider=gemini + Pro 조합에서 FAL/Pollinations
         # 하향 폴백을 거부한다. 따라서 비교 결과의 공급자가 섞이지 않는다.
         from app.providers.real.image import NanaBananaProvider
 
+        reference_names = [Path(path).name.lower() for path in reference_image_paths or []]
+        character_indices = [index + 1 for index, name in enumerate(reference_names) if "character_reference" in name]
+        style_indices = [index + 1 for index, name in enumerate(reference_names) if "style_reference" in name]
+        if character_indices:
+            character_index = character_indices[0]
+            reference_contract = (
+                f"Reference image {character_index} is the authoritative channel mascot identity model sheet. "
+                f"Preserve the mascot identity from image {character_index} exactly: one round gold-coin silhouette, the same face proportions, "
+                "eye shape, iris treatment, rim thickness, and dark outline weight. Keep exactly one brown fedora hat, navy suit, "
+                "white gloves, and brown shoes; expression and arm pose may change, but never redesign or restyle the mascot. "
+            )
+        elif len(reference_names) == 1 and not style_indices:
+            # 기존 단일 캐릭터 참조 호출과의 호환성이다. 파일명이 명확한 스타일
+            # 참조인 경우에는 이 분기로 들어오지 않는다.
+            reference_contract = (
+                "Reference image 1 is the authoritative channel mascot identity model sheet. "
+                "Preserve the mascot identity from image 1 exactly: one round gold-coin silhouette, the same face proportions, "
+                "eye shape, iris treatment, rim thickness, and dark outline weight. Keep exactly one brown fedora hat, navy suit, "
+                "white gloves, and brown shoes. "
+            )
+        else:
+            reference_contract = (
+                "No mascot identity reference is supplied. Do not invent or add a mascot unless the written prompt explicitly requires one. "
+            )
+        if style_indices:
+            reference_contract += (
+                f"Reference image {style_indices[0]} is visual style only: use its line weight, palette, and cel shading, "
+                "but do not treat it as a character identity and do not reproduce its individual marks. "
+            )
         prompt = (
-            "Reference image order is fixed: image 1 is the channel mascot identity; "
-            "image 2 is the approved line, palette, and cel-shading style. "
-            "Preserve the mascot identity from image 1 exactly: one round gold-coin silhouette, the same face proportions, "
-            "eye shape, iris treatment, rim thickness, and dark outline weight in every scene. Wardrobe and expression may change, "
-            "but never redesign or restyle the mascot. Use image 2 only as visual style. "
-            "Render one continuous full-bleed scene, never a split screen, comic panel, inset image, or internal frame. "
+            reference_contract
+            + "Render one continuous full-bleed scene, never a split screen, comic panel, inset image, or internal frame. "
             "Follow the placement instructions in the written prompt; do not invent framing guides. "
             "Do not reproduce marks from any reference image.\n\n" + prompt
         )

@@ -174,8 +174,12 @@ public class TtsService {
             StringBuilder narration = new StringBuilder();
             for (Object rawSection : sections) {
                 if (!(rawSection instanceof Map<?, ?> section)) continue;
-                Object value = section.get("content") != null
-                        ? section.get("content") : section.get("text");
+                // text_for_tts는 최종 승인된 발화 원문이다. content/text는
+                // 편집용 문구 또는 정규화 이전 초안일 수 있으므로 후순위로 둔다.
+                Object value = section.get("text_for_tts") != null
+                        ? section.get("text_for_tts")
+                        : (section.get("content") != null
+                            ? section.get("content") : section.get("text"));
                 if (value == null || value.toString().isBlank()) continue;
                 if (!narration.isEmpty()) narration.append("\n\n");
                 narration.append(value.toString().trim());

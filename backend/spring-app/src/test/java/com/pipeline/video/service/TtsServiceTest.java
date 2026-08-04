@@ -24,4 +24,21 @@ class TtsServiceTest {
         assertThat(providerCopy).isEqualTo("첫 문장입니다.\n\n둘째 문장입니다.");
         assertThat(providerCopy).doesNotContain("##", "씬 1", "급락");
     }
+
+    @Test
+    void providerCopyPrefersApprovedTtsTextOverEditorContent() {
+        Map<String, Object> meta = Map.of(
+                "script", "대체 원문",
+                "sections", List.of(
+                        Map.of(
+                                "content", "약 38포인트가 빠졌습니다.",
+                                "text_for_tts", "약 38퍼센트가 빠졌습니다."
+                        )
+                )
+        );
+
+        assertThat(TtsService.narrationFromMeta(meta))
+                .isEqualTo("약 38퍼센트가 빠졌습니다.")
+                .doesNotContain("포인트");
+    }
 }

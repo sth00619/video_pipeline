@@ -133,7 +133,10 @@ class ThumbnailV2Composer:
             else:
                 # A legacy job with no clean plate is still eligible for a
                 # proven chart/article frame, never for a second cutout.
-                variant_contract.template = "chart_warning"
+                # A comparison-structured script (A vs B) uses the same
+                # geometry with a left/right contrast tint instead, matching
+                # the reference channel's split-stage thumbnail composition.
+                variant_contract.template = "split_versus" if contract.comparison_mode else "chart_warning"
                 variant_contract.primary_subject = Subject(
                     kind="chart",
                     asset_id=str(source.get("scene_id") or source.get("id") or "scene_backdrop"),

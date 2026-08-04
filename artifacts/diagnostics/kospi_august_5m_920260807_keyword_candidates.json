@@ -1,0 +1,932 @@
+{
+    "job_id":  920260807,
+    "seed":  "8ì ì½ì¤í¼ ì ë§",
+    "category":  "KOSPI",
+    "candidates":  [
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ë¬ë¬ì íì¨ ë³ì",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ë¬ë¬/ì íì¨ì´ 1,427ìëë¡ ê³ íì¨ ìíê° ì§ìëê³  ìì¼ë©°, íì¨ì ì¸êµ­ì¸ ìê¸ê³¼ ì½ì¤í¼ ë°©í¥ì±ì ì§ì  ìí¥ì ë¯¸ì¹©ëë¤. ììºë¦¬ ì²­ì° ê³µí¬ì ë§ë¬¼ë ¤ íì¨ ë³ìë¥¼ 8ì ì ë§ì ì°ê²°íë ì½í\u0085ì¸  ììê° ëìµëë¤.",
+                           "content_angle":  "ë¬ë¬ì íì¨ ê³ ê³µ íì§ì´ 8ì ì½ì¤í¼ì ë¯¸ì¹ë ìí¥: íì¨ ìì  ìì´ ë°ë± ê°ë¥íê°",
+                           "source":  "news",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  true,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  62,
+                           "news_score":  16,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  1,
+                                            "latest_news_at":  "2026-08-01T21:05:01+00:00",
+                                            "news_sources":  [
+                                                                 "ì°í©ë´ì¤"
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  true,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ëª¨ê±´ì¤í ë¦¬ êµ¬ì²í¼",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ëª¨ê±´ì¤í ë¦¬ê° ì½ì¤í¼ë¥¼ \u0027ë¹ì¤ íë\u0027ë¡ ìí¥íë©° ì½ì¤í¼ 9,000 ì¬ëì  ê°ë¥ì±ì ì ìíìµëë¤. ì½ì¤í¼ê° ê¸ë½í ë  ì´ ë´ì¤ê° ê²¹ì¹ë©´ì ì ë¢° vs íì ë\u0085¼ìì´ ì»¤ì ¸ í´ë¦­ ì ì¸ì´ ê°í©ëë¤.",
+                           "content_angle":  "ëª¨ê±´ì¤í ë¦¬ \u0027êµ¬ì²í¼\u0027 ì ë§ì ê·¼ê±°ì íì¤ ê°ë¥ì± ê²í : ì§ê¸ ë¯¿ì´ë ëëê°",
+                           "source":  "news",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  true,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  44,
+                           "news_score":  0,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ììºë¦¬ ì²­ì° ê³µí¬",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ìí ê¸ë½ ì´í ììºë¦¬ ì²­ì° ì°ë ¤ê° ì¬ë¶ìíë©° ì½ì¤í¼ ê¸ë½ì íµì¬ ìì¸ì¼ë¡ ì§ëª©ë©ëë¤. 2ë\u0085 ì  ë¸ëë¨¼ë°ì´ ì\u0085ëª½ì ì¸ê¸í ë´ì¤ê° ë¤ì ë±ì¥í´ ìì²­ì ê³µí¬ ì¬ë¦¬ì ì§ê²°ë©ëë¤.",
+                           "content_angle":  "ììºë¦¬ ì²­ì°ì´ 8ì ì½ì¤í¼ë¥¼ ë ë®ì¹  ì ìëê°: 2ë\u0085 ì  ë¸ëë¨¼ë°ì´ì íì¬ ë¹êµ",
+                           "source":  "news",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  true,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  44,
+                           "news_score":  0,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ë°ëì²´ì£¼ íë½",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ë°ëì²´ì£¼ íë½ì´ ì½ì¤í¼ ê¸ë½ì ì§ì  ìì¸ ì¤ íëë¡ ë´ì¤ìì ë°ë³µ ì¸ê¸ë©ëë¤. 2008ë\u0085 ì´í ìµì\u0085ì ë¬ì ë³´ë¸ ì´í ë°ëì²´ê° 8ì ì½ì¤í¼ íë³µì ì´ì ì¸ì§ ê°ì¸í¬ìì ê´ì¬ì´ ì§ì¤ë  ìë°ì ììµëë¤.",
+                           "content_angle":  "ë°ëì²´ì£¼ ì¶ê° íë½ vs ë°ë±: 8ì ì½ì¤í¼ íë³µì íµì¬ ë³ì ì ê²",
+                           "source":  "news",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  true,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  44,
+                           "news_score":  0,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ì¸êµ­ì¸ íêµ­ ì£¼ì ë§¤ë§¤",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "\u0027íêµ­ ì£¼ì ì¬íì¬í\u0027 ë± ì¸êµ­ì¸ì íêµ­ ì£¼ì ë§¤ë§¤ í¨í´ì´ ë´ì¤ìì ì£¼ëª©ë°ê³  ììµëë¤. ì¸êµ­ì¸ ìê¸ì ì½ì¤í¼ ë°©í¥ì±ì ê²°ì íë íµì¬ ììë¡, 8ì ì ë§ê³¼ ì§ê²°ëë ì½í\u0085ì¸  ì£¼ì ì\u0085ëë¤.",
+                           "content_angle":  "ì¸êµ­ì¸ì ì íêµ­ ì£¼ìì ì¬ê³ íëê°: 8ì ìê¸ íë¦ì´ ì½ì¤í¼ ì ë§ì ë¯¸ì¹ë ìí¥",
+                           "source":  "news",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  true,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  44,
+                           "news_score":  0,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ì¸ë ¥ìê² ë¹íë ì¼ì±ì ì",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ì íë¸ í¸ë ë©ìì \u0027ì¸ë ¥ìê² ìë²½í ë¹íì\u0085¨ìµëë¤ ì¼ì±ì ì\u0027 ììì´ êµ¬ë\u0085ì ëë¹ ëì ì¢ìì ë¹ì¨ì ê¸°ë¡ ì¤ì´ë©°, ì¼ì±ì ìë ì½ì¤í¼ì íµì¬ êµ¬ì± ì¢\u0085ëª©ì\u0085ëë¤. ê¸ë½ì¥ìì ì¼ì±ì ì ìì§ìê³¼ ì½ì¤í¼ ì ë§ì ì°ê²°íë©´ ê´ì¬ëê° ëìµëë¤.",
+                           "content_angle":  "ì¼ì±ì ì ê¸ë½ì ë°°ê²½ê³¼ 8ì ì½ì¤í¼ ì ë§: ê°ì¸í¬ììë ì¸ë ¥ìê² ë ë¹íëê°",
+                           "source":  "both",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+                                                      "QaTSsdghSwE"
+                                                  ],
+                           "is_outperformer":  false,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  44,
+                           "news_score":  0,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+                                                                       "QaTSsdghSwE"
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ë¹ì¤ íë ìì ì¸ê°",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ëª¨ê±´ì¤í ë¦¬ì íêµ­ ì£¼ì \u0027ë¹ì¤ íë\u0027 ìí¥ ë´ì¤ê° 10í ì´ì ë±ì¥íìµëë¤. ê¸ë½ì¥ìì ê¸ë¡ë² IBì ë¹ì¤ íë ìê²¬ì ê°ì¸í¬ììê° ì´ë»ê² í´ìí´ì¼ íëì§ë ì¤ì©ì ì´ê³  ë\u0085¼ìì ì¸ ì½í\u0085ì¸  ì£¼ì ì\u0085ëë¤.",
+                           "content_angle":  "ëª¨ê±´ì¤í ë¦¬ ë¹ì¤ íë ìí¥ì ì½ì¤í¼ ê¸ë½ì¥ìì ì´ë»ê² ì½ì ê²ì¸ê°: 8ì ë§¤ì íì´ë° íë¨",
+                           "source":  "news",
+                           "estimated_interest":  "medium",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  false,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  44,
+                           "news_score":  0,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ 2008ë\u0085 ì´í ìµì\u0085 ì´í",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ë´ì¤ìì ì½ì¤í¼ê° 2008ë\u0085 ì´í ìµì\u0085ì ë¬ì ë³´ë¸ ì§íë¼ë ííì´ ë±ì¥íìµëë¤. ì­ì¬ì  ìµì\u0085 ì´í íë³µ í¨í´ì ë¶ìíë ê²ì 20ë¶ ë¶ëì ë°ì´í° ê¸°ë° ì½í\u0085ì¸ ë¡ ì í©í©ëë¤.",
+                           "content_angle":  "2008ë\u0085 ì´í ìµì\u0085ì ë¬ ì´í ì½ì¤í¼ë ì´ë»ê² ìì§ìë: 8ì ì­ì¬ì  í¨í´ ë¶ì",
+                           "source":  "news",
+                           "estimated_interest":  "medium",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  false,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  44,
+                           "news_score":  0,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ìì ìì° ì ëµ",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ê¸ ë± ìì ìì°ì ë°ë± ìê±´ ê´ë ¨ ë´ì¤ê° ë±ì¥íë©°, ì½ì¤í¼ ê¸ë½ êµ­ë©´ìì ê°ì¸í¬ììì ìì ìì° ì´ë ê´ì¬ì´ ëìì§ëë¤. ì½ì¤í¼ ë¶ì ì í¬í¸í´ë¦¬ì¤ ì¬í¸ ì ëµì ì¤ì©ì  ì½í\u0085ì¸ ë¡ íì¥ ê°ë¥í©ëë¤.",
+                           "content_angle":  "ì½ì¤í¼ ê¸ë½ 8ì, ìì ìì°ì¼ë¡ í¼í´ì¼ íë vs ì ì  ë§¤ì ê¸°íì¸ê°: í¬ìì ëµ ë¶ê¸°ì ",
+                           "source":  "news",
+                           "estimated_interest":  "medium",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  false,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  44,
+                           "news_score":  0,
+                           "market_data_score":  17,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  null,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ê²ì ìë ê·¸ëë¡ë¡, ì½ì¤í¼ê° 5% ì´ì ê¸ë½í ìí©ìì 8ì ë°©í¥ì±ì ëí ê°ì¸í¬ìì ê´ì¬ì´ ê·¹ëë¡ ëìì ¸ ììµëë¤. ëª¨ê±´ì¤í ë¦¬ì \u0027ë¹ì¤ íë\u0027 ìí¥ê³¼ ììºë¦¬ ì²­ì° ê³µí¬ê° ëìì ë¶ê°ëë©° ì ë§ ì½í\u0085ì¸  ììê° ì§ì¤ë  ìì ì\u0085ëë¤.",
+                           "content_angle":  "ì½ì¤í¼ ê¸ë½ ì´í 8ì ë°©í¥ì±: ë°ë± ê°ë¥ì± vs ì¶ê° íë½ ë¦¬ì¤í¬ë¥¼ ë´ì¤ ê·¼ê±° ì¤ì¬ì¼ë¡ ë¶ì",
+                           "source":  "news",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  false,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  35,
+                           "news_score":  0,
+                           "market_data_score":  10,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  false,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ê¸ë½ ì´í ë°ë± ì ëµ",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ì½ì¤í¼ê° 5%ë ê¸ë½ì ê¸°ë¡í ì§íë¡, \u0027ë°ë±\u0027 í¤ìëê° ë´ì¤ì ë¤ì ë±ì¥íë©° ê°ì¸í¬ììì í¬ìì ëµ ììê° ê¸ì¦í©ëë¤. ê¸ë½ ì§í ëì ì ëµì 20ë¶ ììì¼ë¡ ì¶©ë¶í ë¤ë£° ì ìë ê¹ì´ê° ììµëë¤.",
+                           "content_angle":  "ì½ì¤í¼ ê¸ë½ ì§í ê°ì¸í¬ììê° ì·¨í´ì¼ í  8ì í¬ìì ëµ: ë§¤ì íì´ë°ê³¼ ëìë²",
+                           "source":  "news",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  false,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  35,
+                           "news_score":  0,
+                           "market_data_score":  10,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  false,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       },
+                       {
+                           "keyword":  "8ì ì½ì¤í¼ ì ë§ ì½ì¤ë¥ ê°ì¸ ê´´ë¦¬",
+                           "search_volume":  0,
+                           "competition":  "MEDIUM",
+                           "reason":  "ì½ì¤í¼ê° 5% ì´ì ê¸ë½íë ë  ì½ì¤ë¥ì´ 2% ì´ì ìì¹íë ì´ë¡ì  ê´´ë¦¬ê° ë°ìíìµëë¤. ì´ ìë°ë íë¦ì ìì¸ê³¼ 8ì ì§ì ì¬ë¶ë ê°ì¸í¬ìììê² ë§¤ì° ì¤ì©ì ì¸ ì ë³´ê° ë©ëë¤.",
+                           "content_angle":  "ì½ì¤í¼ ê¸ë½ vs ì½ì¤ë¥ ê°ì¸: 8ììë ì´ ê´´ë¦¬ê° ì§ìë ê¹, ì´ëì í¬ìí´ì¼ íë",
+                           "source":  "news",
+                           "estimated_interest":  "high",
+                           "engagement_ratio":  0.0,
+                           "outperformance_index":  0.0,
+                           "velocity_vph":  0.0,
+                           "evidence_video_ids":  [
+
+                                                  ],
+                           "is_outperformer":  false,
+                           "source_videos":  [
+
+                                             ],
+                           "score":  35,
+                           "news_score":  0,
+                           "market_data_score":  10,
+                           "category_score":  20,
+                           "youtube_score":  null,
+                           "metrics_available":  false,
+                           "evidence":  {
+                                            "news_count":  0,
+                                            "latest_news_at":  null,
+                                            "news_sources":  [
+
+                                                             ],
+                                            "numeric_claims_verified":  false,
+                                            "market_metrics":  [
+                                                                   "kr.index.kospi",
+                                                                   "kr.market_indicators.usd_krw"
+                                                               ],
+                                            "youtube_data_available":  false,
+                                            "evidence_video_ids":  [
+
+                                                                   ],
+                                            "news_lookup_failed":  false
+                                        },
+                           "auto_confirm_eligible":  false,
+                           "seed_overlap_terms":  [
+                                                      "KOSPI",
+                                                      "ì½ì¤í¼"
+                                                  ],
+                           "seed_overlap_count":  2
+                       }
+                   ],
+    "market_snapshot":  {
+                            "category":  "KOSPI",
+                            "keyword":  "8ì ì½ì¤í¼ ì ë§",
+                            "collected_at":  "2026-08-03T14:28:00.328998",
+                            "kr":  {
+                                       "index":  {
+                                                     "kospi":  {
+                                                                   "close":  6257.45,
+                                                                   "change":  -338.0,
+                                                                   "change_pct":  -5.12,
+                                                                   "volume":  272959301,
+                                                                   "trading_value":  26334639979834
+                                                               },
+                                                     "kosdaq":  {
+                                                                    "close":  737.35,
+                                                                    "change":  17.590000000000032,
+                                                                    "change_pct":  2.44,
+                                                                    "volume":  431221416
+                                                                }
+                                                 },
+                                       "chart_series":  {
+                                                            "kospi":  [
+                                                                          {
+                                                                              "date":  "2026-06-22",
+                                                                              "close":  9114.55
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-06-23",
+                                                                              "close":  8203.84
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-06-24",
+                                                                              "close":  8471.02
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-06-25",
+                                                                              "close":  8930.3
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-06-26",
+                                                                              "close":  8411.21
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-06-29",
+                                                                              "close":  8394.65
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-06-30",
+                                                                              "close":  8476.48
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-01",
+                                                                              "close":  8303.41
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-02",
+                                                                              "close":  7648.09
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-03",
+                                                                              "close":  8088.34
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-06",
+                                                                              "close":  8051.33
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-07",
+                                                                              "close":  7656.31
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-08",
+                                                                              "close":  7246.79
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-09",
+                                                                              "close":  7291.91
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-10",
+                                                                              "close":  7475.94
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-13",
+                                                                              "close":  6806.93
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-14",
+                                                                              "close":  6856.83
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-15",
+                                                                              "close":  7284.41
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-16",
+                                                                              "close":  6820.6
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-20",
+                                                                              "close":  6516.27
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-21",
+                                                                              "close":  6747.95
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-22",
+                                                                              "close":  6797.7
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-23",
+                                                                              "close":  7096.89
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-24",
+                                                                              "close":  6690.62
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-27",
+                                                                              "close":  6755.75
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-28",
+                                                                              "close":  6023.66
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-29",
+                                                                              "close":  5663.24
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-30",
+                                                                              "close":  5593.56
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-07-31",
+                                                                              "close":  6595.45
+                                                                          },
+                                                                          {
+                                                                              "date":  "2026-08-03",
+                                                                              "close":  6257.45
+                                                                          }
+                                                                      ],
+                                                            "kosdaq":  [
+                                                                           {
+                                                                               "date":  "2026-06-22",
+                                                                               "close":  968.4
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-06-23",
+                                                                               "close":  891.52
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-06-24",
+                                                                               "close":  909.31
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-06-25",
+                                                                               "close":  887.81
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-06-26",
+                                                                               "close":  851.37
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-06-29",
+                                                                               "close":  920.57
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-06-30",
+                                                                               "close":  916.18
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-01",
+                                                                               "close":  929.35
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-02",
+                                                                               "close":  866.72
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-03",
+                                                                               "close":  868.41
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-06",
+                                                                               "close":  847.07
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-07",
+                                                                               "close":  831.23
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-08",
+                                                                               "close":  785.0
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-09",
+                                                                               "close":  794.0
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-10",
+                                                                               "close":  837.43
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-13",
+                                                                               "close":  799.36
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-14",
+                                                                               "close":  783.98
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-15",
+                                                                               "close":  829.43
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-16",
+                                                                               "close":  791.84
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-20",
+                                                                               "close":  749.64
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-21",
+                                                                               "close":  753.34
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-22",
+                                                                               "close":  751.09
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-23",
+                                                                               "close":  790.28
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-24",
+                                                                               "close":  748.22
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-27",
+                                                                               "close":  764.86
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-28",
+                                                                               "close":  705.85
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-29",
+                                                                               "close":  662.68
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-30",
+                                                                               "close":  644.78
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-07-31",
+                                                                               "close":  719.76
+                                                                           },
+                                                                           {
+                                                                               "date":  "2026-08-03",
+                                                                               "close":  737.35
+                                                                           }
+                                                                       ]
+                                                        },
+                                       "supply_demand":  {
+
+                                                         },
+                                       "top_stocks":  [
+                                                          {
+                                                              "name":  "ì¼ì±ì ì",
+                                                              "symbol":  "005930",
+                                                              "market_cap":  "+14,001,837ìµì",
+                                                              "market_cap_value":  1400183726616000.0
+                                                          },
+                                                          {
+                                                              "name":  "SKíì´ëì¤",
+                                                              "symbol":  "000660",
+                                                              "market_cap":  "+11,446,815ìµì",
+                                                              "market_cap_value":  1144681535955000.0
+                                                          },
+                                                          {
+                                                              "name":  "ì¼ì±ì ìì°",
+                                                              "symbol":  "005935",
+                                                              "market_cap":  "+1,428,220ìµì",
+                                                              "market_cap_value":  142822074134000.0
+                                                          },
+                                                          {
+                                                              "name":  "SKì¤íì´",
+                                                              "symbol":  "402340",
+                                                              "market_cap":  "+1,352,573ìµì",
+                                                              "market_cap_value":  135257345650000.0
+                                                          },
+                                                          {
+                                                              "name":  "ì¼ì±ì ê¸°",
+                                                              "symbol":  "009150",
+                                                              "market_cap":  "+882,132ìµì",
+                                                              "market_cap_value":  88213254976000.0
+                                                          },
+                                                          {
+                                                              "name":  "íëì°¨",
+                                                              "symbol":  "005380",
+                                                              "market_cap":  "+804,698ìµì",
+                                                              "market_cap_value":  80469802038000.0
+                                                          },
+                                                          {
+                                                              "name":  "LGìëì§ìë£¨ì\u0085",
+                                                              "symbol":  "373220",
+                                                              "market_cap":  "+739,440ìµì",
+                                                              "market_cap_value":  73944000000000.0
+                                                          },
+                                                          {
+                                                              "name":  "ì¼ì±ë°ì´ì¤ë¡ì§ì¤",
+                                                              "symbol":  "207940",
+                                                              "market_cap":  "+658,720ìµì",
+                                                              "market_cap_value":  65872023273000.0
+                                                          },
+                                                          {
+                                                              "name":  "KBê¸ìµ",
+                                                              "symbol":  "105560",
+                                                              "market_cap":  "+601,195ìµì",
+                                                              "market_cap_value":  60119570913000.0
+                                                          },
+                                                          {
+                                                              "name":  "ì¼ì±ìëª\u0085",
+                                                              "symbol":  "032830",
+                                                              "market_cap":  "+575,000ìµì",
+                                                              "market_cap_value":  57500000000000.0
+                                                          }
+                                                      ],
+                                       "market_indicators":  {
+                                                                 "usd_krw":  1427.68
+                                                             },
+                                       "data_date":  "2026-08-03"
+                                   },
+                            "us":  null,
+                            "associated_data":  null
+                        },
+    "news_keyword_count":  15,
+    "yt_candidate_count":  1,
+    "time_interpretation":  {
+                                "detected":  false,
+                                "requires_evidence":  false,
+                                "message":  "ìê° ì¡°ê±´ ìì"
+                            },
+    "top_candidate_keyword":  "8ì ì½ì¤í¼ ì ë§ ë¬ë¬ì íì¨ ë³ì",
+    "auto_confirmable":  true,
+    "topic_evidence_required":  false
+}

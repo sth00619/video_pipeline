@@ -1,0 +1,150 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:3",
+      "attempt": 1,
+      "attempt_id": "43929b408e0247a79608209558d14709",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T09:32:55.954031+00:00",
+      "request_metadata": {
+        "policy_version": "under-20m-40000-2026-08-02"
+      },
+      "completed_at": "2026-08-02T09:33:34.903371+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:5",
+      "attempt": 1,
+      "attempt_id": "0c80be32239c4168b751d7005d879aec",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T09:32:56.005129+00:00",
+      "request_metadata": {
+        "policy_version": "under-20m-40000-2026-08-02"
+      },
+      "completed_at": "2026-08-02T09:33:33.149981+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:4",
+      "attempt": 1,
+      "attempt_id": "6753509101a940feab690b9de8b119b8",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T09:32:56.029680+00:00",
+      "request_metadata": {
+        "policy_version": "under-20m-40000-2026-08-02"
+      },
+      "completed_at": "2026-08-02T09:33:33.024819+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:0",
+      "attempt": 1,
+      "attempt_id": "4a9cc4b20bb544f4a7103eb7bc281a92",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T09:32:56.054777+00:00",
+      "request_metadata": {
+        "policy_version": "under-20m-40000-2026-08-02"
+      },
+      "completed_at": "2026-08-02T09:33:35.508809+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:1",
+      "attempt": 1,
+      "attempt_id": "138727db53c242118eefbb5bb655e1a1",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T09:32:56.074513+00:00",
+      "request_metadata": {
+        "policy_version": "under-20m-40000-2026-08-02"
+      },
+      "completed_at": "2026-08-02T09:33:36.314805+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:2",
+      "attempt": 1,
+      "attempt_id": "546a60fd391c456a88488751fe09577c",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T09:32:56.090065+00:00",
+      "request_metadata": {
+        "policy_version": "under-20m-40000-2026-08-02"
+      },
+      "completed_at": "2026-08-02T09:33:32.777152+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-08-02T09:33:36.508291+00:00"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-08-02T09:33:36.712685+00:00"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-08-02T09:33:36.725861+00:00"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-08-02T09:33:38.306929+00:00"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-08-02T09:33:41.237339+00:00"
+    },
+    {
+      "kind": "pro",
+      "count": 1,
+      "amount_krw": 188,
+      "at": "2026-08-02T09:33:41.824766+00:00"
+    }
+  ],
+  "total_krw": 2256,
+  "budget_overrun_krw": 0
+}

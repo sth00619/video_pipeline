@@ -210,9 +210,21 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         wardrobe_key, wardrobe = WARDROBE_BY_FAMILY[family]
         costume_role = ROLE_COSTUME_BY_FAMILY[family]
         costume_state = _costume_state(section, mood)
-        # The channel mascot is a visual narrator, not an optional decoration.
-        # Keeping it in every scene prevents generic background-only frames.
-        character_required = True
+        render_contract = scene.get("v5_render_contract") or {}
+        visual_mode = str(
+            scene.get("visual_mode") or render_contract.get("visual_mode") or ""
+        ).strip()
+        if visual_mode in {"article_evidence", "semantic_illustration"}:
+            character_required = False
+        elif visual_mode == "archetype_explainer":
+            character_required = True
+        else:
+            character_required = (
+                section == "data"
+                or str(scene.get("visual_type") or "") in {
+                    "character_hero", "character_explainer", "takeaway"
+                }
+            )
         pose = scene.get("pose") or wardrobe_key
         camera = CAMERAS[index % len(CAMERAS)]
         composition = dict(REFERENCE_COMPOSITION_BY_FAMILY[family])
@@ -292,6 +304,9 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             )),
         }
         scene["pose"] = pose
+        scene["visual_mode"] = visual_mode or (
+            "archetype_explainer" if character_required else "semantic_illustration"
+        )
         scene["art_direction"] = direction
         scene["style_profile"] = "editorial_comic_2d"
         scene["visual_type"] = scene.get("visual_type") or family
@@ -305,51 +320,17 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def plan_image_quality_tiers(scenes: list[dict[str, Any]], tier: str, pro_limit: int) -> list[dict[str, Any]]:
-    """Assign expensive Pro generations to editorial anchor scenes only.
-
-    This makes quality deliberate: the scenes that carry factual proof, the
-    hook, comparisons, and conclusion get the most composition budget while
-    connective scenes remain fast and affordable.
-    """
-    normalized = str(tier or "hybrid").lower()
-    if normalized not in {"flash", "hybrid", "pro"}:
-        normalized = "hybrid"
-    limit = max(0, int(pro_limit or 0))
-    ranked: list[tuple[int, int]] = []
-    for index, scene in enumerate(scenes):
-        direction = scene.get("art_direction") or {}
-        family = str(direction.get("family") or "")
-        section = str(scene.get("section") or "")
-        score = 0
-        if index == 0:
-            score += 100
-        if section == "data":
-            score += 90
-        if family in {"news_headline", "news_context", "comparison_board", "factory_dashboard", "industry_environment"}:
-            score += 70
-        if section == "conclusion":
-            score += 50
-        if family in {"cause_effect", "split_outcomes"}:
-            score += 30
-        ranked.append((score, index))
-
-    if normalized == "pro":
-        pro_indices = {index for _, index in ranked}
-    elif normalized == "flash" or limit == 0:
-        pro_indices = set()
-    else:
-        ranked.sort(key=lambda item: (-item[0], item[1]))
-        pro_indices = {index for score, index in ranked[:limit] if score > 0}
-
+    """모든 유료 이미지 장면을 Nano Banana Pro 2K 계약으로 고정한다."""
+    if str(tier or "pro").lower() != "pro":
+        raise ValueError("이미지 품질 tier는 pro만 허용합니다.")
     planned: list[dict[str, Any]] = []
-    for index, original in enumerate(scenes):
+    for original in scenes:
         scene = dict(original)
-        use_pro = index in pro_indices
         scene["image_profile"] = {
-            "tier": "pro" if use_pro else "flash",
-            "model": "gemini-3-pro-image" if use_pro else "gemini-3.1-flash-image",
-            "image_size": "2K" if use_pro else "1K",
-            "reason": "editorial_anchor" if use_pro else "supporting_scene",
+            "tier": "pro",
+            "model": "gemini-3-pro-image",
+            "image_size": "2K",
+            "reason": "pro_only_policy",
         }
         planned.append(scene)
     return planned

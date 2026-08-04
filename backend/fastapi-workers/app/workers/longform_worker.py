@@ -42,19 +42,21 @@ from app.utils.process_manager import register_process, unregister_process, is_j
 from app import runtime_config
 from app.utils.quality_gate import assess_images, assess_subtitles, persist_quality_report
 from app.utils.art_direction import assess_art_diversity
-from app.utils.fal_billing import get_fal_credit_status
 from app.utils.stock_overlay import Anchor, IndexData, Market, overlay_filter, render_index_card
 from app.utils.market_charts import render_market_chart
 from app.utils.data_surface_locator import locate_data_surface
 from app.services.overlay.surface_detector import detect_surface
-from app.utils.budget import load_preflight, record_cost
+from app.services.overlay.watermark import render_channel_watermark_layer
+from app.utils.budget import ProviderRequestAudit, load_preflight, record_cost
 from app.utils.intro_motion import scene_duration_seconds, select_intro_motion_scene_indices
+from app.utils.narration_contract import (
+    build_script_contract,
+    narration_from_sections,
+    verify_tts_against_script_contract,
+)
 from app.utils.output_qc import build_output_qc_report
 from app.services.kling_prompt_builder import build_kling_motion_prompt
-from app.services.bubble_overlay import write_speech_bubble_overlay
-from app.services.overlay.editorial_overlay import OverlaySlot, render_editorial_overlay
-from app.services.overlay.plans import DataOverlayPlan, SceneEditorialOverlayPlan
-from app.services.annotate import callout_block, render_annotations
+from app.services.annotate import render_annotations
 from app.services.verbatim_guard import validate as validate_verbatim
 from datetime import datetime, timezone
 
@@ -120,6 +122,33 @@ class LongformWorker:
 
         raw_scenes = json.loads(scenes_meta_json)
         scenes = [json.loads(s) if isinstance(s, str) else s for s in raw_scenes]
+
+        # 조립 단계는 승인 원문과 100% 일치하는 TTS/자막만 받는다.
+        canonical_text = str(tts_meta.get("canonical_text") or "").strip()
+        canonical_sha256 = str(tts_meta.get("canonical_sha256") or "").strip()
+        if not canonical_text or not canonical_sha256:
+            raise RuntimeError("TTS 원문 계약이 없습니다. TTS를 다시 생성한 뒤 조립하세요.")
+        if hashlib.sha256(canonical_text.encode("utf-8")).hexdigest() != canonical_sha256:
+            raise RuntimeError("TTS 원문 해시가 일치하지 않습니다. 변조되거나 오래된 TTS 자산입니다.")
+        subtitle_compact = re.sub(
+            r"\s+", "", "".join(str(chunk.get("text") or "") for chunk in chunks)
+        )
+        if subtitle_compact != re.sub(r"\s+", "", canonical_text):
+            raise RuntimeError("TTS 음성과 자막 청크가 승인된 스크립트 원문과 일치하지 않습니다.")
+        subtitle_quality = (
+            (tts_meta.get("quality_report") or {}).get("subtitles")
+            if isinstance(tts_meta.get("quality_report"), dict) else None
+        )
+        if not isinstance(subtitle_quality, dict) or not subtitle_quality.get("passed", False):
+            raise RuntimeError("자막 품질 검수를 통과하지 못했습니다. TTS/자막 싱크를 재생성하세요.")
+
+        # 조립을 직접 호출해 이미지 단계를 우회하더라도, 실제 사용할 장면의
+        # 원문과 TTS·자막 원문이 모두 같은지 다시 확인한다.
+        try:
+            scene_contract = build_script_contract(narration_from_sections(scenes), scenes)
+            tts_subtitle_sync = verify_tts_against_script_contract(tts_meta, scene_contract)
+        except Exception as exc:
+            raise RuntimeError(f"조립 전 대본·TTS·자막·장면 계보 검증 실패: {exc}") from exc
 
         raw_gifs = json.loads(gifs_meta_json)
         gifs = [json.loads(g) if isinstance(g, str) else g for g in raw_gifs]
@@ -217,24 +246,21 @@ class LongformWorker:
         )
 
         # Kling 비디오 프로바이더 로드 (하이브리드 모드)
-        fal_status = get_fal_credit_status()
         video_provider = None
         try:
-            if not fal_status["available"]:
-                raise RuntimeError(f"Fal billing preflight: {fal_status['reason']}")
             from app.providers.factory import get_video_provider
             video_provider = get_video_provider()
             logger.info("하이브리드 Kling 비디오 프로바이더 로드 성공")
         except Exception as e:
             logger.warning(f"Kling 비디오 프로바이더 로드 실패 (FFmpeg 폴백 사용): {e}")
 
-        # Contiguous opening-only Fal motion.  Later scenes are deliberately
-        # static to preserve chart, caption, and numerical alignment.
-        # Do not invoke any video generator unless the Fal billing preflight
-        # confirms usable credit. Gemini Pro images still assemble normally.
-        if not fal_status["available"] or not bool(runtime_config.value("intro_motion_enabled")):
+        # Contiguous opening-only Fal motion. Later scenes are deliberately
+        # static to preserve chart, caption, and numerical alignment. Credit
+        # availability is judged by the cost ledger and the real provider
+        # response, never by an undocumented Fal billing endpoint.
+        if not bool(runtime_config.value("intro_motion_enabled")):
             video_provider = None
-            logger.info("Fal motion disabled: %s", "configuration" if fal_status["available"] else fal_status["reason"])
+            logger.info("Fal motion disabled by configuration")
         max_clips_cap = (
             max(0, int(runtime_config.value("intro_motion_clip_count")))
             if bool(runtime_config.value("intro_motion_enabled")) else 0
@@ -243,26 +269,10 @@ class LongformWorker:
             max_clips_cap = min(max_clips_cap, 2)
             logger.info("intro_motion_test_mode is active. Kling clip count capped to 2.")
 
-        # Dynamic budget clip auto-downgrade check
-        max_budget_krw = int(runtime_config.value("max_budget_per_video_krw") or 40000)
-        budget_remaining_krw = max_budget_krw
         budget_preflight = load_preflight(job_id)
         if budget_preflight:
-            planned_kling = budget_preflight.get("kling_clip_count", 0)
-            usd_krw = float(runtime_config.value("usd_krw") or 1400.0)
-            kling_cost_per_clip_usd = float(runtime_config.value("kling_cost_per_clip_usd") or 0.35)
-            buffer_multiplier = 1.0 + float(budget_preflight.get("retry_buffer_pct", 10.0)) / 100.0
-            planned_kling_cost = round(planned_kling * kling_cost_per_clip_usd * usd_krw * buffer_multiplier)
-            non_kling_cost = float(budget_preflight.get("estimated_cost_krw", 0)) - planned_kling_cost
-            budget_remaining_krw = max(0, max_budget_krw - non_kling_cost)
-
-        resolved_cap = self._resolve_clip_count(budget_remaining_krw, max_clips_cap)
-        max_clips_cap = min(max_clips_cap, resolved_cap)
-        logger.info(f"Budget auto-downgrade check: remaining={budget_remaining_krw} -> cap={max_clips_cap}")
-
-        if budget_preflight:
             max_clips_cap = min(max_clips_cap, max(0, int(budget_preflight.get("kling_clip_count", max_clips_cap))))
-            logger.info("Budget preflight applies Fal motion cap=%s, estimate=₩%s", max_clips_cap, budget_preflight.get("estimated_cost_krw"))
+            logger.info("Budget preflight applies Kling cap=%s, estimate=₩%s", max_clips_cap, budget_preflight.get("estimated_cost_krw"))
 
         max_clips_cap = _cap_intro_motion_for_short_video(total_duration, max_clips_cap)
 
@@ -355,8 +365,11 @@ class LongformWorker:
         clip_paths = [clip_paths_map[i] for i in sorted(clip_paths_map)]
         requested_motion_indices = {
             i for i in intro_kling_indices
-            if not _article_capture_for_scene(scenes[i])
-            and (not has_manual_kling_selection or bool(scenes[i].get("use_kling")))
+            if _should_request_kling_for_scene(
+                scenes[i],
+                selected_for_intro_motion=True,
+                has_manual_kling_selection=has_manual_kling_selection,
+            )
         }
         actual_kling_count = sum(
             1 for i in requested_motion_indices if clip_modes.get(i) == "kling"
@@ -369,6 +382,18 @@ class LongformWorker:
                 f"required={minimum_kling_count}, failures={json.dumps(clip_failures, ensure_ascii=False)}. "
                 "Refusing to deliver a silently static video."
             )
+        kling_motion_plan = _build_kling_motion_plan(
+            scenes=scenes,
+            total_duration=total_duration,
+            target_seconds=intro_motion_target,
+            selected_seconds=intro_motion_actual,
+            selected_indices=intro_kling_indices,
+            requested_indices=requested_motion_indices,
+            protected_fact_indices=protected_fact_indices,
+            clip_modes=clip_modes,
+            failures=clip_failures,
+            has_manual_selection=has_manual_kling_selection,
+        )
         logger.info(
             f"씬 클립 생성 완료: {len(clip_paths)}/{len(scenes)}개 성공, "
             f"소요={time.time() - scene_stage_t0:.1f}s"
@@ -548,6 +573,9 @@ class LongformWorker:
         if not _verify_video(output_path):
             raise RuntimeError("롱폼 영상 생성 실패")
 
+        # 우상단 채널 워터마크는 자막/BGM 합성과 독립된 마지막 패스로 적용한다.
+        watermark_applied = _apply_channel_watermark(output_path, temp_dir, job_id)
+
         probe = os.popen(
             f'ffprobe -v error -show_entries format=duration '
             f'-of default=noprint_wrappers=1:nokey=1 "{output_path}"'
@@ -567,9 +595,11 @@ class LongformWorker:
             "duration_delta_seconds": duration_delta,
             "duration_ok": duration_delta <= 0.2,
             "subtitles": subtitle_quality,
+            "tts_subtitle_sync": tts_subtitle_sync,
             "images": visual_quality,
             "art_direction": assess_art_diversity(scenes),
             "has_subtitles": has_subtitles,
+            "watermark_applied": watermark_applied,
             "data_card_count": data_card_count,
             "market_chart_count": market_chart_count,
             "verified_data_cards_expected": data_card_count,
@@ -579,6 +609,7 @@ class LongformWorker:
             "planned_kling_clip_count": len(requested_motion_indices),
             "kling_clip_count": actual_kling_count,
             "motion_delivery_ok": actual_kling_count >= minimum_kling_count,
+            "kling_motion_plan": kling_motion_plan,
         }
         output_qc = build_output_qc_report(
             job_id=job_id,
@@ -627,6 +658,7 @@ class LongformWorker:
             "market_chart_count": market_chart_count,
             "planned_kling_clip_count": len(requested_motion_indices),
             "kling_clip_count": actual_kling_count,
+            "kling_motion_plan": kling_motion_plan,
             "has_subtitles": has_subtitles,
             "resolution": "1920x1080",
             "quality_report": quality_report,
@@ -648,6 +680,8 @@ class LongformWorker:
                 "start_seconds": round(timeline_seconds, 3),
                 "end_seconds": round(timeline_seconds + duration, 3),
                 "use_kling": bool(scene.get("use_kling")),
+                "kling_requested": index in requested_motion_indices,
+                "kling_delivery_mode": clip_modes.get(index, "static"),
                 "generation_method": scene.get("generation_method"),
                 "visual_type": scene.get("visual_type"),
                 "character_regions": scene.get("character_regions") or [],
@@ -662,6 +696,7 @@ class LongformWorker:
             "job_id": job_id,
             "video_path": output_path,
             "resolution": "1920x1080",
+            "kling_motion_plan": kling_motion_plan,
             "scenes": manifest_scenes,
         }, ensure_ascii=False, indent=2), encoding="utf-8")
         result["assembly_manifest_path"] = str(manifest_path)
@@ -703,6 +738,9 @@ class LongformWorker:
             # 호출자 분기와 독립적으로 한 번 더 막아, 향후 호출 경로가 바뀌어도
             # 검증 수치가 포함된 PNG가 FAL 입력으로 전달되지 않게 한다.
             use_kling = False
+        if use_kling and not _motion_contract_allows_scene(scene):
+            # 호출 경로가 바뀌어도 이미지 계약을 우회할 수 없게 한 번 더 차단한다.
+            use_kling = False
         raw_dur = scene.get("duration")
         duration = float(raw_dur) if raw_dur is not None else 15.0
         clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
@@ -739,7 +777,7 @@ class LongformWorker:
                     # image-to-video는 이미지에 이미 있는 내용(캐릭터 생김새, 배경,
                     # 구도)을 다시 설명하면 안 되고 "무엇이 어떻게 움직이는가"만
                     # 묘사해야 결과가 안정적입니다.
-                    prompt_dict = build_kling_motion_prompt(scene.get("motion_type"))
+                    prompt_dict = build_kling_motion_prompt(scene)
                     prompt = prompt_dict["prompt"]
                     negative_prompt = prompt_dict["negative_prompt"]
 
@@ -756,14 +794,26 @@ class LongformWorker:
                     if not start_image_url:
                         raise RuntimeError(f"씬 {i}: Fal CDN 이미지 업로드 실패. 정지 이미지 폴백.")
 
-                    asset = video_provider.generate(
-                        prompt=prompt,
-                        duration=motion_duration,
-                        output_path=clip_path,
-                        image_path=img_path,
-                        image_url=start_image_url,
-                        negative_prompt=negative_prompt,
-                        fal_only=True,
+                    request_audit = ProviderRequestAudit.for_kling(
+                        job_id=job_id, scene_key=f"kling:{i}")
+                    attempt_id = request_audit.before_attempt(attempt=1)
+                    try:
+                        asset = video_provider.generate(
+                            prompt=prompt,
+                            duration=motion_duration,
+                            output_path=clip_path,
+                            image_path=img_path,
+                            image_url=start_image_url,
+                            negative_prompt=negative_prompt,
+                            fal_only=True,
+                        )
+                    except Exception:
+                        request_audit.after_attempt(attempt_id, outcome="failed")
+                        raise
+                    request_audit.after_attempt(
+                        attempt_id,
+                        outcome="succeeded",
+                        request_id=(asset.meta or {}).get("fal_request_id") if asset and asset.meta else None,
                     )
                     if os.path.exists(clip_path) and os.path.getsize(clip_path) > 1000:
                         temp_kling = clip_path + ".temp.mp4"
@@ -793,7 +843,7 @@ class LongformWorker:
                         if _verify_video(clip_path) and abs(_probe_duration(clip_path) - duration) <= 0.15:
                             if not _apply_editorial_overlays(scene, clip_path, temp_dir, i, duration, job_id):
                                 raise RuntimeError(f"scene {i} editorial overlay failed")
-                            record_cost(job_id, "kling")
+                            record_cost(job_id, "kling", scene_key=f"kling:{i}")
                             
                             # Write Kling audit params for reproducibility
                             _write_kling_audit(job_id, i, {
@@ -867,13 +917,13 @@ class LongformWorker:
             # 반투명 다크 바 + 흰 글자 + 금색 강조 포인트.
             style = (
                 f"Style: Main,{font_name},{font_size},&H00FFFFFF,&H0000FFFF,"
-                "&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,5,0,2,70,70,58,1"
+                "&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,2,70,70,58,1"
             )
         else:
             # 흰 굵은 글자와 검정 외곽선. 불투명 박스 없이 장면을 살린다.
             style = (
                 f"Style: Main,{font_name},{font_size},&H00FFFFFF,&H0000FFFF,"
-                "&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,5,0,2,70,70,58,1"
+                "&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,2,70,70,58,1"
             )
 
         header = f"""[Script Info]
@@ -894,31 +944,8 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             sec = s % 60
             return f"{h}:{m:02d}:{sec:05.2f}"
 
-        # A scene may carry subtitle_text when an editor intentionally changed
-        # only what appears on screen.  Exclude the overlapping TTS chunks and
-        # render that scene-level override instead; narration audio is left
-        # untouched. This makes the "caption only" button safe and literal.
-        overrides = []
-        for scene in scenes or []:
-            caption = str(scene.get("subtitle_text") or "").strip()
-            if not caption:
-                continue
-            start = float(scene.get("start_time", scene.get("start", 0.0)) or 0.0)
-            duration = float(scene.get("duration", 0.0) or 0.0)
-            if duration > 0:
-                overrides.append((start, start + duration, caption))
-
-        def is_overridden_chunk(chunk: dict) -> bool:
-            start = float(chunk.get("start", 0.0) or 0.0)
-            end = start + float(chunk.get("duration", 0.0) or 0.0)
-            midpoint = (start + end) / 2.0
-            return any(override_start <= midpoint < override_end
-                       for override_start, override_end, _ in overrides)
-
         lines = [header]
         for chunk in chunks:
-            if is_overridden_chunk(chunk):
-                continue
             text = chunk.get("text", "").strip()
             if not text:
                 continue
@@ -932,12 +959,6 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             start_str = to_ass_time(start_sec)
             end_str = to_ass_time(end_sec)
             lines.append(f"Dialogue: 0,{start_str},{end_str},Main,,0,0,0,,{display}")
-
-        for start_sec, end_sec, caption in overrides:
-            display = self._trim_to_limit(caption)
-            lines.append(
-                f"Dialogue: 0,{to_ass_time(start_sec)},{to_ass_time(end_sec)},Main,,0,0,0,,{display}"
-            )
 
         # UTF-8-SIG 저장
         with open(ass_path, "w", encoding="utf-8-sig") as f:
@@ -1320,6 +1341,15 @@ def _has_v5_verified_fact_overlay(scene: dict) -> bool:
     return isinstance(overlays, list) and bool(overlays)
 
 
+def _motion_contract_allows_scene(scene: dict) -> bool:
+    """V5 장면은 텍스트 없는 일반형만 Fal 후보가 될 수 있다."""
+    contract = scene.get("motion_contract")
+    if not isinstance(contract, dict):
+        # 기존 작업물은 명시 계약이 없으므로 이전 호환 규칙을 유지한다.
+        return True
+    return bool(contract.get("eligible")) and bool(contract.get("requires_explicit_selection"))
+
+
 def _should_request_kling_for_scene(
     scene: dict,
     *,
@@ -1331,6 +1361,11 @@ def _should_request_kling_for_scene(
         return False
     if _article_capture_for_scene(scene) or _has_v5_verified_fact_overlay(scene):
         return False
+    if not _motion_contract_allows_scene(scene):
+        return False
+    contract = scene.get("motion_contract")
+    if isinstance(contract, dict) and contract.get("requires_explicit_selection"):
+        return bool(scene.get("use_kling"))
     return bool(scene.get("use_kling")) if has_manual_kling_selection else True
 
 
@@ -1627,6 +1662,50 @@ def _resolve_market_chart_surface(
         job_id=job_id,
         scene_key=scene_key,
     )
+
+
+def _build_kling_motion_plan(
+    *,
+    scenes: list[dict],
+    total_duration: float,
+    target_seconds: float,
+    selected_seconds: float,
+    selected_indices: set[int],
+    requested_indices: set[int],
+    protected_fact_indices: set[int],
+    clip_modes: dict[int, str],
+    failures: dict[int, str],
+    has_manual_selection: bool,
+) -> dict:
+    """최종 영상과 함께 저장할 초반 Kling 구간의 재현 가능한 계획이다."""
+    timeline = 0.0
+    scene_windows = []
+    for index, scene in enumerate(scenes):
+        duration = scene_duration_seconds(scene, float(runtime_config.value("scene_duration_sec")))
+        scene_windows.append({
+            "index": index,
+            "scene_id": str(scene.get("scene_id") or scene.get("id") or index),
+            "start_seconds": round(timeline, 3),
+            "end_seconds": round(timeline + duration, 3),
+        })
+        timeline += duration
+    delivered_indices = sorted(index for index in requested_indices if clip_modes.get(index) == "kling")
+    return {
+        "policy": "opening_contiguous_window",
+        "video_duration_seconds": round(float(total_duration or timeline), 3),
+        "window_start_seconds": 0.0,
+        "window_end_seconds": round(float(target_seconds), 3),
+        "selected_scene_seconds": round(float(selected_seconds), 3),
+        "clip_seconds": min(float(runtime_config.value("intro_motion_clip_seconds")), 5.0),
+        "clip_count_cap": int(runtime_config.value("intro_motion_clip_count")),
+        "manual_scene_filter_applied": bool(has_manual_selection),
+        "candidate_scene_indices": sorted(selected_indices),
+        "requested_scene_indices": sorted(requested_indices),
+        "delivered_scene_indices": delivered_indices,
+        "protected_verified_fact_scene_indices": sorted(protected_fact_indices & selected_indices),
+        "failed_scene_indices": sorted(failures),
+        "scene_windows": scene_windows,
+    }
     detected = locate_data_surface(source_image_path, surface)
     if not detected and not detection:
         return resolved
@@ -1693,54 +1772,16 @@ def _apply_speech_bubble_overlay(
     duration: float,
     job_id: int,
 ) -> bool:
-    """Place exact bubble text after all generated-video work is complete."""
-    if not bool(runtime_config.value("render_speech_bubbles")):
-        return True
+    """기존 말풍선 요청을 계보에 남기되 영상에는 합성하지 않는다."""
     spec = scene.get("speech_bubble") if isinstance(scene.get("speech_bubble"), dict) else {}
     text = str(spec.get("text") or scene.get("bubble_text") or "").strip()
-    if not text:
-        return True
-    validation = validate_verbatim(text, {
-        "article_capture": scene.get("article_capture"),
-        "verified_facts": scene.get("verified_facts"),
-        "market_snapshot": scene.get("market_snapshot"),
-    })
-    if not validation.passed:
-        logger.error("scene %s rejects ungrounded bubble text: %s", index, validation.reasons)
-        return False
-    bubble_path = str(temp_dir / f"speech_bubble_{index:03d}.png")
-    side = "left" if scene.get("market_chart") else "right"
-    avoid_regions = []
-    avoid_regions.extend(scene.get("character_regions") or [])
-    avoid_regions.extend((scene.get("article_capture") or {}).get("quote_bboxes") or [])
-    if isinstance(scene.get("callout"), dict) and scene["callout"].get("bbox"):
-        avoid_regions.append(scene["callout"]["bbox"])
-    if not write_speech_bubble_overlay(
-        bubble_path,
-        text,
-        character_side=side,
-        style=str(spec.get("style") or "round"),
-        avoid_regions=avoid_regions,
-        subtitle_safe_area_pct=float(runtime_config.value("subtitle_safe_area_pct")),
-        font_max_px=int(runtime_config.value("bubble_font_max_px")),
-        font_min_px=int(runtime_config.value("bubble_font_min_px")),
-    ):
-        logger.warning("scene %s speech bubble renderer returned no valid file", index)
-        return False
-    staged = clip_path + ".bubble.mp4"
-    cmd = (
-        f'ffmpeg -i "{clip_path}" -loop 1 -i "{bubble_path}" '
-        f'-filter_complex "[0:v][1:v]overlay=0:0:format=auto[v]" '
-        f'-map "[v]" -t {duration:.3f} -an '
-        f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
-        f'-y "{staged}" -loglevel error'
-    )
-    ret = _run_subprocess(cmd, job_id)
-    if ret != 0 or not _verify_video(staged):
-        if os.path.exists(staged):
-            os.remove(staged)
-        return False
-    os.replace(staged, clip_path)
+    if text:
+        scene.setdefault("overlay_provenance", []).append({
+            "kind": "speech_bubble",
+            "skipped_reason": "script_caption_only_policy",
+        })
+    # TTS 원문과 100% 동기화되는 ASS 자막만 영상 위 텍스트로 허용한다.
+    # 말풍선은 자막과 경쟁하고 프레임 밖 UI처럼 보이므로 재활성화하지 않는다.
     return True
 
 
@@ -1752,62 +1793,17 @@ def _apply_scene_editorial_plan(
     duration: float,
     job_id: int,
 ) -> bool:
-    """Render the typed non-data overlay plan through the shared renderer."""
+    """텍스트 오버레이 계획을 차단하고 원본 계획만 계보에 남긴다."""
     raw = scene.get("editorial_overlay_plan")
     data_raw = scene.get("data_overlay_plan")
     if not isinstance(raw, dict) and not isinstance(data_raw, dict):
         return True
-    try:
-        if isinstance(raw, dict):
-            plan = SceneEditorialOverlayPlan.model_validate(raw)
-            overlay = plan.overlay
-        else:
-            data_plan = DataOverlayPlan.model_validate(data_raw)
-            if not data_plan.callout:
-                return True
-            overlay = OverlaySlot(
-                kind="caption_chip",
-                text=data_plan.callout.text,
-                claim_type=data_plan.callout.claim_type,
-                source_refs=data_plan.callout.source_refs,
-                anchor="upper_left",
-            )
-        result = render_editorial_overlay(
-            overlay,
-            canvas_size=(1920, 1080),
-            subject_regions=scene.get("character_regions") or [],
-            copy_regions=(scene.get("article_capture") or {}).get("quote_bboxes") or [],
-        )
-        if not result or result.skipped_reason:
-            scene.setdefault("overlay_provenance", []).append({
-                "kind": overlay.kind,
-                "skipped_reason": result.skipped_reason if result else "renderer_returned_none",
-            })
-            return True
-        overlay_path = temp_dir / f"editorial_overlay_{index:03d}.png"
-        result.image.save(overlay_path, "PNG")
-        staged = clip_path + ".editorial.mp4"
-        timing = _overlay_timing(scene, duration)
-        cmd = (
-            f'ffmpeg -i "{clip_path}" -loop 1 -i "{overlay_path}" '
-            f'-filter_complex "[0:v][1:v]overlay=0:0:format=auto:enable=\'between(t,{timing[0]:.3f},{timing[1]:.3f})\'[v]" '
-            f'-map "[v]" -t {duration:.3f} -an -c:v libx264 -preset fast -crf 18 '
-            f'-pix_fmt yuv420p -y "{staged}" -loglevel error'
-        )
-        ret = _run_subprocess(cmd, job_id)
-        if ret != 0 or not _verify_video(staged):
-            if os.path.exists(staged):
-                os.remove(staged)
-            return False
-        os.replace(staged, clip_path)
-        scene.setdefault("overlay_provenance", []).append({
-            "kind": overlay.kind, "bbox": result.bbox,
-            "source_refs": overlay.source_refs,
-        })
-        return True
-    except (TypeError, ValueError, OSError) as exc:
-        logger.warning("scene %s editorial overlay plan skipped: %s", index, exc)
-        return True
+    scene.setdefault("overlay_provenance", []).append({
+        "kind": "editorial_text_overlay",
+        "skipped_reason": "script_caption_only_policy",
+        "plan_source": "editorial_overlay_plan" if isinstance(raw, dict) else "data_overlay_plan",
+    })
+    return True
 
 
 def _apply_scene_annotation_overlay(
@@ -1855,12 +1851,10 @@ def _apply_scene_annotation_overlay(
         overlay = render_annotations((1920, 1080), annotations)
         callout = scene.get("callout") if isinstance(scene.get("callout"), dict) else None
         if callout and callout.get("text"):
-            check = validate_verbatim(str(callout["text"]), {"article_capture": capture, "verified_facts": scene.get("verified_facts"), "market_snapshot": scene.get("market_snapshot")})
-            if not check.passed:
-                logger.error("scene %s rejects ungrounded callout: %s", index, check.reasons)
-                return False
-            anchor = tuple(callout.get("anchor") or (.08, .08))
-            callout_block(overlay, str(callout["text"]), anchor, str(callout.get("style") or "red_block"))
+            scene.setdefault("overlay_provenance", []).append({
+                "kind": "annotation_callout",
+                "skipped_reason": "script_caption_only_policy",
+            })
         draw = ImageDraw.Draw(overlay)
         font_path = NANUM_BOLD if os.path.exists(NANUM_BOLD) else NANUM_REGULAR
         try:
@@ -1893,16 +1887,11 @@ def _apply_scene_annotation_overlay(
 def _apply_editorial_overlays(scene: dict, clip_path: str, temp_dir: Path, index: int, duration: float, job_id: int) -> bool:
     chart = scene.get("market_chart")
     verified_chart = isinstance(chart, dict) and chart.get("verified") is True
-    plan = scene.get("info_surface_plan")
-    # v2.2 forbids adding a factual chart after camera/motion rendering.  A
-    # persisted legacy job must be regenerated from its source still; silently
-    # applying the old FFmpeg rectangle would detach the data from the scene.
-    if verified_chart and not (isinstance(plan, dict) and plan.get("final_image_path")):
-        logger.error("scene %s has verified chart but no finalized info surface", index)
-        return False
-    if _requires_verified_index_card(scene) and not verified_chart:
-        if not _apply_verified_index_card(scene, clip_path, temp_dir, index, duration, job_id):
-            return False
+    if verified_chart or _requires_verified_index_card(scene) or scene.get("data_overlay_plan"):
+        scene.setdefault("overlay_provenance", []).append({
+            "kind": "numeric_visual",
+            "skipped_reason": "non_numeric_visual_policy",
+        })
     if not _apply_scene_editorial_plan(scene, clip_path, temp_dir, index, duration, job_id):
         return False
     if not _apply_scene_annotation_overlay(scene, clip_path, temp_dir, index, duration, job_id):
@@ -1912,6 +1901,43 @@ def _apply_editorial_overlays(scene: dict, clip_path: str, temp_dir: Path, index
     if isinstance(scene.get("editorial_overlay_plan"), dict):
         return True
     return _apply_speech_bubble_overlay(scene, clip_path, temp_dir, index, duration, job_id)
+
+
+def _apply_channel_watermark(video_path: str, temp_dir: Path, job_id: int) -> bool:
+    """완성된 최종 영상 전체에 우상단 채널 배지를 한 번만 합성한다.
+
+    자막·BGM 합성(위 5단계)과 별도 패스로 분리한 이유: 그 단계는 오디오
+    믹싱 유무에 따라 4갈래로 분기하는 이미 섬세한 문자열 조립이라, 거기에
+    필터를 더 얹으면 회귀 위험이 크다. 여기서는 이미 완성된 최종 영상 위에
+    한 번 더 겹쳐 그리기만 하므로 그 분기와 완전히 독립적이다.
+
+    워터마크는 채널 정체성을 위한 장식 계층이며 대본·수치의 사실성과
+    무관하다. 따라서 이 합성이 실패해도(폰트/ffmpeg 환경 문제 등) 이미
+    검증을 마친 영상 자체를 폐기하지 않고 경고만 남긴다.
+    """
+    try:
+        watermark_path = str(temp_dir / "channel_watermark.png")
+        render_channel_watermark_layer((1920, 1080)).save(watermark_path, "PNG")
+        staged = video_path + ".watermarked.mp4"
+        cmd = (
+            f'ffmpeg -i "{video_path}" -i "{watermark_path}" '
+            f'-filter_complex "[0:v][1:v]overlay=0:0:format=auto[v]" '
+            f'-map "[v]" -map 0:a? '
+            f'-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+            f'-c:a copy -movflags +faststart '
+            f'-y "{staged}" -loglevel error'
+        )
+        ret = _run_subprocess(cmd, job_id)
+        if ret != 0 or not _verify_video(staged):
+            if os.path.exists(staged):
+                os.remove(staged)
+            logger.warning("scene watermark overlay failed, keeping unwatermarked final video")
+            return False
+        os.replace(staged, video_path)
+        return True
+    except OSError as exc:
+        logger.warning("scene watermark overlay skipped: %s", exc)
+        return False
 
 
 def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_duration: float):

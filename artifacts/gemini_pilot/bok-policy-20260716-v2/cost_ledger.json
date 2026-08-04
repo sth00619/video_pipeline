@@ -1,0 +1,205 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "policy_rate_graph:attempt-01",
+      "attempt": 1,
+      "attempt_id": "5762ff125f884ae08c23830de55a8eb8",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T07:24:39.645859+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 1,
+        "prompt_sha256": "3c123a1476fe634d8f758a0fbd3df1a97d2860b8ff1d8450e8c161ef21aa393c",
+        "verified_number_prompt_guard": "passed"
+      },
+      "completed_at": "2026-08-02T07:25:09.611748+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "policy_transmission_diagram:attempt-01",
+      "attempt": 1,
+      "attempt_id": "25bc7c135da3459682056dece27148f4",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T07:25:15.337931+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 1,
+        "prompt_sha256": "101ed906cb0b949baae0569c50f2f71e53dd36f5258c3c98006ceadd1fca00a2",
+        "verified_number_prompt_guard": "passed"
+      },
+      "completed_at": "2026-08-02T07:25:42.694093+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "inflation_metric:attempt-01",
+      "attempt": 1,
+      "attempt_id": "b0395d5182b047c3bad8dad76fc41942",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T07:25:47.903949+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 1,
+        "prompt_sha256": "6abfa1617875855a49869b1797eb31b90c4986f48db5962450b33f83e5d4096d",
+        "verified_number_prompt_guard": "passed"
+      },
+      "completed_at": "2026-08-02T07:26:18.559471+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "policy_general:attempt-01",
+      "attempt": 1,
+      "attempt_id": "b19cac91fc4e4f7f97fbb455b5c4951f",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T07:26:23.769947+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 1,
+        "prompt_sha256": "d69f1f0f859932da10a31cde98eaf16d3fb91007f87e5b533931c35309fc2e27",
+        "verified_number_prompt_guard": "passed"
+      },
+      "completed_at": "2026-08-02T07:27:01.560169+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "policy_transmission_diagram:attempt-02",
+      "attempt": 1,
+      "attempt_id": "bb663773b4894527a04e0fcd51f7e5df",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T07:29:21.191998+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 2,
+        "prompt_sha256": "47d7f7c0069d9045d5dd6636bd7e8ea7cea1c048cd2e1638bb50c92b0a3145ba",
+        "verified_number_prompt_guard": "passed"
+      },
+      "completed_at": "2026-08-02T07:29:50.002227+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "inflation_metric:attempt-02",
+      "attempt": 1,
+      "attempt_id": "f05b301b23834dd1a6154875afe1cecd",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T07:29:55.594661+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 2,
+        "prompt_sha256": "cb919594b8bbd50fd286826b28f569f345a2fc22d99f976453ec925a2b2c229d",
+        "verified_number_prompt_guard": "passed"
+      },
+      "completed_at": "2026-08-02T07:30:24.582858+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "policy_transmission_diagram:attempt-03",
+      "attempt": 1,
+      "attempt_id": "a0565405d388470bacf3172946fb247c",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T07:32:30.719784+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 3,
+        "prompt_sha256": "4e995b2991d5ed74f23d5a9035cfce2e601f319490ca8189ca9aadf989926df5",
+        "verified_number_prompt_guard": "passed"
+      },
+      "completed_at": "2026-08-02T07:33:09.754383+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "policy_transmission_diagram:attempt-04",
+      "attempt": 1,
+      "attempt_id": "e4c6781421d843f9ab60142e7b5f2ae9",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T07:35:28.294178+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 4,
+        "prompt_sha256": "264222a3715b58f00a6b6ee1b2e174b29d37fbef22d45c1f87744418d3d76408",
+        "verified_number_prompt_guard": "passed"
+      },
+      "completed_at": "2026-08-02T07:35:58.416879+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "policy_transmission_diagram:attempt-05",
+      "attempt": 1,
+      "attempt_id": "a512d7721f93474685356990818fc004",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_429",
+      "reserved_at": "2026-08-02T08:08:28.708528+00:00",
+      "request_metadata": {
+        "policy_version": "three-goals-e2e-2026-08-02",
+        "e2e_run": true,
+        "candidate_attempt": 5,
+        "prompt_sha256": "ccd5124cf88f779429f39da3356c93d8c200a73543a09cba67f07af37cd4f0aa",
+        "verified_number_prompt_guard": "passed",
+        "character_reference_sha256": "8f611c300a03fad99af2e628b2f24e60f1f1bc928024b2e2c9ba2c8352f20a79"
+      },
+      "completed_at": "2026-08-02T08:08:29.809356+00:00",
+      "status_code": 429
+    }
+  ],
+  "total_krw": 1692,
+  "budget_overrun_krw": 0
+}

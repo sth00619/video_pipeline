@@ -49,7 +49,7 @@ export const AUTONOMY_STYLE = {
 export const STATUS_LIST = [
   'ALL', 'DRAFT', 'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING', 'IMAGES_PENDING', 'IMAGES_RETRY_REQUIRED',
   'ASSEMBLING', 'PREVIEW_PENDING', 'SHORTS_SEGMENTS_PENDING', 'SHORTS_GENERATING',
-  'SHORTS_PREVIEW_PENDING', 'READY', 'PUBLISHED', 'BUDGET_BLOCKED', 'FAILED',
+  'SHORTS_PREVIEW_PENDING', 'READY', 'PUBLISH_PENDING', 'PUBLISHED', 'BUDGET_BLOCKED', 'FAILED',
 ]
 
 export const STATUS_LABEL = {
@@ -66,6 +66,7 @@ export const STATUS_LABEL = {
   SHORTS_GENERATING: '쇼츠 생성중',
   SHORTS_PREVIEW_PENDING: '쇼츠 미리보기',
   READY: '완료',
+  PUBLISH_PENDING: '게시 연동 대기',
   PUBLISHED: '업로드 완료',
   BUDGET_BLOCKED: '예산 초과',
   FAILED: '오류',
@@ -85,6 +86,7 @@ export const STATUS_COLOR = {
   SHORTS_GENERATING: 'bg-accent-cyan/20 text-accent-cyan',
   SHORTS_PREVIEW_PENDING: 'bg-accent-gold/10 text-accent-gold',
   READY: 'bg-accent-green/20 text-accent-green',
+  PUBLISH_PENDING: 'bg-accent-amber/20 text-accent-amber',
   PUBLISHED: 'bg-accent-green/20 text-accent-green',
   BUDGET_BLOCKED: 'bg-accent-red/20 text-accent-red',
   FAILED: 'bg-accent-red/20 text-accent-red',
@@ -94,7 +96,7 @@ export const STATUS_COLOR = {
 export const IN_PROGRESS_STATUSES = [
   'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING', 'IMAGES_PENDING',
   'ASSEMBLING', 'PREVIEW_PENDING', 'SHORTS_SEGMENTS_PENDING',
-  'SHORTS_GENERATING', 'SHORTS_PREVIEW_PENDING',
+  'SHORTS_GENERATING', 'SHORTS_PREVIEW_PENDING', 'PUBLISH_PENDING',
 ]
 export const COMPLETED_STATUSES = ['READY', 'PUBLISHED']
 export const ERROR_STATUSES = ['FAILED', 'BUDGET_BLOCKED', 'IMAGES_RETRY_REQUIRED']
@@ -117,7 +119,7 @@ export const KOREAN_STATUS_LABEL = {
   IMAGES_RETRY_REQUIRED: '이미지 생성 재시도 필요',
   PREVIEW_PENDING: '미리보기 검토', SHORTS_SEGMENTS_PENDING: '쇼츠 구간 선택',
   SHORTS_GENERATING: '쇼츠 생성 중', SHORTS_PREVIEW_PENDING: '쇼츠 미리보기 검토',
-  EDITING: '편집 중', READY: '완료', PUBLISHED: '게시 완료',
+  EDITING: '편집 중', READY: '완료', PUBLISH_PENDING: '게시 연동 대기', PUBLISHED: '게시 완료',
   BUDGET_BLOCKED: '예산 한도 초과', FAILED: '오류',
 }
 export const KOREAN_ROLE_LABEL = { ADMIN: '관리자', USER: '작업자' }

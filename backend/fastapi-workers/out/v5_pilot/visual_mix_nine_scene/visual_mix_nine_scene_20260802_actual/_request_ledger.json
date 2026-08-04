@@ -1,0 +1,219 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_large_small",
+      "attempt": 1,
+      "attempt_id": "bad4f6236fb54b6db6553fdecd52aeb5",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T14:46:20.177279+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "visual_mode": "semantic_illustration",
+        "selected_archetype": "classroom",
+        "surface_caption": null
+      },
+      "completed_at": "2026-08-02T14:47:02.145560+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_us_korea",
+      "attempt": 1,
+      "attempt_id": "61c3f75a807140d0b019f4bf65b70955",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T14:47:02.907812+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "visual_mode": "semantic_illustration",
+        "selected_archetype": "port_emergency",
+        "surface_caption": null
+      },
+      "completed_at": "2026-08-02T14:47:38.028450+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_monthly",
+      "attempt": 1,
+      "attempt_id": "30f9dab061c34597b8619dd584b52445",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T14:47:38.662523+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "visual_mode": "semantic_illustration",
+        "selected_archetype": "classroom",
+        "surface_caption": null
+      },
+      "completed_at": "2026-08-02T14:48:06.623385+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "info_semiconductor",
+      "attempt": 1,
+      "attempt_id": "c77edb7321244f78a0544818e84c5b9f",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T14:48:07.253654+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "visual_mode": "archetype_explainer",
+        "selected_archetype": "data_lab",
+        "surface_caption": {
+          "english": "SEMICONDUCTOR GOES DOWN",
+          "korean": "반도체 섹터의 약세 가능성과 확인할 흐름",
+          "direction": "down",
+          "target": "one broad curved presentation wall"
+        }
+      },
+      "completed_at": "2026-08-02T14:48:44.994551+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "info_buy_signal",
+      "attempt": 1,
+      "attempt_id": "63eb2e37463040f59d78a69d291bb82a",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T14:48:45.634986+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "visual_mode": "archetype_explainer",
+        "selected_archetype": "weather_map",
+        "surface_caption": {
+          "english": "BUY SIGNAL",
+          "korean": "매수 신호를 확인할 때 보는 흐름을 설명",
+          "direction": "up",
+          "target": "the broad central geographic region of the single large curved illuminated map wall"
+        }
+      },
+      "completed_at": "2026-08-02T14:49:20.618117+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "info_fear",
+      "attempt": 1,
+      "attempt_id": "7c1be5d789eb44648d0c62afbcdc7b5a",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-02T14:49:21.274272+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "visual_mode": "archetype_explainer",
+        "selected_archetype": "risk_control_room",
+        "surface_caption": {
+          "english": "FEAR IS COOLING",
+          "korean": "시장의 공포가 진정되는 과정과 남은 변동",
+          "direction": "down",
+          "target": "the single large central analog gauge dial face embedded at eye level in the curved operations wall"
+        }
+      },
+      "completed_at": "2026-08-02T14:50:26.580157+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 1524,
+  "budget_overrun_krw": 0
+}

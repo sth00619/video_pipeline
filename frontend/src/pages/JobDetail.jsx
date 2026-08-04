@@ -110,7 +110,6 @@ export default function JobDetail() {
   const [scriptViewMode, setScriptViewMode] = useState('paragraphs')
   const [editingSceneIndex, setEditingSceneIndex] = useState(null)
   const [editingSceneText, setEditingSceneText] = useState('')
-  const [editingSubtitleText, setEditingSubtitleText] = useState('')
   const [activeSceneActionIndex, setActiveSceneActionIndex] = useState(null)
   const [scenePage, setScenePage] = useState(1)
   const [longformScenePage, setLongformScenePage] = useState(1)
@@ -353,11 +352,7 @@ export default function JobDetail() {
       setEditingSceneIndex(null)
       setActiveSceneActionIndex(null)
       setImageSalt(prev => prev + 1)
-      const modeStr = variables.mode === 'caption_only'
-        ? '자막만'
-        : variables.mode === 'image_only'
-          ? '이미지만'
-          : '원문과 이미지';
+      const modeStr = variables.mode === 'image_only' ? '이미지만' : '원문과 이미지';
       alert(`${modeStr} 변경이 저장되었습니다. 최종 영상에는 '동영상 재조립'을 실행한 뒤 반영됩니다.`);
     },
     onError: (err) => {
@@ -468,6 +463,20 @@ export default function JobDetail() {
   const { data: qcAssets = [] } = useQuery({
     queryKey: ['assets', id, 'QC_REPORT'], queryFn: () => jobsApi.assets(id, 'QC_REPORT'), enabled: !!job, refetchInterval: autoRefreshInterval,
   })
+  const { data: klingMotionPolicy = {} } = useQuery({
+    queryKey: ['pipeline', 'motion-policy'],
+    queryFn: async () => (await apiClient.get('/pipeline/motion-policy')).data,
+    enabled: !!job,
+    staleTime: 60_000,
+  })
+
+  const klingMotionWindowEnd = useMemo(() => {
+    const targetSeconds = Number(job?.longformTargetMinutes || 0) * 60
+    const threshold = Number(klingMotionPolicy.long_threshold_seconds ?? 600)
+    const shortWindow = Number(klingMotionPolicy.short_window_seconds ?? 45)
+    const longWindow = Number(klingMotionPolicy.long_window_seconds ?? 60)
+    return targetSeconds > threshold ? longWindow : shortWindow
+  }, [job?.longformTargetMinutes, klingMotionPolicy])
 
   const outputQc = useMemo(() => {
     if (!qcAssets.length) return null
@@ -675,7 +684,7 @@ export default function JobDetail() {
         </div>
       )}
 
-      {['PREVIEW_PENDING', 'READY', 'PUBLISHED'].includes(job.status) && (
+      {['PREVIEW_PENDING', 'READY', 'PUBLISH_PENDING', 'PUBLISHED'].includes(job.status) && (
         <div className="bg-navy-800 rounded-xl border border-accent-cyan p-5 space-y-4 mb-6 shadow-card">
           <div className="flex items-center justify-between border-b border-navy-700 pb-3">
             <h3 className="text-base font-bold text-accent-cyan flex items-center gap-1.5">
@@ -687,7 +696,7 @@ export default function JobDetail() {
               </span>
             ) : (
               <span className="text-sm bg-accent-gold/10 text-accent-gold font-bold px-2.5 py-1 rounded border border-accent-gold/20">
-                업로드 대기 중 ({job.autonomy} 모드)
+                {job.status === 'PUBLISH_PENDING' ? '게시 연동 대기' : `업로드 대기 중 (${job.autonomy} 모드)`}
               </span>
             )}
           </div>
@@ -1570,7 +1579,12 @@ export default function JobDetail() {
                         const retryRecommended = img.retryRecommended ?? img.retry_recommended;
                         const imageProfile = img.imageProfile ?? img.image_profile;
                         const useKling = img.useKling ?? img.use_kling;
-                        const isKlingEligible = Number(img.start || 0) < 60;
+                        const sceneStart = Number(img.start ?? img.start_seconds ?? 0)
+                        const sceneDuration = Number(img.duration ?? img.estimated_seconds ?? 0)
+                        const hasVerifiedFactOverlay = Boolean((img.v5_verified_overlays || img.verified_facts || []).length)
+                        const isKlingEligible = klingMotionPolicy.enabled !== false
+                          && sceneStart + sceneDuration <= klingMotionWindowEnd
+                          && !hasVerifiedFactOverlay
 
                         return (
                           <div key={img.index || i} className="flex gap-4 bg-navy-800/40 border border-navy-700/60 rounded-lg p-3.5 hover:border-navy-600 transition">
@@ -1596,7 +1610,7 @@ export default function JobDetail() {
                                   <div className="flex items-center gap-1.5">
                                     {imageProfile?.tier && (
                                       <span className={`text-xs px-2 py-0.5 rounded border ${imageProfile.tier === 'pro' ? 'bg-accent-gold/10 text-accent-gold border-accent-gold/30' : 'bg-navy-700 text-navy-400 border-navy-600'}`}>
-                                        {imageProfile.tier === 'pro' ? 'Pro 2K' : 'Flash 1K'}
+                                        {imageProfile.tier === 'pro' ? 'Gemini Pro 2K' : '프로필 오류'}
                                       </span>
                                     )}
                                     {qualityScore !== undefined && (
@@ -1622,13 +1636,6 @@ export default function JobDetail() {
                                         value={editingSceneText}
                                         onChange={e => setEditingSceneText(e.target.value)}
                                         className="w-full bg-navy-700 border border-navy-600 rounded p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
-                                        rows={2}
-                                      />
-                                      <label className="block text-[11px] text-gray-400">화면 자막 · 자막만 저장을 눌러도 이미지와 음성은 바뀌지 않음</label>
-                                      <textarea
-                                        value={editingSubtitleText}
-                                        onChange={e => setEditingSubtitleText(e.target.value)}
-                                        className="w-full bg-navy-900 border border-navy-600 rounded p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
                                         rows={2}
                                       />
                                       <div>
@@ -1671,7 +1678,7 @@ export default function JobDetail() {
                                     onClick={() => sceneKlingMut.mutate({ index: img.index, enabled: !useKling })}
                                     disabled={sceneKlingMut.isPending}
                                     className={`flex items-center gap-1 text-xs border px-2.5 py-1.5 rounded transition disabled:opacity-50 ${useKling ? 'bg-purple-500/20 text-purple-200 border-purple-400/60' : 'bg-navy-700 text-gray-200 hover:text-white border-navy-600'}`}
-                                    title="직접 선택하면 초반 1분 안에서 선택한 씬만 Kling 영상화합니다."
+                                    title={`직접 선택하면 초반 ${klingMotionWindowEnd}초 구간 안에서 선택한 씬만 Kling 영상화합니다.`}
                                   >
                                     <Zap size={12}/>
                                     {useKling ? 'Kling 선택됨' : '이 씬 Kling'}
@@ -1717,7 +1724,6 @@ export default function JobDetail() {
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
                                         text: editingSceneText,
-                                        subtitleText: editingSubtitleText,
                                         section: img.section,
                                         mode: 'image_only'
                                       })}
@@ -1732,22 +1738,6 @@ export default function JobDetail() {
                                       onClick={() => regenImageMut.mutate({
                                         index: img.index,
                                         text: editingSceneText,
-                                        subtitleText: editingSubtitleText,
-                                        section: img.section,
-                                        mode: 'caption_only'
-                                      })}
-                                      disabled={isRegeneratingThis}
-                                      className="flex items-center gap-1 bg-accent-gold text-navy-950 text-xs font-semibold px-2.5 py-1.5 rounded hover:opacity-90 disabled:opacity-50 transition"
-                                      title="이미지와 음성은 유지하고 최종 영상에 표시되는 자막만 저장합니다."
-                                    >
-                                      {isRegeneratingThis ? <Loader size={12} className="animate-spin"/> : <Save size={12}/>}
-                                      자막만 저장
-                                    </button>
-                                    <button
-                                      onClick={() => regenImageMut.mutate({
-                                        index: img.index,
-                                        text: editingSceneText,
-                                        subtitleText: editingSubtitleText,
                                         section: img.section,
                                         mode: 'text_and_image'
                                       })}
@@ -1780,12 +1770,11 @@ export default function JobDetail() {
                                         onClick={() => {
                                           setEditingSceneIndex(img.index);
                                           setEditingSceneText(img.text || img.prompt_ko || img.prompt || '');
-                                          setEditingSubtitleText(img.subtitle_text || img.subtitleText || img.text || img.prompt_ko || '');
                                         }}
                                         className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-white border border-navy-600 px-2.5 py-1.5 rounded transition"
                                       >
                                         <Edit size={12}/>
-                                        자막 · 원문 편집
+                                        원문 편집
                                       </button>
                                     </div>
                                   )
@@ -1837,8 +1826,8 @@ export default function JobDetail() {
             <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
               <h3 className="text-base font-semibold mb-3">비용 상세</h3>
               <div className="space-y-2.5 text-sm mb-3">
-                <InfoRow label="누적" value={`$${parseFloat(costs.currentTotal||0).toFixed(2)}`}/>
-                <InfoRow label="예산" value={costs.budgetCap ? `$${costs.budgetCap}` : '무제한'}/>
+                <InfoRow label="누적" value={`₩${Math.round(Number(costs.currentTotal || 0)).toLocaleString()}`}/>
+                <InfoRow label="예산" value={costs.budgetCap ? `₩${Math.round(Number(costs.budgetCap)).toLocaleString()}` : '무제한'}/>
               </div>
               {costs.budgetCap && (
                 <div className="mb-3">
@@ -1852,7 +1841,11 @@ export default function JobDetail() {
                   {costs.items.map((item, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <span className="text-navy-400">{item.provider}</span>
-                      <span className="text-gray-200">${parseFloat(item.amount||0).toFixed(3)}</span>
+                      <span className="text-gray-200">
+                        {item.currency === 'KRW'
+                          ? `₩${Math.round(Number(item.amount || 0)).toLocaleString()}`
+                          : `$${parseFloat(item.amount || 0).toFixed(3)}`}
+                      </span>
                     </div>
                   ))}
                 </div>

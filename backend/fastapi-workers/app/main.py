@@ -20,7 +20,7 @@ from app.workers.bgm_worker import BgmWorker
 from app.workers.pronunciation_manager import PronunciationManager
 from app.config import APP_MODE, BFL_API_KEY, CLAUDE_MODEL, V5_BFL_ENABLED
 from app import runtime_config
-from app.utils.fal_billing import get_fal_credit_status
+from app.utils.budget import load_cost_ledger_summary
 from app.utils.art_direction import compile_editorial_prompt
 from app.models.article_evidence import EvidenceCaptureRequest, QuoteCardRequest, UserImageEvidenceRequest
 from app.services.article_discovery import ArticleDiscoveryService, ArticleDiscoveryUnavailable
@@ -136,8 +136,16 @@ def provider_status():
             "image_model": "gemini-3-pro-image",
             "quality_tier": runtime_config.value("image_quality_tier"),
         },
-        "fal": get_fal_credit_status(),
+        "fal": {"configured": bool(os.environ.get("FAL_KEY", "").strip())},
     }
+
+
+@app.get("/workers/jobs/{job_id}/cost-ledger")
+def worker_cost_ledger(job_id: int):
+    """실제 FastAPI provider 요청 원장을 Spring/UI에 노출한다."""
+    if job_id <= 0:
+        raise HTTPException(status_code=422, detail="job_id는 양수여야 합니다.")
+    return load_cost_ledger_summary(job_id)
 
 
 # ============================
@@ -229,6 +237,19 @@ class PipelineConfigUpdate(BaseModel):
 def get_pipeline_config():
     """현재 적용 중인 파이프라인 파라미터 전체를 반환합니다."""
     return runtime_config.get()
+
+
+@app.get("/pipeline/motion-policy")
+def get_intro_motion_policy():
+    """편집 화면에 노출할 비밀값 없는 초반 Kling 정책만 반환합니다."""
+    return {
+        "enabled": bool(runtime_config.value("intro_motion_enabled")),
+        "short_window_seconds": float(runtime_config.value("intro_motion_seconds_short")),
+        "long_window_seconds": float(runtime_config.value("intro_motion_seconds_long")),
+        "long_threshold_seconds": float(runtime_config.value("intro_motion_short_threshold")),
+        "clip_count_cap": int(runtime_config.value("intro_motion_clip_count")),
+        "clip_seconds": min(float(runtime_config.value("intro_motion_clip_seconds")), 5.0),
+    }
 
 
 @app.post("/pipeline/config")
@@ -629,7 +650,8 @@ class ScriptGenerateRequest(BaseModel):
     voice_id: Optional[str] = None
     market_data: Optional[dict] = None  # KeywordWorker에서 전달된 market_snapshot
 
-    data_visuals_enabled: bool = True
+    # 숫자 카드·차트는 명시적으로 켠 레거시 작업에서만 사용한다.
+    data_visuals_enabled: bool = False
     # Uses the product's original house style.  Named-channel imitation is not
     # accepted as a profile; future approved profiles remain opt-in here.
     storytelling_profile: str = "original_finance_storyteller_v1"
@@ -848,6 +870,9 @@ class ImagesGenerateRequest(BaseModel):
     lora_model_id: Optional[str] = None        # safetensors CDN URL (Fal.ai flux-lora)
     lora_trigger_word: Optional[str] = None    # LoRA 활성화 트리거 단어
     lora_scale: Optional[float] = 1.0          # LoRA 적용 강도 (0.8~1.2)
+    autonomy_mode: Optional[Literal["GUIDED", "AUTO", "MANUAL"]] = None
+    budget_limit_krw: Optional[int] = Field(default=None, ge=1, le=70_000)
+    budget_policy_version: Optional[str] = Field(default=None, max_length=64)
 
 
 @app.post("/workers/images/generate")
@@ -864,6 +889,9 @@ def images_generate(request: ImagesGenerateRequest):
             lora_model_id=request.lora_model_id,
             lora_trigger_word=request.lora_trigger_word,
             lora_scale=request.lora_scale,
+            autonomy_mode=request.autonomy_mode,
+            budget_limit_krw=request.budget_limit_krw,
+            budget_policy_version=request.budget_policy_version,
         )
     except ImageProviderCreditRequiredError as e:
         logger.warning("이미지 생성 중단: 공급자 크레딧/쿼터 필요: %s", e)

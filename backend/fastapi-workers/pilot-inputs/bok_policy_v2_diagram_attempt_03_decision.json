@@ -1,0 +1,10 @@
+{
+  "decisions": [
+    {
+      "scene_id": "policy_transmission_diagram",
+      "decision": "REGENERATE",
+      "reviewed_attempt": 3,
+      "reason": "attempt-03은 청록색 동전과 책의 가짜 문자로 고정 금화 마스코트 및 strict_textless 계약을 모두 위반했다. 교실 소품을 배제한 단일 data-lab network surface 후보가 필요하다."
+    }
+  ]
+}

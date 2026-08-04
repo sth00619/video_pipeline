@@ -1,0 +1,891 @@
+{
+  "status": "APPROVED",
+  "automatic_regeneration": false,
+  "review_contract": {
+    "automatic_regeneration": false,
+    "require_manual_decision_before_regeneration": true,
+    "required_artifacts_per_scene": [
+      "background.png",
+      "final.png"
+    ],
+    "required_checks": [
+      "PNG 해상도와 파일 무결성",
+      "원본 배경의 읽을 수 있는 수치·한글 텍스트 유무",
+      "마스코트 얼굴·비율·카메라 구도 보존",
+      "검증 장면의 소품 표면 오버레이 위치·출처·값 일치",
+      "일반 장면의 검증 수치 오버레이 부재"
+    ]
+  },
+  "scenes": [
+    {
+      "scene_id": "policy_rate_graph",
+      "scene_type": "graph",
+      "review_kind": "verified_surface",
+      "current_attempt": 1,
+      "attempts": [
+        {
+          "scene_id": "policy_rate_graph",
+          "attempt": 1,
+          "status": "completed",
+          "background": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_rate_graph/attempt-01/background.png",
+            "sha256": "0fb5af6261dcabd7e20d36d80332c5ad87686571752ee627b1b22dfb2899b34f",
+            "width": 2752,
+            "height": 1536,
+            "format": "PNG"
+          },
+          "final": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_rate_graph/attempt-01/final.png",
+            "sha256": "a0e1ef3f4fa22b3ca68f0299bdfaa22e39fc6ed32d0151cc127f4dca1216f225",
+            "width": 1920,
+            "height": 1080,
+            "format": "PNG"
+          },
+          "normalization": {
+            "method": "center_crop_then_lanczos_resize",
+            "source_size": [
+              2752,
+              1536
+            ],
+            "crop_box": [
+              10,
+              0,
+              2741,
+              1536
+            ],
+            "target_size": [
+              1920,
+              1080
+            ]
+          },
+          "ocr": {
+            "status": "ADVISORY_REVIEW_REQUIRED",
+            "reader": "tesseract",
+            "detected_texts": [
+              "Wf,",
+              "- ~",
+              "~",
+              "애 _",
+              "_-",
+              "—",
+              "@ —___",
+              "—",
+              "x",
+              "|",
+              "P=",
+              "ee ez)",
+              "> ee",
+              "se",
+              "OOD",
+              "~ Y",
+              "a",
+              "= =",
+              "Zi)",
+              "|",
+              "Vay",
+              "|",
+              "@eee",
+              "al",
+              "‘A",
+              ":  (]",
+              "a",
+              "oe",
+              "460",
+              "ry",
+              "=",
+              "Nig",
+              "VA",
+              "(ema",
+              "WBS)",
+              "MABE",
+              "——————”",
+              "=o",
+              "mas",
+              "=“",
+              "=",
+              "=) 아즈",
+              "Soe",
+              "ss",
+              ">",
+              "Sars.",
+              "=",
+              "=",
+              "_ =",
+              "~",
+              "수 =",
+              "wmaSe =e",
+              "%      wes ee",
+              "ee",
+              "ㆍ @e",
+              "we =",
+              "——_~",
+              "ㅣ",
+              "II",
+              "Cn",
+              "<<",
+              "\\y",
+              "a __",
+              "| 008",
+              "(7",
+              "="
+            ],
+            "automatic_approval": false
+          }
+        }
+      ],
+      "decision": "APPROVE",
+      "decision_template": {
+        "decision": "APPROVE 또는 REGENERATE",
+        "reason": "검토 근거를 기록",
+        "reviewed_attempt": "재생성 시 현재 검수 회차의 정수"
+      },
+      "review_reason": "원형 금화 마스코트와 data-lab 중심 surface가 선명하며, 모델이 만든 읽을 수 있는 수치·문자는 보이지 않는다. 기준금리 오버레이가 단일 표면에 정확히 합성됐다.",
+      "reviewed_attempt": 1,
+      "reviewed_at": "2026-08-02T07:38:35.782455+00:00"
+    },
+    {
+      "scene_id": "policy_transmission_diagram",
+      "scene_type": "diagram",
+      "review_kind": "verified_surface",
+      "current_attempt": 4,
+      "attempts": [
+        {
+          "scene_id": "policy_transmission_diagram",
+          "attempt": 1,
+          "status": "completed",
+          "background": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-01/background.png",
+            "sha256": "fffab1c690c35de895d6865339b691493bd472b77040c30f34a4ce6d2c4d20c2",
+            "width": 2752,
+            "height": 1536,
+            "format": "PNG"
+          },
+          "final": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-01/final.png",
+            "sha256": "69033fac1395fd1fea1d0a8939fb6664cc9abbacaf98f0bf04d4da4f490e2eb6",
+            "width": 1920,
+            "height": 1080,
+            "format": "PNG"
+          },
+          "normalization": {
+            "method": "center_crop_then_lanczos_resize",
+            "source_size": [
+              2752,
+              1536
+            ],
+            "crop_box": [
+              10,
+              0,
+              2741,
+              1536
+            ],
+            "target_size": [
+              1920,
+              1080
+            ]
+          },
+          "ocr": {
+            "status": "ADVISORY_REVIEW_REQUIRED",
+            "reader": "tesseract",
+            "detected_texts": [
+              "| 1 |e",
+              "-",
+              "— 3",
+              "개",
+              "ee ad",
+              "ial",
+              "a [|",
+              "… Om",
+              "~ 가 가 되여",
+              "2 Se",
+              "/ㅠ",
+              "=",
+              "me,",
+              "oo",
+              "“is",
+              "뻐",
+              "an",
+              "JO.25°%",
+              "[2",
+              "cz",
+              "A \\\\",
+              "LA —",
+              "fo} Te)",
+              "Ba",
+              "a)",
+              "he",
+              "5 \\",
+              "ㄴㄴ",
+              "eo) 5",
+              "=",
+              "~",
+              "때",
+              "il",
+              "PG",
+              "aS",
+              "UNA)    OS",
+              "7",
+              "255",
+              "% al",
+              "a",
+              "4",
+              "(|",
+              "cA",
+              "aii =)",
+              "7.",
+              "00 | ^",
+              "]",
+              "~",
+              "NS",
+              "NS",
+              "|",
+              "ve",
+              "WY",
+              "one",
+              ">",
+              "(Z— =r",
+              "692",
+              "GS",
+              "ZN",
+              "yet",
+              "시",
+              "ti i ©",
+              "티비",
+              "(="
+            ],
+            "automatic_approval": false
+          }
+        },
+        {
+          "scene_id": "policy_transmission_diagram",
+          "attempt": 2,
+          "status": "completed",
+          "background": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-02/background.png",
+            "sha256": "f72dee2154c200cd206bc988f2678ae05f0784f94a69ad4301925dd51c4a00f8",
+            "width": 2752,
+            "height": 1536,
+            "format": "PNG"
+          },
+          "final": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-02/final.png",
+            "sha256": "69a709e3d192027d046a44044cee69edf185136f18ebc01fbe81ffd2adb8e90c",
+            "width": 1920,
+            "height": 1080,
+            "format": "PNG"
+          },
+          "normalization": {
+            "method": "center_crop_then_lanczos_resize",
+            "source_size": [
+              2752,
+              1536
+            ],
+            "crop_box": [
+              10,
+              0,
+              2741,
+              1536
+            ],
+            "target_size": [
+              1920,
+              1080
+            ]
+          },
+          "ocr": {
+            "status": "ADVISORY_REVIEW_REQUIRED",
+            "reader": "tesseract",
+            "detected_texts": [
+              "|",
+              "—",
+              "‘Ag",
+              "~ =",
+              "24  “~       ~",
+              "Y,",
+              "2 -ㄱ",
+              "$4",
+              "2",
+              "as",
+              "1",
+              "O",
+              "25",
+              "Of.",
+              "2",
+              "22",
+              "Zp",
+              "^",
+              "Ww ¢",
+              "이",
+              "~",
+              "fu ~",
+              "\\\\",
+              "O",
+              "~  N <",
+              "il",
+              "YL",
+              "||",
+              "Kgs",
+              "&",
+              "&",
+              "By",
+              "@:>",
+              "\\\\",
+              "| 내",
+              "내 ~",
+              "-",
+              "LP",
+              "|",
+              "NY)",
+              "Re",
+              "NY",
+              "€",
+              "W)",
+              "=",
+              "1 \\",
+              "tt",
+              "2",
+              "——_",
+              "——S, =",
+              "SS",
+              "a",
+              "pr",
+              "oo",
+              "수 Oi",
+              "O ()",
+              "— ~",
+              "SN",
+              "a 2 IRR",
+              "Bow",
+              "= ~",
+              "~",
+              "‘g@",
+              "=~",
+              "A",
+              "<",
+              "SS",
+              "~",
+              "|"
+            ],
+            "automatic_approval": false
+          }
+        },
+        {
+          "scene_id": "policy_transmission_diagram",
+          "attempt": 3,
+          "status": "completed",
+          "background": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-03/background.png",
+            "sha256": "271a3c5afd472813957517eb4899b0c25b037dcc35344c7f958b20528e958bd3",
+            "width": 2752,
+            "height": 1536,
+            "format": "PNG"
+          },
+          "final": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-03/final.png",
+            "sha256": "5f2a62c409fce7228e9def4e506c279ac797761732a0e225b52e11afc905e3f7",
+            "width": 1920,
+            "height": 1080,
+            "format": "PNG"
+          },
+          "normalization": {
+            "method": "center_crop_then_lanczos_resize",
+            "source_size": [
+              2752,
+              1536
+            ],
+            "crop_box": [
+              10,
+              0,
+              2741,
+              1536
+            ],
+            "target_size": [
+              1920,
+              1080
+            ]
+          },
+          "ocr": {
+            "status": "ADVISORY_REVIEW_REQUIRED",
+            "reader": "tesseract",
+            "detected_texts": [
+              "<",
+              "NN",
+              "a",
+              "~",
+              "oN",
+              "wag *",
+              "aime 그",
+              ">",
+              "—_",
+              "Siow .",
+              "Ni",
+              "10) 25 0",
+              "‘425",
+              "a Sam <",
+              "ety,",
+              "Nts",
+              "- ©",
+              "~  ©",
+              "~ ~",
+              "Noe:",
+              "Wil",
+              "ee",
+              "\\ |",
+              "Li",
+              "OO0000",
+              "7",
+              "~ ^",
+              "[0 (0(0()0(,",
+              "200000",
+              "=",
+              "60000",
+              "VOOR",
+              "SO 06",
+              "ZH",
+              "(=",
+              "5)",
+              "\\",
+              "vf)",
+              "2)",
+              ")00",
+              "ZN",
+              ".)",
+              "CA",
+              "NY",
+              "er",
+              "IN",
+              "%",
+              "J",
+              "Tr",
+              "Ty,",
+              "%",
+              "WZ",
+              "0",
+              "NY",
+              "tl",
+              "VW",
+              "[",
+              "——",
+              "me ^,",
+              "Uk",
+              "Ze",
+              "A",
+              "NY",
+              "~  tm 1",
+              "N",
+              "|",
+              "0",
+              "al  |",
+              "| gee",
+              "ea @",
+              "—_— ~ <",
+              "_—",
+              "|",
+              ">)",
+              "WW"
+            ],
+            "automatic_approval": false
+          }
+        },
+        {
+          "scene_id": "policy_transmission_diagram",
+          "attempt": 4,
+          "status": "completed",
+          "background": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-04/background.png",
+            "sha256": "12aec712d9640b1794af52a0999a6db89d8d4bbf85249210f93f0b272be03b5f",
+            "width": 2752,
+            "height": 1536,
+            "format": "PNG"
+          },
+          "final": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-04/final.png",
+            "sha256": "599b5c2751e8d7570ad9156832eb1809d8e39402c09621498dc3b3a4987a10cd",
+            "width": 1920,
+            "height": 1080,
+            "format": "PNG"
+          },
+          "normalization": {
+            "method": "center_crop_then_lanczos_resize",
+            "source_size": [
+              2752,
+              1536
+            ],
+            "crop_box": [
+              10,
+              0,
+              2741,
+              1536
+            ],
+            "target_size": [
+              1920,
+              1080
+            ]
+          },
+          "ocr": {
+            "status": "ADVISORY_REVIEW_REQUIRED",
+            "reader": "tesseract",
+            "detected_texts": [
+              "0”",
+              "~",
+              "~",
+              "SS",
+              "~ ~",
+              "Cami",
+              "—",
+              "=x,",
+              "—",
+              "=",
+              "=,",
+              "=",
+              "—",
+              ")",
+              "®ee",
+              "ele",
+              "~",
+              "2",
+              "=. “<",
+              "c ee",
+              "~.",
+              "—",
+              "Se",
+              "=e = @",
+              "e® =",
+              "©-000,25%p",
+              "ee",
+              "‥ㅎ00066",
+              "/ ? =",
+              "eS",
+              "@eeeeen",
+              "000000",
+              "XN 6",
+              "ND)",
+              "@eeee ee",
+              "cesses: |",
+              "~ —_—",
+              "= <=ㅁ",
+              "| Oa  =",
+              "a.",
+              "<==",
+              "00 /",
+              "BS",
+              "= 8),",
+              "TARAS",
+              "\\",
+              "Sr",
+              "Sain",
+              "en",
+              "3"
+            ],
+            "automatic_approval": false
+          }
+        }
+      ],
+      "decision": "APPROVE",
+      "decision_template": {
+        "decision": "APPROVE 또는 REGENERATE",
+        "reason": "검토 근거를 기록",
+        "reviewed_attempt": "재생성 시 현재 검수 회차의 정수"
+      },
+      "review_reason": "data-lab network surface 전환 후 원형 금화 마스코트가 유지됐고, 전달 경로를 나타내는 비문자 노드·곡선만 남았다. 인상폭 오버레이가 정확히 합성됐다.",
+      "reviewed_attempt": 4,
+      "reviewed_at": "2026-08-02T07:38:35.782469+00:00"
+    },
+    {
+      "scene_id": "inflation_metric",
+      "scene_type": "metric",
+      "review_kind": "verified_surface",
+      "current_attempt": 2,
+      "attempts": [
+        {
+          "scene_id": "inflation_metric",
+          "attempt": 1,
+          "status": "completed",
+          "background": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/inflation_metric/attempt-01/background.png",
+            "sha256": "821ef7c8916d5e10371e5b9d06c6f42c263180957a4def83c7803e44ca73a966",
+            "width": 2752,
+            "height": 1536,
+            "format": "PNG"
+          },
+          "final": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/inflation_metric/attempt-01/final.png",
+            "sha256": "3aa5efae2986adfa42f2656c774f5af882a9c4193995e813374427db43634f53",
+            "width": 1920,
+            "height": 1080,
+            "format": "PNG"
+          },
+          "normalization": {
+            "method": "center_crop_then_lanczos_resize",
+            "source_size": [
+              2752,
+              1536
+            ],
+            "crop_box": [
+              10,
+              0,
+              2741,
+              1536
+            ],
+            "target_size": [
+              1920,
+              1080
+            ]
+          },
+          "ocr": {
+            "status": "ADVISORY_REVIEW_REQUIRED",
+            "reader": "tesseract",
+            "detected_texts": [
+              "ee",
+              "^",
+              "ly",
+              "!",
+              "©) ©",
+              "%",
+              "A",
+              "WwW\"",
+              "^",
+              "가",
+              "00000",
+              "O00 OO",
+              "L[{[(/f/fLYf",
+              "02000",
+              "/. /=/스/5으2",
+              "( / / 7575",
+              "( /80/=/_ /=/으스",
+              "LTT TMT 7,",
+              "4",
+              "—_——_",
+              "Mi s",
+              "배",
+              "00 0/",
+              "2000",
+              "4",
+              "LAW",
+              "\\ \\",
+              "Te",
+              "| =",
+              "^ ㅠㅠ",
+              "1]",
+              "더"
+            ],
+            "automatic_approval": false
+          }
+        },
+        {
+          "scene_id": "inflation_metric",
+          "attempt": 2,
+          "status": "completed",
+          "background": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/inflation_metric/attempt-02/background.png",
+            "sha256": "e5fb379ab27acc65a2a184179cc56e829b12d86fb95205b24dae4d4325430b1a",
+            "width": 2752,
+            "height": 1536,
+            "format": "PNG"
+          },
+          "final": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/inflation_metric/attempt-02/final.png",
+            "sha256": "48758f6d79c40e9e70da060842485edb52bddc724a1c3c75fc25c93af5aa2bc1",
+            "width": 1920,
+            "height": 1080,
+            "format": "PNG"
+          },
+          "normalization": {
+            "method": "center_crop_then_lanczos_resize",
+            "source_size": [
+              2752,
+              1536
+            ],
+            "crop_box": [
+              10,
+              0,
+              2741,
+              1536
+            ],
+            "target_size": [
+              1920,
+              1080
+            ]
+          },
+          "ocr": {
+            "status": "ADVISORY_REVIEW_REQUIRED",
+            "reader": "tesseract",
+            "detected_texts": [
+              "0",
+              "le",
+              "—_",
+              "a",
+              "Ce.",
+              "요",
+              "ㅣ",
+              "9",
+              "=",
+              "_ㅋ9",
+              "06 ee]",
+              "—",
+              "—\\\\",
+              ">, il",
+              "x",
+              "==7| 너는 도",
+              "=",
+              ". _ 0 ~",
+              "») ~",
+              "WW",
+              "@",
+              "SLES AML",
+              "(\\— ae",
+              "WE",
+              "peer",
+              "i",
+              "AN",
+              "=",
+              "~ ~",
+              "ve",
+              "~"
+            ],
+            "automatic_approval": false
+          }
+        }
+      ],
+      "decision": "APPROVE",
+      "decision_template": {
+        "decision": "APPROVE 또는 REGENERATE",
+        "reason": "검토 근거를 기록",
+        "reviewed_attempt": "재생성 시 현재 검수 회차의 정수"
+      },
+      "review_reason": "원형 금화 마스코트와 중앙 아날로그 게이지가 유지됐고, 모델 생성 문자는 보이지 않는다. 소비자물가 오버레이가 지정 게이지 표면에 정확히 합성됐다.",
+      "reviewed_attempt": 2,
+      "reviewed_at": "2026-08-02T07:38:35.782472+00:00"
+    },
+    {
+      "scene_id": "policy_general",
+      "scene_type": "general",
+      "review_kind": "general_scene",
+      "current_attempt": 1,
+      "attempts": [
+        {
+          "scene_id": "policy_general",
+          "attempt": 1,
+          "status": "completed",
+          "background": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_general/attempt-01/background.png",
+            "sha256": "a2ae8ba8263b0d7df02ee21cb72179bd6d2469be642e78f746207aeed0278255",
+            "width": 2752,
+            "height": 1536,
+            "format": "PNG"
+          },
+          "final": {
+            "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_general/attempt-01/final.png",
+            "sha256": "ced632ed7d537706f36d1797f9e65a9f719bb362e09fe6935ceda97dcd069df4",
+            "width": 1920,
+            "height": 1080,
+            "format": "PNG"
+          },
+          "normalization": {
+            "method": "center_crop_then_lanczos_resize",
+            "source_size": [
+              2752,
+              1536
+            ],
+            "crop_box": [
+              10,
+              0,
+              2741,
+              1536
+            ],
+            "target_size": [
+              1920,
+              1080
+            ]
+          },
+          "ocr": {
+            "status": "ADVISORY_REVIEW_REQUIRED",
+            "reader": "tesseract",
+            "detected_texts": [
+              "©",
+              "—~——",
+              "©: -@: 0:",
+              "it",
+              "|",
+              "=",
+              "|",
+              "@               |",
+              "000",
+              ":        |",
+              "~",
+              "=",
+              "al.",
+              "!",
+              "Ooo",
+              "Te)",
+              "> ,  \"=",
+              "스스",
+              "fa fo",
+              "ow ¢",
+              "@",
+              "——",
+              "00",
+              "a *",
+              "@",
+              "a",
+              "YO",
+              "^)",
+              "7\\",
+              "X—a",
+              "7",
+              "SS  18",
+              "~ `",
+              "~ =",
+              "'",
+              "7 흘",
+              "ㄴ 32",
+              "a",
+              "Ni",
+              "WY",
+              "te",
+              "+",
+              "|!",
+              "7,",
+              "i,",
+              "ig",
+              "ANG",
+              "1]",
+              "=",
+              "—-",
+              ",",
+              "Ba",
+              "7.",
+              "Nx",
+              "1",
+              "~",
+              "uh)",
+              "Wy)",
+              "^",
+              "ka",
+              "Wy",
+              "WW)",
+              "Nae",
+              "A)",
+              "l 4   Wg",
+              "ay",
+              "a",
+              "L— 7",
+              "—_ ,",
+              "Vv",
+              "1"
+            ],
+            "automatic_approval": false
+          }
+        }
+      ],
+      "decision": "APPROVE",
+      "decision_template": {
+        "decision": "APPROVE 또는 REGENERATE",
+        "reason": "검토 근거를 기록",
+        "reviewed_attempt": "재생성 시 현재 검수 회차의 정수"
+      },
+      "review_reason": "일반 장면은 원형 금화 마스코트와 항구 경보 배경을 유지하며, 검증 사실 오버레이가 추가되지 않았다.",
+      "reviewed_attempt": 1,
+      "reviewed_at": "2026-08-02T07:38:35.782475+00:00"
+    }
+  ]
+}

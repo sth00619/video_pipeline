@@ -1,0 +1,187 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_rates_flow",
+      "attempt": 1,
+      "attempt_id": "69198f168e5e42d6b51aa59b3f77a5e3",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "network_error",
+      "reserved_at": "2026-08-03T06:56:50.041178+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "style",
+          "character"
+        ],
+        "visual_mode": "semantic_illustration",
+        "selected_archetype": "weather_map",
+        "surface_caption": null
+      },
+      "completed_at": "2026-08-03T06:58:51.309817+00:00"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_rates_flow",
+      "attempt": 1,
+      "attempt_id": "535ec3ecadf34eb5adfb7ae8ffbc3ed4",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_503",
+      "reserved_at": "2026-08-03T07:02:46.784046+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "character",
+          "style"
+        ],
+        "visual_mode": "semantic_illustration",
+        "selected_archetype": "weather_map",
+        "surface_caption": null
+      },
+      "completed_at": "2026-08-03T07:02:57.810764+00:00",
+      "status_code": 503
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_rates_flow",
+      "attempt": 1,
+      "attempt_id": "b96f889aba284db9a532f885b2a38d59",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "network_error",
+      "reserved_at": "2026-08-03T07:06:06.218498+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "character",
+          "style"
+        ],
+        "visual_mode": "semantic_illustration",
+        "selected_archetype": "weather_map",
+        "surface_caption": null
+      },
+      "completed_at": "2026-08-03T07:08:07.250418+00:00"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_rates_flow",
+      "attempt": 1,
+      "attempt_id": "16dddbc62304430ba953ebca6a9481a5",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "network_error",
+      "reserved_at": "2026-08-03T07:15:36.914115+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "character",
+          "style"
+        ],
+        "visual_mode": "semantic_illustration",
+        "selected_archetype": "weather_map",
+        "surface_caption": null
+      },
+      "completed_at": "2026-08-03T07:17:38.342301+00:00"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_rates_flow",
+      "attempt": 1,
+      "attempt_id": "581dcc4505da4de18021faf4052ada0d",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "network_error",
+      "reserved_at": "2026-08-03T07:19:04.727899+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "character",
+          "style"
+        ],
+        "visual_mode": "semantic_illustration",
+        "selected_archetype": "weather_map",
+        "surface_caption": null
+      },
+      "completed_at": "2026-08-03T07:21:06.625780+00:00"
+    }
+  ],
+  "total_krw": 1270,
+  "budget_overrun_krw": 0
+}

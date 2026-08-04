@@ -1,0 +1,6826 @@
+[
+  {
+    "title": "씬 7: 공포 지수가 식었다 · 1",
+    "content": "시장 공포의 온도를 재는 지표, VIX 지수를 보겠습니다.",
+    "prompt_ko": "거대한 온도계가 화면 중앙에 놓여 있고, 붉게 치솟았던 수은이 빠르게 식으며 내려가는 장면. 온도계 주변의 불꽃이 하나씩 꺼지고 있다.",
+    "prompt_en": "giant thermometer centered in frame with red mercury rapidly falling from a peak, surrounding flames extinguishing one by one, cooling atmosphere transitioning from red to cool blue, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "prompt": "giant thermometer centered in frame with red mercury rapidly falling from a peak, surrounding flames extinguishing one by one, cooling atmosphere transitioning from red to cool blue, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "pose": "thinking",
+    "motion_type": "",
+    "bubble_text": "VIX 20.66 → 15.99\n\n---",
+    "bubble_validation": {
+      "passed": true,
+      "reasons": [],
+      "matched_sources": [
+        "market_snapshot.us.chart_series.vix[20].close",
+        "market_snapshot.us.chart_series.vix[22].close",
+        "market_snapshot.us.index.vix.close"
+      ],
+      "numeric_tokens": [
+        "20.66",
+        "15.99"
+      ]
+    },
+    "scene_rejected": false,
+    "section": "data",
+    "char_count": 32,
+    "text": "시장 공포의 온도를 재는 지표, VIX 지수를 보겠습니다.",
+    "visual_type": "data_visual",
+    "visual_plan": {
+      "objective": "chart-shaped data visual with no generated text",
+      "visual_type": "data_visual",
+      "character_required": true,
+      "overlay_type": "fact_card",
+      "no_generated_text": true,
+      "source_scene_index": 34,
+      "source_scene_count": 93,
+      "family": "data_lab",
+      "art_direction": {
+        "family": "data_lab",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "industrial_navy",
+          "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+        },
+        "wardrobe": "white lab coat and data goggles",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "analyst_neutral",
+        "fallback_pose": "scientist",
+        "character_required": true,
+        "camera": "low-angle hero shot",
+        "lighting": "cinematic practical lights",
+        "reference_composition": {
+          "id": "data_lab",
+          "character_placement": "right third",
+          "character_area_target": 0.44,
+          "information_area_target": 0.42
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 110,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "monitor",
+        "data_surface_prompt": "a large blank wall monitor or desk terminal, with a matte non-glowing screen",
+        "surface_contract": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            65,
+            86,
+            102
+          ],
+          "border_rgb": [
+            15,
+            27,
+            42
+          ],
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.05,
+            "y": 0.1,
+            "width": 0.42,
+            "height": 0.6
+          },
+          "tilt_hint": "nearly front-facing matte monitor"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true
+      }
+    },
+    "art_direction": {
+      "family": "data_lab",
+      "topic": "finance",
+      "setting": "premium Korean finance editorial studio",
+      "props": [
+        "financial chart silhouette",
+        "briefing screen",
+        "document folder"
+      ],
+      "palette": {
+        "name": "industrial_navy",
+        "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+      },
+      "wardrobe": "white lab coat and data goggles",
+      "role_costume": "analyst",
+      "costume_state": "neutral",
+      "pose_asset": "analyst_neutral",
+      "fallback_pose": "scientist",
+      "character_required": true,
+      "camera": "low-angle hero shot",
+      "lighting": "cinematic practical lights",
+      "reference_composition": {
+        "id": "data_lab",
+        "character_placement": "right third",
+        "character_area_target": 0.44,
+        "information_area_target": 0.42
+      },
+      "character_placement": "right third",
+      "layer_pipeline": {
+        "version": "3.0",
+        "render_clean_plate": true,
+        "canonical_character_required": true,
+        "z_order": [
+          "clean_background",
+          "verified_info_surface",
+          "character_foreground",
+          "editorial_text"
+        ]
+      },
+      "overlay_strategy": "integrated_verified_data_visual",
+      "data_surface": {
+        "x": 110,
+        "y": 115,
+        "width": 780,
+        "height": 525
+      },
+      "data_surface_kind": "monitor",
+      "data_surface_prompt": "a large blank wall monitor or desk terminal, with a matte non-glowing screen",
+      "surface_contract": {
+        "surface_kind": "monitor",
+        "geometry": "planar_quad",
+        "marker_rgb": [
+          65,
+          86,
+          102
+        ],
+        "border_rgb": [
+          15,
+          27,
+          42
+        ],
+        "preferred_side": "left",
+        "preferred_region": {
+          "x": 0.05,
+          "y": 0.1,
+          "width": 0.42,
+          "height": 0.6
+        },
+        "tilt_hint": "nearly front-facing matte monitor"
+      },
+      "editorial_text_surface": null,
+      "editorial_overlay_target": {
+        "x": 0.1,
+        "y": 0.16,
+        "width": 0.36,
+        "height": 0.25
+      },
+      "negative_constraints": [
+        "no readable text",
+        "no watermark",
+        "no generic gold pile",
+        "no unrelated fire or space scene",
+        "no photorealism",
+        "no mixed art styles"
+      ],
+      "decorative_text_allowed": true
+    },
+    "style_profile": "editorial_comic_2d",
+    "market_snapshot": {
+      "category": "STOCK",
+      "keyword": "8월 코스피 전망",
+      "collected_at": "2026-08-02T09:12:50.811918",
+      "kr": {
+        "index": {
+          "kospi": {
+            "close": 6595.45,
+            "change": 1001.8899999999994,
+            "change_pct": 17.91,
+            "volume": 434445151,
+            "trading_value": 49567650533548
+          },
+          "kosdaq": {
+            "close": 719.76,
+            "change": 74.98000000000002,
+            "change_pct": 11.63,
+            "volume": 445905868
+          }
+        },
+        "chart_series": {
+          "kospi": [
+            {
+              "date": "2026-06-19",
+              "close": 9052.42
+            },
+            {
+              "date": "2026-06-22",
+              "close": 9114.55
+            },
+            {
+              "date": "2026-06-23",
+              "close": 8203.84
+            },
+            {
+              "date": "2026-06-24",
+              "close": 8471.02
+            },
+            {
+              "date": "2026-06-25",
+              "close": 8930.3
+            },
+            {
+              "date": "2026-06-26",
+              "close": 8411.21
+            },
+            {
+              "date": "2026-06-29",
+              "close": 8394.65
+            },
+            {
+              "date": "2026-06-30",
+              "close": 8476.48
+            },
+            {
+              "date": "2026-07-01",
+              "close": 8303.41
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7648.09
+            },
+            {
+              "date": "2026-07-03",
+              "close": 8088.34
+            },
+            {
+              "date": "2026-07-06",
+              "close": 8051.33
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7656.31
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7246.79
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7291.91
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7475.94
+            },
+            {
+              "date": "2026-07-13",
+              "close": 6806.93
+            },
+            {
+              "date": "2026-07-14",
+              "close": 6856.83
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7284.41
+            },
+            {
+              "date": "2026-07-16",
+              "close": 6820.6
+            },
+            {
+              "date": "2026-07-20",
+              "close": 6516.27
+            },
+            {
+              "date": "2026-07-21",
+              "close": 6747.95
+            },
+            {
+              "date": "2026-07-22",
+              "close": 6797.7
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7096.89
+            },
+            {
+              "date": "2026-07-24",
+              "close": 6690.62
+            },
+            {
+              "date": "2026-07-27",
+              "close": 6755.75
+            },
+            {
+              "date": "2026-07-28",
+              "close": 6023.66
+            },
+            {
+              "date": "2026-07-29",
+              "close": 5663.24
+            },
+            {
+              "date": "2026-07-30",
+              "close": 5593.56
+            },
+            {
+              "date": "2026-07-31",
+              "close": 6595.45
+            }
+          ],
+          "kosdaq": [
+            {
+              "date": "2026-06-19",
+              "close": 966.59
+            },
+            {
+              "date": "2026-06-22",
+              "close": 968.4
+            },
+            {
+              "date": "2026-06-23",
+              "close": 891.52
+            },
+            {
+              "date": "2026-06-24",
+              "close": 909.31
+            },
+            {
+              "date": "2026-06-25",
+              "close": 887.81
+            },
+            {
+              "date": "2026-06-26",
+              "close": 851.37
+            },
+            {
+              "date": "2026-06-29",
+              "close": 920.57
+            },
+            {
+              "date": "2026-06-30",
+              "close": 916.18
+            },
+            {
+              "date": "2026-07-01",
+              "close": 929.35
+            },
+            {
+              "date": "2026-07-02",
+              "close": 866.72
+            },
+            {
+              "date": "2026-07-03",
+              "close": 868.41
+            },
+            {
+              "date": "2026-07-06",
+              "close": 847.07
+            },
+            {
+              "date": "2026-07-07",
+              "close": 831.23
+            },
+            {
+              "date": "2026-07-08",
+              "close": 785.0
+            },
+            {
+              "date": "2026-07-09",
+              "close": 794.0
+            },
+            {
+              "date": "2026-07-10",
+              "close": 837.43
+            },
+            {
+              "date": "2026-07-13",
+              "close": 799.36
+            },
+            {
+              "date": "2026-07-14",
+              "close": 783.98
+            },
+            {
+              "date": "2026-07-15",
+              "close": 829.43
+            },
+            {
+              "date": "2026-07-16",
+              "close": 791.84
+            },
+            {
+              "date": "2026-07-20",
+              "close": 749.64
+            },
+            {
+              "date": "2026-07-21",
+              "close": 753.34
+            },
+            {
+              "date": "2026-07-22",
+              "close": 751.09
+            },
+            {
+              "date": "2026-07-23",
+              "close": 790.28
+            },
+            {
+              "date": "2026-07-24",
+              "close": 748.22
+            },
+            {
+              "date": "2026-07-27",
+              "close": 764.86
+            },
+            {
+              "date": "2026-07-28",
+              "close": 705.85
+            },
+            {
+              "date": "2026-07-29",
+              "close": 662.68
+            },
+            {
+              "date": "2026-07-30",
+              "close": 644.78
+            },
+            {
+              "date": "2026-07-31",
+              "close": 719.76
+            }
+          ]
+        },
+        "supply_demand": {},
+        "top_stocks": [
+          {
+            "name": "알테오젠",
+            "symbol": "196170",
+            "market_cap": "+165,313억원",
+            "market_cap_value": 16531386815500.0
+          },
+          {
+            "name": "에코프로",
+            "symbol": "086520",
+            "market_cap": "+107,398억원",
+            "market_cap_value": 10739893623200.0
+          },
+          {
+            "name": "에코프로비엠",
+            "symbol": "247540",
+            "market_cap": "+101,254억원",
+            "market_cap_value": 10125449919000.0
+          },
+          {
+            "name": "레인보우로보틱스",
+            "symbol": "277810",
+            "market_cap": "+84,001억원",
+            "market_cap_value": 8400138514000.0
+          },
+          {
+            "name": "주성엔지니어링",
+            "symbol": "036930",
+            "market_cap": "+57,868억원",
+            "market_cap_value": 5786899564500.0
+          },
+          {
+            "name": "리노공업",
+            "symbol": "058470",
+            "market_cap": "+48,851억원",
+            "market_cap_value": 4885179585000.0
+          },
+          {
+            "name": "원익IPS",
+            "symbol": "240810",
+            "market_cap": "+47,905억원",
+            "market_cap_value": 4790588737600.0
+          },
+          {
+            "name": "HLB",
+            "symbol": "028300",
+            "market_cap": "+40,758억원",
+            "market_cap_value": 4075865623800.0
+          },
+          {
+            "name": "피에스케이",
+            "symbol": "319660",
+            "market_cap": "+37,540억원",
+            "market_cap_value": 3754086134400.0
+          },
+          {
+            "name": "에이비엘바이오",
+            "symbol": "298380",
+            "market_cap": "+37,399억원",
+            "market_cap_value": 3739962528400.0
+          }
+        ],
+        "market_indicators": {
+          "usd_krw": 1436.6
+        },
+        "data_date": "2026-08-02"
+      },
+      "us": {
+        "index": {
+          "sp500": {
+            "close": 7489.72,
+            "change_pct": 0.7,
+            "volume": 5391020000
+          },
+          "nasdaq": {
+            "close": 25373.85,
+            "change_pct": 1.0,
+            "volume": 11942500000
+          },
+          "dow": {
+            "close": 52485.03,
+            "change_pct": 0.53,
+            "volume": 697510000
+          },
+          "vix": {
+            "close": 15.99,
+            "change_pct": -6.44,
+            "volume": 0
+          },
+          "dxy": {
+            "close": 99.8,
+            "change_pct": -0.21,
+            "volume": 0
+          }
+        },
+        "chart_series": {
+          "sp500": [
+            {
+              "date": "2026-07-01",
+              "close": 7483.23
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7483.2402
+            },
+            {
+              "date": "2026-07-06",
+              "close": 7537.4302
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7503.8501
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7482.71
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7543.6401
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7575.3901
+            },
+            {
+              "date": "2026-07-13",
+              "close": 7515.3398
+            },
+            {
+              "date": "2026-07-14",
+              "close": 7543.5898
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7572.3999
+            },
+            {
+              "date": "2026-07-16",
+              "close": 7533.77
+            },
+            {
+              "date": "2026-07-17",
+              "close": 7457.6899
+            },
+            {
+              "date": "2026-07-20",
+              "close": 7443.2798
+            },
+            {
+              "date": "2026-07-21",
+              "close": 7509.2002
+            },
+            {
+              "date": "2026-07-22",
+              "close": 7498.96
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7408.2998
+            },
+            {
+              "date": "2026-07-24",
+              "close": 7411.98
+            },
+            {
+              "date": "2026-07-27",
+              "close": 7413.1802
+            },
+            {
+              "date": "2026-07-28",
+              "close": 7428.7798
+            },
+            {
+              "date": "2026-07-29",
+              "close": 7316.1499
+            },
+            {
+              "date": "2026-07-30",
+              "close": 7437.6299
+            },
+            {
+              "date": "2026-07-31",
+              "close": 7489.7202
+            }
+          ],
+          "nasdaq": [
+            {
+              "date": "2026-07-01",
+              "close": 26040.0293
+            },
+            {
+              "date": "2026-07-02",
+              "close": 25832.6699
+            },
+            {
+              "date": "2026-07-06",
+              "close": 26121.1602
+            },
+            {
+              "date": "2026-07-07",
+              "close": 25818.6895
+            },
+            {
+              "date": "2026-07-08",
+              "close": 25870.6504
+            },
+            {
+              "date": "2026-07-09",
+              "close": 26206.8906
+            },
+            {
+              "date": "2026-07-10",
+              "close": 26281.6094
+            },
+            {
+              "date": "2026-07-13",
+              "close": 25873.1797
+            },
+            {
+              "date": "2026-07-14",
+              "close": 26107.0098
+            },
+            {
+              "date": "2026-07-15",
+              "close": 26269.2305
+            },
+            {
+              "date": "2026-07-16",
+              "close": 25881.9492
+            },
+            {
+              "date": "2026-07-17",
+              "close": 25520.2402
+            },
+            {
+              "date": "2026-07-20",
+              "close": 25508.0703
+            },
+            {
+              "date": "2026-07-21",
+              "close": 25837.2109
+            },
+            {
+              "date": "2026-07-22",
+              "close": 25690.9004
+            },
+            {
+              "date": "2026-07-23",
+              "close": 25137.6895
+            },
+            {
+              "date": "2026-07-24",
+              "close": 24975.8203
+            },
+            {
+              "date": "2026-07-27",
+              "close": 24932.0801
+            },
+            {
+              "date": "2026-07-28",
+              "close": 24876.9102
+            },
+            {
+              "date": "2026-07-29",
+              "close": 24442.9395
+            },
+            {
+              "date": "2026-07-30",
+              "close": 25122.1797
+            },
+            {
+              "date": "2026-07-31",
+              "close": 25373.8496
+            }
+          ],
+          "dow": [
+            {
+              "date": "2026-07-01",
+              "close": 52305.2383
+            },
+            {
+              "date": "2026-07-02",
+              "close": 52900.0703
+            },
+            {
+              "date": "2026-07-06",
+              "close": 53055.9102
+            },
+            {
+              "date": "2026-07-07",
+              "close": 52925.1484
+            },
+            {
+              "date": "2026-07-08",
+              "close": 52348.3906
+            },
+            {
+              "date": "2026-07-09",
+              "close": 52487.4102
+            },
+            {
+              "date": "2026-07-10",
+              "close": 52637.0117
+            },
+            {
+              "date": "2026-07-13",
+              "close": 52498.6406
+            },
+            {
+              "date": "2026-07-14",
+              "close": 52508.2695
+            },
+            {
+              "date": "2026-07-15",
+              "close": 52658.6406
+            },
+            {
+              "date": "2026-07-16",
+              "close": 52552.9688
+            },
+            {
+              "date": "2026-07-17",
+              "close": 52146.4219
+            },
+            {
+              "date": "2026-07-20",
+              "close": 51839.2617
+            },
+            {
+              "date": "2026-07-21",
+              "close": 52224.6406
+            },
+            {
+              "date": "2026-07-22",
+              "close": 52218.5781
+            },
+            {
+              "date": "2026-07-23",
+              "close": 51711.6484
+            },
+            {
+              "date": "2026-07-24",
+              "close": 51947.25
+            },
+            {
+              "date": "2026-07-27",
+              "close": 52210.0781
+            },
+            {
+              "date": "2026-07-28",
+              "close": 52747.3203
+            },
+            {
+              "date": "2026-07-29",
+              "close": 51594.1406
+            },
+            {
+              "date": "2026-07-30",
+              "close": 52208.0586
+            },
+            {
+              "date": "2026-07-31",
+              "close": 52485.0312
+            }
+          ],
+          "vix": [
+            {
+              "date": "2026-06-30",
+              "close": 16.45
+            },
+            {
+              "date": "2026-07-01",
+              "close": 16.59
+            },
+            {
+              "date": "2026-07-02",
+              "close": 16.15
+            },
+            {
+              "date": "2026-07-06",
+              "close": 15.57
+            },
+            {
+              "date": "2026-07-07",
+              "close": 16.13
+            },
+            {
+              "date": "2026-07-08",
+              "close": 16.9
+            },
+            {
+              "date": "2026-07-09",
+              "close": 15.84
+            },
+            {
+              "date": "2026-07-10",
+              "close": 15.03
+            },
+            {
+              "date": "2026-07-13",
+              "close": 17.16
+            },
+            {
+              "date": "2026-07-14",
+              "close": 16.5
+            },
+            {
+              "date": "2026-07-15",
+              "close": 15.67
+            },
+            {
+              "date": "2026-07-16",
+              "close": 16.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 18.77
+            },
+            {
+              "date": "2026-07-20",
+              "close": 18.65
+            },
+            {
+              "date": "2026-07-21",
+              "close": 17.05
+            },
+            {
+              "date": "2026-07-22",
+              "close": 16.64
+            },
+            {
+              "date": "2026-07-23",
+              "close": 18.7
+            },
+            {
+              "date": "2026-07-24",
+              "close": 18.58
+            },
+            {
+              "date": "2026-07-27",
+              "close": 18.67
+            },
+            {
+              "date": "2026-07-28",
+              "close": 18.21
+            },
+            {
+              "date": "2026-07-29",
+              "close": 20.66
+            },
+            {
+              "date": "2026-07-30",
+              "close": 17.09
+            },
+            {
+              "date": "2026-07-31",
+              "close": 15.99
+            }
+          ],
+          "dxy": [
+            {
+              "date": "2026-07-02",
+              "close": 100.86
+            },
+            {
+              "date": "2026-07-06",
+              "close": 100.85
+            },
+            {
+              "date": "2026-07-07",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-08",
+              "close": 101.05
+            },
+            {
+              "date": "2026-07-09",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-10",
+              "close": 100.97
+            },
+            {
+              "date": "2026-07-13",
+              "close": 101.28
+            },
+            {
+              "date": "2026-07-14",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-15",
+              "close": 100.5
+            },
+            {
+              "date": "2026-07-16",
+              "close": 100.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 100.75
+            },
+            {
+              "date": "2026-07-20",
+              "close": 100.99
+            },
+            {
+              "date": "2026-07-21",
+              "close": 101.18
+            },
+            {
+              "date": "2026-07-22",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-23",
+              "close": 101.43
+            },
+            {
+              "date": "2026-07-24",
+              "close": 101.47
+            },
+            {
+              "date": "2026-07-27",
+              "close": 101.51
+            },
+            {
+              "date": "2026-07-28",
+              "close": 101.38
+            },
+            {
+              "date": "2026-07-29",
+              "close": 100.8
+            },
+            {
+              "date": "2026-07-30",
+              "close": 100.01
+            },
+            {
+              "date": "2026-07-31",
+              "close": 99.8
+            }
+          ]
+        },
+        "macro": {
+          "note": "FRED_API_KEY 미설정 - 공식 FRED 사이트 참고"
+        },
+        "sector": {},
+        "news_sentiment": {
+          "headline_count": 100,
+          "top_headlines": [
+            {
+              "headline": "Looking at just the odds isn’t enough. How traders gain an edge on prediction markets",
+              "source": "CNBC",
+              "datetime": 1785591844
+            },
+            {
+              "headline": "OpenAI's Hugging Face hack confirmed months of AI cyber warnings: 'Pandora's box is open'",
+              "source": "CNBC",
+              "datetime": 1785585601
+            },
+            {
+              "headline": "Bloomberg puts off adding Indian bonds to its global index",
+              "source": "Bloomberg",
+              "datetime": 1785564914
+            },
+            {
+              "headline": "Data centre boom fuels demand for workforce housing",
+              "source": "Bloomberg",
+              "datetime": 1785559029
+            },
+            {
+              "headline": "Dollar logs its worst week in over 3 months amid Fed doubts",
+              "source": "Bloomberg",
+              "datetime": 1785558774
+            }
+          ]
+        },
+        "data_date": "2026-08-02"
+      },
+      "associated_data": null
+    },
+    "overlay_placement": {
+      "mode": "anchor",
+      "anchor": "top_right",
+      "margin": 40
+    },
+    "embedded_copy": [
+      {
+        "text": "-2.80% over selected period",
+        "claim_type": "derived_hook",
+        "source_refs": [
+          "market_snapshot.chart_series.vix"
+        ]
+      }
+    ],
+    "data_overlay_plan": {
+      "chart_kind": "trend",
+      "primary_metric": "VIX",
+      "unit": "pt",
+      "source_refs": [
+        "market_snapshot.chart_series.vix"
+      ],
+      "comparison_basis": null,
+      "focus_target": "latest_point",
+      "callout": {
+        "text": "이 흐름이 핵심",
+        "claim_type": "derived_hook",
+        "source_refs": [
+          "market_snapshot.chart_series.vix"
+        ]
+      },
+      "callout_anchor": "target",
+      "diegetic": [],
+      "subtitle_emphasis_ref": "market_snapshot.chart_series.vix",
+      "date_stamp_ref": "market_chart.source_date"
+    },
+    "market_chart": {
+      "series_key": "vix",
+      "label": "VIX",
+      "points": [
+        {
+          "date": "2026-06-30",
+          "close": 16.45
+        },
+        {
+          "date": "2026-07-01",
+          "close": 16.59
+        },
+        {
+          "date": "2026-07-02",
+          "close": 16.15
+        },
+        {
+          "date": "2026-07-06",
+          "close": 15.57
+        },
+        {
+          "date": "2026-07-07",
+          "close": 16.13
+        },
+        {
+          "date": "2026-07-08",
+          "close": 16.9
+        },
+        {
+          "date": "2026-07-09",
+          "close": 15.84
+        },
+        {
+          "date": "2026-07-10",
+          "close": 15.03
+        },
+        {
+          "date": "2026-07-13",
+          "close": 17.16
+        },
+        {
+          "date": "2026-07-14",
+          "close": 16.5
+        },
+        {
+          "date": "2026-07-15",
+          "close": 15.67
+        },
+        {
+          "date": "2026-07-16",
+          "close": 16.73
+        },
+        {
+          "date": "2026-07-17",
+          "close": 18.77
+        },
+        {
+          "date": "2026-07-20",
+          "close": 18.65
+        },
+        {
+          "date": "2026-07-21",
+          "close": 17.05
+        },
+        {
+          "date": "2026-07-22",
+          "close": 16.64
+        },
+        {
+          "date": "2026-07-23",
+          "close": 18.7
+        },
+        {
+          "date": "2026-07-24",
+          "close": 18.58
+        },
+        {
+          "date": "2026-07-27",
+          "close": 18.67
+        },
+        {
+          "date": "2026-07-28",
+          "close": 18.21
+        },
+        {
+          "date": "2026-07-29",
+          "close": 20.66
+        },
+        {
+          "date": "2026-07-30",
+          "close": 17.09
+        },
+        {
+          "date": "2026-07-31",
+          "close": 15.99
+        }
+      ],
+      "daily_change_bars": [
+        {
+          "label": "07-27",
+          "value": 0.48
+        },
+        {
+          "label": "07-28",
+          "value": -2.46
+        },
+        {
+          "label": "07-29",
+          "value": 13.45
+        },
+        {
+          "label": "07-30",
+          "value": -17.28
+        },
+        {
+          "label": "07-31",
+          "value": -6.44
+        }
+      ],
+      "market_cap_pie": [
+        {
+          "label": "알테오젠",
+          "value": 16531386815500.0
+        },
+        {
+          "label": "에코프로",
+          "value": 10739893623200.0
+        },
+        {
+          "label": "에코프로비엠",
+          "value": 10125449919000.0
+        },
+        {
+          "label": "레인보우로보틱스",
+          "value": 8400138514000.0
+        },
+        {
+          "label": "주성엔지니어링",
+          "value": 5786899564500.0
+        }
+      ],
+      "change_pct": -2.8,
+      "latest": 15.99,
+      "source_date": "2026-07-31",
+      "source_ref": "market_snapshot.chart_series.vix",
+      "visual_kind": "trend_dashboard",
+      "visual_theme": "factory_panel",
+      "verified": true,
+      "source": "market_snapshot.chart_series",
+      "hero_stat": {
+        "headline_value": "15.99",
+        "headline_unit_label": "VIX",
+        "direction": "down",
+        "meaning_line": "-2.80% over selected period",
+        "support_marks": [],
+        "comparison_basis": "2026-07-31",
+        "source_refs": [
+          "market_snapshot.chart_series.vix"
+        ]
+      },
+      "focus": {
+        "enabled": false,
+        "target": "latest_verified_point"
+      }
+    },
+    "scene_type": "graph",
+    "selection_reason": "검증된 market_chart 페이로드가 있어 그래프형으로 분류",
+    "editorial_decision": {
+      "index": 34,
+      "selected": false,
+      "reason": "verified_data_visual_priority"
+    },
+    "phase": "context",
+    "phase_name": "Context & Escalation",
+    "start_seconds": 219.51,
+    "end_seconds": 226.13,
+    "emotion_tag": "neutral",
+    "character_action": "arms_crossed",
+    "edit_marker": "scene_change",
+    "text_for_tts": "시장 공포의 온도를 재는 지표, VIX 지수를 보겠습니다.",
+    "sentences": [
+      {
+        "sentence_id": "s035_1",
+        "text": "시장 공포의 온도를 재는 지표, VIX 지수를 보겠습니다.",
+        "text_for_tts": "시장 공포의 온도를 재는 지표, VIX 지수를 보겠습니다.",
+        "emotion_tag": "neutral",
+        "character_action": "arms_crossed",
+        "edit_marker": "scene_change",
+        "estimated_seconds": 6.62,
+        "fact_refs": [],
+        "market_data_refs": [],
+        "elevenlabs_hint": {
+          "audio_tag": "",
+          "stability_mode": "Robust"
+        }
+      }
+    ],
+    "elevenlabs_hint": {
+      "audio_tag": "",
+      "stability_mode": "Robust"
+    },
+    "e2e_test_scene_type": "graph",
+    "e2e_test_ordinal": 1
+  },
+  {
+    "title": "씬 7: 공포 지수가 식었다 · 2",
+    "content": "VIX는 7월 29일 20.66포인트까지 치솟았습니다.",
+    "prompt_ko": "거대한 온도계가 화면 중앙에 놓여 있고, 붉게 치솟았던 수은이 빠르게 식으며 내려가는 장면. 온도계 주변의 불꽃이 하나씩 꺼지고 있다.",
+    "prompt_en": "giant thermometer centered in frame with red mercury rapidly falling from a peak, surrounding flames extinguishing one by one, cooling atmosphere transitioning from red to cool blue, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "prompt": "giant thermometer centered in frame with red mercury rapidly falling from a peak, surrounding flames extinguishing one by one, cooling atmosphere transitioning from red to cool blue, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "pose": "thinking",
+    "motion_type": "",
+    "bubble_text": "VIX 20.66 → 15.99\n\n---",
+    "bubble_validation": {
+      "passed": true,
+      "reasons": [],
+      "matched_sources": [
+        "market_snapshot.us.chart_series.vix[20].close",
+        "market_snapshot.us.chart_series.vix[22].close",
+        "market_snapshot.us.index.vix.close"
+      ],
+      "numeric_tokens": [
+        "20.66",
+        "15.99"
+      ]
+    },
+    "scene_rejected": false,
+    "section": "data",
+    "char_count": 30,
+    "text": "VIX는 7월 29일 20.66포인트까지 치솟았습니다.",
+    "visual_type": "data_visual",
+    "visual_plan": {
+      "objective": "chart-shaped data visual with no generated text",
+      "visual_type": "data_visual",
+      "character_required": true,
+      "overlay_type": "fact_card",
+      "no_generated_text": true,
+      "source_scene_index": 35,
+      "source_scene_count": 93,
+      "family": "factory_dashboard",
+      "art_direction": {
+        "family": "factory_dashboard",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "industrial safety helmet and workwear",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "analyst_neutral",
+        "fallback_pose": "engineer",
+        "character_required": true,
+        "camera": "over-the-shoulder explanation shot",
+        "lighting": "soft studio key light",
+        "reference_composition": {
+          "id": "factory_panel",
+          "character_placement": "left third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 1030,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "inspection_clipboard",
+        "data_surface_prompt": "a blank clipped inspection sheet attached to a machine guard",
+        "surface_contract": {
+          "surface_kind": "inspection_clipboard",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            225,
+            210,
+            175
+          ],
+          "border_rgb": [
+            76,
+            53,
+            34
+          ],
+          "preferred_side": "right",
+          "preferred_region": {
+            "x": 0.52,
+            "y": 0.11,
+            "width": 0.42,
+            "height": 0.6
+          },
+          "tilt_hint": "slightly tilted clipped inspection sheet"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true
+      }
+    },
+    "art_direction": {
+      "family": "factory_dashboard",
+      "topic": "finance",
+      "setting": "premium Korean finance editorial studio",
+      "props": [
+        "financial chart silhouette",
+        "briefing screen",
+        "document folder"
+      ],
+      "palette": {
+        "name": "editorial_blue",
+        "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+      },
+      "wardrobe": "industrial safety helmet and workwear",
+      "role_costume": "analyst",
+      "costume_state": "neutral",
+      "pose_asset": "analyst_neutral",
+      "fallback_pose": "engineer",
+      "character_required": true,
+      "camera": "over-the-shoulder explanation shot",
+      "lighting": "soft studio key light",
+      "reference_composition": {
+        "id": "factory_panel",
+        "character_placement": "left third",
+        "character_area_target": 0.42,
+        "information_area_target": 0.42
+      },
+      "character_placement": "left third",
+      "layer_pipeline": {
+        "version": "3.0",
+        "render_clean_plate": true,
+        "canonical_character_required": true,
+        "z_order": [
+          "clean_background",
+          "verified_info_surface",
+          "character_foreground",
+          "editorial_text"
+        ]
+      },
+      "overlay_strategy": "integrated_verified_data_visual",
+      "data_surface": {
+        "x": 1030,
+        "y": 115,
+        "width": 780,
+        "height": 525
+      },
+      "data_surface_kind": "inspection_clipboard",
+      "data_surface_prompt": "a blank clipped inspection sheet attached to a machine guard",
+      "surface_contract": {
+        "surface_kind": "inspection_clipboard",
+        "geometry": "planar_quad",
+        "marker_rgb": [
+          225,
+          210,
+          175
+        ],
+        "border_rgb": [
+          76,
+          53,
+          34
+        ],
+        "preferred_side": "right",
+        "preferred_region": {
+          "x": 0.52,
+          "y": 0.11,
+          "width": 0.42,
+          "height": 0.6
+        },
+        "tilt_hint": "slightly tilted clipped inspection sheet"
+      },
+      "editorial_text_surface": null,
+      "editorial_overlay_target": {
+        "x": 0.53,
+        "y": 0.16,
+        "width": 0.36,
+        "height": 0.25
+      },
+      "negative_constraints": [
+        "no readable text",
+        "no watermark",
+        "no generic gold pile",
+        "no unrelated fire or space scene",
+        "no photorealism",
+        "no mixed art styles"
+      ],
+      "decorative_text_allowed": true
+    },
+    "style_profile": "editorial_comic_2d",
+    "market_snapshot": {
+      "category": "STOCK",
+      "keyword": "8월 코스피 전망",
+      "collected_at": "2026-08-02T09:12:50.811918",
+      "kr": {
+        "index": {
+          "kospi": {
+            "close": 6595.45,
+            "change": 1001.8899999999994,
+            "change_pct": 17.91,
+            "volume": 434445151,
+            "trading_value": 49567650533548
+          },
+          "kosdaq": {
+            "close": 719.76,
+            "change": 74.98000000000002,
+            "change_pct": 11.63,
+            "volume": 445905868
+          }
+        },
+        "chart_series": {
+          "kospi": [
+            {
+              "date": "2026-06-19",
+              "close": 9052.42
+            },
+            {
+              "date": "2026-06-22",
+              "close": 9114.55
+            },
+            {
+              "date": "2026-06-23",
+              "close": 8203.84
+            },
+            {
+              "date": "2026-06-24",
+              "close": 8471.02
+            },
+            {
+              "date": "2026-06-25",
+              "close": 8930.3
+            },
+            {
+              "date": "2026-06-26",
+              "close": 8411.21
+            },
+            {
+              "date": "2026-06-29",
+              "close": 8394.65
+            },
+            {
+              "date": "2026-06-30",
+              "close": 8476.48
+            },
+            {
+              "date": "2026-07-01",
+              "close": 8303.41
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7648.09
+            },
+            {
+              "date": "2026-07-03",
+              "close": 8088.34
+            },
+            {
+              "date": "2026-07-06",
+              "close": 8051.33
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7656.31
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7246.79
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7291.91
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7475.94
+            },
+            {
+              "date": "2026-07-13",
+              "close": 6806.93
+            },
+            {
+              "date": "2026-07-14",
+              "close": 6856.83
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7284.41
+            },
+            {
+              "date": "2026-07-16",
+              "close": 6820.6
+            },
+            {
+              "date": "2026-07-20",
+              "close": 6516.27
+            },
+            {
+              "date": "2026-07-21",
+              "close": 6747.95
+            },
+            {
+              "date": "2026-07-22",
+              "close": 6797.7
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7096.89
+            },
+            {
+              "date": "2026-07-24",
+              "close": 6690.62
+            },
+            {
+              "date": "2026-07-27",
+              "close": 6755.75
+            },
+            {
+              "date": "2026-07-28",
+              "close": 6023.66
+            },
+            {
+              "date": "2026-07-29",
+              "close": 5663.24
+            },
+            {
+              "date": "2026-07-30",
+              "close": 5593.56
+            },
+            {
+              "date": "2026-07-31",
+              "close": 6595.45
+            }
+          ],
+          "kosdaq": [
+            {
+              "date": "2026-06-19",
+              "close": 966.59
+            },
+            {
+              "date": "2026-06-22",
+              "close": 968.4
+            },
+            {
+              "date": "2026-06-23",
+              "close": 891.52
+            },
+            {
+              "date": "2026-06-24",
+              "close": 909.31
+            },
+            {
+              "date": "2026-06-25",
+              "close": 887.81
+            },
+            {
+              "date": "2026-06-26",
+              "close": 851.37
+            },
+            {
+              "date": "2026-06-29",
+              "close": 920.57
+            },
+            {
+              "date": "2026-06-30",
+              "close": 916.18
+            },
+            {
+              "date": "2026-07-01",
+              "close": 929.35
+            },
+            {
+              "date": "2026-07-02",
+              "close": 866.72
+            },
+            {
+              "date": "2026-07-03",
+              "close": 868.41
+            },
+            {
+              "date": "2026-07-06",
+              "close": 847.07
+            },
+            {
+              "date": "2026-07-07",
+              "close": 831.23
+            },
+            {
+              "date": "2026-07-08",
+              "close": 785.0
+            },
+            {
+              "date": "2026-07-09",
+              "close": 794.0
+            },
+            {
+              "date": "2026-07-10",
+              "close": 837.43
+            },
+            {
+              "date": "2026-07-13",
+              "close": 799.36
+            },
+            {
+              "date": "2026-07-14",
+              "close": 783.98
+            },
+            {
+              "date": "2026-07-15",
+              "close": 829.43
+            },
+            {
+              "date": "2026-07-16",
+              "close": 791.84
+            },
+            {
+              "date": "2026-07-20",
+              "close": 749.64
+            },
+            {
+              "date": "2026-07-21",
+              "close": 753.34
+            },
+            {
+              "date": "2026-07-22",
+              "close": 751.09
+            },
+            {
+              "date": "2026-07-23",
+              "close": 790.28
+            },
+            {
+              "date": "2026-07-24",
+              "close": 748.22
+            },
+            {
+              "date": "2026-07-27",
+              "close": 764.86
+            },
+            {
+              "date": "2026-07-28",
+              "close": 705.85
+            },
+            {
+              "date": "2026-07-29",
+              "close": 662.68
+            },
+            {
+              "date": "2026-07-30",
+              "close": 644.78
+            },
+            {
+              "date": "2026-07-31",
+              "close": 719.76
+            }
+          ]
+        },
+        "supply_demand": {},
+        "top_stocks": [
+          {
+            "name": "알테오젠",
+            "symbol": "196170",
+            "market_cap": "+165,313억원",
+            "market_cap_value": 16531386815500.0
+          },
+          {
+            "name": "에코프로",
+            "symbol": "086520",
+            "market_cap": "+107,398억원",
+            "market_cap_value": 10739893623200.0
+          },
+          {
+            "name": "에코프로비엠",
+            "symbol": "247540",
+            "market_cap": "+101,254억원",
+            "market_cap_value": 10125449919000.0
+          },
+          {
+            "name": "레인보우로보틱스",
+            "symbol": "277810",
+            "market_cap": "+84,001억원",
+            "market_cap_value": 8400138514000.0
+          },
+          {
+            "name": "주성엔지니어링",
+            "symbol": "036930",
+            "market_cap": "+57,868억원",
+            "market_cap_value": 5786899564500.0
+          },
+          {
+            "name": "리노공업",
+            "symbol": "058470",
+            "market_cap": "+48,851억원",
+            "market_cap_value": 4885179585000.0
+          },
+          {
+            "name": "원익IPS",
+            "symbol": "240810",
+            "market_cap": "+47,905억원",
+            "market_cap_value": 4790588737600.0
+          },
+          {
+            "name": "HLB",
+            "symbol": "028300",
+            "market_cap": "+40,758억원",
+            "market_cap_value": 4075865623800.0
+          },
+          {
+            "name": "피에스케이",
+            "symbol": "319660",
+            "market_cap": "+37,540억원",
+            "market_cap_value": 3754086134400.0
+          },
+          {
+            "name": "에이비엘바이오",
+            "symbol": "298380",
+            "market_cap": "+37,399억원",
+            "market_cap_value": 3739962528400.0
+          }
+        ],
+        "market_indicators": {
+          "usd_krw": 1436.6
+        },
+        "data_date": "2026-08-02"
+      },
+      "us": {
+        "index": {
+          "sp500": {
+            "close": 7489.72,
+            "change_pct": 0.7,
+            "volume": 5391020000
+          },
+          "nasdaq": {
+            "close": 25373.85,
+            "change_pct": 1.0,
+            "volume": 11942500000
+          },
+          "dow": {
+            "close": 52485.03,
+            "change_pct": 0.53,
+            "volume": 697510000
+          },
+          "vix": {
+            "close": 15.99,
+            "change_pct": -6.44,
+            "volume": 0
+          },
+          "dxy": {
+            "close": 99.8,
+            "change_pct": -0.21,
+            "volume": 0
+          }
+        },
+        "chart_series": {
+          "sp500": [
+            {
+              "date": "2026-07-01",
+              "close": 7483.23
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7483.2402
+            },
+            {
+              "date": "2026-07-06",
+              "close": 7537.4302
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7503.8501
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7482.71
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7543.6401
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7575.3901
+            },
+            {
+              "date": "2026-07-13",
+              "close": 7515.3398
+            },
+            {
+              "date": "2026-07-14",
+              "close": 7543.5898
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7572.3999
+            },
+            {
+              "date": "2026-07-16",
+              "close": 7533.77
+            },
+            {
+              "date": "2026-07-17",
+              "close": 7457.6899
+            },
+            {
+              "date": "2026-07-20",
+              "close": 7443.2798
+            },
+            {
+              "date": "2026-07-21",
+              "close": 7509.2002
+            },
+            {
+              "date": "2026-07-22",
+              "close": 7498.96
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7408.2998
+            },
+            {
+              "date": "2026-07-24",
+              "close": 7411.98
+            },
+            {
+              "date": "2026-07-27",
+              "close": 7413.1802
+            },
+            {
+              "date": "2026-07-28",
+              "close": 7428.7798
+            },
+            {
+              "date": "2026-07-29",
+              "close": 7316.1499
+            },
+            {
+              "date": "2026-07-30",
+              "close": 7437.6299
+            },
+            {
+              "date": "2026-07-31",
+              "close": 7489.7202
+            }
+          ],
+          "nasdaq": [
+            {
+              "date": "2026-07-01",
+              "close": 26040.0293
+            },
+            {
+              "date": "2026-07-02",
+              "close": 25832.6699
+            },
+            {
+              "date": "2026-07-06",
+              "close": 26121.1602
+            },
+            {
+              "date": "2026-07-07",
+              "close": 25818.6895
+            },
+            {
+              "date": "2026-07-08",
+              "close": 25870.6504
+            },
+            {
+              "date": "2026-07-09",
+              "close": 26206.8906
+            },
+            {
+              "date": "2026-07-10",
+              "close": 26281.6094
+            },
+            {
+              "date": "2026-07-13",
+              "close": 25873.1797
+            },
+            {
+              "date": "2026-07-14",
+              "close": 26107.0098
+            },
+            {
+              "date": "2026-07-15",
+              "close": 26269.2305
+            },
+            {
+              "date": "2026-07-16",
+              "close": 25881.9492
+            },
+            {
+              "date": "2026-07-17",
+              "close": 25520.2402
+            },
+            {
+              "date": "2026-07-20",
+              "close": 25508.0703
+            },
+            {
+              "date": "2026-07-21",
+              "close": 25837.2109
+            },
+            {
+              "date": "2026-07-22",
+              "close": 25690.9004
+            },
+            {
+              "date": "2026-07-23",
+              "close": 25137.6895
+            },
+            {
+              "date": "2026-07-24",
+              "close": 24975.8203
+            },
+            {
+              "date": "2026-07-27",
+              "close": 24932.0801
+            },
+            {
+              "date": "2026-07-28",
+              "close": 24876.9102
+            },
+            {
+              "date": "2026-07-29",
+              "close": 24442.9395
+            },
+            {
+              "date": "2026-07-30",
+              "close": 25122.1797
+            },
+            {
+              "date": "2026-07-31",
+              "close": 25373.8496
+            }
+          ],
+          "dow": [
+            {
+              "date": "2026-07-01",
+              "close": 52305.2383
+            },
+            {
+              "date": "2026-07-02",
+              "close": 52900.0703
+            },
+            {
+              "date": "2026-07-06",
+              "close": 53055.9102
+            },
+            {
+              "date": "2026-07-07",
+              "close": 52925.1484
+            },
+            {
+              "date": "2026-07-08",
+              "close": 52348.3906
+            },
+            {
+              "date": "2026-07-09",
+              "close": 52487.4102
+            },
+            {
+              "date": "2026-07-10",
+              "close": 52637.0117
+            },
+            {
+              "date": "2026-07-13",
+              "close": 52498.6406
+            },
+            {
+              "date": "2026-07-14",
+              "close": 52508.2695
+            },
+            {
+              "date": "2026-07-15",
+              "close": 52658.6406
+            },
+            {
+              "date": "2026-07-16",
+              "close": 52552.9688
+            },
+            {
+              "date": "2026-07-17",
+              "close": 52146.4219
+            },
+            {
+              "date": "2026-07-20",
+              "close": 51839.2617
+            },
+            {
+              "date": "2026-07-21",
+              "close": 52224.6406
+            },
+            {
+              "date": "2026-07-22",
+              "close": 52218.5781
+            },
+            {
+              "date": "2026-07-23",
+              "close": 51711.6484
+            },
+            {
+              "date": "2026-07-24",
+              "close": 51947.25
+            },
+            {
+              "date": "2026-07-27",
+              "close": 52210.0781
+            },
+            {
+              "date": "2026-07-28",
+              "close": 52747.3203
+            },
+            {
+              "date": "2026-07-29",
+              "close": 51594.1406
+            },
+            {
+              "date": "2026-07-30",
+              "close": 52208.0586
+            },
+            {
+              "date": "2026-07-31",
+              "close": 52485.0312
+            }
+          ],
+          "vix": [
+            {
+              "date": "2026-06-30",
+              "close": 16.45
+            },
+            {
+              "date": "2026-07-01",
+              "close": 16.59
+            },
+            {
+              "date": "2026-07-02",
+              "close": 16.15
+            },
+            {
+              "date": "2026-07-06",
+              "close": 15.57
+            },
+            {
+              "date": "2026-07-07",
+              "close": 16.13
+            },
+            {
+              "date": "2026-07-08",
+              "close": 16.9
+            },
+            {
+              "date": "2026-07-09",
+              "close": 15.84
+            },
+            {
+              "date": "2026-07-10",
+              "close": 15.03
+            },
+            {
+              "date": "2026-07-13",
+              "close": 17.16
+            },
+            {
+              "date": "2026-07-14",
+              "close": 16.5
+            },
+            {
+              "date": "2026-07-15",
+              "close": 15.67
+            },
+            {
+              "date": "2026-07-16",
+              "close": 16.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 18.77
+            },
+            {
+              "date": "2026-07-20",
+              "close": 18.65
+            },
+            {
+              "date": "2026-07-21",
+              "close": 17.05
+            },
+            {
+              "date": "2026-07-22",
+              "close": 16.64
+            },
+            {
+              "date": "2026-07-23",
+              "close": 18.7
+            },
+            {
+              "date": "2026-07-24",
+              "close": 18.58
+            },
+            {
+              "date": "2026-07-27",
+              "close": 18.67
+            },
+            {
+              "date": "2026-07-28",
+              "close": 18.21
+            },
+            {
+              "date": "2026-07-29",
+              "close": 20.66
+            },
+            {
+              "date": "2026-07-30",
+              "close": 17.09
+            },
+            {
+              "date": "2026-07-31",
+              "close": 15.99
+            }
+          ],
+          "dxy": [
+            {
+              "date": "2026-07-02",
+              "close": 100.86
+            },
+            {
+              "date": "2026-07-06",
+              "close": 100.85
+            },
+            {
+              "date": "2026-07-07",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-08",
+              "close": 101.05
+            },
+            {
+              "date": "2026-07-09",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-10",
+              "close": 100.97
+            },
+            {
+              "date": "2026-07-13",
+              "close": 101.28
+            },
+            {
+              "date": "2026-07-14",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-15",
+              "close": 100.5
+            },
+            {
+              "date": "2026-07-16",
+              "close": 100.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 100.75
+            },
+            {
+              "date": "2026-07-20",
+              "close": 100.99
+            },
+            {
+              "date": "2026-07-21",
+              "close": 101.18
+            },
+            {
+              "date": "2026-07-22",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-23",
+              "close": 101.43
+            },
+            {
+              "date": "2026-07-24",
+              "close": 101.47
+            },
+            {
+              "date": "2026-07-27",
+              "close": 101.51
+            },
+            {
+              "date": "2026-07-28",
+              "close": 101.38
+            },
+            {
+              "date": "2026-07-29",
+              "close": 100.8
+            },
+            {
+              "date": "2026-07-30",
+              "close": 100.01
+            },
+            {
+              "date": "2026-07-31",
+              "close": 99.8
+            }
+          ]
+        },
+        "macro": {
+          "note": "FRED_API_KEY 미설정 - 공식 FRED 사이트 참고"
+        },
+        "sector": {},
+        "news_sentiment": {
+          "headline_count": 100,
+          "top_headlines": [
+            {
+              "headline": "Looking at just the odds isn’t enough. How traders gain an edge on prediction markets",
+              "source": "CNBC",
+              "datetime": 1785591844
+            },
+            {
+              "headline": "OpenAI's Hugging Face hack confirmed months of AI cyber warnings: 'Pandora's box is open'",
+              "source": "CNBC",
+              "datetime": 1785585601
+            },
+            {
+              "headline": "Bloomberg puts off adding Indian bonds to its global index",
+              "source": "Bloomberg",
+              "datetime": 1785564914
+            },
+            {
+              "headline": "Data centre boom fuels demand for workforce housing",
+              "source": "Bloomberg",
+              "datetime": 1785559029
+            },
+            {
+              "headline": "Dollar logs its worst week in over 3 months amid Fed doubts",
+              "source": "Bloomberg",
+              "datetime": 1785558774
+            }
+          ]
+        },
+        "data_date": "2026-08-02"
+      },
+      "associated_data": null
+    },
+    "overlay_placement": {
+      "mode": "anchor",
+      "anchor": "top_right",
+      "margin": 40
+    },
+    "embedded_copy": [
+      {
+        "text": "-2.80% over selected period",
+        "claim_type": "derived_hook",
+        "source_refs": [
+          "market_snapshot.chart_series.vix"
+        ]
+      }
+    ],
+    "data_overlay_plan": {
+      "chart_kind": "trend",
+      "primary_metric": "VIX",
+      "unit": "pt",
+      "source_refs": [
+        "market_snapshot.chart_series.vix"
+      ],
+      "comparison_basis": null,
+      "focus_target": "latest_point",
+      "callout": {
+        "text": "이 흐름이 핵심",
+        "claim_type": "derived_hook",
+        "source_refs": [
+          "market_snapshot.chart_series.vix"
+        ]
+      },
+      "callout_anchor": "target",
+      "diegetic": [],
+      "subtitle_emphasis_ref": "market_snapshot.chart_series.vix",
+      "date_stamp_ref": "market_chart.source_date"
+    },
+    "market_chart": {
+      "series_key": "vix",
+      "label": "VIX",
+      "points": [
+        {
+          "date": "2026-06-30",
+          "close": 16.45
+        },
+        {
+          "date": "2026-07-01",
+          "close": 16.59
+        },
+        {
+          "date": "2026-07-02",
+          "close": 16.15
+        },
+        {
+          "date": "2026-07-06",
+          "close": 15.57
+        },
+        {
+          "date": "2026-07-07",
+          "close": 16.13
+        },
+        {
+          "date": "2026-07-08",
+          "close": 16.9
+        },
+        {
+          "date": "2026-07-09",
+          "close": 15.84
+        },
+        {
+          "date": "2026-07-10",
+          "close": 15.03
+        },
+        {
+          "date": "2026-07-13",
+          "close": 17.16
+        },
+        {
+          "date": "2026-07-14",
+          "close": 16.5
+        },
+        {
+          "date": "2026-07-15",
+          "close": 15.67
+        },
+        {
+          "date": "2026-07-16",
+          "close": 16.73
+        },
+        {
+          "date": "2026-07-17",
+          "close": 18.77
+        },
+        {
+          "date": "2026-07-20",
+          "close": 18.65
+        },
+        {
+          "date": "2026-07-21",
+          "close": 17.05
+        },
+        {
+          "date": "2026-07-22",
+          "close": 16.64
+        },
+        {
+          "date": "2026-07-23",
+          "close": 18.7
+        },
+        {
+          "date": "2026-07-24",
+          "close": 18.58
+        },
+        {
+          "date": "2026-07-27",
+          "close": 18.67
+        },
+        {
+          "date": "2026-07-28",
+          "close": 18.21
+        },
+        {
+          "date": "2026-07-29",
+          "close": 20.66
+        },
+        {
+          "date": "2026-07-30",
+          "close": 17.09
+        },
+        {
+          "date": "2026-07-31",
+          "close": 15.99
+        }
+      ],
+      "daily_change_bars": [
+        {
+          "label": "07-27",
+          "value": 0.48
+        },
+        {
+          "label": "07-28",
+          "value": -2.46
+        },
+        {
+          "label": "07-29",
+          "value": 13.45
+        },
+        {
+          "label": "07-30",
+          "value": -17.28
+        },
+        {
+          "label": "07-31",
+          "value": -6.44
+        }
+      ],
+      "market_cap_pie": [
+        {
+          "label": "알테오젠",
+          "value": 16531386815500.0
+        },
+        {
+          "label": "에코프로",
+          "value": 10739893623200.0
+        },
+        {
+          "label": "에코프로비엠",
+          "value": 10125449919000.0
+        },
+        {
+          "label": "레인보우로보틱스",
+          "value": 8400138514000.0
+        },
+        {
+          "label": "주성엔지니어링",
+          "value": 5786899564500.0
+        }
+      ],
+      "change_pct": -2.8,
+      "latest": 15.99,
+      "source_date": "2026-07-31",
+      "source_ref": "market_snapshot.chart_series.vix",
+      "visual_kind": "trend_dashboard",
+      "visual_theme": "paper_poster",
+      "verified": true,
+      "source": "market_snapshot.chart_series",
+      "hero_stat": {
+        "headline_value": "15.99",
+        "headline_unit_label": "VIX",
+        "direction": "down",
+        "meaning_line": "-2.80% over selected period",
+        "support_marks": [],
+        "comparison_basis": "2026-07-31",
+        "source_refs": [
+          "market_snapshot.chart_series.vix"
+        ]
+      },
+      "focus": {
+        "enabled": false,
+        "target": "latest_verified_point"
+      }
+    },
+    "scene_type": "graph",
+    "selection_reason": "검증된 market_chart 페이로드가 있어 그래프형으로 분류",
+    "editorial_decision": {
+      "index": 35,
+      "selected": false,
+      "reason": "verified_data_visual_priority"
+    },
+    "phase": "context",
+    "phase_name": "Context & Escalation",
+    "start_seconds": 226.13,
+    "end_seconds": 233.01,
+    "emotion_tag": "highlight",
+    "character_action": "pointer_up",
+    "edit_marker": "data_overlay",
+    "text_for_tts": "VIX는 7월 29일 20.66포인트까지 치솟았습니다.",
+    "sentences": [
+      {
+        "sentence_id": "s036_1",
+        "text": "VIX는 7월 29일 20.66포인트까지 치솟았습니다.",
+        "text_for_tts": "VIX는 7월 29일 20.66포인트까지 치솟았습니다.",
+        "emotion_tag": "highlight",
+        "character_action": "pointer_up",
+        "edit_marker": "data_overlay",
+        "estimated_seconds": 6.88,
+        "fact_refs": [],
+        "market_data_refs": [],
+        "elevenlabs_hint": {
+          "audio_tag": "[emphatically]",
+          "stability_mode": "Robust"
+        }
+      }
+    ],
+    "elevenlabs_hint": {
+      "audio_tag": "[emphatically]",
+      "stability_mode": "Robust"
+    },
+    "e2e_test_scene_type": "graph",
+    "e2e_test_ordinal": 2
+  },
+  {
+    "title": "씬 3: 하락의 마지막 3일 · 1",
+    "content": "7월 말로 갈수록 하락은 더 가팔라졌습니다.",
+    "prompt_ko": "세 개의 계단이 차례로 아래로 내려가는 구조물. 각 계단마다 붉은 화살표가 아래를 향하고, 마지막 계단 끝은 낭떠러지 위에 걸쳐 있다.",
+    "prompt_en": "three descending stone steps each marked with a downward red arrow, the final step hanging over a sheer drop into darkness, ominous atmosphere, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "prompt": "three descending stone steps each marked with a downward red arrow, the final step hanging over a sheer drop into darkness, ominous atmosphere, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "pose": "worried",
+    "motion_type": "thinking_desk",
+    "bubble_text": "3일 연속 신저점\n\n---",
+    "bubble_validation": {
+      "passed": false,
+      "reasons": [
+        "ungrounded_numeric_token:3일"
+      ],
+      "matched_sources": [],
+      "numeric_tokens": [
+        "3일"
+      ]
+    },
+    "scene_rejected": true,
+    "section": "intro",
+    "char_count": 24,
+    "text": "7월 말로 갈수록 하락은 더 가팔라졌습니다.",
+    "visual_type": "character_hero",
+    "visual_plan": {
+      "objective": "hero character establishes the topic",
+      "visual_type": "character_hero",
+      "character_required": true,
+      "overlay_type": null,
+      "no_generated_text": true,
+      "source_scene_index": 10,
+      "source_scene_count": 93,
+      "family": "news_headline",
+      "art_direction": {
+        "family": "news_headline",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "risk_crimson",
+          "colors": "mostly charcoal and white, one deep crimson warning, muted gray"
+        },
+        "wardrobe": "clean broadcaster jacket and notebook",
+        "role_costume": "anchor",
+        "costume_state": "worried",
+        "pose_asset": "anchor_worried",
+        "fallback_pose": "analyst",
+        "character_required": true,
+        "camera": "low-angle hero shot",
+        "lighting": "cinematic practical lights",
+        "reference_composition": {
+          "id": "headline_reaction",
+          "character_placement": "right third",
+          "character_area_target": 0.46,
+          "information_area_target": 0.3
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "headline_card",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true
+      }
+    },
+    "art_direction": {
+      "family": "news_headline",
+      "topic": "finance",
+      "setting": "premium Korean finance editorial studio",
+      "props": [
+        "financial chart silhouette",
+        "briefing screen",
+        "document folder"
+      ],
+      "palette": {
+        "name": "risk_crimson",
+        "colors": "mostly charcoal and white, one deep crimson warning, muted gray"
+      },
+      "wardrobe": "clean broadcaster jacket and notebook",
+      "role_costume": "anchor",
+      "costume_state": "worried",
+      "pose_asset": "anchor_worried",
+      "fallback_pose": "analyst",
+      "character_required": true,
+      "camera": "low-angle hero shot",
+      "lighting": "cinematic practical lights",
+      "reference_composition": {
+        "id": "headline_reaction",
+        "character_placement": "right third",
+        "character_area_target": 0.46,
+        "information_area_target": 0.3
+      },
+      "character_placement": "right third",
+      "layer_pipeline": {
+        "version": "3.0",
+        "render_clean_plate": true,
+        "canonical_character_required": true,
+        "z_order": [
+          "clean_background",
+          "verified_info_surface",
+          "character_foreground",
+          "editorial_text"
+        ]
+      },
+      "overlay_strategy": "headline_card",
+      "data_surface": null,
+      "data_surface_kind": null,
+      "data_surface_prompt": null,
+      "surface_contract": null,
+      "editorial_text_surface": null,
+      "editorial_overlay_target": {
+        "x": 0.1,
+        "y": 0.16,
+        "width": 0.36,
+        "height": 0.25
+      },
+      "negative_constraints": [
+        "no readable text",
+        "no watermark",
+        "no generic gold pile",
+        "no unrelated fire or space scene",
+        "no photorealism",
+        "no mixed art styles"
+      ],
+      "decorative_text_allowed": true
+    },
+    "style_profile": "editorial_comic_2d",
+    "market_snapshot": {
+      "category": "STOCK",
+      "keyword": "8월 코스피 전망",
+      "collected_at": "2026-08-02T09:12:50.811918",
+      "kr": {
+        "index": {
+          "kospi": {
+            "close": 6595.45,
+            "change": 1001.8899999999994,
+            "change_pct": 17.91,
+            "volume": 434445151,
+            "trading_value": 49567650533548
+          },
+          "kosdaq": {
+            "close": 719.76,
+            "change": 74.98000000000002,
+            "change_pct": 11.63,
+            "volume": 445905868
+          }
+        },
+        "chart_series": {
+          "kospi": [
+            {
+              "date": "2026-06-19",
+              "close": 9052.42
+            },
+            {
+              "date": "2026-06-22",
+              "close": 9114.55
+            },
+            {
+              "date": "2026-06-23",
+              "close": 8203.84
+            },
+            {
+              "date": "2026-06-24",
+              "close": 8471.02
+            },
+            {
+              "date": "2026-06-25",
+              "close": 8930.3
+            },
+            {
+              "date": "2026-06-26",
+              "close": 8411.21
+            },
+            {
+              "date": "2026-06-29",
+              "close": 8394.65
+            },
+            {
+              "date": "2026-06-30",
+              "close": 8476.48
+            },
+            {
+              "date": "2026-07-01",
+              "close": 8303.41
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7648.09
+            },
+            {
+              "date": "2026-07-03",
+              "close": 8088.34
+            },
+            {
+              "date": "2026-07-06",
+              "close": 8051.33
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7656.31
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7246.79
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7291.91
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7475.94
+            },
+            {
+              "date": "2026-07-13",
+              "close": 6806.93
+            },
+            {
+              "date": "2026-07-14",
+              "close": 6856.83
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7284.41
+            },
+            {
+              "date": "2026-07-16",
+              "close": 6820.6
+            },
+            {
+              "date": "2026-07-20",
+              "close": 6516.27
+            },
+            {
+              "date": "2026-07-21",
+              "close": 6747.95
+            },
+            {
+              "date": "2026-07-22",
+              "close": 6797.7
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7096.89
+            },
+            {
+              "date": "2026-07-24",
+              "close": 6690.62
+            },
+            {
+              "date": "2026-07-27",
+              "close": 6755.75
+            },
+            {
+              "date": "2026-07-28",
+              "close": 6023.66
+            },
+            {
+              "date": "2026-07-29",
+              "close": 5663.24
+            },
+            {
+              "date": "2026-07-30",
+              "close": 5593.56
+            },
+            {
+              "date": "2026-07-31",
+              "close": 6595.45
+            }
+          ],
+          "kosdaq": [
+            {
+              "date": "2026-06-19",
+              "close": 966.59
+            },
+            {
+              "date": "2026-06-22",
+              "close": 968.4
+            },
+            {
+              "date": "2026-06-23",
+              "close": 891.52
+            },
+            {
+              "date": "2026-06-24",
+              "close": 909.31
+            },
+            {
+              "date": "2026-06-25",
+              "close": 887.81
+            },
+            {
+              "date": "2026-06-26",
+              "close": 851.37
+            },
+            {
+              "date": "2026-06-29",
+              "close": 920.57
+            },
+            {
+              "date": "2026-06-30",
+              "close": 916.18
+            },
+            {
+              "date": "2026-07-01",
+              "close": 929.35
+            },
+            {
+              "date": "2026-07-02",
+              "close": 866.72
+            },
+            {
+              "date": "2026-07-03",
+              "close": 868.41
+            },
+            {
+              "date": "2026-07-06",
+              "close": 847.07
+            },
+            {
+              "date": "2026-07-07",
+              "close": 831.23
+            },
+            {
+              "date": "2026-07-08",
+              "close": 785.0
+            },
+            {
+              "date": "2026-07-09",
+              "close": 794.0
+            },
+            {
+              "date": "2026-07-10",
+              "close": 837.43
+            },
+            {
+              "date": "2026-07-13",
+              "close": 799.36
+            },
+            {
+              "date": "2026-07-14",
+              "close": 783.98
+            },
+            {
+              "date": "2026-07-15",
+              "close": 829.43
+            },
+            {
+              "date": "2026-07-16",
+              "close": 791.84
+            },
+            {
+              "date": "2026-07-20",
+              "close": 749.64
+            },
+            {
+              "date": "2026-07-21",
+              "close": 753.34
+            },
+            {
+              "date": "2026-07-22",
+              "close": 751.09
+            },
+            {
+              "date": "2026-07-23",
+              "close": 790.28
+            },
+            {
+              "date": "2026-07-24",
+              "close": 748.22
+            },
+            {
+              "date": "2026-07-27",
+              "close": 764.86
+            },
+            {
+              "date": "2026-07-28",
+              "close": 705.85
+            },
+            {
+              "date": "2026-07-29",
+              "close": 662.68
+            },
+            {
+              "date": "2026-07-30",
+              "close": 644.78
+            },
+            {
+              "date": "2026-07-31",
+              "close": 719.76
+            }
+          ]
+        },
+        "supply_demand": {},
+        "top_stocks": [
+          {
+            "name": "알테오젠",
+            "symbol": "196170",
+            "market_cap": "+165,313억원",
+            "market_cap_value": 16531386815500.0
+          },
+          {
+            "name": "에코프로",
+            "symbol": "086520",
+            "market_cap": "+107,398억원",
+            "market_cap_value": 10739893623200.0
+          },
+          {
+            "name": "에코프로비엠",
+            "symbol": "247540",
+            "market_cap": "+101,254억원",
+            "market_cap_value": 10125449919000.0
+          },
+          {
+            "name": "레인보우로보틱스",
+            "symbol": "277810",
+            "market_cap": "+84,001억원",
+            "market_cap_value": 8400138514000.0
+          },
+          {
+            "name": "주성엔지니어링",
+            "symbol": "036930",
+            "market_cap": "+57,868억원",
+            "market_cap_value": 5786899564500.0
+          },
+          {
+            "name": "리노공업",
+            "symbol": "058470",
+            "market_cap": "+48,851억원",
+            "market_cap_value": 4885179585000.0
+          },
+          {
+            "name": "원익IPS",
+            "symbol": "240810",
+            "market_cap": "+47,905억원",
+            "market_cap_value": 4790588737600.0
+          },
+          {
+            "name": "HLB",
+            "symbol": "028300",
+            "market_cap": "+40,758억원",
+            "market_cap_value": 4075865623800.0
+          },
+          {
+            "name": "피에스케이",
+            "symbol": "319660",
+            "market_cap": "+37,540억원",
+            "market_cap_value": 3754086134400.0
+          },
+          {
+            "name": "에이비엘바이오",
+            "symbol": "298380",
+            "market_cap": "+37,399억원",
+            "market_cap_value": 3739962528400.0
+          }
+        ],
+        "market_indicators": {
+          "usd_krw": 1436.6
+        },
+        "data_date": "2026-08-02"
+      },
+      "us": {
+        "index": {
+          "sp500": {
+            "close": 7489.72,
+            "change_pct": 0.7,
+            "volume": 5391020000
+          },
+          "nasdaq": {
+            "close": 25373.85,
+            "change_pct": 1.0,
+            "volume": 11942500000
+          },
+          "dow": {
+            "close": 52485.03,
+            "change_pct": 0.53,
+            "volume": 697510000
+          },
+          "vix": {
+            "close": 15.99,
+            "change_pct": -6.44,
+            "volume": 0
+          },
+          "dxy": {
+            "close": 99.8,
+            "change_pct": -0.21,
+            "volume": 0
+          }
+        },
+        "chart_series": {
+          "sp500": [
+            {
+              "date": "2026-07-01",
+              "close": 7483.23
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7483.2402
+            },
+            {
+              "date": "2026-07-06",
+              "close": 7537.4302
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7503.8501
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7482.71
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7543.6401
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7575.3901
+            },
+            {
+              "date": "2026-07-13",
+              "close": 7515.3398
+            },
+            {
+              "date": "2026-07-14",
+              "close": 7543.5898
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7572.3999
+            },
+            {
+              "date": "2026-07-16",
+              "close": 7533.77
+            },
+            {
+              "date": "2026-07-17",
+              "close": 7457.6899
+            },
+            {
+              "date": "2026-07-20",
+              "close": 7443.2798
+            },
+            {
+              "date": "2026-07-21",
+              "close": 7509.2002
+            },
+            {
+              "date": "2026-07-22",
+              "close": 7498.96
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7408.2998
+            },
+            {
+              "date": "2026-07-24",
+              "close": 7411.98
+            },
+            {
+              "date": "2026-07-27",
+              "close": 7413.1802
+            },
+            {
+              "date": "2026-07-28",
+              "close": 7428.7798
+            },
+            {
+              "date": "2026-07-29",
+              "close": 7316.1499
+            },
+            {
+              "date": "2026-07-30",
+              "close": 7437.6299
+            },
+            {
+              "date": "2026-07-31",
+              "close": 7489.7202
+            }
+          ],
+          "nasdaq": [
+            {
+              "date": "2026-07-01",
+              "close": 26040.0293
+            },
+            {
+              "date": "2026-07-02",
+              "close": 25832.6699
+            },
+            {
+              "date": "2026-07-06",
+              "close": 26121.1602
+            },
+            {
+              "date": "2026-07-07",
+              "close": 25818.6895
+            },
+            {
+              "date": "2026-07-08",
+              "close": 25870.6504
+            },
+            {
+              "date": "2026-07-09",
+              "close": 26206.8906
+            },
+            {
+              "date": "2026-07-10",
+              "close": 26281.6094
+            },
+            {
+              "date": "2026-07-13",
+              "close": 25873.1797
+            },
+            {
+              "date": "2026-07-14",
+              "close": 26107.0098
+            },
+            {
+              "date": "2026-07-15",
+              "close": 26269.2305
+            },
+            {
+              "date": "2026-07-16",
+              "close": 25881.9492
+            },
+            {
+              "date": "2026-07-17",
+              "close": 25520.2402
+            },
+            {
+              "date": "2026-07-20",
+              "close": 25508.0703
+            },
+            {
+              "date": "2026-07-21",
+              "close": 25837.2109
+            },
+            {
+              "date": "2026-07-22",
+              "close": 25690.9004
+            },
+            {
+              "date": "2026-07-23",
+              "close": 25137.6895
+            },
+            {
+              "date": "2026-07-24",
+              "close": 24975.8203
+            },
+            {
+              "date": "2026-07-27",
+              "close": 24932.0801
+            },
+            {
+              "date": "2026-07-28",
+              "close": 24876.9102
+            },
+            {
+              "date": "2026-07-29",
+              "close": 24442.9395
+            },
+            {
+              "date": "2026-07-30",
+              "close": 25122.1797
+            },
+            {
+              "date": "2026-07-31",
+              "close": 25373.8496
+            }
+          ],
+          "dow": [
+            {
+              "date": "2026-07-01",
+              "close": 52305.2383
+            },
+            {
+              "date": "2026-07-02",
+              "close": 52900.0703
+            },
+            {
+              "date": "2026-07-06",
+              "close": 53055.9102
+            },
+            {
+              "date": "2026-07-07",
+              "close": 52925.1484
+            },
+            {
+              "date": "2026-07-08",
+              "close": 52348.3906
+            },
+            {
+              "date": "2026-07-09",
+              "close": 52487.4102
+            },
+            {
+              "date": "2026-07-10",
+              "close": 52637.0117
+            },
+            {
+              "date": "2026-07-13",
+              "close": 52498.6406
+            },
+            {
+              "date": "2026-07-14",
+              "close": 52508.2695
+            },
+            {
+              "date": "2026-07-15",
+              "close": 52658.6406
+            },
+            {
+              "date": "2026-07-16",
+              "close": 52552.9688
+            },
+            {
+              "date": "2026-07-17",
+              "close": 52146.4219
+            },
+            {
+              "date": "2026-07-20",
+              "close": 51839.2617
+            },
+            {
+              "date": "2026-07-21",
+              "close": 52224.6406
+            },
+            {
+              "date": "2026-07-22",
+              "close": 52218.5781
+            },
+            {
+              "date": "2026-07-23",
+              "close": 51711.6484
+            },
+            {
+              "date": "2026-07-24",
+              "close": 51947.25
+            },
+            {
+              "date": "2026-07-27",
+              "close": 52210.0781
+            },
+            {
+              "date": "2026-07-28",
+              "close": 52747.3203
+            },
+            {
+              "date": "2026-07-29",
+              "close": 51594.1406
+            },
+            {
+              "date": "2026-07-30",
+              "close": 52208.0586
+            },
+            {
+              "date": "2026-07-31",
+              "close": 52485.0312
+            }
+          ],
+          "vix": [
+            {
+              "date": "2026-06-30",
+              "close": 16.45
+            },
+            {
+              "date": "2026-07-01",
+              "close": 16.59
+            },
+            {
+              "date": "2026-07-02",
+              "close": 16.15
+            },
+            {
+              "date": "2026-07-06",
+              "close": 15.57
+            },
+            {
+              "date": "2026-07-07",
+              "close": 16.13
+            },
+            {
+              "date": "2026-07-08",
+              "close": 16.9
+            },
+            {
+              "date": "2026-07-09",
+              "close": 15.84
+            },
+            {
+              "date": "2026-07-10",
+              "close": 15.03
+            },
+            {
+              "date": "2026-07-13",
+              "close": 17.16
+            },
+            {
+              "date": "2026-07-14",
+              "close": 16.5
+            },
+            {
+              "date": "2026-07-15",
+              "close": 15.67
+            },
+            {
+              "date": "2026-07-16",
+              "close": 16.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 18.77
+            },
+            {
+              "date": "2026-07-20",
+              "close": 18.65
+            },
+            {
+              "date": "2026-07-21",
+              "close": 17.05
+            },
+            {
+              "date": "2026-07-22",
+              "close": 16.64
+            },
+            {
+              "date": "2026-07-23",
+              "close": 18.7
+            },
+            {
+              "date": "2026-07-24",
+              "close": 18.58
+            },
+            {
+              "date": "2026-07-27",
+              "close": 18.67
+            },
+            {
+              "date": "2026-07-28",
+              "close": 18.21
+            },
+            {
+              "date": "2026-07-29",
+              "close": 20.66
+            },
+            {
+              "date": "2026-07-30",
+              "close": 17.09
+            },
+            {
+              "date": "2026-07-31",
+              "close": 15.99
+            }
+          ],
+          "dxy": [
+            {
+              "date": "2026-07-02",
+              "close": 100.86
+            },
+            {
+              "date": "2026-07-06",
+              "close": 100.85
+            },
+            {
+              "date": "2026-07-07",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-08",
+              "close": 101.05
+            },
+            {
+              "date": "2026-07-09",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-10",
+              "close": 100.97
+            },
+            {
+              "date": "2026-07-13",
+              "close": 101.28
+            },
+            {
+              "date": "2026-07-14",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-15",
+              "close": 100.5
+            },
+            {
+              "date": "2026-07-16",
+              "close": 100.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 100.75
+            },
+            {
+              "date": "2026-07-20",
+              "close": 100.99
+            },
+            {
+              "date": "2026-07-21",
+              "close": 101.18
+            },
+            {
+              "date": "2026-07-22",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-23",
+              "close": 101.43
+            },
+            {
+              "date": "2026-07-24",
+              "close": 101.47
+            },
+            {
+              "date": "2026-07-27",
+              "close": 101.51
+            },
+            {
+              "date": "2026-07-28",
+              "close": 101.38
+            },
+            {
+              "date": "2026-07-29",
+              "close": 100.8
+            },
+            {
+              "date": "2026-07-30",
+              "close": 100.01
+            },
+            {
+              "date": "2026-07-31",
+              "close": 99.8
+            }
+          ]
+        },
+        "macro": {
+          "note": "FRED_API_KEY 미설정 - 공식 FRED 사이트 참고"
+        },
+        "sector": {},
+        "news_sentiment": {
+          "headline_count": 100,
+          "top_headlines": [
+            {
+              "headline": "Looking at just the odds isn’t enough. How traders gain an edge on prediction markets",
+              "source": "CNBC",
+              "datetime": 1785591844
+            },
+            {
+              "headline": "OpenAI's Hugging Face hack confirmed months of AI cyber warnings: 'Pandora's box is open'",
+              "source": "CNBC",
+              "datetime": 1785585601
+            },
+            {
+              "headline": "Bloomberg puts off adding Indian bonds to its global index",
+              "source": "Bloomberg",
+              "datetime": 1785564914
+            },
+            {
+              "headline": "Data centre boom fuels demand for workforce housing",
+              "source": "Bloomberg",
+              "datetime": 1785559029
+            },
+            {
+              "headline": "Dollar logs its worst week in over 3 months amid Fed doubts",
+              "source": "Bloomberg",
+              "datetime": 1785558774
+            }
+          ]
+        },
+        "data_date": "2026-08-02"
+      },
+      "associated_data": null
+    },
+    "scene_type": "diagram",
+    "selection_reason": "대본 또는 기존 시각 의도에 흐름·구조·단계 관계가 있어 다이어그램형으로 분류",
+    "editorial_decision": {
+      "index": 10,
+      "selected": false,
+      "reason": "bubble_not_verified"
+    },
+    "phase": "context",
+    "phase_name": "Context & Escalation",
+    "start_seconds": 62.75,
+    "end_seconds": 67.78,
+    "emotion_tag": "worried",
+    "character_action": "arms_crossed",
+    "edit_marker": "data_overlay",
+    "text_for_tts": "7월 말로 갈수록 하락은 더 가팔라졌습니다.",
+    "sentences": [
+      {
+        "sentence_id": "s011_1",
+        "text": "7월 말로 갈수록 하락은 더 가팔라졌습니다.",
+        "text_for_tts": "7월 말로 갈수록 하락은 더 가팔라졌습니다.",
+        "emotion_tag": "worried",
+        "character_action": "arms_crossed",
+        "edit_marker": "data_overlay",
+        "estimated_seconds": 5.03,
+        "fact_refs": [],
+        "market_data_refs": [],
+        "elevenlabs_hint": {
+          "audio_tag": "[concerned]",
+          "stability_mode": "Robust"
+        }
+      }
+    ],
+    "elevenlabs_hint": {
+      "audio_tag": "[concerned]",
+      "stability_mode": "Robust"
+    },
+    "e2e_test_scene_type": "diagram",
+    "e2e_test_ordinal": 1
+  },
+  {
+    "title": "씬 3: 하락의 마지막 3일 · 2",
+    "content": "28일에 6023포인트였던 코스피는 29일 5663포인트",
+    "prompt_ko": "세 개의 계단이 차례로 아래로 내려가는 구조물. 각 계단마다 붉은 화살표가 아래를 향하고, 마지막 계단 끝은 낭떠러지 위에 걸쳐 있다.",
+    "prompt_en": "three descending stone steps each marked with a downward red arrow, the final step hanging over a sheer drop into darkness, ominous atmosphere, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "prompt": "three descending stone steps each marked with a downward red arrow, the final step hanging over a sheer drop into darkness, ominous atmosphere, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "pose": "worried",
+    "motion_type": "thinking_desk",
+    "bubble_text": "3일 연속 신저점\n\n---",
+    "bubble_validation": {
+      "passed": false,
+      "reasons": [
+        "ungrounded_numeric_token:3일"
+      ],
+      "matched_sources": [],
+      "numeric_tokens": [
+        "3일"
+      ]
+    },
+    "scene_rejected": true,
+    "section": "intro",
+    "char_count": 32,
+    "text": "28일에 6023포인트였던 코스피는 29일 5663포인트",
+    "visual_type": "character_hero",
+    "visual_plan": {
+      "objective": "hero character establishes the topic",
+      "visual_type": "character_hero",
+      "character_required": true,
+      "overlay_type": null,
+      "no_generated_text": true,
+      "source_scene_index": 11,
+      "source_scene_count": 93,
+      "family": "topic_stage",
+      "art_direction": {
+        "family": "topic_stage",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "smart casual presenter outfit",
+        "role_costume": "anchor",
+        "costume_state": "worried",
+        "pose_asset": "anchor_worried",
+        "fallback_pose": "explaining",
+        "character_required": true,
+        "camera": "over-the-shoulder explanation shot",
+        "lighting": "soft studio key light",
+        "reference_composition": {
+          "id": "topic_explainer",
+          "character_placement": "right third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.28
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": false
+      }
+    },
+    "art_direction": {
+      "family": "topic_stage",
+      "topic": "finance",
+      "setting": "premium Korean finance editorial studio",
+      "props": [
+        "financial chart silhouette",
+        "briefing screen",
+        "document folder"
+      ],
+      "palette": {
+        "name": "editorial_blue",
+        "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+      },
+      "wardrobe": "smart casual presenter outfit",
+      "role_costume": "anchor",
+      "costume_state": "worried",
+      "pose_asset": "anchor_worried",
+      "fallback_pose": "explaining",
+      "character_required": true,
+      "camera": "over-the-shoulder explanation shot",
+      "lighting": "soft studio key light",
+      "reference_composition": {
+        "id": "topic_explainer",
+        "character_placement": "right third",
+        "character_area_target": 0.42,
+        "information_area_target": 0.28
+      },
+      "character_placement": "right third",
+      "layer_pipeline": {
+        "version": "3.0",
+        "render_clean_plate": true,
+        "canonical_character_required": true,
+        "z_order": [
+          "clean_background",
+          "verified_info_surface",
+          "character_foreground",
+          "editorial_text"
+        ]
+      },
+      "overlay_strategy": "none",
+      "data_surface": null,
+      "data_surface_kind": null,
+      "data_surface_prompt": null,
+      "surface_contract": null,
+      "editorial_text_surface": null,
+      "editorial_overlay_target": {
+        "x": 0.1,
+        "y": 0.16,
+        "width": 0.36,
+        "height": 0.25
+      },
+      "negative_constraints": [
+        "no readable text",
+        "no watermark",
+        "no generic gold pile",
+        "no unrelated fire or space scene",
+        "no photorealism",
+        "no mixed art styles"
+      ],
+      "decorative_text_allowed": false
+    },
+    "style_profile": "editorial_comic_2d",
+    "market_snapshot": {
+      "category": "STOCK",
+      "keyword": "8월 코스피 전망",
+      "collected_at": "2026-08-02T09:12:50.811918",
+      "kr": {
+        "index": {
+          "kospi": {
+            "close": 6595.45,
+            "change": 1001.8899999999994,
+            "change_pct": 17.91,
+            "volume": 434445151,
+            "trading_value": 49567650533548
+          },
+          "kosdaq": {
+            "close": 719.76,
+            "change": 74.98000000000002,
+            "change_pct": 11.63,
+            "volume": 445905868
+          }
+        },
+        "chart_series": {
+          "kospi": [
+            {
+              "date": "2026-06-19",
+              "close": 9052.42
+            },
+            {
+              "date": "2026-06-22",
+              "close": 9114.55
+            },
+            {
+              "date": "2026-06-23",
+              "close": 8203.84
+            },
+            {
+              "date": "2026-06-24",
+              "close": 8471.02
+            },
+            {
+              "date": "2026-06-25",
+              "close": 8930.3
+            },
+            {
+              "date": "2026-06-26",
+              "close": 8411.21
+            },
+            {
+              "date": "2026-06-29",
+              "close": 8394.65
+            },
+            {
+              "date": "2026-06-30",
+              "close": 8476.48
+            },
+            {
+              "date": "2026-07-01",
+              "close": 8303.41
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7648.09
+            },
+            {
+              "date": "2026-07-03",
+              "close": 8088.34
+            },
+            {
+              "date": "2026-07-06",
+              "close": 8051.33
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7656.31
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7246.79
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7291.91
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7475.94
+            },
+            {
+              "date": "2026-07-13",
+              "close": 6806.93
+            },
+            {
+              "date": "2026-07-14",
+              "close": 6856.83
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7284.41
+            },
+            {
+              "date": "2026-07-16",
+              "close": 6820.6
+            },
+            {
+              "date": "2026-07-20",
+              "close": 6516.27
+            },
+            {
+              "date": "2026-07-21",
+              "close": 6747.95
+            },
+            {
+              "date": "2026-07-22",
+              "close": 6797.7
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7096.89
+            },
+            {
+              "date": "2026-07-24",
+              "close": 6690.62
+            },
+            {
+              "date": "2026-07-27",
+              "close": 6755.75
+            },
+            {
+              "date": "2026-07-28",
+              "close": 6023.66
+            },
+            {
+              "date": "2026-07-29",
+              "close": 5663.24
+            },
+            {
+              "date": "2026-07-30",
+              "close": 5593.56
+            },
+            {
+              "date": "2026-07-31",
+              "close": 6595.45
+            }
+          ],
+          "kosdaq": [
+            {
+              "date": "2026-06-19",
+              "close": 966.59
+            },
+            {
+              "date": "2026-06-22",
+              "close": 968.4
+            },
+            {
+              "date": "2026-06-23",
+              "close": 891.52
+            },
+            {
+              "date": "2026-06-24",
+              "close": 909.31
+            },
+            {
+              "date": "2026-06-25",
+              "close": 887.81
+            },
+            {
+              "date": "2026-06-26",
+              "close": 851.37
+            },
+            {
+              "date": "2026-06-29",
+              "close": 920.57
+            },
+            {
+              "date": "2026-06-30",
+              "close": 916.18
+            },
+            {
+              "date": "2026-07-01",
+              "close": 929.35
+            },
+            {
+              "date": "2026-07-02",
+              "close": 866.72
+            },
+            {
+              "date": "2026-07-03",
+              "close": 868.41
+            },
+            {
+              "date": "2026-07-06",
+              "close": 847.07
+            },
+            {
+              "date": "2026-07-07",
+              "close": 831.23
+            },
+            {
+              "date": "2026-07-08",
+              "close": 785.0
+            },
+            {
+              "date": "2026-07-09",
+              "close": 794.0
+            },
+            {
+              "date": "2026-07-10",
+              "close": 837.43
+            },
+            {
+              "date": "2026-07-13",
+              "close": 799.36
+            },
+            {
+              "date": "2026-07-14",
+              "close": 783.98
+            },
+            {
+              "date": "2026-07-15",
+              "close": 829.43
+            },
+            {
+              "date": "2026-07-16",
+              "close": 791.84
+            },
+            {
+              "date": "2026-07-20",
+              "close": 749.64
+            },
+            {
+              "date": "2026-07-21",
+              "close": 753.34
+            },
+            {
+              "date": "2026-07-22",
+              "close": 751.09
+            },
+            {
+              "date": "2026-07-23",
+              "close": 790.28
+            },
+            {
+              "date": "2026-07-24",
+              "close": 748.22
+            },
+            {
+              "date": "2026-07-27",
+              "close": 764.86
+            },
+            {
+              "date": "2026-07-28",
+              "close": 705.85
+            },
+            {
+              "date": "2026-07-29",
+              "close": 662.68
+            },
+            {
+              "date": "2026-07-30",
+              "close": 644.78
+            },
+            {
+              "date": "2026-07-31",
+              "close": 719.76
+            }
+          ]
+        },
+        "supply_demand": {},
+        "top_stocks": [
+          {
+            "name": "알테오젠",
+            "symbol": "196170",
+            "market_cap": "+165,313억원",
+            "market_cap_value": 16531386815500.0
+          },
+          {
+            "name": "에코프로",
+            "symbol": "086520",
+            "market_cap": "+107,398억원",
+            "market_cap_value": 10739893623200.0
+          },
+          {
+            "name": "에코프로비엠",
+            "symbol": "247540",
+            "market_cap": "+101,254억원",
+            "market_cap_value": 10125449919000.0
+          },
+          {
+            "name": "레인보우로보틱스",
+            "symbol": "277810",
+            "market_cap": "+84,001억원",
+            "market_cap_value": 8400138514000.0
+          },
+          {
+            "name": "주성엔지니어링",
+            "symbol": "036930",
+            "market_cap": "+57,868억원",
+            "market_cap_value": 5786899564500.0
+          },
+          {
+            "name": "리노공업",
+            "symbol": "058470",
+            "market_cap": "+48,851억원",
+            "market_cap_value": 4885179585000.0
+          },
+          {
+            "name": "원익IPS",
+            "symbol": "240810",
+            "market_cap": "+47,905억원",
+            "market_cap_value": 4790588737600.0
+          },
+          {
+            "name": "HLB",
+            "symbol": "028300",
+            "market_cap": "+40,758억원",
+            "market_cap_value": 4075865623800.0
+          },
+          {
+            "name": "피에스케이",
+            "symbol": "319660",
+            "market_cap": "+37,540억원",
+            "market_cap_value": 3754086134400.0
+          },
+          {
+            "name": "에이비엘바이오",
+            "symbol": "298380",
+            "market_cap": "+37,399억원",
+            "market_cap_value": 3739962528400.0
+          }
+        ],
+        "market_indicators": {
+          "usd_krw": 1436.6
+        },
+        "data_date": "2026-08-02"
+      },
+      "us": {
+        "index": {
+          "sp500": {
+            "close": 7489.72,
+            "change_pct": 0.7,
+            "volume": 5391020000
+          },
+          "nasdaq": {
+            "close": 25373.85,
+            "change_pct": 1.0,
+            "volume": 11942500000
+          },
+          "dow": {
+            "close": 52485.03,
+            "change_pct": 0.53,
+            "volume": 697510000
+          },
+          "vix": {
+            "close": 15.99,
+            "change_pct": -6.44,
+            "volume": 0
+          },
+          "dxy": {
+            "close": 99.8,
+            "change_pct": -0.21,
+            "volume": 0
+          }
+        },
+        "chart_series": {
+          "sp500": [
+            {
+              "date": "2026-07-01",
+              "close": 7483.23
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7483.2402
+            },
+            {
+              "date": "2026-07-06",
+              "close": 7537.4302
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7503.8501
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7482.71
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7543.6401
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7575.3901
+            },
+            {
+              "date": "2026-07-13",
+              "close": 7515.3398
+            },
+            {
+              "date": "2026-07-14",
+              "close": 7543.5898
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7572.3999
+            },
+            {
+              "date": "2026-07-16",
+              "close": 7533.77
+            },
+            {
+              "date": "2026-07-17",
+              "close": 7457.6899
+            },
+            {
+              "date": "2026-07-20",
+              "close": 7443.2798
+            },
+            {
+              "date": "2026-07-21",
+              "close": 7509.2002
+            },
+            {
+              "date": "2026-07-22",
+              "close": 7498.96
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7408.2998
+            },
+            {
+              "date": "2026-07-24",
+              "close": 7411.98
+            },
+            {
+              "date": "2026-07-27",
+              "close": 7413.1802
+            },
+            {
+              "date": "2026-07-28",
+              "close": 7428.7798
+            },
+            {
+              "date": "2026-07-29",
+              "close": 7316.1499
+            },
+            {
+              "date": "2026-07-30",
+              "close": 7437.6299
+            },
+            {
+              "date": "2026-07-31",
+              "close": 7489.7202
+            }
+          ],
+          "nasdaq": [
+            {
+              "date": "2026-07-01",
+              "close": 26040.0293
+            },
+            {
+              "date": "2026-07-02",
+              "close": 25832.6699
+            },
+            {
+              "date": "2026-07-06",
+              "close": 26121.1602
+            },
+            {
+              "date": "2026-07-07",
+              "close": 25818.6895
+            },
+            {
+              "date": "2026-07-08",
+              "close": 25870.6504
+            },
+            {
+              "date": "2026-07-09",
+              "close": 26206.8906
+            },
+            {
+              "date": "2026-07-10",
+              "close": 26281.6094
+            },
+            {
+              "date": "2026-07-13",
+              "close": 25873.1797
+            },
+            {
+              "date": "2026-07-14",
+              "close": 26107.0098
+            },
+            {
+              "date": "2026-07-15",
+              "close": 26269.2305
+            },
+            {
+              "date": "2026-07-16",
+              "close": 25881.9492
+            },
+            {
+              "date": "2026-07-17",
+              "close": 25520.2402
+            },
+            {
+              "date": "2026-07-20",
+              "close": 25508.0703
+            },
+            {
+              "date": "2026-07-21",
+              "close": 25837.2109
+            },
+            {
+              "date": "2026-07-22",
+              "close": 25690.9004
+            },
+            {
+              "date": "2026-07-23",
+              "close": 25137.6895
+            },
+            {
+              "date": "2026-07-24",
+              "close": 24975.8203
+            },
+            {
+              "date": "2026-07-27",
+              "close": 24932.0801
+            },
+            {
+              "date": "2026-07-28",
+              "close": 24876.9102
+            },
+            {
+              "date": "2026-07-29",
+              "close": 24442.9395
+            },
+            {
+              "date": "2026-07-30",
+              "close": 25122.1797
+            },
+            {
+              "date": "2026-07-31",
+              "close": 25373.8496
+            }
+          ],
+          "dow": [
+            {
+              "date": "2026-07-01",
+              "close": 52305.2383
+            },
+            {
+              "date": "2026-07-02",
+              "close": 52900.0703
+            },
+            {
+              "date": "2026-07-06",
+              "close": 53055.9102
+            },
+            {
+              "date": "2026-07-07",
+              "close": 52925.1484
+            },
+            {
+              "date": "2026-07-08",
+              "close": 52348.3906
+            },
+            {
+              "date": "2026-07-09",
+              "close": 52487.4102
+            },
+            {
+              "date": "2026-07-10",
+              "close": 52637.0117
+            },
+            {
+              "date": "2026-07-13",
+              "close": 52498.6406
+            },
+            {
+              "date": "2026-07-14",
+              "close": 52508.2695
+            },
+            {
+              "date": "2026-07-15",
+              "close": 52658.6406
+            },
+            {
+              "date": "2026-07-16",
+              "close": 52552.9688
+            },
+            {
+              "date": "2026-07-17",
+              "close": 52146.4219
+            },
+            {
+              "date": "2026-07-20",
+              "close": 51839.2617
+            },
+            {
+              "date": "2026-07-21",
+              "close": 52224.6406
+            },
+            {
+              "date": "2026-07-22",
+              "close": 52218.5781
+            },
+            {
+              "date": "2026-07-23",
+              "close": 51711.6484
+            },
+            {
+              "date": "2026-07-24",
+              "close": 51947.25
+            },
+            {
+              "date": "2026-07-27",
+              "close": 52210.0781
+            },
+            {
+              "date": "2026-07-28",
+              "close": 52747.3203
+            },
+            {
+              "date": "2026-07-29",
+              "close": 51594.1406
+            },
+            {
+              "date": "2026-07-30",
+              "close": 52208.0586
+            },
+            {
+              "date": "2026-07-31",
+              "close": 52485.0312
+            }
+          ],
+          "vix": [
+            {
+              "date": "2026-06-30",
+              "close": 16.45
+            },
+            {
+              "date": "2026-07-01",
+              "close": 16.59
+            },
+            {
+              "date": "2026-07-02",
+              "close": 16.15
+            },
+            {
+              "date": "2026-07-06",
+              "close": 15.57
+            },
+            {
+              "date": "2026-07-07",
+              "close": 16.13
+            },
+            {
+              "date": "2026-07-08",
+              "close": 16.9
+            },
+            {
+              "date": "2026-07-09",
+              "close": 15.84
+            },
+            {
+              "date": "2026-07-10",
+              "close": 15.03
+            },
+            {
+              "date": "2026-07-13",
+              "close": 17.16
+            },
+            {
+              "date": "2026-07-14",
+              "close": 16.5
+            },
+            {
+              "date": "2026-07-15",
+              "close": 15.67
+            },
+            {
+              "date": "2026-07-16",
+              "close": 16.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 18.77
+            },
+            {
+              "date": "2026-07-20",
+              "close": 18.65
+            },
+            {
+              "date": "2026-07-21",
+              "close": 17.05
+            },
+            {
+              "date": "2026-07-22",
+              "close": 16.64
+            },
+            {
+              "date": "2026-07-23",
+              "close": 18.7
+            },
+            {
+              "date": "2026-07-24",
+              "close": 18.58
+            },
+            {
+              "date": "2026-07-27",
+              "close": 18.67
+            },
+            {
+              "date": "2026-07-28",
+              "close": 18.21
+            },
+            {
+              "date": "2026-07-29",
+              "close": 20.66
+            },
+            {
+              "date": "2026-07-30",
+              "close": 17.09
+            },
+            {
+              "date": "2026-07-31",
+              "close": 15.99
+            }
+          ],
+          "dxy": [
+            {
+              "date": "2026-07-02",
+              "close": 100.86
+            },
+            {
+              "date": "2026-07-06",
+              "close": 100.85
+            },
+            {
+              "date": "2026-07-07",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-08",
+              "close": 101.05
+            },
+            {
+              "date": "2026-07-09",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-10",
+              "close": 100.97
+            },
+            {
+              "date": "2026-07-13",
+              "close": 101.28
+            },
+            {
+              "date": "2026-07-14",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-15",
+              "close": 100.5
+            },
+            {
+              "date": "2026-07-16",
+              "close": 100.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 100.75
+            },
+            {
+              "date": "2026-07-20",
+              "close": 100.99
+            },
+            {
+              "date": "2026-07-21",
+              "close": 101.18
+            },
+            {
+              "date": "2026-07-22",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-23",
+              "close": 101.43
+            },
+            {
+              "date": "2026-07-24",
+              "close": 101.47
+            },
+            {
+              "date": "2026-07-27",
+              "close": 101.51
+            },
+            {
+              "date": "2026-07-28",
+              "close": 101.38
+            },
+            {
+              "date": "2026-07-29",
+              "close": 100.8
+            },
+            {
+              "date": "2026-07-30",
+              "close": 100.01
+            },
+            {
+              "date": "2026-07-31",
+              "close": 99.8
+            }
+          ]
+        },
+        "macro": {
+          "note": "FRED_API_KEY 미설정 - 공식 FRED 사이트 참고"
+        },
+        "sector": {},
+        "news_sentiment": {
+          "headline_count": 100,
+          "top_headlines": [
+            {
+              "headline": "Looking at just the odds isn’t enough. How traders gain an edge on prediction markets",
+              "source": "CNBC",
+              "datetime": 1785591844
+            },
+            {
+              "headline": "OpenAI's Hugging Face hack confirmed months of AI cyber warnings: 'Pandora's box is open'",
+              "source": "CNBC",
+              "datetime": 1785585601
+            },
+            {
+              "headline": "Bloomberg puts off adding Indian bonds to its global index",
+              "source": "Bloomberg",
+              "datetime": 1785564914
+            },
+            {
+              "headline": "Data centre boom fuels demand for workforce housing",
+              "source": "Bloomberg",
+              "datetime": 1785559029
+            },
+            {
+              "headline": "Dollar logs its worst week in over 3 months amid Fed doubts",
+              "source": "Bloomberg",
+              "datetime": 1785558774
+            }
+          ]
+        },
+        "data_date": "2026-08-02"
+      },
+      "associated_data": null
+    },
+    "scene_type": "diagram",
+    "selection_reason": "대본 또는 기존 시각 의도에 흐름·구조·단계 관계가 있어 다이어그램형으로 분류",
+    "editorial_decision": {
+      "index": 11,
+      "selected": false,
+      "reason": "bubble_not_verified"
+    },
+    "phase": "context",
+    "phase_name": "Context & Escalation",
+    "start_seconds": 67.78,
+    "end_seconds": 74.93,
+    "emotion_tag": "highlight",
+    "character_action": "pointer_up",
+    "edit_marker": "data_overlay",
+    "text_for_tts": "28일에 6023포인트였던 코스피는 29일 5663포인트",
+    "sentences": [
+      {
+        "sentence_id": "s012_1",
+        "text": "28일에 6023포인트였던 코스피는 29일 5663포인트",
+        "text_for_tts": "28일에 6023포인트였던 코스피는 29일 5663포인트",
+        "emotion_tag": "highlight",
+        "character_action": "pointer_up",
+        "edit_marker": "data_overlay",
+        "estimated_seconds": 7.15,
+        "fact_refs": [],
+        "market_data_refs": [],
+        "elevenlabs_hint": {
+          "audio_tag": "[emphatically]",
+          "stability_mode": "Robust"
+        }
+      }
+    ],
+    "elevenlabs_hint": {
+      "audio_tag": "[emphatically]",
+      "stability_mode": "Robust"
+    },
+    "e2e_test_scene_type": "diagram",
+    "e2e_test_ordinal": 2
+  },
+  {
+    "title": "씬 1: 7월의 공포 · 1",
+    "content": "7월 한 달, 여러분의 계좌는 어땠습니까?",
+    "prompt_ko": "거대한 유리 수조 안에서 대부분의 동전이 바닥으로 가라앉고 있고, 아주 소수의 동전만 겨우 표면 근처에 떠 있는 장면. 가라앉는 동전들이 붉은 빛을 띤다.",
+    "prompt_en": "giant glass aquarium tank, most gold coins sinking to the dark bottom glowing red, only a few coins floating near the surface, dramatic lighting, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "prompt": "giant glass aquarium tank, most gold coins sinking to the dark bottom glowing red, only a few coins floating near the surface, dramatic lighting, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "pose": "worried",
+    "motion_type": "chart_shock",
+    "bubble_text": "종목 70%가 마이너스!\n\n---",
+    "bubble_validation": {
+      "passed": true,
+      "reasons": [],
+      "matched_sources": [
+        "verified_facts[9].fact",
+        "verified_facts[9].figure"
+      ],
+      "numeric_tokens": [
+        "70%"
+      ]
+    },
+    "scene_rejected": false,
+    "section": "intro",
+    "char_count": 23,
+    "text": "7월 한 달, 여러분의 계좌는 어땠습니까?",
+    "visual_type": "character_hero",
+    "visual_plan": {
+      "objective": "hero character establishes the topic",
+      "visual_type": "character_hero",
+      "character_required": true,
+      "overlay_type": null,
+      "no_generated_text": true,
+      "source_scene_index": 0,
+      "source_scene_count": 93,
+      "family": "hero_metaphor",
+      "art_direction": {
+        "family": "hero_metaphor",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "tailored navy analyst suit with a gold accent",
+        "role_costume": "field_reporter",
+        "costume_state": "worried",
+        "pose_asset": "field_reporter_worried",
+        "fallback_pose": "hero_business",
+        "character_required": true,
+        "camera": "wide establishing shot",
+        "lighting": "dramatic rim light",
+        "reference_composition": {
+          "id": "hero_reaction",
+          "character_placement": "left third",
+          "character_area_target": 0.48,
+          "information_area_target": 0.26
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": false
+      }
+    },
+    "art_direction": {
+      "family": "hero_metaphor",
+      "topic": "finance",
+      "setting": "premium Korean finance editorial studio",
+      "props": [
+        "financial chart silhouette",
+        "briefing screen",
+        "document folder"
+      ],
+      "palette": {
+        "name": "editorial_blue",
+        "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+      },
+      "wardrobe": "tailored navy analyst suit with a gold accent",
+      "role_costume": "field_reporter",
+      "costume_state": "worried",
+      "pose_asset": "field_reporter_worried",
+      "fallback_pose": "hero_business",
+      "character_required": true,
+      "camera": "wide establishing shot",
+      "lighting": "dramatic rim light",
+      "reference_composition": {
+        "id": "hero_reaction",
+        "character_placement": "left third",
+        "character_area_target": 0.48,
+        "information_area_target": 0.26
+      },
+      "character_placement": "left third",
+      "layer_pipeline": {
+        "version": "3.0",
+        "render_clean_plate": true,
+        "canonical_character_required": true,
+        "z_order": [
+          "clean_background",
+          "verified_info_surface",
+          "character_foreground",
+          "editorial_text"
+        ]
+      },
+      "overlay_strategy": "none",
+      "data_surface": null,
+      "data_surface_kind": null,
+      "data_surface_prompt": null,
+      "surface_contract": null,
+      "editorial_text_surface": null,
+      "editorial_overlay_target": {
+        "x": 0.53,
+        "y": 0.16,
+        "width": 0.36,
+        "height": 0.25
+      },
+      "negative_constraints": [
+        "no readable text",
+        "no watermark",
+        "no generic gold pile",
+        "no unrelated fire or space scene",
+        "no photorealism",
+        "no mixed art styles"
+      ],
+      "decorative_text_allowed": false
+    },
+    "style_profile": "editorial_comic_2d",
+    "market_snapshot": {
+      "category": "STOCK",
+      "keyword": "8월 코스피 전망",
+      "collected_at": "2026-08-02T09:12:50.811918",
+      "kr": {
+        "index": {
+          "kospi": {
+            "close": 6595.45,
+            "change": 1001.8899999999994,
+            "change_pct": 17.91,
+            "volume": 434445151,
+            "trading_value": 49567650533548
+          },
+          "kosdaq": {
+            "close": 719.76,
+            "change": 74.98000000000002,
+            "change_pct": 11.63,
+            "volume": 445905868
+          }
+        },
+        "chart_series": {
+          "kospi": [
+            {
+              "date": "2026-06-19",
+              "close": 9052.42
+            },
+            {
+              "date": "2026-06-22",
+              "close": 9114.55
+            },
+            {
+              "date": "2026-06-23",
+              "close": 8203.84
+            },
+            {
+              "date": "2026-06-24",
+              "close": 8471.02
+            },
+            {
+              "date": "2026-06-25",
+              "close": 8930.3
+            },
+            {
+              "date": "2026-06-26",
+              "close": 8411.21
+            },
+            {
+              "date": "2026-06-29",
+              "close": 8394.65
+            },
+            {
+              "date": "2026-06-30",
+              "close": 8476.48
+            },
+            {
+              "date": "2026-07-01",
+              "close": 8303.41
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7648.09
+            },
+            {
+              "date": "2026-07-03",
+              "close": 8088.34
+            },
+            {
+              "date": "2026-07-06",
+              "close": 8051.33
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7656.31
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7246.79
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7291.91
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7475.94
+            },
+            {
+              "date": "2026-07-13",
+              "close": 6806.93
+            },
+            {
+              "date": "2026-07-14",
+              "close": 6856.83
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7284.41
+            },
+            {
+              "date": "2026-07-16",
+              "close": 6820.6
+            },
+            {
+              "date": "2026-07-20",
+              "close": 6516.27
+            },
+            {
+              "date": "2026-07-21",
+              "close": 6747.95
+            },
+            {
+              "date": "2026-07-22",
+              "close": 6797.7
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7096.89
+            },
+            {
+              "date": "2026-07-24",
+              "close": 6690.62
+            },
+            {
+              "date": "2026-07-27",
+              "close": 6755.75
+            },
+            {
+              "date": "2026-07-28",
+              "close": 6023.66
+            },
+            {
+              "date": "2026-07-29",
+              "close": 5663.24
+            },
+            {
+              "date": "2026-07-30",
+              "close": 5593.56
+            },
+            {
+              "date": "2026-07-31",
+              "close": 6595.45
+            }
+          ],
+          "kosdaq": [
+            {
+              "date": "2026-06-19",
+              "close": 966.59
+            },
+            {
+              "date": "2026-06-22",
+              "close": 968.4
+            },
+            {
+              "date": "2026-06-23",
+              "close": 891.52
+            },
+            {
+              "date": "2026-06-24",
+              "close": 909.31
+            },
+            {
+              "date": "2026-06-25",
+              "close": 887.81
+            },
+            {
+              "date": "2026-06-26",
+              "close": 851.37
+            },
+            {
+              "date": "2026-06-29",
+              "close": 920.57
+            },
+            {
+              "date": "2026-06-30",
+              "close": 916.18
+            },
+            {
+              "date": "2026-07-01",
+              "close": 929.35
+            },
+            {
+              "date": "2026-07-02",
+              "close": 866.72
+            },
+            {
+              "date": "2026-07-03",
+              "close": 868.41
+            },
+            {
+              "date": "2026-07-06",
+              "close": 847.07
+            },
+            {
+              "date": "2026-07-07",
+              "close": 831.23
+            },
+            {
+              "date": "2026-07-08",
+              "close": 785.0
+            },
+            {
+              "date": "2026-07-09",
+              "close": 794.0
+            },
+            {
+              "date": "2026-07-10",
+              "close": 837.43
+            },
+            {
+              "date": "2026-07-13",
+              "close": 799.36
+            },
+            {
+              "date": "2026-07-14",
+              "close": 783.98
+            },
+            {
+              "date": "2026-07-15",
+              "close": 829.43
+            },
+            {
+              "date": "2026-07-16",
+              "close": 791.84
+            },
+            {
+              "date": "2026-07-20",
+              "close": 749.64
+            },
+            {
+              "date": "2026-07-21",
+              "close": 753.34
+            },
+            {
+              "date": "2026-07-22",
+              "close": 751.09
+            },
+            {
+              "date": "2026-07-23",
+              "close": 790.28
+            },
+            {
+              "date": "2026-07-24",
+              "close": 748.22
+            },
+            {
+              "date": "2026-07-27",
+              "close": 764.86
+            },
+            {
+              "date": "2026-07-28",
+              "close": 705.85
+            },
+            {
+              "date": "2026-07-29",
+              "close": 662.68
+            },
+            {
+              "date": "2026-07-30",
+              "close": 644.78
+            },
+            {
+              "date": "2026-07-31",
+              "close": 719.76
+            }
+          ]
+        },
+        "supply_demand": {},
+        "top_stocks": [
+          {
+            "name": "알테오젠",
+            "symbol": "196170",
+            "market_cap": "+165,313억원",
+            "market_cap_value": 16531386815500.0
+          },
+          {
+            "name": "에코프로",
+            "symbol": "086520",
+            "market_cap": "+107,398억원",
+            "market_cap_value": 10739893623200.0
+          },
+          {
+            "name": "에코프로비엠",
+            "symbol": "247540",
+            "market_cap": "+101,254억원",
+            "market_cap_value": 10125449919000.0
+          },
+          {
+            "name": "레인보우로보틱스",
+            "symbol": "277810",
+            "market_cap": "+84,001억원",
+            "market_cap_value": 8400138514000.0
+          },
+          {
+            "name": "주성엔지니어링",
+            "symbol": "036930",
+            "market_cap": "+57,868억원",
+            "market_cap_value": 5786899564500.0
+          },
+          {
+            "name": "리노공업",
+            "symbol": "058470",
+            "market_cap": "+48,851억원",
+            "market_cap_value": 4885179585000.0
+          },
+          {
+            "name": "원익IPS",
+            "symbol": "240810",
+            "market_cap": "+47,905억원",
+            "market_cap_value": 4790588737600.0
+          },
+          {
+            "name": "HLB",
+            "symbol": "028300",
+            "market_cap": "+40,758억원",
+            "market_cap_value": 4075865623800.0
+          },
+          {
+            "name": "피에스케이",
+            "symbol": "319660",
+            "market_cap": "+37,540억원",
+            "market_cap_value": 3754086134400.0
+          },
+          {
+            "name": "에이비엘바이오",
+            "symbol": "298380",
+            "market_cap": "+37,399억원",
+            "market_cap_value": 3739962528400.0
+          }
+        ],
+        "market_indicators": {
+          "usd_krw": 1436.6
+        },
+        "data_date": "2026-08-02"
+      },
+      "us": {
+        "index": {
+          "sp500": {
+            "close": 7489.72,
+            "change_pct": 0.7,
+            "volume": 5391020000
+          },
+          "nasdaq": {
+            "close": 25373.85,
+            "change_pct": 1.0,
+            "volume": 11942500000
+          },
+          "dow": {
+            "close": 52485.03,
+            "change_pct": 0.53,
+            "volume": 697510000
+          },
+          "vix": {
+            "close": 15.99,
+            "change_pct": -6.44,
+            "volume": 0
+          },
+          "dxy": {
+            "close": 99.8,
+            "change_pct": -0.21,
+            "volume": 0
+          }
+        },
+        "chart_series": {
+          "sp500": [
+            {
+              "date": "2026-07-01",
+              "close": 7483.23
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7483.2402
+            },
+            {
+              "date": "2026-07-06",
+              "close": 7537.4302
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7503.8501
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7482.71
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7543.6401
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7575.3901
+            },
+            {
+              "date": "2026-07-13",
+              "close": 7515.3398
+            },
+            {
+              "date": "2026-07-14",
+              "close": 7543.5898
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7572.3999
+            },
+            {
+              "date": "2026-07-16",
+              "close": 7533.77
+            },
+            {
+              "date": "2026-07-17",
+              "close": 7457.6899
+            },
+            {
+              "date": "2026-07-20",
+              "close": 7443.2798
+            },
+            {
+              "date": "2026-07-21",
+              "close": 7509.2002
+            },
+            {
+              "date": "2026-07-22",
+              "close": 7498.96
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7408.2998
+            },
+            {
+              "date": "2026-07-24",
+              "close": 7411.98
+            },
+            {
+              "date": "2026-07-27",
+              "close": 7413.1802
+            },
+            {
+              "date": "2026-07-28",
+              "close": 7428.7798
+            },
+            {
+              "date": "2026-07-29",
+              "close": 7316.1499
+            },
+            {
+              "date": "2026-07-30",
+              "close": 7437.6299
+            },
+            {
+              "date": "2026-07-31",
+              "close": 7489.7202
+            }
+          ],
+          "nasdaq": [
+            {
+              "date": "2026-07-01",
+              "close": 26040.0293
+            },
+            {
+              "date": "2026-07-02",
+              "close": 25832.6699
+            },
+            {
+              "date": "2026-07-06",
+              "close": 26121.1602
+            },
+            {
+              "date": "2026-07-07",
+              "close": 25818.6895
+            },
+            {
+              "date": "2026-07-08",
+              "close": 25870.6504
+            },
+            {
+              "date": "2026-07-09",
+              "close": 26206.8906
+            },
+            {
+              "date": "2026-07-10",
+              "close": 26281.6094
+            },
+            {
+              "date": "2026-07-13",
+              "close": 25873.1797
+            },
+            {
+              "date": "2026-07-14",
+              "close": 26107.0098
+            },
+            {
+              "date": "2026-07-15",
+              "close": 26269.2305
+            },
+            {
+              "date": "2026-07-16",
+              "close": 25881.9492
+            },
+            {
+              "date": "2026-07-17",
+              "close": 25520.2402
+            },
+            {
+              "date": "2026-07-20",
+              "close": 25508.0703
+            },
+            {
+              "date": "2026-07-21",
+              "close": 25837.2109
+            },
+            {
+              "date": "2026-07-22",
+              "close": 25690.9004
+            },
+            {
+              "date": "2026-07-23",
+              "close": 25137.6895
+            },
+            {
+              "date": "2026-07-24",
+              "close": 24975.8203
+            },
+            {
+              "date": "2026-07-27",
+              "close": 24932.0801
+            },
+            {
+              "date": "2026-07-28",
+              "close": 24876.9102
+            },
+            {
+              "date": "2026-07-29",
+              "close": 24442.9395
+            },
+            {
+              "date": "2026-07-30",
+              "close": 25122.1797
+            },
+            {
+              "date": "2026-07-31",
+              "close": 25373.8496
+            }
+          ],
+          "dow": [
+            {
+              "date": "2026-07-01",
+              "close": 52305.2383
+            },
+            {
+              "date": "2026-07-02",
+              "close": 52900.0703
+            },
+            {
+              "date": "2026-07-06",
+              "close": 53055.9102
+            },
+            {
+              "date": "2026-07-07",
+              "close": 52925.1484
+            },
+            {
+              "date": "2026-07-08",
+              "close": 52348.3906
+            },
+            {
+              "date": "2026-07-09",
+              "close": 52487.4102
+            },
+            {
+              "date": "2026-07-10",
+              "close": 52637.0117
+            },
+            {
+              "date": "2026-07-13",
+              "close": 52498.6406
+            },
+            {
+              "date": "2026-07-14",
+              "close": 52508.2695
+            },
+            {
+              "date": "2026-07-15",
+              "close": 52658.6406
+            },
+            {
+              "date": "2026-07-16",
+              "close": 52552.9688
+            },
+            {
+              "date": "2026-07-17",
+              "close": 52146.4219
+            },
+            {
+              "date": "2026-07-20",
+              "close": 51839.2617
+            },
+            {
+              "date": "2026-07-21",
+              "close": 52224.6406
+            },
+            {
+              "date": "2026-07-22",
+              "close": 52218.5781
+            },
+            {
+              "date": "2026-07-23",
+              "close": 51711.6484
+            },
+            {
+              "date": "2026-07-24",
+              "close": 51947.25
+            },
+            {
+              "date": "2026-07-27",
+              "close": 52210.0781
+            },
+            {
+              "date": "2026-07-28",
+              "close": 52747.3203
+            },
+            {
+              "date": "2026-07-29",
+              "close": 51594.1406
+            },
+            {
+              "date": "2026-07-30",
+              "close": 52208.0586
+            },
+            {
+              "date": "2026-07-31",
+              "close": 52485.0312
+            }
+          ],
+          "vix": [
+            {
+              "date": "2026-06-30",
+              "close": 16.45
+            },
+            {
+              "date": "2026-07-01",
+              "close": 16.59
+            },
+            {
+              "date": "2026-07-02",
+              "close": 16.15
+            },
+            {
+              "date": "2026-07-06",
+              "close": 15.57
+            },
+            {
+              "date": "2026-07-07",
+              "close": 16.13
+            },
+            {
+              "date": "2026-07-08",
+              "close": 16.9
+            },
+            {
+              "date": "2026-07-09",
+              "close": 15.84
+            },
+            {
+              "date": "2026-07-10",
+              "close": 15.03
+            },
+            {
+              "date": "2026-07-13",
+              "close": 17.16
+            },
+            {
+              "date": "2026-07-14",
+              "close": 16.5
+            },
+            {
+              "date": "2026-07-15",
+              "close": 15.67
+            },
+            {
+              "date": "2026-07-16",
+              "close": 16.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 18.77
+            },
+            {
+              "date": "2026-07-20",
+              "close": 18.65
+            },
+            {
+              "date": "2026-07-21",
+              "close": 17.05
+            },
+            {
+              "date": "2026-07-22",
+              "close": 16.64
+            },
+            {
+              "date": "2026-07-23",
+              "close": 18.7
+            },
+            {
+              "date": "2026-07-24",
+              "close": 18.58
+            },
+            {
+              "date": "2026-07-27",
+              "close": 18.67
+            },
+            {
+              "date": "2026-07-28",
+              "close": 18.21
+            },
+            {
+              "date": "2026-07-29",
+              "close": 20.66
+            },
+            {
+              "date": "2026-07-30",
+              "close": 17.09
+            },
+            {
+              "date": "2026-07-31",
+              "close": 15.99
+            }
+          ],
+          "dxy": [
+            {
+              "date": "2026-07-02",
+              "close": 100.86
+            },
+            {
+              "date": "2026-07-06",
+              "close": 100.85
+            },
+            {
+              "date": "2026-07-07",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-08",
+              "close": 101.05
+            },
+            {
+              "date": "2026-07-09",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-10",
+              "close": 100.97
+            },
+            {
+              "date": "2026-07-13",
+              "close": 101.28
+            },
+            {
+              "date": "2026-07-14",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-15",
+              "close": 100.5
+            },
+            {
+              "date": "2026-07-16",
+              "close": 100.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 100.75
+            },
+            {
+              "date": "2026-07-20",
+              "close": 100.99
+            },
+            {
+              "date": "2026-07-21",
+              "close": 101.18
+            },
+            {
+              "date": "2026-07-22",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-23",
+              "close": 101.43
+            },
+            {
+              "date": "2026-07-24",
+              "close": 101.47
+            },
+            {
+              "date": "2026-07-27",
+              "close": 101.51
+            },
+            {
+              "date": "2026-07-28",
+              "close": 101.38
+            },
+            {
+              "date": "2026-07-29",
+              "close": 100.8
+            },
+            {
+              "date": "2026-07-30",
+              "close": 100.01
+            },
+            {
+              "date": "2026-07-31",
+              "close": 99.8
+            }
+          ]
+        },
+        "macro": {
+          "note": "FRED_API_KEY 미설정 - 공식 FRED 사이트 참고"
+        },
+        "sector": {},
+        "news_sentiment": {
+          "headline_count": 100,
+          "top_headlines": [
+            {
+              "headline": "Looking at just the odds isn’t enough. How traders gain an edge on prediction markets",
+              "source": "CNBC",
+              "datetime": 1785591844
+            },
+            {
+              "headline": "OpenAI's Hugging Face hack confirmed months of AI cyber warnings: 'Pandora's box is open'",
+              "source": "CNBC",
+              "datetime": 1785585601
+            },
+            {
+              "headline": "Bloomberg puts off adding Indian bonds to its global index",
+              "source": "Bloomberg",
+              "datetime": 1785564914
+            },
+            {
+              "headline": "Data centre boom fuels demand for workforce housing",
+              "source": "Bloomberg",
+              "datetime": 1785559029
+            },
+            {
+              "headline": "Dollar logs its worst week in over 3 months amid Fed doubts",
+              "source": "Bloomberg",
+              "datetime": 1785558774
+            }
+          ]
+        },
+        "data_date": "2026-08-02"
+      },
+      "associated_data": null
+    },
+    "scene_type": "metric",
+    "selection_reason": "대본에 검증 대상 수치·등락·규모 표현이 있어 지표형으로 분류",
+    "editorial_overlay_plan": {
+      "section": "intro",
+      "message_role": "hook",
+      "overlay": {
+        "kind": "burst",
+        "text": "종목 70%가 마이너스!\n\n---",
+        "claim_type": "verbatim_fact",
+        "source_refs": [
+          "verified_facts[9].fact",
+          "verified_facts[9].figure"
+        ],
+        "anchor": "subject_gaze",
+        "target_bbox": null,
+        "text_style": "outline",
+        "tone": "warning",
+        "max_area_ratio": 0.18,
+        "spans": []
+      },
+      "target_id": null,
+      "subtitle_text": "7월 한 달, 여러분의 계좌는 어땠습니까?"
+    },
+    "editorial_decision": {
+      "index": 0,
+      "selected": true,
+      "reason": "semantic_editorial_beat",
+      "intent": "hook",
+      "kind": "burst"
+    },
+    "phase": "hook",
+    "phase_name": "Hook & Question",
+    "start_seconds": 0.0,
+    "end_seconds": 4.77,
+    "emotion_tag": "highlight",
+    "character_action": "pointer_up",
+    "edit_marker": "data_overlay",
+    "text_for_tts": "7월 한 달, 여러분의 계좌는 어땠습니까?",
+    "sentences": [
+      {
+        "sentence_id": "s001_1",
+        "text": "7월 한 달, 여러분의 계좌는 어땠습니까?",
+        "text_for_tts": "7월 한 달, 여러분의 계좌는 어땠습니까?",
+        "emotion_tag": "highlight",
+        "character_action": "pointer_up",
+        "edit_marker": "data_overlay",
+        "estimated_seconds": 4.77,
+        "fact_refs": [],
+        "market_data_refs": [],
+        "elevenlabs_hint": {
+          "audio_tag": "[intriguingly]",
+          "stability_mode": "Natural"
+        }
+      }
+    ],
+    "elevenlabs_hint": {
+      "audio_tag": "[intriguingly]",
+      "stability_mode": "Natural"
+    },
+    "e2e_test_scene_type": "metric",
+    "e2e_test_ordinal": 1
+  },
+  {
+    "title": "씬 1: 7월의 공포 · 2",
+    "content": "국내 주식 시장에서 종목 약 70퍼센트가 마이너스 수익률을 기록했습니다.",
+    "prompt_ko": "거대한 유리 수조 안에서 대부분의 동전이 바닥으로 가라앉고 있고, 아주 소수의 동전만 겨우 표면 근처에 떠 있는 장면. 가라앉는 동전들이 붉은 빛을 띤다.",
+    "prompt_en": "giant glass aquarium tank, most gold coins sinking to the dark bottom glowing red, only a few coins floating near the surface, dramatic lighting, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "prompt": "giant glass aquarium tank, most gold coins sinking to the dark bottom glowing red, only a few coins floating near the surface, dramatic lighting, original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements",
+    "pose": "worried",
+    "motion_type": "chart_shock",
+    "bubble_text": "종목 70%가 마이너스!\n\n---",
+    "bubble_validation": {
+      "passed": true,
+      "reasons": [],
+      "matched_sources": [
+        "verified_facts[9].fact",
+        "verified_facts[9].figure"
+      ],
+      "numeric_tokens": [
+        "70%"
+      ]
+    },
+    "scene_rejected": false,
+    "section": "intro",
+    "char_count": 40,
+    "text": "국내 주식 시장에서 종목 약 70퍼센트가 마이너스 수익률을 기록했습니다.",
+    "visual_type": "character_hero",
+    "visual_plan": {
+      "objective": "hero character establishes the topic",
+      "visual_type": "character_hero",
+      "character_required": true,
+      "overlay_type": null,
+      "no_generated_text": true,
+      "source_scene_index": 1,
+      "source_scene_count": 93,
+      "family": "news_headline",
+      "art_direction": {
+        "family": "news_headline",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "growth_gold",
+          "colors": "mostly deep navy and white, one warm yellow emphasis, muted gray"
+        },
+        "wardrobe": "clean broadcaster jacket and notebook",
+        "role_costume": "anchor",
+        "costume_state": "worried",
+        "pose_asset": "anchor_worried",
+        "fallback_pose": "analyst",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "bright editorial daylight",
+        "reference_composition": {
+          "id": "headline_reaction",
+          "character_placement": "right third",
+          "character_area_target": 0.46,
+          "information_area_target": 0.3
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "headline_card",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true
+      }
+    },
+    "art_direction": {
+      "family": "news_headline",
+      "topic": "finance",
+      "setting": "premium Korean finance editorial studio",
+      "props": [
+        "financial chart silhouette",
+        "briefing screen",
+        "document folder"
+      ],
+      "palette": {
+        "name": "growth_gold",
+        "colors": "mostly deep navy and white, one warm yellow emphasis, muted gray"
+      },
+      "wardrobe": "clean broadcaster jacket and notebook",
+      "role_costume": "anchor",
+      "costume_state": "worried",
+      "pose_asset": "anchor_worried",
+      "fallback_pose": "analyst",
+      "character_required": true,
+      "camera": "medium editorial shot",
+      "lighting": "bright editorial daylight",
+      "reference_composition": {
+        "id": "headline_reaction",
+        "character_placement": "right third",
+        "character_area_target": 0.46,
+        "information_area_target": 0.3
+      },
+      "character_placement": "right third",
+      "layer_pipeline": {
+        "version": "3.0",
+        "render_clean_plate": true,
+        "canonical_character_required": true,
+        "z_order": [
+          "clean_background",
+          "verified_info_surface",
+          "character_foreground",
+          "editorial_text"
+        ]
+      },
+      "overlay_strategy": "headline_card",
+      "data_surface": null,
+      "data_surface_kind": null,
+      "data_surface_prompt": null,
+      "surface_contract": null,
+      "editorial_text_surface": null,
+      "editorial_overlay_target": {
+        "x": 0.1,
+        "y": 0.16,
+        "width": 0.36,
+        "height": 0.25
+      },
+      "negative_constraints": [
+        "no readable text",
+        "no watermark",
+        "no generic gold pile",
+        "no unrelated fire or space scene",
+        "no photorealism",
+        "no mixed art styles"
+      ],
+      "decorative_text_allowed": true
+    },
+    "style_profile": "editorial_comic_2d",
+    "market_snapshot": {
+      "category": "STOCK",
+      "keyword": "8월 코스피 전망",
+      "collected_at": "2026-08-02T09:12:50.811918",
+      "kr": {
+        "index": {
+          "kospi": {
+            "close": 6595.45,
+            "change": 1001.8899999999994,
+            "change_pct": 17.91,
+            "volume": 434445151,
+            "trading_value": 49567650533548
+          },
+          "kosdaq": {
+            "close": 719.76,
+            "change": 74.98000000000002,
+            "change_pct": 11.63,
+            "volume": 445905868
+          }
+        },
+        "chart_series": {
+          "kospi": [
+            {
+              "date": "2026-06-19",
+              "close": 9052.42
+            },
+            {
+              "date": "2026-06-22",
+              "close": 9114.55
+            },
+            {
+              "date": "2026-06-23",
+              "close": 8203.84
+            },
+            {
+              "date": "2026-06-24",
+              "close": 8471.02
+            },
+            {
+              "date": "2026-06-25",
+              "close": 8930.3
+            },
+            {
+              "date": "2026-06-26",
+              "close": 8411.21
+            },
+            {
+              "date": "2026-06-29",
+              "close": 8394.65
+            },
+            {
+              "date": "2026-06-30",
+              "close": 8476.48
+            },
+            {
+              "date": "2026-07-01",
+              "close": 8303.41
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7648.09
+            },
+            {
+              "date": "2026-07-03",
+              "close": 8088.34
+            },
+            {
+              "date": "2026-07-06",
+              "close": 8051.33
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7656.31
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7246.79
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7291.91
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7475.94
+            },
+            {
+              "date": "2026-07-13",
+              "close": 6806.93
+            },
+            {
+              "date": "2026-07-14",
+              "close": 6856.83
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7284.41
+            },
+            {
+              "date": "2026-07-16",
+              "close": 6820.6
+            },
+            {
+              "date": "2026-07-20",
+              "close": 6516.27
+            },
+            {
+              "date": "2026-07-21",
+              "close": 6747.95
+            },
+            {
+              "date": "2026-07-22",
+              "close": 6797.7
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7096.89
+            },
+            {
+              "date": "2026-07-24",
+              "close": 6690.62
+            },
+            {
+              "date": "2026-07-27",
+              "close": 6755.75
+            },
+            {
+              "date": "2026-07-28",
+              "close": 6023.66
+            },
+            {
+              "date": "2026-07-29",
+              "close": 5663.24
+            },
+            {
+              "date": "2026-07-30",
+              "close": 5593.56
+            },
+            {
+              "date": "2026-07-31",
+              "close": 6595.45
+            }
+          ],
+          "kosdaq": [
+            {
+              "date": "2026-06-19",
+              "close": 966.59
+            },
+            {
+              "date": "2026-06-22",
+              "close": 968.4
+            },
+            {
+              "date": "2026-06-23",
+              "close": 891.52
+            },
+            {
+              "date": "2026-06-24",
+              "close": 909.31
+            },
+            {
+              "date": "2026-06-25",
+              "close": 887.81
+            },
+            {
+              "date": "2026-06-26",
+              "close": 851.37
+            },
+            {
+              "date": "2026-06-29",
+              "close": 920.57
+            },
+            {
+              "date": "2026-06-30",
+              "close": 916.18
+            },
+            {
+              "date": "2026-07-01",
+              "close": 929.35
+            },
+            {
+              "date": "2026-07-02",
+              "close": 866.72
+            },
+            {
+              "date": "2026-07-03",
+              "close": 868.41
+            },
+            {
+              "date": "2026-07-06",
+              "close": 847.07
+            },
+            {
+              "date": "2026-07-07",
+              "close": 831.23
+            },
+            {
+              "date": "2026-07-08",
+              "close": 785.0
+            },
+            {
+              "date": "2026-07-09",
+              "close": 794.0
+            },
+            {
+              "date": "2026-07-10",
+              "close": 837.43
+            },
+            {
+              "date": "2026-07-13",
+              "close": 799.36
+            },
+            {
+              "date": "2026-07-14",
+              "close": 783.98
+            },
+            {
+              "date": "2026-07-15",
+              "close": 829.43
+            },
+            {
+              "date": "2026-07-16",
+              "close": 791.84
+            },
+            {
+              "date": "2026-07-20",
+              "close": 749.64
+            },
+            {
+              "date": "2026-07-21",
+              "close": 753.34
+            },
+            {
+              "date": "2026-07-22",
+              "close": 751.09
+            },
+            {
+              "date": "2026-07-23",
+              "close": 790.28
+            },
+            {
+              "date": "2026-07-24",
+              "close": 748.22
+            },
+            {
+              "date": "2026-07-27",
+              "close": 764.86
+            },
+            {
+              "date": "2026-07-28",
+              "close": 705.85
+            },
+            {
+              "date": "2026-07-29",
+              "close": 662.68
+            },
+            {
+              "date": "2026-07-30",
+              "close": 644.78
+            },
+            {
+              "date": "2026-07-31",
+              "close": 719.76
+            }
+          ]
+        },
+        "supply_demand": {},
+        "top_stocks": [
+          {
+            "name": "알테오젠",
+            "symbol": "196170",
+            "market_cap": "+165,313억원",
+            "market_cap_value": 16531386815500.0
+          },
+          {
+            "name": "에코프로",
+            "symbol": "086520",
+            "market_cap": "+107,398억원",
+            "market_cap_value": 10739893623200.0
+          },
+          {
+            "name": "에코프로비엠",
+            "symbol": "247540",
+            "market_cap": "+101,254억원",
+            "market_cap_value": 10125449919000.0
+          },
+          {
+            "name": "레인보우로보틱스",
+            "symbol": "277810",
+            "market_cap": "+84,001억원",
+            "market_cap_value": 8400138514000.0
+          },
+          {
+            "name": "주성엔지니어링",
+            "symbol": "036930",
+            "market_cap": "+57,868억원",
+            "market_cap_value": 5786899564500.0
+          },
+          {
+            "name": "리노공업",
+            "symbol": "058470",
+            "market_cap": "+48,851억원",
+            "market_cap_value": 4885179585000.0
+          },
+          {
+            "name": "원익IPS",
+            "symbol": "240810",
+            "market_cap": "+47,905억원",
+            "market_cap_value": 4790588737600.0
+          },
+          {
+            "name": "HLB",
+            "symbol": "028300",
+            "market_cap": "+40,758억원",
+            "market_cap_value": 4075865623800.0
+          },
+          {
+            "name": "피에스케이",
+            "symbol": "319660",
+            "market_cap": "+37,540억원",
+            "market_cap_value": 3754086134400.0
+          },
+          {
+            "name": "에이비엘바이오",
+            "symbol": "298380",
+            "market_cap": "+37,399억원",
+            "market_cap_value": 3739962528400.0
+          }
+        ],
+        "market_indicators": {
+          "usd_krw": 1436.6
+        },
+        "data_date": "2026-08-02"
+      },
+      "us": {
+        "index": {
+          "sp500": {
+            "close": 7489.72,
+            "change_pct": 0.7,
+            "volume": 5391020000
+          },
+          "nasdaq": {
+            "close": 25373.85,
+            "change_pct": 1.0,
+            "volume": 11942500000
+          },
+          "dow": {
+            "close": 52485.03,
+            "change_pct": 0.53,
+            "volume": 697510000
+          },
+          "vix": {
+            "close": 15.99,
+            "change_pct": -6.44,
+            "volume": 0
+          },
+          "dxy": {
+            "close": 99.8,
+            "change_pct": -0.21,
+            "volume": 0
+          }
+        },
+        "chart_series": {
+          "sp500": [
+            {
+              "date": "2026-07-01",
+              "close": 7483.23
+            },
+            {
+              "date": "2026-07-02",
+              "close": 7483.2402
+            },
+            {
+              "date": "2026-07-06",
+              "close": 7537.4302
+            },
+            {
+              "date": "2026-07-07",
+              "close": 7503.8501
+            },
+            {
+              "date": "2026-07-08",
+              "close": 7482.71
+            },
+            {
+              "date": "2026-07-09",
+              "close": 7543.6401
+            },
+            {
+              "date": "2026-07-10",
+              "close": 7575.3901
+            },
+            {
+              "date": "2026-07-13",
+              "close": 7515.3398
+            },
+            {
+              "date": "2026-07-14",
+              "close": 7543.5898
+            },
+            {
+              "date": "2026-07-15",
+              "close": 7572.3999
+            },
+            {
+              "date": "2026-07-16",
+              "close": 7533.77
+            },
+            {
+              "date": "2026-07-17",
+              "close": 7457.6899
+            },
+            {
+              "date": "2026-07-20",
+              "close": 7443.2798
+            },
+            {
+              "date": "2026-07-21",
+              "close": 7509.2002
+            },
+            {
+              "date": "2026-07-22",
+              "close": 7498.96
+            },
+            {
+              "date": "2026-07-23",
+              "close": 7408.2998
+            },
+            {
+              "date": "2026-07-24",
+              "close": 7411.98
+            },
+            {
+              "date": "2026-07-27",
+              "close": 7413.1802
+            },
+            {
+              "date": "2026-07-28",
+              "close": 7428.7798
+            },
+            {
+              "date": "2026-07-29",
+              "close": 7316.1499
+            },
+            {
+              "date": "2026-07-30",
+              "close": 7437.6299
+            },
+            {
+              "date": "2026-07-31",
+              "close": 7489.7202
+            }
+          ],
+          "nasdaq": [
+            {
+              "date": "2026-07-01",
+              "close": 26040.0293
+            },
+            {
+              "date": "2026-07-02",
+              "close": 25832.6699
+            },
+            {
+              "date": "2026-07-06",
+              "close": 26121.1602
+            },
+            {
+              "date": "2026-07-07",
+              "close": 25818.6895
+            },
+            {
+              "date": "2026-07-08",
+              "close": 25870.6504
+            },
+            {
+              "date": "2026-07-09",
+              "close": 26206.8906
+            },
+            {
+              "date": "2026-07-10",
+              "close": 26281.6094
+            },
+            {
+              "date": "2026-07-13",
+              "close": 25873.1797
+            },
+            {
+              "date": "2026-07-14",
+              "close": 26107.0098
+            },
+            {
+              "date": "2026-07-15",
+              "close": 26269.2305
+            },
+            {
+              "date": "2026-07-16",
+              "close": 25881.9492
+            },
+            {
+              "date": "2026-07-17",
+              "close": 25520.2402
+            },
+            {
+              "date": "2026-07-20",
+              "close": 25508.0703
+            },
+            {
+              "date": "2026-07-21",
+              "close": 25837.2109
+            },
+            {
+              "date": "2026-07-22",
+              "close": 25690.9004
+            },
+            {
+              "date": "2026-07-23",
+              "close": 25137.6895
+            },
+            {
+              "date": "2026-07-24",
+              "close": 24975.8203
+            },
+            {
+              "date": "2026-07-27",
+              "close": 24932.0801
+            },
+            {
+              "date": "2026-07-28",
+              "close": 24876.9102
+            },
+            {
+              "date": "2026-07-29",
+              "close": 24442.9395
+            },
+            {
+              "date": "2026-07-30",
+              "close": 25122.1797
+            },
+            {
+              "date": "2026-07-31",
+              "close": 25373.8496
+            }
+          ],
+          "dow": [
+            {
+              "date": "2026-07-01",
+              "close": 52305.2383
+            },
+            {
+              "date": "2026-07-02",
+              "close": 52900.0703
+            },
+            {
+              "date": "2026-07-06",
+              "close": 53055.9102
+            },
+            {
+              "date": "2026-07-07",
+              "close": 52925.1484
+            },
+            {
+              "date": "2026-07-08",
+              "close": 52348.3906
+            },
+            {
+              "date": "2026-07-09",
+              "close": 52487.4102
+            },
+            {
+              "date": "2026-07-10",
+              "close": 52637.0117
+            },
+            {
+              "date": "2026-07-13",
+              "close": 52498.6406
+            },
+            {
+              "date": "2026-07-14",
+              "close": 52508.2695
+            },
+            {
+              "date": "2026-07-15",
+              "close": 52658.6406
+            },
+            {
+              "date": "2026-07-16",
+              "close": 52552.9688
+            },
+            {
+              "date": "2026-07-17",
+              "close": 52146.4219
+            },
+            {
+              "date": "2026-07-20",
+              "close": 51839.2617
+            },
+            {
+              "date": "2026-07-21",
+              "close": 52224.6406
+            },
+            {
+              "date": "2026-07-22",
+              "close": 52218.5781
+            },
+            {
+              "date": "2026-07-23",
+              "close": 51711.6484
+            },
+            {
+              "date": "2026-07-24",
+              "close": 51947.25
+            },
+            {
+              "date": "2026-07-27",
+              "close": 52210.0781
+            },
+            {
+              "date": "2026-07-28",
+              "close": 52747.3203
+            },
+            {
+              "date": "2026-07-29",
+              "close": 51594.1406
+            },
+            {
+              "date": "2026-07-30",
+              "close": 52208.0586
+            },
+            {
+              "date": "2026-07-31",
+              "close": 52485.0312
+            }
+          ],
+          "vix": [
+            {
+              "date": "2026-06-30",
+              "close": 16.45
+            },
+            {
+              "date": "2026-07-01",
+              "close": 16.59
+            },
+            {
+              "date": "2026-07-02",
+              "close": 16.15
+            },
+            {
+              "date": "2026-07-06",
+              "close": 15.57
+            },
+            {
+              "date": "2026-07-07",
+              "close": 16.13
+            },
+            {
+              "date": "2026-07-08",
+              "close": 16.9
+            },
+            {
+              "date": "2026-07-09",
+              "close": 15.84
+            },
+            {
+              "date": "2026-07-10",
+              "close": 15.03
+            },
+            {
+              "date": "2026-07-13",
+              "close": 17.16
+            },
+            {
+              "date": "2026-07-14",
+              "close": 16.5
+            },
+            {
+              "date": "2026-07-15",
+              "close": 15.67
+            },
+            {
+              "date": "2026-07-16",
+              "close": 16.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 18.77
+            },
+            {
+              "date": "2026-07-20",
+              "close": 18.65
+            },
+            {
+              "date": "2026-07-21",
+              "close": 17.05
+            },
+            {
+              "date": "2026-07-22",
+              "close": 16.64
+            },
+            {
+              "date": "2026-07-23",
+              "close": 18.7
+            },
+            {
+              "date": "2026-07-24",
+              "close": 18.58
+            },
+            {
+              "date": "2026-07-27",
+              "close": 18.67
+            },
+            {
+              "date": "2026-07-28",
+              "close": 18.21
+            },
+            {
+              "date": "2026-07-29",
+              "close": 20.66
+            },
+            {
+              "date": "2026-07-30",
+              "close": 17.09
+            },
+            {
+              "date": "2026-07-31",
+              "close": 15.99
+            }
+          ],
+          "dxy": [
+            {
+              "date": "2026-07-02",
+              "close": 100.86
+            },
+            {
+              "date": "2026-07-06",
+              "close": 100.85
+            },
+            {
+              "date": "2026-07-07",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-08",
+              "close": 101.05
+            },
+            {
+              "date": "2026-07-09",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-10",
+              "close": 100.97
+            },
+            {
+              "date": "2026-07-13",
+              "close": 101.28
+            },
+            {
+              "date": "2026-07-14",
+              "close": 100.94
+            },
+            {
+              "date": "2026-07-15",
+              "close": 100.5
+            },
+            {
+              "date": "2026-07-16",
+              "close": 100.73
+            },
+            {
+              "date": "2026-07-17",
+              "close": 100.75
+            },
+            {
+              "date": "2026-07-20",
+              "close": 100.99
+            },
+            {
+              "date": "2026-07-21",
+              "close": 101.18
+            },
+            {
+              "date": "2026-07-22",
+              "close": 101.14
+            },
+            {
+              "date": "2026-07-23",
+              "close": 101.43
+            },
+            {
+              "date": "2026-07-24",
+              "close": 101.47
+            },
+            {
+              "date": "2026-07-27",
+              "close": 101.51
+            },
+            {
+              "date": "2026-07-28",
+              "close": 101.38
+            },
+            {
+              "date": "2026-07-29",
+              "close": 100.8
+            },
+            {
+              "date": "2026-07-30",
+              "close": 100.01
+            },
+            {
+              "date": "2026-07-31",
+              "close": 99.8
+            }
+          ]
+        },
+        "macro": {
+          "note": "FRED_API_KEY 미설정 - 공식 FRED 사이트 참고"
+        },
+        "sector": {},
+        "news_sentiment": {
+          "headline_count": 100,
+          "top_headlines": [
+            {
+              "headline": "Looking at just the odds isn’t enough. How traders gain an edge on prediction markets",
+              "source": "CNBC",
+              "datetime": 1785591844
+            },
+            {
+              "headline": "OpenAI's Hugging Face hack confirmed months of AI cyber warnings: 'Pandora's box is open'",
+              "source": "CNBC",
+              "datetime": 1785585601
+            },
+            {
+              "headline": "Bloomberg puts off adding Indian bonds to its global index",
+              "source": "Bloomberg",
+              "datetime": 1785564914
+            },
+            {
+              "headline": "Data centre boom fuels demand for workforce housing",
+              "source": "Bloomberg",
+              "datetime": 1785559029
+            },
+            {
+              "headline": "Dollar logs its worst week in over 3 months amid Fed doubts",
+              "source": "Bloomberg",
+              "datetime": 1785558774
+            }
+          ]
+        },
+        "data_date": "2026-08-02"
+      },
+      "associated_data": null
+    },
+    "scene_type": "metric",
+    "selection_reason": "대본에 검증 대상 수치·등락·규모 표현이 있어 지표형으로 분류",
+    "editorial_decision": {
+      "index": 1,
+      "selected": false,
+      "reason": "adjacent_overlay_suppressed",
+      "intent": "hook"
+    },
+    "phase": "hook",
+    "phase_name": "Hook & Question",
+    "start_seconds": 4.77,
+    "end_seconds": 13.24,
+    "emotion_tag": "highlight",
+    "character_action": "pointer_up",
+    "edit_marker": "data_overlay",
+    "text_for_tts": "국내 주식 시장에서 종목 약 70퍼센트가 마이너스 수익률을 기록했습니다.",
+    "sentences": [
+      {
+        "sentence_id": "s002_1",
+        "text": "국내 주식 시장에서 종목 약 70퍼센트가 마이너스 수익률을 기록했습니다.",
+        "text_for_tts": "국내 주식 시장에서 종목 약 70퍼센트가 마이너스 수익률을 기록했습니다.",
+        "emotion_tag": "highlight",
+        "character_action": "pointer_up",
+        "edit_marker": "data_overlay",
+        "estimated_seconds": 8.47,
+        "fact_refs": [],
+        "market_data_refs": [],
+        "elevenlabs_hint": {
+          "audio_tag": "[intriguingly]",
+          "stability_mode": "Natural"
+        }
+      }
+    ],
+    "elevenlabs_hint": {
+      "audio_tag": "[intriguingly]",
+      "stability_mode": "Natural"
+    },
+    "e2e_test_scene_type": "metric",
+    "e2e_test_ordinal": 2
+  }
+]

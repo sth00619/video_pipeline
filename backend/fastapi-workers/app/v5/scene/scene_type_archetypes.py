@@ -59,7 +59,7 @@ ARCHETYPE_SURFACES: dict[str, tuple[str, ...]] = {
         "printed documents",
         "wall diagrams",
     ),
-    "data_lab": ("one central holographic map panel", "translucent gauge faces", "console etchings"),
+    "data_lab": ("one broad curved presentation wall", "analog gauge faces", "console etchings"),
     "earnings_stage": (
         "the single broad earnings-briefing surface embedded flush into the center back wall directly behind the presentation podium",
         "podium nameplates",
@@ -116,11 +116,18 @@ def primary_surface_region(archetype: str) -> tuple[float, float, float, float]:
 # 숫자·그래프형 장면은 반드시 물리 표면이 이미 정의된 무대만 후보로 둔다.
 # 첫 항목은 문맥 신호가 없을 때의 기본값이고, 이후 항목은 사람 검토용 대안이다.
 TYPE_CANDIDATES: dict[str, tuple[str, ...]] = {
-    "graph": ("data_lab", "weather_map", "trade_calculator"),
-    "metric": ("data_lab", "risk_control_room", "retail_shock", "trade_calculator", "weather_map"),
+    "graph": ("data_lab", "weather_map", "trade_calculator", "briefing_podium"),
+    "metric": ("data_lab", "risk_control_room", "retail_shock", "trade_calculator", "weather_map", "port_emergency"),
     "diagram": ("classroom", "trade_calculator", "data_lab"),
     "text": ("classroom", "risk_control_room", "port_emergency"),
-    "general": ("port_emergency", "classroom", "risk_control_room"),
+    "general": (
+        "port_emergency",
+        "classroom",
+        "risk_control_room",
+        "weather_map",
+        "data_lab",
+        "trade_calculator",
+    ),
 }
 
 
@@ -128,7 +135,12 @@ _GRAPH_MAP_HINTS = ("지도", "지역", "국가", "날씨", "map", "region", "co
 _GRAPH_COMPARISON_HINTS = ("막대", "비율", "공식", "bar", "formula")
 _METRIC_RETAIL_HINTS = ("가격", "판매", "소비", "매장", "장바구니", "price", "retail", "checkout", "total")
 _METRIC_RISK_HINTS = ("하락", "급락", "낙폭", "위험", "경고", "손실", "변동", "drop", "decline", "risk", "loss", "volatile")
-_DIAGRAM_DATA_LAB_HINTS = ("네트워크", "노드", "연결망", "network", "node")
+# 흐름도라도 실제 지표의 상승·하락을 설명하는 경우에는 교실 판서보다 넓은
+# 물리 그래프 벽이 있는 data_lab을 쓴다. 숫자는 여전히 후처리 사실층에서만 넣는다.
+_DIAGRAM_DATA_LAB_HINTS = (
+    "네트워크", "노드", "연결망", "홀로그램", "상승 추세", "하락 추세",
+    "network", "node", "hologram", "trend",
+)
 _GENERAL_CLASSROOM_HINTS = ("설명", "원리", "배경", "explain", "principle", "background")
 _TEXT_PORT_HINTS = ("항만", "물류", "컨테이너", "수출", "port", "logistics", "container", "shipping")
 
@@ -170,6 +182,9 @@ def recommend_v5_archetype(scene: dict) -> ArchetypeSelection:
     if scene_type not in SCENE_TYPES:
         raise ValueError(f"지원하지 않는 scene_type: {scene_type}")
     text = _scene_text(scene)
+    forced_archetype = str(scene.get("visual_archetype") or "").strip()
+    if forced_archetype:
+        return _selection(scene_type, forced_archetype, "파일럿 장면 다양성을 위한 명시적 archetype 선택")
 
     if scene_type == "graph":
         if _has_any(text, _GRAPH_MAP_HINTS):
@@ -187,7 +202,7 @@ def recommend_v5_archetype(scene: dict) -> ArchetypeSelection:
 
     if scene_type == "diagram":
         if _has_any(text, _DIAGRAM_DATA_LAB_HINTS):
-            return _selection("diagram", "data_lab", "노드·연결망 구조이므로 홀로그램 지도 경로가 있는 data_lab을 추천")
+            return _selection("diagram", "data_lab", "네트워크·홀로그램·추세 흐름이므로 넓은 물리 그래프 벽이 있는 data_lab을 추천")
         return _selection("diagram", "classroom", "흐름·구조 설명이므로 판서와 화살표를 담을 강의 벽이 있는 classroom을 추천")
 
     if scene_type == "text":

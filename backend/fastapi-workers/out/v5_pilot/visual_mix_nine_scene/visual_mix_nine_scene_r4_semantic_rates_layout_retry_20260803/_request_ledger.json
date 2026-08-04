@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_rates_flow",
+      "attempt": 1,
+      "attempt_id": "c63219ecad5241b3b22fb692220ffbe6",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-03T08:10:19.556185+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "character",
+          "style"
+        ],
+        "visual_mode": "semantic_illustration",
+        "visual_mode_contract": {
+          "asset_source": "v5_gemini_scene",
+          "text_policy": "strict_textless",
+          "overlay_policy": "ass_subtitle_only",
+          "numeric_visual_policy": "prohibited",
+          "character_policy": "fixed_reference_when_character_required"
+        },
+        "style_contract_version": "2026-08-03-r4-korean-nonnumeric-three-mode-v1",
+        "selected_archetype": "weather_map",
+        "surface_caption": null,
+        "prompt_sha256": "355bd248cd165c0656d8ce389cc4324f8343a521da51e8f3e2afb68a0edd90f3"
+      },
+      "completed_at": "2026-08-03T08:11:00.361065+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 254,
+  "budget_overrun_krw": 0
+}

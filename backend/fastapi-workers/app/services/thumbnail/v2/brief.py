@@ -16,6 +16,7 @@ TemplateId = Literal[
     "chart_warning",
     "article_evidence",
     "product_earnings",
+    "split_versus",
 ]
 
 
@@ -82,6 +83,9 @@ class ThumbnailBriefV2(BaseModel):
     speech_bubble: str | None = Field(default=None, max_length=24)
     editorial_overlays: list[OverlaySlot] = Field(default_factory=list, max_length=2)
     pattern_id: str | None = Field(default=None, max_length=8)
+    # 대본이 A vs B 대조 구조일 때만 True. compose.py가 chart_led 변형을
+    # 고를 때 이 플래그를 보고 split_versus 템플릿을 대신 선택한다.
+    comparison_mode: bool = False
 
     @model_validator(mode="after")
     def template_requirements(self) -> "ThumbnailBriefV2":
@@ -91,8 +95,8 @@ class ThumbnailBriefV2(BaseModel):
             raise ValueError("person_headline 템플릿의 주 피사체는 person이어야 합니다")
         if self.template == "product_earnings" and not self.badge:
             raise ValueError("product_earnings 템플릿은 badge가 필수입니다")
-        if self.template not in {"chart_warning", "mascot_headline"} and self.secondary_subject.allowed:
-            raise ValueError("마스코트는 mascot_headline 또는 chart_warning 템플릿에서만 허용됩니다")
+        if self.template not in {"chart_warning", "mascot_headline", "split_versus"} and self.secondary_subject.allowed:
+            raise ValueError("마스코트는 mascot_headline·chart_warning·split_versus 템플릿에서만 허용됩니다")
         if self.template == "mascot_headline" and not self.secondary_subject.allowed:
             raise ValueError("mascot_headline 템플릿은 선택된 채널 캐릭터가 필수입니다")
         return self

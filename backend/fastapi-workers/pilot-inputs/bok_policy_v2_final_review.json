@@ -1,0 +1,28 @@
+{
+  "decisions": [
+    {
+      "scene_id": "policy_rate_graph",
+      "decision": "APPROVE",
+      "reviewed_attempt": 1,
+      "reason": "원형 금화 마스코트와 data-lab 중심 surface가 선명하며, 모델이 만든 읽을 수 있는 수치·문자는 보이지 않는다. 기준금리 오버레이가 단일 표면에 정확히 합성됐다."
+    },
+    {
+      "scene_id": "policy_transmission_diagram",
+      "decision": "APPROVE",
+      "reviewed_attempt": 4,
+      "reason": "data-lab network surface 전환 후 원형 금화 마스코트가 유지됐고, 전달 경로를 나타내는 비문자 노드·곡선만 남았다. 인상폭 오버레이가 정확히 합성됐다."
+    },
+    {
+      "scene_id": "inflation_metric",
+      "decision": "APPROVE",
+      "reviewed_attempt": 2,
+      "reason": "원형 금화 마스코트와 중앙 아날로그 게이지가 유지됐고, 모델 생성 문자는 보이지 않는다. 소비자물가 오버레이가 지정 게이지 표면에 정확히 합성됐다."
+    },
+    {
+      "scene_id": "policy_general",
+      "decision": "APPROVE",
+      "reviewed_attempt": 1,
+      "reason": "일반 장면은 원형 금화 마스코트와 항구 경보 배경을 유지하며, 검증 사실 오버레이가 추가되지 않았다."
+    }
+  ]
+}

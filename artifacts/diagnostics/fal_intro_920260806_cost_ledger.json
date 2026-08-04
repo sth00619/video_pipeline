@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "kind": "kling_request",
+      "provider": "fal",
+      "model": "kling_image_to_video",
+      "scene_key": "kling:0",
+      "attempt": 1,
+      "attempt_id": "3c4b0d1ce79e44239a495444ba6adbef",
+      "estimated_usd": 0.35,
+      "amount_krw": 490,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "succeeded",
+      "reserved_at": "2026-08-03T10:29:57.046214+00:00",
+      "request_metadata": {
+        "policy_version": "runtime-default"
+      },
+      "completed_at": "2026-08-03T10:32:20.458018+00:00",
+      "request_id": "019fc72c-4f9a-7c40-b5d8-6112fad64722"
+    }
+  ],
+  "total_krw": 490,
+  "budget_overrun_krw": 0
+}

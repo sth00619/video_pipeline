@@ -1,0 +1,488 @@
+{
+  "mode": "completed",
+  "model": "gemini-3-pro-image",
+  "policy_version": "three-goals-e2e-2026-08-02",
+  "gemini_key_configured": true,
+  "preflight": {
+    "planned_at": "2026-08-02T07:24:39.639859+00:00",
+    "scene_count": 4,
+    "quality_tier": "pro",
+    "pro_scene_count": 5,
+    "flash_scene_count": 0,
+    "kling_clip_count": 0,
+    "estimated_cost_krw": 1032,
+    "budget_limit_krw": 70000,
+    "retry_buffer_pct": 10.0,
+    "allowed": true,
+    "policy_version": "three-goals-e2e-2026-08-02",
+    "actions": [],
+    "reason": null,
+    "template_scene_count": 0,
+    "template_retry_reserve_krw": 0,
+    "template_regeneration_enabled": true,
+    "rates": {
+      "img_cost_pro_2k_usd": 0.134,
+      "kling_cost_per_clip_usd": 0.35,
+      "usd_krw": 1400.0
+    }
+  },
+  "scenes": [
+    {
+      "scene_id": "policy_rate_graph",
+      "scene_type": "graph",
+      "model": "gemini-3-pro-image",
+      "prompt_guard": "passed",
+      "verified_overlay": true,
+      "review_kind": "verified_surface"
+    },
+    {
+      "scene_id": "policy_transmission_diagram",
+      "scene_type": "diagram",
+      "model": "gemini-3-pro-image",
+      "prompt_guard": "passed",
+      "verified_overlay": true,
+      "review_kind": "verified_surface"
+    },
+    {
+      "scene_id": "inflation_metric",
+      "scene_type": "metric",
+      "model": "gemini-3-pro-image",
+      "prompt_guard": "passed",
+      "verified_overlay": true,
+      "review_kind": "verified_surface"
+    },
+    {
+      "scene_id": "policy_general",
+      "scene_type": "general",
+      "model": "gemini-3-pro-image",
+      "prompt_guard": "passed",
+      "verified_overlay": false,
+      "review_kind": "general_scene"
+    }
+  ],
+  "review_contract": {
+    "automatic_regeneration": false,
+    "require_manual_decision_before_regeneration": true,
+    "required_artifacts_per_scene": [
+      "background.png",
+      "final.png"
+    ],
+    "required_checks": [
+      "PNG 해상도와 파일 무결성",
+      "원본 배경의 읽을 수 있는 수치·한글 텍스트 유무",
+      "마스코트 얼굴·비율·카메라 구도 보존",
+      "검증 장면의 소품 표면 오버레이 위치·출처·값 일치",
+      "일반 장면의 검증 수치 오버레이 부재"
+    ]
+  },
+  "run_id": "bok-policy-20260716-v2",
+  "run_dir": "/app/data/pilots/three_goals/bok-policy-20260716-v2",
+  "results": [
+    {
+      "scene_id": "policy_rate_graph",
+      "attempt": 1,
+      "status": "completed",
+      "background": {
+        "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_rate_graph/attempt-01/background.png",
+        "sha256": "0fb5af6261dcabd7e20d36d80332c5ad87686571752ee627b1b22dfb2899b34f",
+        "width": 2752,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "final": {
+        "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_rate_graph/attempt-01/final.png",
+        "sha256": "a0e1ef3f4fa22b3ca68f0299bdfaa22e39fc6ed32d0151cc127f4dca1216f225",
+        "width": 1920,
+        "height": 1080,
+        "format": "PNG"
+      },
+      "normalization": {
+        "method": "center_crop_then_lanczos_resize",
+        "source_size": [
+          2752,
+          1536
+        ],
+        "crop_box": [
+          10,
+          0,
+          2741,
+          1536
+        ],
+        "target_size": [
+          1920,
+          1080
+        ]
+      },
+      "ocr": {
+        "status": "ADVISORY_REVIEW_REQUIRED",
+        "reader": "tesseract",
+        "detected_texts": [
+          "Wf,",
+          "- ~",
+          "~",
+          "애 _",
+          "_-",
+          "—",
+          "@ —___",
+          "—",
+          "x",
+          "|",
+          "P=",
+          "ee ez)",
+          "> ee",
+          "se",
+          "OOD",
+          "~ Y",
+          "a",
+          "= =",
+          "Zi)",
+          "|",
+          "Vay",
+          "|",
+          "@eee",
+          "al",
+          "‘A",
+          ":  (]",
+          "a",
+          "oe",
+          "460",
+          "ry",
+          "=",
+          "Nig",
+          "VA",
+          "(ema",
+          "WBS)",
+          "MABE",
+          "——————”",
+          "=o",
+          "mas",
+          "=“",
+          "=",
+          "=) 아즈",
+          "Soe",
+          "ss",
+          ">",
+          "Sars.",
+          "=",
+          "=",
+          "_ =",
+          "~",
+          "수 =",
+          "wmaSe =e",
+          "%      wes ee",
+          "ee",
+          "ㆍ @e",
+          "we =",
+          "——_~",
+          "ㅣ",
+          "II",
+          "Cn",
+          "<<",
+          "\\y",
+          "a __",
+          "| 008",
+          "(7",
+          "="
+        ],
+        "automatic_approval": false
+      }
+    },
+    {
+      "scene_id": "policy_transmission_diagram",
+      "attempt": 1,
+      "status": "completed",
+      "background": {
+        "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-01/background.png",
+        "sha256": "fffab1c690c35de895d6865339b691493bd472b77040c30f34a4ce6d2c4d20c2",
+        "width": 2752,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "final": {
+        "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_transmission_diagram/attempt-01/final.png",
+        "sha256": "69033fac1395fd1fea1d0a8939fb6664cc9abbacaf98f0bf04d4da4f490e2eb6",
+        "width": 1920,
+        "height": 1080,
+        "format": "PNG"
+      },
+      "normalization": {
+        "method": "center_crop_then_lanczos_resize",
+        "source_size": [
+          2752,
+          1536
+        ],
+        "crop_box": [
+          10,
+          0,
+          2741,
+          1536
+        ],
+        "target_size": [
+          1920,
+          1080
+        ]
+      },
+      "ocr": {
+        "status": "ADVISORY_REVIEW_REQUIRED",
+        "reader": "tesseract",
+        "detected_texts": [
+          "| 1 |e",
+          "-",
+          "— 3",
+          "개",
+          "ee ad",
+          "ial",
+          "a [|",
+          "… Om",
+          "~ 가 가 되여",
+          "2 Se",
+          "/ㅠ",
+          "=",
+          "me,",
+          "oo",
+          "“is",
+          "뻐",
+          "an",
+          "JO.25°%",
+          "[2",
+          "cz",
+          "A \\\\",
+          "LA —",
+          "fo} Te)",
+          "Ba",
+          "a)",
+          "he",
+          "5 \\",
+          "ㄴㄴ",
+          "eo) 5",
+          "=",
+          "~",
+          "때",
+          "il",
+          "PG",
+          "aS",
+          "UNA)    OS",
+          "7",
+          "255",
+          "% al",
+          "a",
+          "4",
+          "(|",
+          "cA",
+          "aii =)",
+          "7.",
+          "00 | ^",
+          "]",
+          "~",
+          "NS",
+          "NS",
+          "|",
+          "ve",
+          "WY",
+          "one",
+          ">",
+          "(Z— =r",
+          "692",
+          "GS",
+          "ZN",
+          "yet",
+          "시",
+          "ti i ©",
+          "티비",
+          "(="
+        ],
+        "automatic_approval": false
+      }
+    },
+    {
+      "scene_id": "inflation_metric",
+      "attempt": 1,
+      "status": "completed",
+      "background": {
+        "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/inflation_metric/attempt-01/background.png",
+        "sha256": "821ef7c8916d5e10371e5b9d06c6f42c263180957a4def83c7803e44ca73a966",
+        "width": 2752,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "final": {
+        "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/inflation_metric/attempt-01/final.png",
+        "sha256": "3aa5efae2986adfa42f2656c774f5af882a9c4193995e813374427db43634f53",
+        "width": 1920,
+        "height": 1080,
+        "format": "PNG"
+      },
+      "normalization": {
+        "method": "center_crop_then_lanczos_resize",
+        "source_size": [
+          2752,
+          1536
+        ],
+        "crop_box": [
+          10,
+          0,
+          2741,
+          1536
+        ],
+        "target_size": [
+          1920,
+          1080
+        ]
+      },
+      "ocr": {
+        "status": "ADVISORY_REVIEW_REQUIRED",
+        "reader": "tesseract",
+        "detected_texts": [
+          "ee",
+          "^",
+          "ly",
+          "!",
+          "©) ©",
+          "%",
+          "A",
+          "WwW\"",
+          "^",
+          "가",
+          "00000",
+          "O00 OO",
+          "L[{[(/f/fLYf",
+          "02000",
+          "/. /=/스/5으2",
+          "( / / 7575",
+          "( /80/=/_ /=/으스",
+          "LTT TMT 7,",
+          "4",
+          "—_——_",
+          "Mi s",
+          "배",
+          "00 0/",
+          "2000",
+          "4",
+          "LAW",
+          "\\ \\",
+          "Te",
+          "| =",
+          "^ ㅠㅠ",
+          "1]",
+          "더"
+        ],
+        "automatic_approval": false
+      }
+    },
+    {
+      "scene_id": "policy_general",
+      "attempt": 1,
+      "status": "completed",
+      "background": {
+        "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_general/attempt-01/background.png",
+        "sha256": "a2ae8ba8263b0d7df02ee21cb72179bd6d2469be642e78f746207aeed0278255",
+        "width": 2752,
+        "height": 1536,
+        "format": "PNG"
+      },
+      "final": {
+        "path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/candidates/policy_general/attempt-01/final.png",
+        "sha256": "ced632ed7d537706f36d1797f9e65a9f719bb362e09fe6935ceda97dcd069df4",
+        "width": 1920,
+        "height": 1080,
+        "format": "PNG"
+      },
+      "normalization": {
+        "method": "center_crop_then_lanczos_resize",
+        "source_size": [
+          2752,
+          1536
+        ],
+        "crop_box": [
+          10,
+          0,
+          2741,
+          1536
+        ],
+        "target_size": [
+          1920,
+          1080
+        ]
+      },
+      "ocr": {
+        "status": "ADVISORY_REVIEW_REQUIRED",
+        "reader": "tesseract",
+        "detected_texts": [
+          "©",
+          "—~——",
+          "©: -@: 0:",
+          "it",
+          "|",
+          "=",
+          "|",
+          "@               |",
+          "000",
+          ":        |",
+          "~",
+          "=",
+          "al.",
+          "!",
+          "Ooo",
+          "Te)",
+          "> ,  \"=",
+          "스스",
+          "fa fo",
+          "ow ¢",
+          "@",
+          "——",
+          "00",
+          "a *",
+          "@",
+          "a",
+          "YO",
+          "^)",
+          "7\\",
+          "X—a",
+          "7",
+          "SS  18",
+          "~ `",
+          "~ =",
+          "'",
+          "7 흘",
+          "ㄴ 32",
+          "a",
+          "Ni",
+          "WY",
+          "te",
+          "+",
+          "|!",
+          "7,",
+          "i,",
+          "ig",
+          "ANG",
+          "1]",
+          "=",
+          "—-",
+          ",",
+          "Ba",
+          "7.",
+          "Nx",
+          "1",
+          "~",
+          "uh)",
+          "Wy)",
+          "^",
+          "ka",
+          "Wy",
+          "WW)",
+          "Nae",
+          "A)",
+          "l 4   Wg",
+          "ay",
+          "a",
+          "L— 7",
+          "—_ ,",
+          "Vv",
+          "1"
+        ],
+        "automatic_approval": false
+      }
+    }
+  ],
+  "review_dossier_path": "/app/data/pilots/three_goals/bok-policy-20260716-v2/review_dossier.json"
+}

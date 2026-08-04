@@ -48,12 +48,12 @@ const AUTONOMY_OPTIONS = [
 ]
 
 const DURATION_OPTIONS = [
-  { value: 1, label: '1분 테스트', hint: '배포 검증용. 짧은 롱폼 전체 경로 확인' },
-  { value: 5, label: '5분', hint: '숏 영상. 인트로 30초 움짤' },
-  { value: 10, label: '10분', hint: '표준 길이. 인트로 45초 움짤' },
-  { value: 15, label: '15분', hint: '심층 분석. 인트로 60초 움짤' },
-  { value: 20, label: '20분', hint: '풀 리포트. 인트로 60초 움짤' },
-  { value: 30, label: '30분', hint: '롱폼 최대. 예산 여유 필요' },
+  { value: 1, label: '1분 테스트', hint: '정책 상한 ₩40,000. 배포 검증용' },
+  { value: 5, label: '5분', hint: '정책 상한 ₩40,000. 인트로 45초 움짤' },
+  { value: 10, label: '10분', hint: '정책 상한 ₩40,000. 표준 길이' },
+  { value: 15, label: '15분', hint: '정책 상한 ₩40,000. 심층 분석' },
+  { value: 20, label: '20분', hint: '정책 상한 ₩70,000. 풀 리포트' },
+  { value: 30, label: '30분', hint: '정책 상한 ₩70,000. 장문 분석' },
 ]
 const RESEARCH_PAGE_SIZE = 10
 
@@ -82,10 +82,11 @@ export default function JobNew() {
     category: 'KOSPI',
     autonomy: 'GUIDED',
     longformTargetMinutes: 15,
-    budgetCap: 10,
+    budgetCap: null,
+    geminiImageBudgetCap: 15000,
     makeShorts: true,
     shortsCount: 3,
-    dataVisualsEnabled: true,
+    dataVisualsEnabled: false,
   })
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export default function JobNew() {
   const canProceed = () => {
     if (step === 1) return form.title.trim().length > 0
     if (step === 2) return true
-    if (step === 3) return form.budgetCap > 0
+    if (step === 3) return true
     return false
   }
 
@@ -306,7 +307,7 @@ export default function JobNew() {
 
               <label className="flex items-start gap-3 bg-accent-cyan/5 border border-accent-cyan/20 rounded-lg p-3 cursor-pointer">
                 <input type="checkbox" checked={form.dataVisualsEnabled} onChange={e => setForm({ ...form, dataVisualsEnabled: e.target.checked })} className="mt-1 accent-cyan-400" />
-                <span><span className="block text-sm text-white font-semibold">데이터 시각화 씬 추가</span><span className="block text-[11px] text-gray-400 mt-1">이 작업의 관련 씬에만 검증된 시장 수치·도표·원형 차트를 Gemini 이미지와 함께 구성합니다. 정확한 숫자는 별도 검증 레이어로 합성합니다.</span></span>
+                <span><span className="block text-sm text-white font-semibold">레거시 수치 시각화 사용</span><span className="block text-[11px] text-gray-400 mt-1">기본 파이프라인은 기사형·일반형·정보형으로 대본 의미를 표현합니다. 이 옵션은 기존 숫자 카드·차트 오버레이 호환이 꼭 필요한 경우에만 사용합니다.</span></span>
               </label>
 
               <div>
@@ -440,43 +441,27 @@ export default function JobNew() {
                 <h2 className="font-semibold">3단계 — 예산 상한과 최종 확인</h2>
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-300 mb-1.5">
-                  예산 상한 (USD)
-                  <span className="text-xs text-gray-500 ml-2">
-                    실제 지출이 이 금액을 초과하면 작업이 자동 중지됩니다.
-                  </span>
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min={1}
-                    max={1000}
-                    value={form.budgetCap}
-                    onChange={e => setForm({ ...form, budgetCap: Number(e.target.value) })}
-                    className="w-32 bg-navy-700 border border-navy-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                  />
-                  <span className="text-sm text-gray-400">USD</span>
-                  <div className="flex gap-1">
-                    {[5, 10, 20, 50].map(v => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => setForm({ ...form, budgetCap: v })}
-                        className="text-xs px-2 py-1 rounded border border-navy-600 bg-navy-700 hover:bg-navy-600 transition"
-                      >
-                        ${v}
-                      </button>
-                    ))}
-                  </div>
+              <div className="rounded-lg border border-accent-cyan/30 bg-accent-cyan/5 p-4">
+                <div className="text-sm font-semibold text-gray-100">정책 예산 상한</div>
+                <div className="mt-1 text-2xl font-bold text-accent-cyan">
+                  ₩{(form.longformTargetMinutes >= 20 ? 70000 : 40000).toLocaleString()}
                 </div>
-                <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                  대략적인 소진량: Claude 스크립트 생성 약 $0.5~2, TTS 약 $1~3, 이미지 생성 약 $1~2,
-                  인트로 움짤 약 $3~6. 15분 영상 한 편당 총 $6~13 정도가 표준입니다.
+                <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                  목표 길이에 따라 서버 정책이 자동 적용됩니다. 20분 미만은 ₩40,000, 20분 이상은 ₩70,000이며 임의 상향할 수 없습니다.
                 </p>
               </div>
 
               <div className="bg-navy-700/50 rounded-lg p-4 border border-navy-600">
+                <label className="block text-sm font-medium text-gray-100">Gemini 이미지 전용 상한</label>
+                <p className="mt-1 text-xs text-gray-400">정지 이미지 생성에만 적용합니다. Fal 모션 비용은 이 값과 분리되며 전체 영상 상한은 그대로 유지됩니다.</p>
+                <input
+                  type="number"
+                  min="1"
+                  step="1000"
+                  value={form.geminiImageBudgetCap}
+                  onChange={e => setForm({ ...form, geminiImageBudgetCap: Number(e.target.value) })}
+                  className="mt-3 w-full rounded border border-navy-600 bg-navy-800 px-3 py-2 text-sm text-white focus:border-accent-cyan focus:outline-none"
+                />
                 <div className="text-xs text-gray-400 mb-2">최종 확인</div>
                 <div className="space-y-1.5 text-sm">
                   <Row label="주제" value={form.title || '(미입력)'} />
@@ -484,7 +469,7 @@ export default function JobNew() {
                   <Row label="자율성" value={AUTONOMY_OPTIONS.find(o => o.value === form.autonomy)?.label} />
                   <Row label="목표 길이" value={`${form.longformTargetMinutes}분`} />
                   <Row label="쇼츠 생성" value={form.makeShorts ? `${form.shortsCount}개` : '안 함'} />
-                  <Row label="예산 상한" value={`$${form.budgetCap}`} highlight />
+                  <Row label="예산 상한" value={`₩${(form.longformTargetMinutes >= 20 ? 70000 : 40000).toLocaleString()}`} highlight />
                 </div>
               </div>
 

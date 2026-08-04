@@ -57,6 +57,28 @@ def test_cer_ignores_whitespace_and_punctuation_only_differences():
     assert TtsWorker._char_error_rate("Market rises.", "Market   rises!") == 0
 
 
+def test_provider_character_alignment_preserves_the_hard_script_contract_when_whisper_is_noisy(monkeypatch):
+    class WhisperWithNoisyNumericTranscript:
+        def transcribe(self, *_args, **_kwargs):
+            return [type("Segment", (), {"text": "금리는 삼 퍼센트입니다."})()], None
+
+    worker = TtsWorker()
+    monkeypatch.setattr(worker, "_get_whisper_model", lambda: WhisperWithNoisyNumericTranscript())
+    provider_characters = _timed("금리는 3.75퍼센트입니다.")
+
+    result = worker._verify_tts_narration(
+        "unused.mp3",
+        "금리는 3.75퍼센트입니다.",
+        1,
+        provider_characters=provider_characters,
+    )
+
+    assert result["passed"] is True
+    assert result["provider_text_exact"] is True
+    assert result["whisper_passed"] is False
+    assert result["audio_review_required"] is True
+
+
 def test_default_delivery_inserts_reference_sized_sentence_pauses():
     characters = [
         {"text": "A", "start": 0.0, "end": 0.1},
@@ -123,6 +145,9 @@ def test_timing_shift_only_affects_the_following_sentence():
 
 
 def test_forced_alignment_keeps_original_numeric_subtitle_text(monkeypatch):
+    # 실제 API 키가 있는 개발 환경에서도 가짜 오디오 파일을 외부 정렬로
+    # 보내지 않도록 기존 단어 정렬 폴백만 검증한다.
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
     monkeypatch.setattr(
         "app.tts.forced_alignment_srt.align_audio_to_text",
         lambda _audio, _script: [

@@ -7,6 +7,9 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from typing import Any
+import re
+
+from app.postprocess.text_overlay import script_caption, script_visual_plan
 
 from app.v5.providers.router import RENDER_BLOCKED_ARCHETYPES
 from app.v5.scene.layout_sketcher import LayoutSketcher
@@ -27,15 +30,43 @@ from app.v5.scene.scene_type_archetypes import (
 # 여기서 만들지 않으며, 씬 내용은 archetype 추천에만 사용한다.
 PRESENTATION_BY_ARCHETYPE: dict[str, tuple[str, str, str, str]] = {
     "port_emergency": ("alarm", "safety_vest", "alarmed_run", "right"),
-    "retail_shock": ("surprise", "analyst", "calculator_hold", "left"),
+    "retail_shock": ("surprise", "analyst", "calculator_hold", "right"),
     "classroom": ("explain", "professor", "point_left", "right"),
     "weather_map": ("explain", "reporter", "present", "right"),
-    "risk_control_room": ("concern", "formal", "present", "center"),
-    "trade_calculator": ("confidence", "vest", "think", "left"),
+    "risk_control_room": ("concern", "reporter", "present", "right"),
+    "trade_calculator": ("confidence", "vest", "think", "right"),
     "data_lab": ("explain", "reporter", "present", "right"),
-    "briefing_podium": ("explain", "reporter", "present", "center"),
-    "real_estate_office": ("explain", "analyst", "calculator_hold", "right"),
-    "job_market_hall": ("explain", "reporter", "present", "left"),
+    "briefing_podium": ("confidence", "tuxedo_host", "present", "right"),
+    "real_estate_office": ("explain", "architect_planner", "calculator_hold", "right"),
+    "job_market_hall": ("explain", "reporter", "present", "right"),
+}
+
+
+# 생성·검수·산출물 원장에 공통으로 남기는 세 가지 장면 계약이다. 이 계약은
+# 이미지 API 제공자와 무관하며, V5 프롬프트와 후속 영상 조립이 같은 규칙을
+# 소비하게 하는 단일 기준점이다.
+VISUAL_MODE_CONTRACTS: dict[str, dict[str, str]] = {
+    "article_evidence": {
+        "asset_source": "verified_article_capture",
+        "text_policy": "source_capture_only",
+        "overlay_policy": "underline_highlight_and_source_credit_only",
+        "numeric_visual_policy": "source_document_only",
+        "character_policy": "no_generated_mascot",
+    },
+    "semantic_illustration": {
+        "asset_source": "v5_gemini_scene",
+        "text_policy": "strict_textless",
+        "overlay_policy": "ass_subtitle_only",
+        "numeric_visual_policy": "prohibited",
+        "character_policy": "fixed_reference_when_character_required",
+    },
+    "archetype_explainer": {
+        "asset_source": "v5_gemini_scene",
+        "text_policy": "single_script_caption_on_primary_prop",
+        "overlay_policy": "ass_subtitle_only",
+        "numeric_visual_policy": "prohibited",
+        "character_policy": "fixed_reference_when_character_required",
+    },
 }
 
 
@@ -45,6 +76,72 @@ def _scene_identifier(scene: dict[str, Any], index: int) -> str:
 
 def _is_information_scene(scene_type: str) -> bool:
     return scene_type in {"metric", "graph", "diagram", "text"}
+
+
+def _visual_mode(scene: dict[str, Any], scene_type: str) -> str:
+    """실제 기사·상황 서사·정보형 소품을 구분해 롱폼의 반복을 막는다."""
+    kind = str(scene.get("visual_kind") or scene.get("visual_type") or "").lower()
+    if scene.get("article_capture") or kind in {"article_evidence", "article_scene"}:
+        return "article_evidence"
+    explicit_mode = str(scene.get("visual_mode") or "").strip()
+    if explicit_mode in VISUAL_MODE_CONTRACTS:
+        return explicit_mode
+    return "archetype_explainer" if _is_information_scene(scene_type) else "semantic_illustration"
+
+
+def _motion_contract(visual_mode: str, visual_text_policy: str, character_required: bool) -> dict[str, Any]:
+    """이미지 유형별 Fal 모션 사용 가능 범위를 명시한다.
+
+    모션은 영상의 초반 집중도를 높이는 선택 기능일 뿐, 이미지 계약을 바꾸는
+    수단이 아니다. 따라서 읽을 글자·기사 캡처·정보 표면이 있는 장면은 항상
+    정지 이미지로 유지하고, 텍스트 없는 일반형 장면도 편집자가 명시 선택한
+    경우에만 Fal 입력으로 보낸다.
+    """
+    eligible = visual_mode == "semantic_illustration" and visual_text_policy == "strict_textless"
+    return {
+        "eligible": eligible,
+        "requires_explicit_selection": True,
+        "character_required": character_required,
+        "default_motion_type": "pointing_explain" if character_required else "ambient_context",
+        "blocked_reasons": [] if eligible else [
+            "article_capture_or_script_caption_or_information_surface",
+        ],
+    }
+
+
+def _korean_context_visual_brief(scene: dict[str, Any]) -> str:
+    """대본의 한국 맥락을 로고 없이 현지 공간·소품으로 전달한다."""
+    source = " ".join(str(scene.get(key) or "") for key in ("title", "content", "text", "visual_intent", "topic")).lower()
+    if any(token in source for token in ("홈플러스", "하림", "마트", "슈퍼", "유통", "소비")):
+        return (
+            "When this scene is Korean retail, use a recognizably Korean hypermarket exterior or interior: Korean-style storefront proportions, "
+            "produce crates, delivery carts, and local urban streets, but no real brand logo, readable Korean text, or price labels"
+        )
+    if any(token in source for token in ("코스피", "코스닥", "삼성", "하이닉스", "국내", "한국", "원·달러", "원달러")):
+        return (
+            "Use a recognizably Korean business setting: Seoul-like office towers, Korean brokerage dealing-room proportions, local street and harbor details, "
+            "or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, readable Korean text, or numeric signage"
+        )
+    return (
+        "Use a Korean editorial-economic visual sensibility with locally familiar urban, retail, office, port, or factory details whenever the script has a Korea connection; "
+        "do not use logos, readable Korean text, or numeric signage"
+    )
+
+
+def _distinct_archetype_input(scene: dict[str, Any], previous_archetype: str) -> dict[str, Any]:
+    """명시 선택은 보존하고, 바로 앞 장면과 같은 정보형 무대를 피한다."""
+    candidate = dict(scene)
+    if not previous_archetype or candidate.get("visual_archetype"):
+        return candidate
+    recommendation = recommend_v5_archetype(candidate)
+    if recommendation.archetype == previous_archetype and recommendation.alternatives:
+        candidate["visual_archetype"] = recommendation.alternatives[0]
+        candidate["visual_mix_adjustment"] = {
+            "reason": "consecutive_archetype_avoidance",
+            "previous_archetype": previous_archetype,
+            "selected_archetype": recommendation.alternatives[0],
+        }
+    return candidate
 
 
 def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
@@ -73,31 +170,39 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         costume=costume,
         pose=pose,
         character_position=character_position,
+        character_required=bool(scene.get("character_required", True)),
     )
-    information_scene = _is_information_scene(scene_type)
-    verified_chart = scene.get("market_chart")
-    has_verified_surface_content = bool(scene.get("v5_verified_overlays")) or (
-        isinstance(verified_chart, dict) and verified_chart.get("verified") is True
-    )
-    # 실제 사실을 합성할 씬에서는 Gemini가 가짜 문구를 먼저 쓰지 못하게
-    # 한다. 최종 프레임은 비어 있지 않으며, 생성 직후 물리 표면 합성기가
-    # 검증된 문구·수치·차트를 같은 소품 안에 채운다.
-    policy = (
-        "strict_textless"
-        if not information_scene or has_verified_surface_content
-        else "diegetic_decorative"
-    )
+    visual_mode = _visual_mode(scene, scene_type)
+    information_scene = visual_mode == "archetype_explainer"
+    visual_mode_contract = VISUAL_MODE_CONTRACTS[visual_mode]
+    has_verified_surface_content = False
+    # Gemini가 임의의 영문·수치·차트 값을 그리면 실제 금융 사실처럼 보일 수
+    # 있다. 검증 데이터가 아직 표면 페이로드로 변환되지 않은 정보 장면도
+    # 예외 없이 텍스트 없는 베이스만 생성하고, 모든 읽을 수 있는 정보는
+    # Pillow/FFmpeg의 결정론적 합성 단계에서만 넣는다.
+    policy = "script_captioned" if information_scene else "strict_textless"
+    semantic_plan = script_visual_plan(scene)
+    semantic_direction = semantic_plan["direction"]
+    semantic_caption = semantic_plan["caption"] if information_scene else ""
+    semantic_visual_brief = semantic_plan["prop_visuals"] if information_scene else semantic_plan["background_visuals"]
     layout = LayoutSketcher.for_mascot_position(
         spec.scene_id,
         occupancy=spec.frame_occupancy,
         position=spec.character_position,
-    )
+    ) if spec.character_required else None
     prompt = build_prompt(
         spec,
         scene_type_selection=selection,
         visual_text_policy=policy,
-        layout_instruction=layout.prompt_instruction(),
+        layout_instruction=layout.prompt_instruction() if layout else None,
+        semantic_direction=semantic_direction,
+        semantic_caption=semantic_caption,
+        semantic_visual_brief=semantic_visual_brief,
+        locale_visual_brief=_korean_context_visual_brief(scene),
     )
+    visual_constraints = str(scene.get("visual_constraints") or "").strip()
+    if visual_constraints:
+        prompt = f"{prompt} <scene_specific_constraints> {visual_constraints} </scene_specific_constraints>"
 
     # hero/body는 Router가 Gemini Pro 우선 lane을 선택한다. draft에서만 klein
     # 후보가 될 수 있으며, 운영 계획은 draft를 지정하지 않는다.
@@ -105,6 +210,8 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
     return {
         "scene_id": spec.scene_id,
         "scene_type": scene_type,
+        "visual_mode": visual_mode,
+        "visual_mode_contract": visual_mode_contract,
         "selection": {
             **asdict(selection),
             "physical_surfaces": list(selection.physical_surfaces),
@@ -115,11 +222,21 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         "provider": "gemini_pro",
         "tier": tier,
         "visual_text_policy": policy,
+        "motion_contract": _motion_contract(
+            visual_mode,
+            policy,
+            spec.character_required,
+        ),
         "style_contract_version": V5_STYLE_CONTRACT_VERSION,
         "primary_surface_region": primary_surface_region(selection.archetype),
-        "verified_overlay_mode": (
-            "replace_primary_surface_from_verified_data" if information_scene else "not_applicable"
-        ),
+        "surface_caption": {
+            "english": semantic_caption,
+            "korean": script_caption(scene),
+            "direction": semantic_direction,
+            "target": selection.primary_physical_surface,
+        } if information_scene else None,
+        "semantic_visual_plan": semantic_plan,
+        "verified_overlay_mode": "non_numeric_prompt_embedded_script_caption" if information_scene else "not_applicable",
         "verified_overlay_present": has_verified_surface_content,
     }
 
@@ -127,14 +244,25 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
 def attach_v5_scene_contracts(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """원본 필드를 보존하며 각 씬에 V5 운영 계약을 첨부한다."""
     planned: list[dict[str, Any]] = []
+    previous_archetype = ""
     for index, source in enumerate(scenes):
-        scene = dict(source)
+        scene = _distinct_archetype_input(source, previous_archetype)
         contract = plan_v5_scene_contract(scene, index)
+        scene["visual_mode"] = contract["visual_mode"]
+        scene["motion_contract"] = contract["motion_contract"]
         scene["v5_render_contract"] = contract
         # 기존 워커의 프롬프트 필드를 그대로 이용하되, V5 계약이 우선임을
         # 별도 필드로도 남겨 후속 감사와 드라이런에서 확인할 수 있게 한다.
         scene["v5_scene_type_selection"] = contract["selection"]
         scene["v5_scene_spec"] = contract["scene_spec"]
+        # 2026-08-04 재검토: 정보형 장면에 정확 수치를 Pillow로 자동 합성하던
+        # 이전 배선을 되돌린다. 실제 생성 결과를 검토한 사용자 피드백 —
+        # "숫자에 집착할 필요 없다, 오히려 따로 붙인 것처럼 보인다" — 에 따라
+        # 정보형 장면은 아래 script_captioned 네이티브 프롬프트 경로(방향성
+        # 색상 그래프·장식 문구가 같은 생성 패스에서 원근·조명까지 자연스럽게
+        # 녹아든다)만 사용한다. v5_verified_overlays는 여전히 다른 경로(예:
+        # 향후 명시적 "핵심 수치 강조" 씬)가 직접 채우면 그대로 존중하되,
+        # 이 함수가 스스로 채우지는 않는다.
         # V5 final lane은 hero/body 모두 Gemini Pro만 사용한다. 기존 품질
         # 분배기가 flash로 낮추거나 전역 IMAGE_PROVIDER가 fal이어도 이 계약을
         # 가진 씬의 모델 선택은 바뀌지 않는다.
@@ -147,6 +275,8 @@ def attach_v5_scene_contracts(scenes: list[dict[str, Any]]) -> list[dict[str, An
         })
         scene["image_profile"] = image_profile
         planned.append(scene)
+        if contract["visual_mode"] != "article_evidence":
+            previous_archetype = contract["selection"]["archetype"]
     return planned
 
 
@@ -156,7 +286,18 @@ def prompt_for_scene(scene: dict[str, Any]) -> str | None:
     if not isinstance(contract, dict):
         return None
     prompt = contract.get("prompt_en")
-    return str(prompt) if isinstance(prompt, str) and prompt.strip() else None
+    if not isinstance(prompt, str) or not prompt.strip():
+        return None
+    # 실제 검증 수치가 있는 장면에서는 화풍용 픽셀 범위도 제거한다.
+    # 이미지 모델과 감사 로그가 이를 금융 수치로 오인할 여지를 없앤다.
+    if scene.get("verified_facts") or scene.get("facts"):
+        prompt = re.sub(
+            r"\s*\(3-5px equivalent\)", "", prompt, flags=re.IGNORECASE
+        )
+    # provider 호출보다 앞선 마지막 계약 경계에서 검증 수치를 차단한다.
+    from app.v5.scene.prompt_fact_guard import assert_prompt_has_no_verified_numbers
+    assert_prompt_has_no_verified_numbers(prompt, scene)
+    return prompt
 
 
 def is_v5_final_lane_scene(scene: dict[str, Any]) -> bool:
@@ -178,7 +319,9 @@ def v5_provider_options(scene: dict[str, Any]) -> dict[str, Any]:
         "gemini_model": "gemini-3-pro-image",
         "gemini_image_size": "2K",
         "gemini_service_tier": "standard",
-        "gemini_max_attempts": 1,
+        # 일시적인 5xx는 품질과 무관한 공급자 오류이므로, 예약된 재시도 버퍼 안에서
+        # 같은 프롬프트를 한 번만 추가 시도한다. 그 외 임의 변형 재생성은 허용하지 않는다.
+        "gemini_max_attempts": 2,
         "suppress_legacy_style_lock": True,
         "style_locked": True,
         "gemini_reference_contract_declared": True,

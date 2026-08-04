@@ -1,0 +1,25 @@
+{
+  "scope": "tts_subtitle_sync_only",
+  "tts_api_called": false,
+  "gemini_api_called": false,
+  "kling_started": false,
+  "mp4_assembly_started": false,
+  "thumbnail_started": false,
+  "selected_visual_scene_ids": [
+    "article_kospi",
+    "article_us_market",
+    "article_sector",
+    "semantic_rates_flow",
+    "semantic_bigtech_ai",
+    "semantic_chip_kospi",
+    "info_semiconductor",
+    "info_dollar",
+    "info_fear"
+  ],
+  "source_script_path": "artifacts\\gemini_pilot\\kospi_august_2026_e2e\\script_result.json",
+  "source_script_sha256": "9ad99adf86af6752c46faacad51995a39176ae393df3aa3a155240865df7f100",
+  "source_section_count": 89,
+  "result": "blocked",
+  "blocker": "승인 대본 원문과 장면 내레이션이 다릅니다. 대본 또는 장면을 다시 확정하세요.",
+  "required_next_action": "새 승인 대본을 장면 원문에서 다시 확정한 뒤 동일 원문으로 TTS를 생성하고, 그 결과의 canonical_text_sha256과 자막 청크를 이 검증기에 다시 입력합니다."
+}

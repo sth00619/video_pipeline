@@ -37,4 +37,13 @@ public class ImagesGenerateResponse {
 
     @JsonProperty("quality_report")
     private Map<String, Object> qualityReport;
+
+    @JsonProperty("tts_subtitle_sync")
+    private Map<String, Object> ttsSubtitleSync;
+
+    @JsonProperty("requires_manual_review")
+    private boolean requiresManualReview;
+
+    @JsonProperty("review_reasons")
+    private List<String> reviewReasons;
 }

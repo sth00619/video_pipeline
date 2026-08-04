@@ -19,6 +19,7 @@ from .korean_overlay import _load_font
 # ``embedded_monitor``는 배경에 AI가 이미 그린 물리 모니터의 *내부 화면*만
 # 갱신한다. 프레임 전체 위에 새 정보 카드를 얹는 용도가 아니다.
 SurfaceKind = Literal["monitor", "placard", "gauge_caption", "embedded_monitor"]
+VisualizationKind = Literal["text", "upward_trend"]
 
 
 @dataclass(frozen=True)
@@ -50,12 +51,22 @@ class VerifiedFact:
     value: str
     source_ref: str
     anchor: SurfaceAnchor
+    visualization: VisualizationKind = "text"
+    start_value: str = ""
+    end_value: str = ""
 
     def validate(self) -> None:
         if not self.label.strip() or not self.value.strip():
             raise ValueError("검증 사실의 항목명과 값은 비어 있을 수 없습니다.")
         if not self.source_ref.strip():
             raise ValueError("검증 사실에는 출처 참조가 필요합니다.")
+        if self.visualization not in {"text", "upward_trend"}:
+            raise ValueError("지원하지 않는 검증 사실 시각화입니다.")
+        if self.visualization == "upward_trend":
+            if self.anchor.kind not in {"monitor", "embedded_monitor"}:
+                raise ValueError("상승 추세선은 모니터 계열 소품 표면에만 배치할 수 있습니다.")
+            if not self.start_value.strip() or not self.end_value.strip():
+                raise ValueError("상승 추세선에는 검증된 시작값과 종료값이 필요합니다.")
         self.anchor.validate()
 
 
@@ -67,14 +78,72 @@ def _fit_font(text: str, max_width: int, start_size: int):
     raise ValueError("소품 표면에 비해 사실 문구가 너무 깁니다.")
 
 
-def _surface_style(kind: SurfaceKind) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
-    if kind == "embedded_monitor":
-        return (7, 25, 42, 255), (68, 202, 231, 255), (241, 250, 255, 255)
-    if kind == "monitor":
-        return (7, 29, 42, 225), (78, 225, 255, 255), (245, 251, 255, 255)
+def _surface_text_style(kind: SurfaceKind) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int]]:
+    """소품을 덮는 새 카드 없이 기존 배경 위에 읽을 수 있는 글자만 그린다."""
+    if kind in {"monitor", "embedded_monitor"}:
+        return (245, 251, 255, 255), (4, 18, 30, 220)
     if kind == "placard":
-        return (255, 242, 187, 235), (79, 51, 24, 255), (42, 30, 18, 255)
-    return (30, 41, 52, 220), (222, 168, 58, 255), (255, 247, 211, 255)
+        return (42, 30, 18, 255), (255, 242, 187, 220)
+    return (255, 247, 211, 255), (30, 41, 52, 220)
+
+
+def _draw_upward_trend(
+    draw: ImageDraw.ImageDraw,
+    fact: VerifiedFact,
+    *,
+    left: int,
+    top: int,
+    right: int,
+    bottom: int,
+) -> None:
+    """새 UI 상자 없이 기존 벽면 위에 상승 의미를 직접 그린다.
+
+    이 도형의 값·방향은 Gemini에 맡기지 않는다. 시작/종료 수치와 변화량은 모두
+    verified_facts 원문 검증을 통과한 문자열만 사용한다.
+    """
+    width = right - left
+    height = bottom - top
+    padding_x = max(10, round(width * 0.07))
+    padding_y = max(8, round(height * 0.08))
+    inner_left = left + padding_x
+    inner_right = right - padding_x
+    inner_top = top + padding_y
+    inner_bottom = bottom - padding_y
+    line_width = max(3, round(min(width, height) * 0.035))
+    label_font = _fit_font(fact.label, width - 2 * padding_x, max(14, round(height * 0.16)))
+    value_font = _fit_font(fact.value, max(36, round(width * 0.30)), max(16, round(height * 0.16)))
+    point_font = _fit_font(fact.start_value, max(30, round(width * 0.22)), max(14, round(height * 0.14)))
+
+    # 얇은 가이드선만 남겨 벽면과 분리된 카드처럼 보이지 않게 한다.
+    for fraction in (0.30, 0.55, 0.80):
+        y = round(inner_top + (inner_bottom - inner_top) * fraction)
+        draw.line((inner_left, y, inner_right, y), fill=(72, 236, 240, 72), width=max(1, line_width // 3))
+
+    title_y = inner_top
+    draw.text((inner_left, title_y), fact.label, font=label_font, fill=(225, 251, 255, 255))
+    chart_top = title_y + label_font.getbbox(fact.label)[3] + max(4, round(height * 0.04))
+    chart_bottom = inner_bottom - max(16, round(height * 0.18))
+    start = (inner_left + round((inner_right - inner_left) * 0.10), chart_bottom)
+    elbow = (inner_left + round((inner_right - inner_left) * 0.48), chart_bottom - round((chart_bottom - chart_top) * 0.28))
+    end = (inner_left + round((inner_right - inner_left) * 0.83), chart_top + round((chart_bottom - chart_top) * 0.08))
+    glow_width = line_width + max(3, line_width)
+    draw.line((start, elbow, end), fill=(20, 176, 197, 120), width=glow_width, joint="curve")
+    draw.line((start, elbow, end), fill=(255, 204, 66, 255), width=line_width, joint="curve")
+    arrow = max(8, round(width * 0.035))
+    draw.polygon(
+        [(end[0], end[1] - arrow), (end[0] + arrow, end[1] + arrow), (end[0] - arrow, end[1] + arrow)],
+        fill=(255, 204, 66, 255),
+    )
+    dot_radius = max(4, round(line_width * 0.80))
+    for point in (start, end):
+        draw.ellipse(
+            (point[0] - dot_radius, point[1] - dot_radius, point[0] + dot_radius, point[1] + dot_radius),
+            fill=(255, 244, 183, 255), outline=(7, 51, 68, 255), width=max(1, line_width // 3),
+        )
+    draw.text((start[0] - dot_radius, min(inner_bottom - 14, start[1] + dot_radius + 2)), fact.start_value, font=point_font, fill=(222, 249, 255, 255))
+    draw.text((end[0] - dot_radius, max(chart_top, end[1] - point_font.getbbox(fact.end_value)[3] - 3)), fact.end_value, font=point_font, fill=(255, 239, 168, 255))
+    value_x = min(inner_right - value_font.getbbox(fact.value)[2], end[0] + arrow + 4)
+    draw.text((max(inner_left, value_x), chart_top), fact.value, font=value_font, fill=(255, 215, 86, 255), stroke_width=1, stroke_fill=(4, 27, 42, 220))
 
 
 def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...]) -> bytes:
@@ -95,23 +164,11 @@ def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...]) ->
         top = round(anchor.y * height)
         right = round((anchor.x + anchor.width) * width)
         bottom = round((anchor.y + anchor.height) * height)
-        fill, outline, text_fill = _surface_style(anchor.kind)
+        if fact.visualization == "upward_trend":
+            _draw_upward_trend(draw, fact, left=left, top=top, right=right, bottom=bottom)
+            continue
+        text_fill, stroke_fill = _surface_text_style(anchor.kind)
         border = max(2, round(min(width, height) * 0.0025))
-        radius = max(4, round(min(right - left, bottom - top) * 0.08))
-        if anchor.kind == "embedded_monitor":
-            # 모니터 베젤은 이미지 모델이 만든 배경을 그대로 유지한다. 여기서는
-            # 안쪽 발광 화면을 정리하고 실제 정보만 넣어 장면 속 소품처럼 보이게 한다.
-            inner = max(2, round(min(right - left, bottom - top) * 0.035))
-            draw.rounded_rectangle((left, top, right, bottom), radius=radius, fill=fill)
-            draw.rounded_rectangle((left, top, right, bottom), radius=radius, outline=outline, width=border)
-            grid_color = (60, 142, 167, 255)
-            for fraction in (.33, .66):
-                x = round(left + (right - left) * fraction)
-                draw.line((x, top + inner, x, bottom - inner), fill=grid_color, width=1)
-            draw.line((left + inner, round(top + (bottom - top) * .76), right - inner, round(top + (bottom - top) * .76)), fill=grid_color, width=1)
-        else:
-            draw.rounded_rectangle((left, top, right, bottom), radius=radius, fill=fill, outline=outline, width=border)
-
         padding = max(6, round((right - left) * 0.07))
         label_font = _fit_font(fact.label, right - left - 2 * padding, max(14, round((bottom - top) * 0.23)))
         value_font = _fit_font(fact.value, right - left - 2 * padding, max(16, round((bottom - top) * 0.35)))
@@ -123,7 +180,7 @@ def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...]) ->
             font=value_font,
             fill=value_fill,
             stroke_width=max(1, border // 2),
-            stroke_fill=(0, 0, 0, 170),
+            stroke_fill=stroke_fill,
         )
 
     output = io.BytesIO()
@@ -170,6 +227,13 @@ def facts_from_verified_scene(scene: dict[str, Any]) -> tuple[VerifiedFact, ...]
         evidence = " ".join(str(fact.get(key) or "") for key in ("figure", "fact"))
         if not value.strip() or _normalise(value) not in _normalise(evidence):
             raise ValueError("오버레이 값은 참조한 verified_facts 원문에 그대로 있어야 합니다.")
+        visualization = str(raw.get("visualization") or "text")
+        start_value = str(raw.get("start_value") or "")
+        end_value = str(raw.get("end_value") or "")
+        if visualization == "upward_trend":
+            for trend_value in (start_value, end_value):
+                if not trend_value.strip() or _normalise(trend_value) not in _normalise(evidence):
+                    raise ValueError("상승 추세선의 시작·종료값은 참조한 verified_facts 원문에 그대로 있어야 합니다.")
         raw_anchor = raw.get("anchor")
         if not isinstance(raw_anchor, dict):
             raise ValueError("검증 수치 오버레이에는 소품 표면 좌표가 필요합니다.")
@@ -181,7 +245,10 @@ def facts_from_verified_scene(scene: dict[str, Any]) -> tuple[VerifiedFact, ...]
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError("소품 표면 좌표 형식이 올바르지 않습니다.") from exc
-        result.append(VerifiedFact(str(raw.get("label") or ""), value, source_ref, anchor))
+        result.append(VerifiedFact(
+            str(raw.get("label") or ""), value, source_ref, anchor,
+            visualization=visualization, start_value=start_value, end_value=end_value,
+        ))
     return tuple(result)
 
 

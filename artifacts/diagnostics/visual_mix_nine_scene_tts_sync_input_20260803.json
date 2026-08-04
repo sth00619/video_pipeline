@@ -1,0 +1,262 @@
+{
+  "run_id": "visual_mix_nine_scene_tts_sync_20260803",
+  "scope": "tts_subtitle_sync_only",
+  "source_script_path": "artifacts\\gemini_pilot\\kospi_august_2026_e2e\\script_result.json",
+  "source_script_sha256": "9ad99adf86af6752c46faacad51995a39176ae393df3aa3a155240865df7f100",
+  "script": "그렇다면 이 반등은 무엇을 뜻하는 걸까요? 낙폭 과대에 따른 기술적 반등인지 아니면 추세 전환의 시작인지, 그 둘을 가르는 기준이 필요합니다. 하루의 폭등이 방향을 보장하지는 않습니다. 7월 한 달의 낙폭이 워낙 컸기 때문에 단기 반등 자체는 통계적으로 자연스러운 현상에 가깝습니다. 중요한 건 8월에 시장이 어떤 조건들을 확인해 나가느냐입니다.\n\n8월 코스피 전망을 논할 때 언론이 공통적으로 지목한 변수가 있습니다. 바로 미국 금리와 빅테크 실적입니다. 먼저 금리를 보겠습니다. 달러 약세는 이미 확인됐지만 연준이 실제로 금리를 언제 어떻게 조정할지는 여전히 불확실합니다. 이 불확실성이 해소되느냐의 여부가 외국인 자금 흐름에 직접 영향을 줍니다. 환율도 마찬가지입니다. 원달러 환율은 현재 1436.6원 수준으로 이 방향성이 어떻게 움직이느냐가 외국인 매수세의 강도를 가늠하는 지표가 됩니다.\n\n두 번째 변수는 빅테크 실적입니다. 지난 7월 급락의 배경 중 하나로 AI 투자에 대한 우려가 지목됐습니다. 과도한 AI 설비투자가 실제 수익으로 연결되지 않을 수 있다는 의심이 시장을 짓눌렀던 겁니다. 이 우려가 해소되느냐 아니면 강화되느냐가 8월 증시 방향성의 핵심 주목 포인트로 거론되고 있습니다. 나스닥이 1퍼센트 반등했다는 건 일단 긍정적인 신호지만 실적 발표 결과가 시장의 해석을 뒤바꿀 수 있다는 점은 열린 변수로 남아 있습니다.\n\n달러 약세는 이미 확인됐지만 연준이 실제로 금리를 언제 어떻게 조정할지는 여전히 불확실합니다. 이 불확실성이 해소되느냐의 여부가 외국인 자금 흐름에 직접 영향을 줍니다.\n\n지난 7월 급락의 배경 중 하나로 AI 투자에 대한 우려가 지목됐습니다. 과도한 AI 설비투자가 실제 수익으로 연결되지 않을 수 있다는 의심이 시장을 짓눌렀던 겁니다. 이 우려가 해소되느냐 아니면 강화되느냐가 8월 증시 방향성의 핵심 주목 포인트로 거론되고 있습니다.\n\n국내 증시 입장에서는 반도체 실적이 핵심입니다. 삼성전자와 SK하이닉스의 3분기 합산 이익이 194조 원에 달할 것이라는 전망이 제시됐습니다. 이 수치가 실적으로 확인된다면, 코스피 반등의 근거로서 설득력을 갖게 됩니다. 물론 전망은 전망입니다. 확인되기 전까지는 기대일 뿐이라는 점도 함께 기억해야 합니다. 이 이익 체력이 실제 숫자로 입증될 때, 외국인과 기관의 매수 명분이 생깁니다.\n\n국내 증시 입장에서는 반도체 실적이 핵심입니다. 삼성전자와 SK하이닉스의 3분기 합산 이익이 194조 원에 달할 것이라는 전망이 제시됐습니다. 이 수치가 실적으로 확인된다면, 코스피 반등의 근거로서 설득력을 갖게 됩니다. 물론 전망은 전망입니다. 확인되기 전까지는 기대일 뿐이라는 점도 함께 기억해야 합니다. 이 이익 체력이 실제 숫자로 입증될 때, 외국인과 기관의 매수 명분이 생깁니다.\n\n달러인덱스도 변화를 보였습니다. 7월 31일 99.8을 기록하며 100 아래로 내려왔는데 블룸버그는 달러화가 연준 정책 불확실성 속에서 3개월 이상 만에 최악의 주간 성과를 기록했다고 전했습니다. 달러 약세는 신흥국 시장에 긍정적인 환경입니다.\n\n미국 시장에서도 비슷한 신호가 나왔습니다. 공포지수로 불리는 VIX가 7월 29일 20.66까지 올랐다가 7월 31일에는 15.99로 내려왔습니다. 하루 등락률로는 6.44퍼센트 하락입니다. VIX가 내려간다는 건 투자자들의 불안감이 그만큼 줄었다는 의미입니다. 글로벌 투자자들의 심리가 안정되기 시작했다는 신호로 읽힙니다.",
+  "sections": [
+    {
+      "scene_id": "article_kospi",
+      "content": "그렇다면 이 반등은 무엇을 뜻하는 걸까요? 낙폭 과대에 따른 기술적 반등인지 아니면 추세 전환의 시작인지, 그 둘을 가르는 기준이 필요합니다. 하루의 폭등이 방향을 보장하지는 않습니다. 7월 한 달의 낙폭이 워낙 컸기 때문에 단기 반등 자체는 통계적으로 자연스러운 현상에 가깝습니다. 중요한 건 8월에 시장이 어떤 조건들을 확인해 나가느냐입니다.",
+      "text": "그렇다면 이 반등은 무엇을 뜻하는 걸까요? 낙폭 과대에 따른 기술적 반등인지 아니면 추세 전환의 시작인지, 그 둘을 가르는 기준이 필요합니다. 하루의 폭등이 방향을 보장하지는 않습니다. 7월 한 달의 낙폭이 워낙 컸기 때문에 단기 반등 자체는 통계적으로 자연스러운 현상에 가깝습니다. 중요한 건 8월에 시장이 어떤 조건들을 확인해 나가느냐입니다.",
+      "visual_mode": "article_evidence",
+      "source_section_indexes": [
+        47,
+        48,
+        49,
+        50,
+        51,
+        52
+      ],
+      "source_text_sha256": [
+        "dcd5cc32b4f9837ce708f50619d99dbf76bcd13e6a6089a91b5ea8d6612340e2",
+        "baab79da0c3c0b1bcec5c6aa89472b88a31806928bf4797a17c7623382750b6a",
+        "13e91e3ebc7d9946233e9c02f233de0c6bcc31e5ca6f084d8b9f75f5e1445fc5",
+        "aad71c2eaa149394b7af8a5b01969884bc989561350d848e5f596f1f2f29dcb0",
+        "0e8177a7103c52c541522f9ce091b524f1c4c6f65bc4fb918d2b836a8a8eec35",
+        "306273a7a0d6dbe36ba27ed7768d3ff9063eab4e62db0b92bd69b3450958b4d1"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_info_retry_20260803\\article_kospi.png"
+    },
+    {
+      "scene_id": "article_us_market",
+      "content": "8월 코스피 전망을 논할 때 언론이 공통적으로 지목한 변수가 있습니다. 바로 미국 금리와 빅테크 실적입니다. 먼저 금리를 보겠습니다. 달러 약세는 이미 확인됐지만 연준이 실제로 금리를 언제 어떻게 조정할지는 여전히 불확실합니다. 이 불확실성이 해소되느냐의 여부가 외국인 자금 흐름에 직접 영향을 줍니다. 환율도 마찬가지입니다. 원달러 환율은 현재 1436.6원 수준으로 이 방향성이 어떻게 움직이느냐가 외국인 매수세의 강도를 가늠하는 지표가 됩니다.",
+      "text": "8월 코스피 전망을 논할 때 언론이 공통적으로 지목한 변수가 있습니다. 바로 미국 금리와 빅테크 실적입니다. 먼저 금리를 보겠습니다. 달러 약세는 이미 확인됐지만 연준이 실제로 금리를 언제 어떻게 조정할지는 여전히 불확실합니다. 이 불확실성이 해소되느냐의 여부가 외국인 자금 흐름에 직접 영향을 줍니다. 환율도 마찬가지입니다. 원달러 환율은 현재 1436.6원 수준으로 이 방향성이 어떻게 움직이느냐가 외국인 매수세의 강도를 가늠하는 지표가 됩니다.",
+      "visual_mode": "article_evidence",
+      "source_section_indexes": [
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60
+      ],
+      "source_text_sha256": [
+        "977278af4314f6f5c5d86a3dcb8550c911e970b8f28be25b60ed0756cb3b6486",
+        "552ef73e247a8ae2385321fabd1b425838f7a2f91cfde61ffb34276afbbb0c0f",
+        "c527ad9913d11f180c0efba807cd52ff3b4d0d29c2b73d0ee80207942a75c296",
+        "2f791aa2baa8e562d11ead2b9e8ad8d42a466665e27a7072eced0238b4c1e481",
+        "ab468f378efcd74382120c4ac9fa9418096b5c72a39175fcce3f91c03bae3d64",
+        "af7dd545a083e21781d2c291e8014423af0a4198cdd44b9d11a79fde50723edc",
+        "07418c5a4137159cb2a86cf8cbd3b35ca00ec0e26375300ecc1585fa23edb23b",
+        "9c217f8028ecf2ed5da45944e8d2643e92d0ad2a36165a35c834d4724e93ccdc"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_info_retry_20260803\\article_us_market.png"
+    },
+    {
+      "scene_id": "article_sector",
+      "content": "두 번째 변수는 빅테크 실적입니다. 지난 7월 급락의 배경 중 하나로 AI 투자에 대한 우려가 지목됐습니다. 과도한 AI 설비투자가 실제 수익으로 연결되지 않을 수 있다는 의심이 시장을 짓눌렀던 겁니다. 이 우려가 해소되느냐 아니면 강화되느냐가 8월 증시 방향성의 핵심 주목 포인트로 거론되고 있습니다. 나스닥이 1퍼센트 반등했다는 건 일단 긍정적인 신호지만 실적 발표 결과가 시장의 해석을 뒤바꿀 수 있다는 점은 열린 변수로 남아 있습니다.",
+      "text": "두 번째 변수는 빅테크 실적입니다. 지난 7월 급락의 배경 중 하나로 AI 투자에 대한 우려가 지목됐습니다. 과도한 AI 설비투자가 실제 수익으로 연결되지 않을 수 있다는 의심이 시장을 짓눌렀던 겁니다. 이 우려가 해소되느냐 아니면 강화되느냐가 8월 증시 방향성의 핵심 주목 포인트로 거론되고 있습니다. 나스닥이 1퍼센트 반등했다는 건 일단 긍정적인 신호지만 실적 발표 결과가 시장의 해석을 뒤바꿀 수 있다는 점은 열린 변수로 남아 있습니다.",
+      "visual_mode": "article_evidence",
+      "source_section_indexes": [
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67
+      ],
+      "source_text_sha256": [
+        "c3172ae94417f53e95ae93aa16cfd607793516ed5353a151259b21eab6ec48b9",
+        "1fd769aedef16507a99f31ee6fb94ded93f5beac96c4bf54f052626369179daa",
+        "4e896c49642c4b33f97207fb7d9a41afd4bdc948a58fb0adca56908318f03ce9",
+        "55f4e3548552314f0b10c8865d59ec150fc0a863b8b387a2c14a9d4047175beb",
+        "83a4b895db3024463cc7cc84d30662c745442d11e4ba9e603928095c87cda9bb",
+        "a7c6d435c05f35820118fe883bcd478a9390975144fcf98e773cf4ee8c24ed70",
+        "15b3cf4fa7a59a5c03a5a5d105839f34850efa187d4a0715a1d7b4c5f759d9dc"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_info_retry_20260803\\article_sector.png"
+    },
+    {
+      "scene_id": "semantic_rates_flow",
+      "content": "달러 약세는 이미 확인됐지만 연준이 실제로 금리를 언제 어떻게 조정할지는 여전히 불확실합니다. 이 불확실성이 해소되느냐의 여부가 외국인 자금 흐름에 직접 영향을 줍니다.",
+      "text": "달러 약세는 이미 확인됐지만 연준이 실제로 금리를 언제 어떻게 조정할지는 여전히 불확실합니다. 이 불확실성이 해소되느냐의 여부가 외국인 자금 흐름에 직접 영향을 줍니다.",
+      "visual_mode": "semantic_illustration",
+      "source_section_indexes": [
+        55,
+        56,
+        57
+      ],
+      "source_text_sha256": [
+        "c527ad9913d11f180c0efba807cd52ff3b4d0d29c2b73d0ee80207942a75c296",
+        "2f791aa2baa8e562d11ead2b9e8ad8d42a466665e27a7072eced0238b4c1e481",
+        "ab468f378efcd74382120c4ac9fa9418096b5c72a39175fcce3f91c03bae3d64"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_semantic_rates_layout_retry_20260803\\semantic_rates_flow.png"
+    },
+    {
+      "scene_id": "semantic_bigtech_ai",
+      "content": "지난 7월 급락의 배경 중 하나로 AI 투자에 대한 우려가 지목됐습니다. 과도한 AI 설비투자가 실제 수익으로 연결되지 않을 수 있다는 의심이 시장을 짓눌렀던 겁니다. 이 우려가 해소되느냐 아니면 강화되느냐가 8월 증시 방향성의 핵심 주목 포인트로 거론되고 있습니다.",
+      "text": "지난 7월 급락의 배경 중 하나로 AI 투자에 대한 우려가 지목됐습니다. 과도한 AI 설비투자가 실제 수익으로 연결되지 않을 수 있다는 의심이 시장을 짓눌렀던 겁니다. 이 우려가 해소되느냐 아니면 강화되느냐가 8월 증시 방향성의 핵심 주목 포인트로 거론되고 있습니다.",
+      "visual_mode": "semantic_illustration",
+      "source_section_indexes": [
+        62,
+        63,
+        64,
+        65
+      ],
+      "source_text_sha256": [
+        "1fd769aedef16507a99f31ee6fb94ded93f5beac96c4bf54f052626369179daa",
+        "4e896c49642c4b33f97207fb7d9a41afd4bdc948a58fb0adca56908318f03ce9",
+        "55f4e3548552314f0b10c8865d59ec150fc0a863b8b387a2c14a9d4047175beb",
+        "83a4b895db3024463cc7cc84d30662c745442d11e4ba9e603928095c87cda9bb"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_remaining_five_20260803\\semantic_bigtech_ai.png"
+    },
+    {
+      "scene_id": "semantic_chip_kospi",
+      "content": "국내 증시 입장에서는 반도체 실적이 핵심입니다. 삼성전자와 SK하이닉스의 3분기 합산 이익이 194조 원에 달할 것이라는 전망이 제시됐습니다. 이 수치가 실적으로 확인된다면, 코스피 반등의 근거로서 설득력을 갖게 됩니다. 물론 전망은 전망입니다. 확인되기 전까지는 기대일 뿐이라는 점도 함께 기억해야 합니다. 이 이익 체력이 실제 숫자로 입증될 때, 외국인과 기관의 매수 명분이 생깁니다.",
+      "text": "국내 증시 입장에서는 반도체 실적이 핵심입니다. 삼성전자와 SK하이닉스의 3분기 합산 이익이 194조 원에 달할 것이라는 전망이 제시됐습니다. 이 수치가 실적으로 확인된다면, 코스피 반등의 근거로서 설득력을 갖게 됩니다. 물론 전망은 전망입니다. 확인되기 전까지는 기대일 뿐이라는 점도 함께 기억해야 합니다. 이 이익 체력이 실제 숫자로 입증될 때, 외국인과 기관의 매수 명분이 생깁니다.",
+      "visual_mode": "semantic_illustration",
+      "source_section_indexes": [
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74
+      ],
+      "source_text_sha256": [
+        "a71d2b2087d581e97ba71261bdebd5fb49b68dbb6e3f06038fe1fb94289644bd",
+        "3ffc1edcc33cf2f463b17e95508e30814fc5554c3dfd581023a9d0f033119f2a",
+        "0ba8a7da570be851766ee463b288691b71a3f48f2e86085cfe892352ad73b196",
+        "15a7c8d90b7c1ecd40f6b71d7fe66eb06623d589c06681598b9818b789e69e64",
+        "60b43fe059737a96d789e1d7a92b03bb4a747be6e65edec75743a588a2f6554a",
+        "fe0c9732e70e2cbece9963251afbe3651bb698322a3bc7d588d679fd2ed6e1a0",
+        "eb67450d98955701516a2262565ed3e68519da13f2d13a5e6effd2ecad6d1480"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_remaining_five_20260803\\semantic_chip_kospi.png"
+    },
+    {
+      "scene_id": "info_semiconductor",
+      "content": "국내 증시 입장에서는 반도체 실적이 핵심입니다. 삼성전자와 SK하이닉스의 3분기 합산 이익이 194조 원에 달할 것이라는 전망이 제시됐습니다. 이 수치가 실적으로 확인된다면, 코스피 반등의 근거로서 설득력을 갖게 됩니다. 물론 전망은 전망입니다. 확인되기 전까지는 기대일 뿐이라는 점도 함께 기억해야 합니다. 이 이익 체력이 실제 숫자로 입증될 때, 외국인과 기관의 매수 명분이 생깁니다.",
+      "text": "국내 증시 입장에서는 반도체 실적이 핵심입니다. 삼성전자와 SK하이닉스의 3분기 합산 이익이 194조 원에 달할 것이라는 전망이 제시됐습니다. 이 수치가 실적으로 확인된다면, 코스피 반등의 근거로서 설득력을 갖게 됩니다. 물론 전망은 전망입니다. 확인되기 전까지는 기대일 뿐이라는 점도 함께 기억해야 합니다. 이 이익 체력이 실제 숫자로 입증될 때, 외국인과 기관의 매수 명분이 생깁니다.",
+      "visual_mode": "archetype_explainer",
+      "source_section_indexes": [
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74
+      ],
+      "source_text_sha256": [
+        "a71d2b2087d581e97ba71261bdebd5fb49b68dbb6e3f06038fe1fb94289644bd",
+        "3ffc1edcc33cf2f463b17e95508e30814fc5554c3dfd581023a9d0f033119f2a",
+        "0ba8a7da570be851766ee463b288691b71a3f48f2e86085cfe892352ad73b196",
+        "15a7c8d90b7c1ecd40f6b71d7fe66eb06623d589c06681598b9818b789e69e64",
+        "60b43fe059737a96d789e1d7a92b03bb4a747be6e65edec75743a588a2f6554a",
+        "fe0c9732e70e2cbece9963251afbe3651bb698322a3bc7d588d679fd2ed6e1a0",
+        "eb67450d98955701516a2262565ed3e68519da13f2d13a5e6effd2ecad6d1480"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_remaining_five_20260803\\info_semiconductor.png"
+    },
+    {
+      "scene_id": "info_dollar",
+      "content": "달러인덱스도 변화를 보였습니다. 7월 31일 99.8을 기록하며 100 아래로 내려왔는데 블룸버그는 달러화가 연준 정책 불확실성 속에서 3개월 이상 만에 최악의 주간 성과를 기록했다고 전했습니다. 달러 약세는 신흥국 시장에 긍정적인 환경입니다.",
+      "text": "달러인덱스도 변화를 보였습니다. 7월 31일 99.8을 기록하며 100 아래로 내려왔는데 블룸버그는 달러화가 연준 정책 불확실성 속에서 3개월 이상 만에 최악의 주간 성과를 기록했다고 전했습니다. 달러 약세는 신흥국 시장에 긍정적인 환경입니다.",
+      "visual_mode": "archetype_explainer",
+      "source_section_indexes": [
+        32,
+        33,
+        34,
+        35,
+        36
+      ],
+      "source_text_sha256": [
+        "2e04e999eddb2a0cd428008cfd82ca4a78e52e7fdbb8eefadb6a0f85360f6b8c",
+        "6b4527a413ea909e436c390ba6c72c46091b3932f8e4ccd327c479f6fcf12c9f",
+        "d061ae12205281e4c8a4cb5d6110e23ae0cfcd3034f5aa456c5fbddf49947b8d",
+        "500bb6294c0971c995fa17497a2d4f86bc3b6eacb7f60ce35b99f31d99e8cfee",
+        "884c8ca2bfb4810ae488cc29feaea31c076add1eb6a23870936ad00c7dfe243b"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_info_retry_20260803\\info_dollar.png"
+    },
+    {
+      "scene_id": "info_fear",
+      "content": "미국 시장에서도 비슷한 신호가 나왔습니다. 공포지수로 불리는 VIX가 7월 29일 20.66까지 올랐다가 7월 31일에는 15.99로 내려왔습니다. 하루 등락률로는 6.44퍼센트 하락입니다. VIX가 내려간다는 건 투자자들의 불안감이 그만큼 줄었다는 의미입니다. 글로벌 투자자들의 심리가 안정되기 시작했다는 신호로 읽힙니다.",
+      "text": "미국 시장에서도 비슷한 신호가 나왔습니다. 공포지수로 불리는 VIX가 7월 29일 20.66까지 올랐다가 7월 31일에는 15.99로 내려왔습니다. 하루 등락률로는 6.44퍼센트 하락입니다. VIX가 내려간다는 건 투자자들의 불안감이 그만큼 줄었다는 의미입니다. 글로벌 투자자들의 심리가 안정되기 시작했다는 신호로 읽힙니다.",
+      "visual_mode": "archetype_explainer",
+      "source_section_indexes": [
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "source_text_sha256": [
+        "31c42279b8ccc8c77820fc6af93d1bdb6df9714dae35d2e5af962e2e33daed3d",
+        "9e9c750208d325cd817675976c51f76bc2856cce47f1d7aee74de118a28b4342",
+        "7f372cc1dc949d2541f3901b4a7e582ac44fdaec6d2e1f4a21a40654e03d7563",
+        "800cf434e64d462327e6eff9535df2022d9b071ffeb16d5b6ac8429dfd3f91bd",
+        "5ce9344946f6c75949d1b72af57163ca5ed248fd4b69652ac66973c1fa4b6363",
+        "f834c0cc8c6bb7b52896b219bbc3022946f28ed014a410f3164f1953a778dffd"
+      ],
+      "selected_asset_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_pilot\\visual_mix_nine_scene\\visual_mix_nine_scene_r4_info_retry_20260803\\info_fear.png"
+    }
+  ],
+  "narration_contract": {
+    "version": "narration-source-v1",
+    "canonical_text_sha256": "9bf43b8eb29b6420c2c69549c8454c0d234d6cd3795cb095a1c505296a1cb5e5",
+    "section_count": 9,
+    "scene_sources": [
+      {
+        "scene_id": "article_kospi",
+        "text_sha256": "0ba82a2f23621ca184205fe2c84e646d10d2cd966857c2f898df0007d4e43899"
+      },
+      {
+        "scene_id": "article_us_market",
+        "text_sha256": "fd7cea2afb190f69778c920b48bf2bc2246b5c5ad6c1ca2d99e1388944d7c59d"
+      },
+      {
+        "scene_id": "article_sector",
+        "text_sha256": "930c4369251b5535db57570d90e304871db7b498cd0ed55d8a075d9bd45d4d30"
+      },
+      {
+        "scene_id": "semantic_rates_flow",
+        "text_sha256": "5f96d2a7835fb4af3a5789aa4712c220f4f65b19dba0317a6d5bfcc73500640f"
+      },
+      {
+        "scene_id": "semantic_bigtech_ai",
+        "text_sha256": "f8a33ff3529afc1bb06ee617271d71c730fd30072303733fb8c109a8a1b47750"
+      },
+      {
+        "scene_id": "semantic_chip_kospi",
+        "text_sha256": "94d06ae873b20492b212c5ea83f59a830d26b320f3385a1b6bd6b22eb046db4f"
+      },
+      {
+        "scene_id": "info_semiconductor",
+        "text_sha256": "94d06ae873b20492b212c5ea83f59a830d26b320f3385a1b6bd6b22eb046db4f"
+      },
+      {
+        "scene_id": "info_dollar",
+        "text_sha256": "157ad0d29274c0ef9b4759f859a6ce235aa8ae80e69fb6debe9671b3cf0eb219"
+      },
+      {
+        "scene_id": "info_fear",
+        "text_sha256": "6178337156d1de30963d7e8a9591ca5626f6fdebfdc8b4008683bd095ef61d46"
+      }
+    ]
+  },
+  "tts_api_called": false,
+  "gemini_api_called": false,
+  "kling_started": false,
+  "mp4_assembly_started": false,
+  "thumbnail_started": false
+}

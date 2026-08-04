@@ -21,6 +21,7 @@ public class JobResponse {
     private Integer shortsCount;
     private Integer longformTargetMinutes;
     private BigDecimal budgetCap;
+    private BigDecimal geminiImageBudgetCap;
     private BigDecimal costAccumulated;
     private String createdBy;
     private String ttsVoiceId;
@@ -49,6 +50,7 @@ public class JobResponse {
         r.setShortsCount(job.getShortsCount());
         r.setLongformTargetMinutes(job.getLongformTargetMinutes());
         r.setBudgetCap(job.getBudgetCap());
+        r.setGeminiImageBudgetCap(job.getGeminiImageBudgetCap());
         r.setCostAccumulated(job.getCostAccumulated());
         r.setCreatedBy(job.getCreatedBy());
         r.setTtsVoiceId(job.getTtsVoiceId());

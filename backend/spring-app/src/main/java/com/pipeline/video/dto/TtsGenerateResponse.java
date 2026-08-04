@@ -52,4 +52,10 @@ public class TtsGenerateResponse {
 
     @JsonProperty("quality_report")
     private Map<String, Object> qualityReport;
+
+    @JsonProperty("canonical_text")
+    private String canonicalText;
+
+    @JsonProperty("canonical_sha256")
+    private String canonicalSha256;
 }

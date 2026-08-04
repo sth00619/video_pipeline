@@ -1,0 +1,26 @@
+{
+  "topic": "8월 코스피 전망 — 대본 의미형 문구 스타일 검증",
+  "scenes": [
+    {
+      "scene_id": "kospi_august_semiconductor",
+      "scene_type": "graph",
+      "title": "반도체 주가 하락 가능성",
+      "narration": "8월 코스피에서는 반도체 주가가 약세일 가능성을 살펴봅니다.",
+      "visual_intent": "A graph prop shows a downward semiconductor trend."
+    },
+    {
+      "scene_id": "kospi_august_dollar",
+      "scene_type": "graph",
+      "title": "달러와 환율의 압박",
+      "narration": "달러와 환율의 압박으로 시장 흐름이 약세입니다.",
+      "visual_intent": "A graph prop shows dollar pressure and a downward market trend."
+    },
+    {
+      "scene_id": "kospi_august_fear",
+      "scene_type": "metric",
+      "title": "시장의 공포는 진정되는가",
+      "narration": "시장의 공포는 진정되지만 변동성 위험은 남아 있습니다.",
+      "visual_intent": "A market risk index gauge shows fear cooling without any value."
+    }
+  ]
+}

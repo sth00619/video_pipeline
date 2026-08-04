@@ -21,8 +21,12 @@ public class CreateJobRequest {
     private Integer shortsCount = 3;
     private Integer longformTargetMinutes = 20;       // 15/20/30 등 유동적
     private BigDecimal budgetCap;
+    /** Gemini 정지 이미지 생성 전용 상한. Fal 모션 비용은 이 값에 포함하지 않는다. */
+    private BigDecimal geminiImageBudgetCap;
     private String policyJson;
     private String channelId;
     private String characterOverride;
-    private boolean dataVisualsEnabled = true;
+    // 숫자 카드·차트 오버레이는 레거시 호환용 명시 옵션이다. 새 영상은
+    // 기사형·일반형·정보형의 대본 의미 시각화를 기본값으로 사용한다.
+    private boolean dataVisualsEnabled = false;
 }

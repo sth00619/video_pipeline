@@ -194,15 +194,14 @@ class NanaBananaProvider(ImageProvider):
         # 공급자를 명시적으로 선택한다. 이전에는 로그가 NanaBanana라고 해도
         # Fal Flux가 항상 먼저 실행되어, 사용자가 기대한 참조 이미지 일관성
         # (Gemini)을 얻지 못하는 문제가 있었다.
-        provider_preference = str(kwargs.get("image_provider", "auto")).lower()
-        if provider_preference not in {"auto", "gemini", "fal"}:
-            logger.warning(f"알 수 없는 image_provider={provider_preference}; auto로 처리")
-            provider_preference = "auto"
+        provider_preference = str(kwargs.get("image_provider", "gemini")).lower()
+        if provider_preference != "gemini":
+            raise GeminiImageGenerationError("이미지 생성 공급자는 Gemini Nano Banana Pro만 허용합니다.")
 
         fal_key = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
         gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        gemini_model = str(kwargs.get("gemini_model") or "gemini-3.1-flash-image")
-        gemini_image_size = str(kwargs.get("gemini_image_size") or "1K")
+        gemini_model = str(kwargs.get("gemini_model") or "gemini-3-pro-image")
+        gemini_image_size = str(kwargs.get("gemini_image_size") or "2K")
         gemini_service_tier = str(kwargs.get("gemini_service_tier") or "standard").lower()
 
         def try_fal() -> bool:
@@ -502,7 +501,7 @@ class NanaBananaProvider(ImageProvider):
         import requests
         import time
 
-        if model not in {"gemini-3.1-flash-image", "gemini-3-pro-image"}:
+        if model != "gemini-3-pro-image":
             raise ValueError(f"Unsupported Gemini image model: {model}")
         if image_size not in {"1K", "2K", "4K"}:
             image_size = "1K"

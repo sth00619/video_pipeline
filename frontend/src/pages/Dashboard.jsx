@@ -11,6 +11,7 @@ import { formatAutonomy, formatCategory, formatStatus } from '../constants/jobSt
 
 const STATUS_CLASS = {
   READY: 'bg-accent-green/15 text-accent-green',
+  PUBLISH_PENDING: 'bg-accent-amber/15 text-accent-amber',
   PUBLISHED: 'bg-accent-green/15 text-accent-green',
   FAILED: 'bg-accent-red/15 text-accent-red',
   BUDGET_BLOCKED: 'bg-accent-red/15 text-accent-red',

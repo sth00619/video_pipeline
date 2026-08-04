@@ -15,7 +15,7 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 # API Keys (prod only)
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2")
+ELEVENLABS_TTS_MODEL = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_v3")
 KLING_API_KEY = os.getenv("KLING_API_KEY", "")
 GOOGLE_AI_API_KEY = os.getenv("GOOGLE_AI_API_KEY", "")
 FAL_KEY = os.getenv("FAL_KEY", "")
@@ -74,7 +74,7 @@ KEYWORD_EXCLUDE_LIVE = os.getenv("KEYWORD_EXCLUDE_LIVE", "true").lower() in {"1"
 # Fast post-generation speed-up flattens pauses and emphasis.  Keep narration
 # close to natural speed; reduce the script target accordingly to preserve the
 # requested video duration instead of compressing the actor's performance.
-TTS_SPEED = float(os.getenv("TTS_SPEED", "1.0"))
+TTS_SPEED = float(os.getenv("TTS_SPEED", "0.9"))
 # Measured Korean long-form narration pace for the configured channel voice.
 # This is deliberately much higher than the old generic estimate because the
 # contract counts only visible Hangul characters, while finance scripts carry
@@ -92,11 +92,14 @@ SUBTITLE_START_FRAME_POLICY = os.getenv("SUBTITLE_START_FRAME_POLICY", "nearest"
 SUBTITLE_FONT_SIZE = int(os.getenv("SUBTITLE_FONT_SIZE", "72"))
 SUBTITLE_THEME = os.getenv("SUBTITLE_THEME", "economy")  # economy | knowledge
 IMAGE_HEADLINE_OVERLAY = os.getenv("IMAGE_HEADLINE_OVERLAY", "false").lower() in {"1", "true", "yes"}
-IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "gemini")   # gemini | fal | auto
-# A 20-minute timeline may contain ~240 scenes.  Hybrid keeps the 2D comic
-# direction for every scene while reserving Pro/2K latency for story anchors
-# and verified data scenes; all-Pro is still available by explicit override.
-IMAGE_QUALITY_TIER = os.getenv("IMAGE_QUALITY_TIER", "pro")  # flash | hybrid | pro
+IMAGE_PROVIDER = os.getenv("IMAGE_PROVIDER", "gemini").lower()
+if IMAGE_PROVIDER != "gemini":
+    raise RuntimeError("이미지 생성 공급자는 Gemini Nano Banana Pro만 사용할 수 있습니다.")
+# 이미지 품질을 예산 때문에 낮추면 사실 장면과 일반 장면의 품질 계약이
+# 달라진다. 운영 경로는 Nano Banana Pro 단일 tier로 고정한다.
+IMAGE_QUALITY_TIER = os.getenv("IMAGE_QUALITY_TIER", "pro").lower()
+if IMAGE_QUALITY_TIER != "pro":
+    raise RuntimeError("IMAGE_QUALITY_TIER는 pro만 허용합니다. flash/hybrid는 지원하지 않습니다.")
 PRO_IMAGE_MAX_SCENES = int(os.getenv("PRO_IMAGE_MAX_SCENES", "48"))
 # Batch API has a 24-hour completion SLO, so it is an economy/background mode,
 # not the default path for a user waiting for a finished video.
@@ -125,14 +128,14 @@ VISUAL_QA_MAX_SCENES = int(os.getenv("VISUAL_QA_MAX_SCENES", "24"))
 
 # Article evidence overlays are post-production assets. They never become
 # Gemini/Kling prompt text and can be toggled without a redeploy.
-RENDER_SPEECH_BUBBLES = os.getenv("RENDER_SPEECH_BUBBLES", "true").lower() in {"1", "true", "yes"}
+RENDER_SPEECH_BUBBLES = os.getenv("RENDER_SPEECH_BUBBLES", "false").lower() in {"1", "true", "yes"}
 RENDER_ARTICLE_EVIDENCE = os.getenv("RENDER_ARTICLE_EVIDENCE", "true").lower() in {"1", "true", "yes"}
-THUMBNAIL_V2_ENABLED = os.getenv("THUMBNAIL_V2_ENABLED", "false").lower() in {"1", "true", "yes"}
+THUMBNAIL_V2_ENABLED = os.getenv("THUMBNAIL_V2_ENABLED", "true").lower() in {"1", "true", "yes"}
 THUMBNAIL_HEADLINE_MAX_LINES = int(os.getenv("THUMBNAIL_HEADLINE_MAX_LINES", "4"))
 THUMBNAIL_HEADLINE_MIN_FONT_PX = int(os.getenv("THUMBNAIL_HEADLINE_MIN_FONT_PX", "64"))
 ARTICLE_ALLOWED_PUBLISHERS_ONLY = os.getenv("ARTICLE_ALLOWED_PUBLISHERS_ONLY", "true").lower() in {"1", "true", "yes"}
 ARTICLE_EVIDENCE_AUTO_ENABLED = os.getenv("ARTICLE_EVIDENCE_AUTO_ENABLED", "true").lower() in {"1", "true", "yes"}
-EVIDENCE_MAX_SCENES = int(os.getenv("EVIDENCE_MAX_SCENES", "2"))
+EVIDENCE_MAX_SCENES = int(os.getenv("EVIDENCE_MAX_SCENES", "12"))
 EVIDENCE_MAX_SEARCHES_PER_SCENE = int(os.getenv("EVIDENCE_MAX_SEARCHES_PER_SCENE", "3"))
 EVIDENCE_MIN_SENTENCE_SIMILARITY = float(os.getenv("EVIDENCE_MIN_SENTENCE_SIMILARITY", "0.85"))
 SCENE_REVEAL_ENABLED = os.getenv("SCENE_REVEAL_ENABLED", "true").lower() in {"1", "true", "yes"}
@@ -146,13 +149,13 @@ ELEVENLABS_SIMILARITY_BOOST = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.
 ELEVENLABS_STYLE = float(os.getenv("ELEVENLABS_STYLE", "0.0"))
 # 한국어 금융 내레이션은 발음 안정성을 우선해 다국어 v2를 기본으로 사용한다.
 # 감정 연기가 필요한 구간만 환경 변수로 v3를 명시적으로 선택할 수 있다.
-TTS_MODEL_INTRO = os.getenv("TTS_MODEL_INTRO", "eleven_multilingual_v2")
-TTS_MODEL_BODY = os.getenv("TTS_MODEL_BODY", "eleven_multilingual_v2")
+TTS_MODEL_INTRO = os.getenv("TTS_MODEL_INTRO", ELEVENLABS_TTS_MODEL)
+TTS_MODEL_BODY = os.getenv("TTS_MODEL_BODY", ELEVENLABS_TTS_MODEL)
 # v7 검수 기준: 같은 목소리의 정체성은 유지하면서 질문 끝과 설명부의
 # 미세한 높낮이를 살릴 수 있도록 안정성을 과도하게 고정하지 않는다.
-TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.25"))
-TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "0.25"))
-TTS_CER_THRESHOLD = float(os.getenv("TTS_CER_THRESHOLD", "0.15"))
+TTS_STABILITY_INTRO = float(os.getenv("TTS_STABILITY_INTRO", "0.5"))
+TTS_STABILITY_BODY = float(os.getenv("TTS_STABILITY_BODY", "0.5"))
+TTS_CER_THRESHOLD = float(os.getenv("TTS_CER_THRESHOLD", "0.05"))
 TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
 # AI 음성은 과한 압축·정규화만으로도 합성음처럼 들릴 수 있다. 원본 성우의
 # 미세한 높낮이와 호흡을 보존하기 위해 기본 마스터링은 끈다.
@@ -164,7 +167,7 @@ TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "400"))
 # ElevenLabs의 원래 억양은 보존하되, 문장 경계가 붙어 들리지 않도록 70ms만
 # 더한다. 이 값은 호흡을 구별하는 수준이며 장면 전환처럼 길게 쉬지 않는다.
 TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "70"))
-TTS_DURATION_TOLERANCE = float(os.getenv("TTS_DURATION_TOLERANCE", "0.15"))
+TTS_DURATION_TOLERANCE = float(os.getenv("TTS_DURATION_TOLERANCE", "0.25"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))
 
@@ -172,9 +175,9 @@ BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))
 # later scenes are rendered as static images: no FFmpeg zoom, pan, or transition
 # effects are permitted because they can introduce visible jitter in charts,
 # captions, and aligned numerical graphics.
-INTRO_MOTION_SECONDS_SHORT = float(os.getenv("INTRO_MOTION_SECONDS_SHORT", "40"))
+INTRO_MOTION_SECONDS_SHORT = float(os.getenv("INTRO_MOTION_SECONDS_SHORT", "45"))
 INTRO_MOTION_SECONDS_LONG = float(os.getenv("INTRO_MOTION_SECONDS_LONG", "60"))
-INTRO_MOTION_SHORT_THRESHOLD = float(os.getenv("INTRO_MOTION_SHORT_THRESHOLD", "660"))
+INTRO_MOTION_SHORT_THRESHOLD = float(os.getenv("INTRO_MOTION_SHORT_THRESHOLD", "600"))
 INTRO_KLING_MAX_CLIPS = int(os.getenv("INTRO_KLING_MAX_CLIPS", "12"))  # legacy API compatibility
 INTRO_MOTION_CLIP_COUNT = int(os.getenv("INTRO_MOTION_CLIP_COUNT", "12"))
 INTRO_MOTION_CLIP_SECONDS = int(os.getenv("INTRO_MOTION_CLIP_SECONDS", "5"))
@@ -188,7 +191,10 @@ IMG_COST_FLASH_1K_USD = float(os.getenv("IMG_COST_FLASH_1K_USD", "0.045"))
 IMG_COST_PRO_2K_USD = float(os.getenv("IMG_COST_PRO_2K_USD", "0.134"))
 KLING_COST_PER_CLIP_USD = float(os.getenv("KLING_COST_PER_CLIP_USD", "0.35"))  # 5 sec × $0.07/sec, audio off
 USD_KRW = float(os.getenv("USD_KRW", "1400"))
-MAX_BUDGET_PER_VIDEO_KRW = min(40_000, int(os.getenv("MAX_BUDGET_PER_VIDEO_KRW", "40000")))
+# 작업별 실제 상한은 Spring PricingConfig가 전달한다. 20분 미만: ₩40,000 / 20분 이상: ₩80,000.
+# 이 값은 그 정책에서 허용한 최대치(80,000원)를 넘는 런타임 설정만 차단한다.
+MAX_BUDGET_PER_VIDEO_KRW = min(80_000, int(os.getenv("MAX_BUDGET_PER_VIDEO_KRW", "80000")))
+GEMINI_TEST_IMAGE_BUDGET_KRW = int(os.getenv("GEMINI_TEST_IMAGE_BUDGET_KRW", "5000"))
 BUDGET_RETRY_BUFFER_PCT = float(os.getenv("BUDGET_RETRY_BUFFER_PCT", "10"))
 
 # 대본 하우스 스타일은 운영자가 단계적으로 활성화한다. 기본값은 기존 채널

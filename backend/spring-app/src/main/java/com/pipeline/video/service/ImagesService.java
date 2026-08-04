@@ -9,6 +9,7 @@ import com.pipeline.video.dto.SceneImageDto;
 import com.pipeline.video.repository.AssetRepository;
 import com.pipeline.video.repository.VideoJobRepository;
 import com.pipeline.video.repository.ChannelProfileRepository;
+import com.pipeline.video.config.PricingConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -68,6 +69,12 @@ public class ImagesService {
             job.setStatus(JobStatus.IMAGES_PENDING);
             jobRepository.save(job);
         }
+        if (job.getStatus() == JobStatus.FAILED) {
+            // 이미지 전 검증 오류처럼 이미 확정된 TTS를 손상시키지 않은 실패는
+            // 같은 API 재시도로 이미지 게이트부터 안전하게 재개할 수 있다.
+            job.setStatus(JobStatus.IMAGES_PENDING);
+            jobRepository.save(job);
+        }
 
         // TTS chunks 로드
         String ttsMetaJson = loadAssetMeta(jobId, AssetType.TTS_AUDIO);
@@ -81,11 +88,33 @@ public class ImagesService {
         log.info("이미지 생성 시작: jobId={}, autonomy={}", jobId, job.getAutonomy());
 
         // FastAPI 호출
+        // 선행 단계에서 이미 확정된 실제 비용을 제외한 잔여 KRW만 워커에 전달한다.
+        // 워커의 이미지·Kling 요청 감사 원장은 이 금액을 넘는 외부 호출을 차단한다.
+        BigDecimal remainingBudget = null;
+        if (job.getBudgetCap() != null) {
+            BigDecimal spent = costService.getTotal(jobId);
+            remainingBudget = job.getBudgetCap().subtract(spent);
+            if (remainingBudget.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalStateException("이전 단계 비용으로 이미지 생성 잔여 예산이 없습니다.");
+            }
+        }
+
+        // Gemini 정지 이미지 상한은 Fal 모션 비용과 분리한다. 다만 전체 영상
+        // 잔여 예산보다 클 수는 없으므로 둘 중 작은 값을 이미지 워커에 전달한다.
+        BigDecimal geminiImageBudget = job.getGeminiImageBudgetCap();
+        if (geminiImageBudget != null) {
+            remainingBudget = remainingBudget == null
+                    ? geminiImageBudget
+                    : remainingBudget.min(geminiImageBudget);
+        }
+
         ImagesGenerateResponse result;
         try {
             result = fastApiClient.generateImages(
                     jobId, ttsMetaJson, scriptMetaJson, character.imagePath(), character.stylePrompt(), character.posesDir(),
-                    character.loraModelId(), character.loraTriggerWord(), character.loraScale());
+                    character.loraModelId(), character.loraTriggerWord(), character.loraScale(),
+                    job.getAutonomy() == null ? null : job.getAutonomy().name(),
+                    remainingBudget, PricingConfig.GEMINI_IMAGE_ONLY_POLICY_VERSION);
         } catch (RuntimeException e) {
             if (isProviderCreditRequired(e)) {
                 job.setStatus(JobStatus.IMAGES_RETRY_REQUIRED);
@@ -108,19 +137,6 @@ public class ImagesService {
                     .build());
             log.info("Gemini Pro Batch submitted: jobId={}, batch={}", jobId, result.getBatchJobName());
             return result;
-        }
-
-        // [버그 수정] 기존 imgCost = BigDecimal.ZERO → 실제 이미지 장 수 기반 요금 추정
-        long newlyRenderedSceneCount = result.getScenes() == null ? 0 : result.getScenes().stream()
-                .filter(scene -> !"resumed_existing".equals(scene.getGenerationMethod()))
-                .count();
-        if (newlyRenderedSceneCount > 0) {
-        java.math.BigDecimal imgCost = CostEstimator.geminiImages((int) newlyRenderedSceneCount);
-        costService.record(jobId, "GEMINI_IMAGE", imgCost, "USD",
-                String.format("씬 이미지 %d장 + GIF %d개",
-                        result.getSceneCount(), result.getGifCount()));
-
-        // Asset 저장 — 씬 이미지
         }
 
         if (result.getScenes() != null) {
@@ -152,9 +168,20 @@ public class ImagesService {
         }
 
         // AUTO 모드: 자동 confirm → ASSEMBLING
-        if (autonomyService.isAuto(job)) {
+        assetRepository.findByJobIdAndAssetType(jobId, AssetType.IMAGE_QC_REPORT)
+                .forEach(assetRepository::delete);
+        assetRepository.save(Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.IMAGE_QC_REPORT)
+                .metaJson(safeJson(result))
+                .build());
+
+        if (autonomyService.isAuto(job) && !result.isRequiresManualReview()) {
             log.info("AUTO 모드 — 이미지 자동 확정");
             confirm(jobId, "AUTO");
+        } else if (result.isRequiresManualReview()) {
+            log.info("OCR 추정 사실 포함 — AUTO 이미지 자동 확정을 중단합니다: jobId={}, reasons={}",
+                    jobId, result.getReviewReasons());
         }
 
         return result;
@@ -186,13 +213,17 @@ public class ImagesService {
                 assetRepository.save(asset);
             }
         }
-        java.math.BigDecimal imgCost = CostEstimator.geminiProBatchImages(result.getSceneCount());
-        costService.record(jobId, "GEMINI_PRO_BATCH_IMAGE", imgCost, "USD",
-                String.format("Gemini Pro Batch scene images %d", result.getSceneCount()));
         assetRepository.deleteById(batchAssetId);
+        assetRepository.findByJobIdAndAssetType(jobId, AssetType.IMAGE_QC_REPORT)
+                .forEach(assetRepository::delete);
+        assetRepository.save(Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.IMAGE_QC_REPORT)
+                .metaJson(safeJson(result))
+                .build());
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
-        if (autonomyService.shouldAutoApprove(job, GateName.IMAGES)) {
+        if (autonomyService.shouldAutoApprove(job, GateName.IMAGES) && !result.isRequiresManualReview()) {
             gateService.tryAutoApproveAtCurrentStatus(jobId);
         }
         log.info("Gemini Pro Batch completed: jobId={}, scenes={}", jobId, result.getSceneCount());
@@ -228,6 +259,21 @@ public class ImagesService {
 
         if (job.getStatus() == JobStatus.DRAFT || job.getStatus() == JobStatus.KEYWORD_PENDING || job.getStatus() == JobStatus.SCRIPT_PENDING || job.getStatus() == JobStatus.TTS_PENDING) {
             throw new IllegalStateException("TTS 확정 전에는 이미지를 확정할 수 없습니다. 현재: " + job.getStatus());
+        }
+
+        Asset imageQc = assetRepository
+                .findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.IMAGE_QC_REPORT)
+                .orElseThrow(() -> new IllegalStateException("이미지 검수 결과가 없습니다. 이미지를 다시 생성하세요."));
+        try {
+            ImagesGenerateResponse qc = objectMapper.readValue(imageQc.getMetaJson(), ImagesGenerateResponse.class);
+            if (qc.isRequiresManualReview()) {
+                List<String> reasons = qc.getReviewReasons() == null ? List.of("상세 사유 없음") : qc.getReviewReasons();
+                throw new IllegalStateException(
+                        "이미지 품질 검수를 통과하지 못했습니다: " + String.join(", ", reasons)
+                );
+            }
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("이미지 검수 결과를 읽을 수 없습니다. 이미지를 다시 생성하세요.", e);
         }
 
         if (job.getStatus() == JobStatus.IMAGES_PENDING) {
@@ -310,11 +356,9 @@ public class ImagesService {
     }
 
     /**
-     * Three deliberately separate editor actions:
-     * - caption_only updates only the rendered subtitle override;
-     * - image_only reuses the stored English prompt unchanged;
-     * - text_and_image makes a fresh English prompt from the Korean source and
-     *   then redraws the image.
+     * 이미지 편집은 두 동작만 허용한다. image_only는 승인된 프롬프트를
+     * 재사용하고, text_and_image는 원문에서 프롬프트와 이미지를 다시 만든다.
+     * 자막 단독 수정은 스크립트·TTS 계약을 깨므로 명시적으로 거부한다.
      */
     private void updateSceneV2(Long jobId, int index, String text, String subtitleText,
                                String section, String mode) {
@@ -337,14 +381,9 @@ public class ImagesService {
         }
 
         if ("caption_only".equalsIgnoreCase(mode)) {
-            if (subtitleText == null || subtitleText.isBlank()) {
-                throw new IllegalArgumentException("Subtitle text is required.");
-            }
-            scene.setSubtitleText(subtitleText.trim());
-            target.setMetaJson(safeJson(scene));
-            assetRepository.save(target);
-            log.info("Scene subtitle updated without image regeneration: jobId={}, index={}", jobId, index);
-            return;
+            throw new IllegalArgumentException(
+                    "자막만 따로 수정할 수 없습니다. 스크립트를 수정한 뒤 TTS와 자막을 함께 다시 생성하세요."
+            );
         }
 
         if ("text_and_image".equalsIgnoreCase(mode)) {

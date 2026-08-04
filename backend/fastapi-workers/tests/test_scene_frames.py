@@ -18,7 +18,8 @@ def test_multiply_highlight_preserves_black_text():
     ImageDraw.Draw(base).rectangle((20, 20, 70, 35), fill="black")
     result = highlight_multiply(base, [NormalizedBBox(x=.05, y=.2, width=.85, height=.5)])
     assert result.getpixel((30, 25)) == (0, 0, 0)
-    assert result.getpixel((10, 30))[1] > result.getpixel((10, 30))[0]
+    red, green, blue = result.getpixel((10, 30))
+    assert red > 180 and green > 140 and blue < 140
 
 
 def test_article_scene_reserves_subtitle_area(tmp_path):
@@ -85,13 +86,13 @@ def _article_frame(tmp_path, *, with_key: bool):
 
 
 def _body_color_counts(image):
-    red = green = 0
+    red = highlight = 0
     for r, g, b in image.crop((0, 300, image.width, 900)).getdata():
         if r > 220 and g < 70 and b < 70:
             red += 1
-        if g > r * 1.35 and g > b * 1.35 and g > 120:
-            green += 1
-    return red, green
+        if r > 180 and g > 140 and b < 140:
+            highlight += 1
+    return red, highlight
 
 
 def test_article_body_underline_does_not_add_highlight(tmp_path):
@@ -103,9 +104,9 @@ def test_article_body_underline_does_not_add_highlight(tmp_path):
             emphasis=EmphasisPlan(body=BodyEmphasis.UNDERLINE),
         ),
     )
-    red, green = _body_color_counts(rendered.emphasized)
+    red, highlight = _body_color_counts(rendered.emphasized)
     assert red > 0
-    assert green == 0
+    assert highlight == 0
 
 
 def test_highlight_then_underline_keeps_opaque_red(tmp_path):
@@ -117,9 +118,9 @@ def test_highlight_then_underline_keeps_opaque_red(tmp_path):
             emphasis=EmphasisPlan(body=BodyEmphasis.HIGHLIGHT_UNDERLINE),
         ),
     )
-    red, green = _body_color_counts(rendered.emphasized)
+    red, highlight = _body_color_counts(rendered.emphasized)
     assert red > 0
-    assert green > 0
+    assert highlight > 0
     # The opaque second pass must retain exact renderer red, not brown multiply.
     assert (229, 36, 29) in set(rendered.emphasized.crop((0, 300, 1920, 900)).getdata())
 
@@ -133,9 +134,9 @@ def test_missing_key_bbox_downgrades_rect_to_highlight(tmp_path):
             emphasis=EmphasisPlan(body=BodyEmphasis.RECT),
         ),
     )
-    red, green = _body_color_counts(rendered.emphasized)
+    red, highlight = _body_color_counts(rendered.emphasized)
     assert red == 0
-    assert green > 0
+    assert highlight > 0
     assert rendered.audit == {
         "requested_body": "rect",
         "effective_body": "highlight",
@@ -153,9 +154,9 @@ def test_rect_uses_only_key_phrase_geometry(tmp_path):
             key_phrase="12.5% 상승",
         ),
     )
-    red, green = _body_color_counts(rendered.emphasized)
+    red, highlight = _body_color_counts(rendered.emphasized)
     assert red > 0
-    assert green == 0
+    assert highlight == 0
     assert rendered.audit["rect_downgraded"] is False
 
 

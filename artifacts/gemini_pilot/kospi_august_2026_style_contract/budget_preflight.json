@@ -1,0 +1,27 @@
+{
+  "planned_at": "2026-08-02T13:25:05.762849+00:00",
+  "scene_count": 3,
+  "quality_tier": "pro",
+  "pro_scene_count": 3,
+  "flash_scene_count": 0,
+  "kling_clip_count": 0,
+  "estimated_cost_krw": 619,
+  "budget_limit_krw": 620,
+  "retry_buffer_pct": 10.0,
+  "allowed": true,
+  "policy_version": "style-contract-pilot-3x188-2026-08-02",
+  "actions": [],
+  "reason": null,
+  "template_scene_count": 0,
+  "template_retry_reserve_krw": 0,
+  "template_regeneration_enabled": true,
+  "rates": {
+    "img_cost_pro_2k_usd": 0.134,
+    "kling_cost_per_clip_usd": 0.35,
+    "usd_krw": 1400.0
+  },
+  "intro_motion_target_seconds": 45.0,
+  "intro_motion_planned_seconds": 0.0,
+  "intro_motion_estimated_total_seconds": 16.5,
+  "still_image_pilot": true
+}

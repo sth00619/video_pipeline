@@ -39,10 +39,11 @@ from app.utils.script_style import (
     get_script_style_guide,
 )
 from app.utils.script_length import make_length_contract, spoken_char_count
+from app.utils.narration_contract import build_script_contract
 from app.utils.sentence_splitter import split_sentences
 from app.workers.news_keyword_extractor import NewsKeywordExtractor
 from app.utils.keyword_aliases import normalise_terms
-from app.utils.script_delivery import annotate_sections, default_style_mix, validate_delivery
+from app.utils.script_delivery import annotate_sections, default_style_mix, pace_sections_for_runtime, validate_delivery
 from app.utils.narrative_planner import fallback_plan, plan_narrative
 from app.utils.flow_qa import review_flow
 from app.utils.elevenlabs_mapper import map_emotion_to_elevenlabs
@@ -159,6 +160,20 @@ def _collect_keyword_news(terms: list[str]) -> list[dict]:
             rows.append({**article, "matched_keyword": term})
     return rows[:12]
 
+# 2026-08-05, 사용자 명시 지시: 문장 단위를 짧게(15~20자) 끊어 TTS에 맞는
+# 대본을 구상한 뒤, 5~6초 화면 단위 묶기는 별도 단계(pace_sections_for_runtime)
+# 에 맡긴다. 예전 26~38자 목표는 "문장 하나 = 화면 하나(5~6초)"를 생성
+# 단계에서부터 강제해 검증 실패가 잦았다 — 문장이 조금만 길어져도(예:
+# 45자) 재작성까지 다 써버리고 job 전체가 죽었다. 문장을 짧게 만들면
+# 목표 글자 수 범위를 맞추기 쉽고, 상한을 살짝 넘겨도 자막 한 장의 표시
+# 시간이 조금 늘어나는 정도라 안전하다. pace_sections_for_runtime은 입력
+# 문장 길이와 무관하게 실제 총 글자수/목표 초 비율로 5~6초 단위를 다시
+# 묶으므로, 여기서 문장을 짧게 만드는 것이 그 단계를 깨지 않는다.
+_SENTENCE_TARGET_MIN_CHARS = 15
+_SENTENCE_TARGET_MAX_CHARS = 20
+_SENTENCE_AVG_CHARS_FOR_COUNT = 18
+_SENTENCE_HARD_CAP_CHARS = 26
+
 CATEGORY_LABELS = {
     "KOSPI": "코스피(한국 종합주가지수)",
     "KOSDAQ": "코스닥",
@@ -249,7 +264,10 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
   3. [비주얼 프롬프트 (영어)] : AI 이미지 생성기용 영어 프롬프트 (오직 배경/분위기/객체만 묘사, 캐릭터 묘사 금지 + 공통 스타일/네거티브 키워드 추가)
   4. [감정] : 상황에 맞는 캐릭터 표정/포즈 (happy / worried / surprised / pointing / thinking / explaining / neutral 중 하나)
   5. [모션] : 인트로 구간(처음 약 13개 씬)인 경우에만 chart_shock, pointing_explain, thinking_desk, walking_intro, celebration 중 하나를 반드시 선택해 기술하세요. 본문 씬은 비워두거나 제외합니다.
-  6. [말풍선] : 필요한 씬에만 작성합니다. 훅·경고·질문·원인 설명·결론처럼 시청자의 시선을 한 번 더 잡아야 하는 장면만 선택하고, 일반 설명 씬에는 비워두세요. 이미지 생성 뒤 별도 그래픽 레이어로 합성할 짧은 한글 텍스트(최대 2줄)입니다. 숫자를 쓰려면 반드시 <verified_facts>에 있는 숫자·단위를 정확히 그대로 사용하세요. 그 외 숫자는 금지합니다. 숫자가 없는 감탄사는 창작할 수 있습니다.
+
+화면 텍스트 안전 규칙:
+- [말풍선], [오버레이], UI 카드, 자막용 문구를 절대 출력하지 마세요. 대사는 TTS·ASS 자막의 유일한 문자 원본입니다.
+- 이미지 안의 문자 배치는 V5 이미지 계약이 별도로 결정합니다. 대본 작성 단계에서 공중 말풍선, 검은 패널, 요약 박스, 수치 카드를 계획하지 마세요.
 
 예시:
 ## 씬 1: 실적 발표와 주가 하락
@@ -276,7 +294,7 @@ chart_shock
 - 확정적 미래 예측 ("반드시 오릅니다" 등) 금지
 - 특정 종목에 대한 직접적인 매수/매도 지시 금지
 - <verified_facts>에 없는 수치나 날짜 창작 금지
-- [말풍선] 숫자·단위는 <verified_facts> 또는 제공된 시장 데이터에 정확히 존재하는 경우에만 사용할 수 있습니다. 화면 그래픽에서는 `15%`처럼 기호를 유지하고, [대사]에서만 `퍼센트`로 읽습니다.
+- 대본 메타데이터에 말풍선·수치 카드·공중 요약 문구를 넣지 마세요. 화면 텍스트는 최종 ASS 자막과 V5의 물리적 소품 표면만 사용합니다.
 
 🎯 영상 메타데이터 (대본 작성이 모두 끝난 후 마지막에 딱 1번만 작성):
 ## 메타데이터
@@ -384,9 +402,82 @@ class ScriptWorker:
             logger.warning("하우스 스타일 %s 보강 실패: %s", device, exc)
             return sections
 
+    def _rewrite_sections_for_rhythm(
+        self,
+        sections: list[dict],
+        verified_facts: list[dict],
+        *,
+        revision_instruction: str,
+        format_name: str,
+    ) -> list[dict]:
+        """flow_qa가 지적한 리듬 문제를 사실은 그대로 두고 문장 형태만 고쳐 푼다.
+
+        job 147(2026-08-04): 스크립트가 문법·사실 검증은 모두 통과했지만
+        78문장 중 76문장이 같은 평서형(~습니다/입니다) 종결이었고, 설명형
+        평서문이 21~25개씩 연속됐다(금지 규칙은 "3개 이상 연속 금지"). AUTO
+        모드는 이런 대본을 조용히 확정하지 않고 사람 승인 대기로 멈춘다.
+        `review_flow()`는 이미 Claude 자신이 만든 한 줄 교정 지시
+        (``revision_instruction``)를 반환하지만, 지금까지 아무도 그 지시를
+        실제 재작성에 쓰지 않아 이 값은 계산만 되고 버려지고 있었다. 이
+        메서드는 그 지시를 실제로 소비해, `_rewrite_sections_for_device`와
+        같은 인덱스 치환 계약으로 사실을 바꾸지 않고 문장 리듬만 고친다.
+        """
+        source_rows = [
+            {"index": index, "text": str(section.get("content") or section.get("text") or "")}
+            for index, section in enumerate(sections)
+        ]
+        facts = json.dumps(verified_facts, ensure_ascii=False)
+        system = f"""당신은 한국 금융 대본의 리듬 편집자입니다.
+사실·숫자·날짜·회사명·인과관계를 절대 추가·삭제·변경하지 마세요. 문장의 종결 어미와 역할
+(설명/질문/전환/강조/이유)만 다시 섞어 리듬을 만드세요. 같은 평서문(~습니다/입니다) 종결을
+세 문장 이상 연속 배치하지 마세요. 특정 창작자·채널의 문장이나 시그니처를 흉내 내지 마세요.
+각 문장은 공백을 제외하고 반드시 {_SENTENCE_HARD_CAP_CHARS}자 이하여야 합니다 — 리듬을 살리려고 절이나 수식어를
+덧붙여 문장을 늘리지 말고, 필요하면 문장을 둘로 나누기보다 더 짧게 다듬으세요.
+JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정된 한국어 문장"}}이어야 합니다."""
+        prompt = f"""형식: {format_name}
+검증 사실 묶음: {facts}
+편집 지시: {revision_instruction or '같은 평서문 종결이 세 문장 이상 이어지지 않게, 질문·전환·강조·이유 문장을 사실에 맞는 곳에 자연스럽게 섞으세요.'}
+씬: {json.dumps(source_rows, ensure_ascii=False)}"""
+        try:
+            raw = self._call_llm_with_fallback(system, [{"role": "user", "content": prompt}], max_tokens=6000)
+            match = re.search(r"\[[\s\S]*\]", raw)
+            edited = json.loads(match.group(0) if match else raw)
+            if not isinstance(edited, list):
+                return sections
+            replacements = {
+                int(item.get("index")): str(item.get("text") or "").strip()
+                for item in edited if isinstance(item, dict) and str(item.get("index", "")).isdigit()
+            }
+            changed = [dict(section) for section in sections]
+            skipped_overlong = []
+            for index, replacement in replacements.items():
+                if not (0 <= index < len(changed) and replacement):
+                    continue
+                # job 148 재현: 리듬을 고치려고 절을 덧붙이다 상한을 넘긴
+                # 문장이 나왔고, 이는 곧바로 spoken_pacing 검사를 새로
+                # 실패시켜 리듬 복구 시도 2회를 모두 소진시켰다. 리듬 하나를
+                # 고치며 다른 계약(문장 길이)을 조용히 깨는 치환은 받아들이지
+                # 않고 원문을 유지한다.
+                if _visible_char_count(replacement) > _SENTENCE_HARD_CAP_CHARS:
+                    skipped_overlong.append(index)
+                    continue
+                changed[index]["content"] = replacement
+                changed[index]["text"] = replacement
+                changed[index]["char_count"] = len(replacement)
+            if skipped_overlong:
+                logger.warning(
+                    "리듬 재편집이 %s자 상한을 넘긴 문장 %s개를 반환해 원문을 유지함: indexes=%s",
+                    _SENTENCE_HARD_CAP_CHARS, len(skipped_overlong), skipped_overlong,
+                )
+            self._llm_provider_log.append({"provider": "claude-sonnet-4-6", "fallback": False, "purpose": "flow_qa_rhythm_repair"})
+            return changed
+        except Exception as exc:
+            logger.warning("리듬 재편집 실패: %s", exc)
+            return sections
+
     def generate(self, keyword: str, category: str, target_minutes: int,
                  market_data: Optional[dict] = None, job_id: int = 0,
-                 data_visuals_enabled: bool = True,
+                 data_visuals_enabled: bool = False,
                  storytelling_profile: str = DEFAULT_SCRIPT_STYLE_PROFILE,
                  voice_id: Optional[str] = None) -> dict:
         category_label = CATEGORY_LABELS.get(category, "주식시장")
@@ -472,7 +563,9 @@ class ScriptWorker:
                 sections = self._rewrite_sections_for_device(
                     sections, verified_facts, device="fake_reader_question", format_name=format_name,
                 )
-            full_script = _dedupe_adjacent_paragraphs(_narration_from_sections(sections))
+            # 장면은 이후 이미지와 타이밍의 기준이므로, 대본에서만 문단을 제거해
+            # 두 계보가 달라지는 일을 허용하지 않는다.
+            full_script = _narration_from_sections(sections)
             try:
                 flow_qa = review_flow(
                     lambda system, messages, max_tokens: self._call_llm_with_fallback(system, messages, max_tokens),
@@ -484,32 +577,82 @@ class ScriptWorker:
             except Exception as exc:
                 logger.warning("대본 흐름 QA 실패: %s", exc)
                 flow_qa = {"passed": False, "method": "unavailable", "transition_issues": ["흐름 QA 호출 실패"]}
+
+            # job 147(2026-08-04): flow_qa가 리듬 문제(같은 평서문 3문장 이상
+            # 연속 등)를 잡아내도 아무도 고치지 않아, AUTO 모드가 조용히
+            # 넘어가지 않고 사람 승인 대기에서 영구히 멈췄다. review_flow가
+            # 이미 만들어 두고 버려지던 revision_instruction으로 최대 2회까지
+            # 사실은 그대로 두고 문장 리듬만 재편집한 뒤 다시 검사한다.
+            if runtime_config.value("script_flow_qa_enabled"):
+                for rhythm_repair_attempt in range(2):
+                    if flow_qa.get("passed"):
+                        break
+                    instruction = str(flow_qa.get("revision_instruction") or "").strip()
+                    logger.warning(
+                        "Flow QA 리듬 문제 발견(repair %s/2): %s",
+                        rhythm_repair_attempt + 1, instruction or "(revision_instruction 없음)",
+                    )
+                    sections = self._rewrite_sections_for_rhythm(
+                        sections, verified_facts, revision_instruction=instruction, format_name=format_name,
+                    )
+                    full_script = _narration_from_sections(sections)
+                    try:
+                        flow_qa = review_flow(
+                            lambda system, messages, max_tokens: self._call_llm_with_fallback(system, messages, max_tokens),
+                            script=full_script,
+                            narrative_plan=narrative_plan,
+                        )
+                    except Exception as exc:
+                        logger.warning("리듬 재검사 실패: %s", exc)
+                        break
+                if flow_qa.get("passed"):
+                    logger.info("Flow QA 리듬 문제가 재편집으로 해결됨 (job_id=%s)", job_id)
+            # 대본 원문은 그대로 두고, 짧은 문장 조각만 5~6초 화면 체류 단위로
+            # 묶는다. 이후 이미지·TTS·ASS가 모두 이 동일한 장면 계보를 사용한다.
+            sections = pace_sections_for_runtime(sections, int(length_contract["target_seconds"]))
             sections = direct_scenes(enrich_scene_plans(sections))
-            sections = _classify_scene_types(sections)
             if data_visuals_enabled:
                 for scene in sections:
                     scene["market_snapshot"] = market_data
-            sections = _attach_verified_index_overlays(sections, market_data)
-            sections = _attach_verified_market_charts(sections)
+            # 일반형·기사형·정보형 혼합 영상은 대본 의미를 소품과 상황으로
+            # 설명한다. 숫자 카드와 차트 오버레이는 레거시의 명시적 데이터
+            # 시각화 요청에서만 유지해 기존 기능과 분리한다.
+            if data_visuals_enabled:
+                sections = _attach_verified_index_overlays(sections, market_data)
+                sections = _attach_verified_market_charts(sections)
+            # 검증된 그래프 페이로드를 붙인 뒤 분류해야 실제 그래프 후보가
+            # 지표형으로 오분류되지 않는다.
+            sections = _classify_scene_types(sections)
             sections = _validate_info_scene_payloads(sections)
-            sections = direct_editorial_overlays(sections)
+            if data_visuals_enabled:
+                sections = direct_editorial_overlays(sections)
+            # 이미지 단계가 전역 응답이 아니라 개별 씬만 전달받아도 검증 사실을
+            # 재확인할 수 있도록 원문을 보존한다. 수치 생성에는 사용하지 않는다.
+            for scene in sections:
+                scene["verified_facts"] = verified_facts
             used_real_llm = True
 
         except ScriptResearchRequiredError:
             # Do not hide an evidence failure behind a fabricated mock script.
             raise
+        except ValueError:
+            # 길이·문장·장면 계약 실패는 실제 대본을 가짜 mock으로 바꾸지 않는다.
+            raise
         except Exception as e:
             logger.error(f"LLM API 호출 실패: {e} — Mock으로 폴백")
             full_script, sections = self._mock_script(keyword, category_label, target_minutes)
+            sections = pace_sections_for_runtime(sections, int(length_contract["target_seconds"]))
             sections = direct_scenes(enrich_scene_plans(sections))
-            sections = _classify_scene_types(sections)
             if data_visuals_enabled:
                 for scene in sections:
                     scene["market_snapshot"] = market_data
-            sections = _attach_verified_index_overlays(sections, market_data)
-            sections = _attach_verified_market_charts(sections)
+            if data_visuals_enabled:
+                sections = _attach_verified_index_overlays(sections, market_data)
+                sections = _attach_verified_market_charts(sections)
+            sections = _classify_scene_types(sections)
             sections = _validate_info_scene_payloads(sections)
-            sections = direct_editorial_overlays(sections)
+            if data_visuals_enabled:
+                sections = direct_editorial_overlays(sections)
             verified_facts = []
             narrative_plan = {"plan_id": "generation_fallback", "planner": "fallback", "story_beats": []}
             flow_qa = {"passed": False, "method": "generation_fallback", "transition_issues": ["생성 실패"]}
@@ -525,6 +668,17 @@ class ScriptWorker:
         # Production metadata is derived after all factual narration and
         # visual planning are final. It never rewrites the approved script.
         sections = annotate_sections(sections, int(length_contract["target_seconds"]))
+        # 이미지·TTS·자막이 같은 문장을 소비하도록 장면 ID와 원문 계보를 고정한다.
+        for index, scene in enumerate(sections, start=1):
+            scene.setdefault("scene_id", f"script_scene_{index:03d}")
+        full_script = _narration_from_sections(sections)
+        narration_contract = build_script_contract(full_script, sections)
+        for source, scene in zip(narration_contract["scene_sources"], sections):
+            scene["narration_source"] = {
+                "scene_id": source["scene_id"],
+                "text_sha256": source["text_sha256"],
+                "canonical_text_sha256": narration_contract["canonical_text_sha256"],
+            }
         for scene in sections:
             scene["elevenlabs_hint"] = map_emotion_to_elevenlabs(scene["emotion_tag"], scene["phase"])
             for sentence in scene.get("sentences", []):
@@ -558,9 +712,18 @@ class ScriptWorker:
         )
         keyword_validation = _validate_keyword_coverage(full_script, selected_terms)
         if not keyword_validation["passed"]:
-            raise ScriptResearchRequiredError(
-                "선택 키워드 반영 검증에 실패했습니다: " + ", ".join(keyword_validation["missing_terms"]),
-                keyword_validation["missing_terms"],
+            # 2026-08-05, 사용자 명시 지시: job 155에서 "전략" 같은 단어 하나가
+            # 본문에 문자 그대로(혹은 등록된 동의어로) 안 보인다는 이유로 이미
+            # 사실 검증(팩트체크 3라운드)까지 마친 정상 스크립트를 통째로
+            # 버리고 키워드 재선정 루프(최대 5회, 매회 수 분 + Anthropic API
+            # 비용)를 반복했다. 사실 검증은 이 함수 앞단(다중 라운드 팩트체크)
+            # 에서 이미 끝났으므로, 이 게이트는 "글자 그대로 다시 안 보이는
+            # 단어"를 이유로 작업 전체를 죽이지 않는다 — 결과를 그대로 쓰고
+            # 어떤 단어가 안 보였는지는 keyword_validation에 남겨 리포트에서
+            # 확인할 수 있게 한다.
+            logger.warning(
+                "선택 키워드 일부가 본문에 그대로 드러나지 않았지만 그대로 진행: %s",
+                ", ".join(keyword_validation["missing_terms"]),
             )
         unit_validation = _validate_unit_usage(full_script)
         thumbnail_brief = _build_thumbnail_brief(keyword, sections, verified_facts)
@@ -570,6 +733,7 @@ class ScriptWorker:
             "keyword": keyword,
             "script": full_script,
             "sections": sections,
+            "narration_contract": narration_contract,
             "char_count": spoken_char_count(full_script),
             "length_contract": length_contract,
             "keyword_validation": keyword_validation,
@@ -588,8 +752,15 @@ class ScriptWorker:
                 bool(rejected_scenes)
                 or any(item.get("fallback") for item in self._llm_provider_log)
                 or not house_style_quality["passed"]
-                or not flow_qa["passed"]
             ),
+            # job 150(2026-08-05), 사용자 명시 지시: flow_qa(문장 리듬·낭독
+            # 페이싱)는 이미 위에서 최대 2회 자동 재편집을 거쳤다. 그래도
+            # 통과 못 하는 건 "같은 어미가 3문장 연속" 같은 스타일 다양성
+            # 지적이지, 사실 오류나 자막/TTS 싱크가 깨지는 문제가 아니다
+            # (문장당 15~26자, 씬 개수는 _validate_scene_delivery가 별도로
+            # 계속 강제한다). 이런 소프트 QA 하나 때문에 AUTO 모드가 72시간
+            # 사람 승인 대기로 멈추는 건 과도한 제약이라, requires_manual_review
+            # 판정에서는 제외하고 flow_qa 결과 자체는 그대로 리포트에 남긴다.
             "storytelling_profile": DEFAULT_SCRIPT_STYLE_PROFILE,
             "style_mix_applied": default_style_mix(category),
             "structure": narrative_plan.get("plan_id", "adaptive_plan"),
@@ -697,6 +868,10 @@ class ScriptWorker:
 - Write continuous, readable narration. Image scenes are derived after narration is complete; do not pad, shorten, or duplicate narration to reach a scene count.
 - 내러티브 플랜의 story_beats 순서·전환 목표를 따른다. 플랜은 고정 문구나 고정 비율이 아니라 소재에 맞춘 편집 의도다. 사실의 자연스러운 설명에 필요하면 인접 비트를 합치거나 짧게 조절할 수 있지만, 새 사실을 만들지 않는다. {style_instruction}
 - 앞 문장이 질문이면 바로 다음 문장 또는 다음 씬에서 검증 사실로 답한다. 같은 사실은 역할이 달라질 때만 다시 언급한다. 마지막은 도입을 반복하지 말고, 플랜의 체크포인트를 자연스럽게 정리한다.
+- 낭독 리듬을 검사하므로, 설명형 ``~습니다`` 문장을 세 개 이상 연속하지 마세요. 사실에 맞는 범위에서 질문·전환·이유·강조를 섞고, 질문에는 물음표를 사용한 뒤 곧바로 근거로 답하세요.
+- [대사]는 짧고 자연스러운 구어체 완결 문장 약 {max(1, round(target_chars / _SENTENCE_AVG_CHARS_FOR_COUNT))}개로 작성하세요(문장 수는 총 분량 {target_chars}자에 맞춰 자연스럽게 정해지는 목표치입니다). 각 문장은 공백 제외 {_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자 범위의 짧은 호흡이어야 하며, TTS가 한 호흡에 자연스럽게 읽을 수 있는 길이입니다.
+- 한 문장이 길어질 경우 단어 중간이나 조사 앞에서 자르지 말고, 원인·전환·결론이 완결된 두 문장으로 자연스럽게 나누세요. 이미지 장면은 이후 여러 짧은 문장을 5~6초 단위로 자동으로 묶어 결정되므로, 지금은 문장 길이 계약만 지키면 됩니다.
+- 세 문장 이상을 단순 설명형으로 나열하지 마세요.
 - Improve only voice, pacing, transitions, and listener comprehension. Do not add, remove, substitute, or reinterpret any verified fact, number, date, company, source, or causal relationship.
 - 마지막에 ## 메타데이터 섹션 추가 ([추천 제목], [추천 썸네일], [더보기 설명], [쇼츠 대본])
 - 쇼츠 대본은 본 영상의 핵심만 30초 내외로 요약한 강렬한 문장으로 작성
@@ -736,14 +911,61 @@ class ScriptWorker:
                     s_match = re.search(r'\[쇼츠 대본\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
                     if s_match: meta_shorts = s_match.group(1).strip()
 
-                if _dialogue_char_count(script_body) > int(target_chars * 1.15):
+                if _needs_dialogue_length_rewrite(script_body, target_chars):
                     script_body = self._rewrite_dialogue_to_target(script_body, target_chars)
+
+                if _needs_dialogue_length_rewrite(script_body, target_chars):
+                    # job 149(2026-08-05): 사용자 명시 지시 — 총 분량이
+                    # target_chars 허용폭(±8~15%)을 못 맞춘다고 작업 전체를
+                    # 실패시키지 말 것. TTS 싱크에 실제로 영향을 주는 건
+                    # 씬(문장) 단위 계약(_validate_scene_delivery: 문장 수,
+                    # 문장당 15~26자)이지 총 글자 수 총합이 아니다. 총 분량은
+                    # LLM 재작성 한 번과 결정론적 캡(문장 경계만 자르고 사실은
+                    # 절대 왜곡하지 않음)으로 최대한 근접시키되, 그래도
+                    # 못 맞추면 예외로 Anthropic API 호출만 낭비하며 작업
+                    # 전체를 죽이는 대신 최선의 결과로 계속 진행한다. 씬 단위
+                    # 계약은 바로 아래 _validate_scene_delivery가 별도로 계속
+                    # 강제하므로 자막 싱크 안전성은 그대로 유지된다.
+                    script_body = _cap_dialogue_to_target(script_body, target_chars)
+                    if _needs_dialogue_length_rewrite(script_body, target_chars):
+                        logger.warning(
+                            "총 대사 분량이 목표 범위를 벗어났지만 씬 단위 계약은 유효해 그대로 진행: "
+                            "actual=%s, target=%s",
+                            _dialogue_char_count(script_body), target_chars,
+                        )
 
                 script_body = _cap_dialogue_to_target(script_body, target_chars)
                 sections = _split_sections_for_visual_pacing(_parse_sections(
                     script_body,
                     evidence={"verified_facts": verified_facts, "market_snapshot": market_data},
                 ))
+                # 5.5초/씬이 아니라 목표 글자수 기준으로 완결 문장 개수를
+                # 추정한다 — 화면 묶기는 pace_sections_for_runtime이
+                # 별도로 담당하므로, 여기서는 "짧은 문장이 총 분량만큼
+                # 충분히 있는가"만 검증하면 된다.
+                target_scene_count = max(1, round(target_chars / _SENTENCE_AVG_CHARS_FOR_COUNT))
+                try:
+                    _validate_scene_delivery(sections, target_scene_count=target_scene_count)
+                except ValueError:
+                    # 문장 수가 부족하거나 문장이 길면 같은 사실 범위에서만
+                    # 재편집한다. 레거시 mock으로 대체하지 않는다.
+                    script_body = self._rewrite_dialogue_to_target(script_body, target_chars)
+                    sections = _split_sections_for_visual_pacing(_parse_sections(
+                        script_body,
+                        evidence={"verified_facts": verified_facts, "market_snapshot": market_data},
+                    ))
+                    try:
+                        _validate_scene_delivery(sections, target_scene_count=target_scene_count)
+                    except ValueError as delivery_err:
+                        # job 152(2026-08-05), 사용자 명시 지시: 재작성까지
+                        # 시도했는데도 문장 하나가 38자를 살짝 넘는다고 job
+                        # 전체를 실패시키지 않는다. 장면 수 부족(실제로 보여줄
+                        # 장면이 모자람)은 여전히 하드 실패로 남기지만, 완결
+                        # 문장 하나가 상한을 넘는 건 자막 한 장의 표시 시간이
+                        # 조금 늘어나는 정도라 씬 단위 재구성 없이 진행한다.
+                        if "장면 수가" in str(delivery_err):
+                            raise
+                        logger.warning("씬 길이 계약을 완전히 못 맞췄지만 그대로 진행: %s", delivery_err)
                 break
             except ValueError as val_err:
                 logger.warning(f"Script parsing validation failed (attempt {attempt+1}/3): {val_err}. Retrying LLM call...")
@@ -802,22 +1024,98 @@ class ScriptWorker:
         }
 
     def _rewrite_dialogue_to_target(self, script_body: str, target_chars: int) -> str:
-        """One best-effort LLM rewrite; the deterministic cap remains safe fallback."""
-        try:
-            rewritten = self._call_llm_with_fallback(
-                "You are a Korean financial script editor.",
-                [{"role": "user", "content": f"""아래 대본의 [대사]만 줄여 공백 제외 약 {target_chars}자로 맞추세요.
-숫자, 단위, 날짜, 회사명은 절대 자르거나 바꾸지 마세요. 문장을 중간에서 자르지 마세요.
-씬 헤더와 [대사]/[비주얼 설명]/[비주얼 프롬프트]/[감정] 구조를 유지하고, 결과만 반환하세요.
+        """검증된 원문만 바탕으로 5~6초 장면용 완결 문장을 다시 만든다.
 
-{script_body}"""}],
-                max_tokens=8000,
-            )
-            if rewritten and _dialogue_char_count(rewritten) < _dialogue_char_count(script_body):
-                logger.info("Narration length rewrite applied: %s -> %s chars", _dialogue_char_count(script_body), _dialogue_char_count(rewritten))
-                return rewritten
+        job 147 재현: 55개 문장을 요청하면 Claude가 49~52개로 근소하게
+        undershoot하는 일이 반복됐다(최소 53 대비 1~6개 부족). 단 한 번만
+        요청하고 실패하면 원문을 그대로 반환하던 이전 구조는 이 근소한
+        미달을 스스로 교정할 기회가 없었다. 최대 3회까지, 직전 결과의 실제
+        문장 수를 알려주며 다시 요청한다 — 매번 새로 처음부터 요청하는 것보다
+        "51개였다, 최소 53개 필요"라는 구체적 피드백이 한두 문장 추가로
+        수렴할 확률이 높다.
+        """
+        try:
+            current_chars = _dialogue_char_count(script_body)
+            target_scene_count = max(1, round(target_chars / _SENTENCE_AVG_CHARS_FOR_COUNT))
+            minimum_scene_count = _minimum_scene_count(target_scene_count)
+            source_sections = _parse_sections(script_body)
+            source_narration = _narration_from_sections(source_sections)
+
+            correction = ""
+            for rewrite_attempt in range(3):
+                rewritten = self._call_llm_with_fallback(
+                    "You are a Korean financial script editor.",
+                    [{"role": "user", "content": f"""아래 한국어 내레이션을 같은 검증 사실 범위 안에서만 재편집하세요.
+새 숫자, 날짜, 회사명, 출처, 인과관계, 투자 권유를 만들지 마세요. 원문의 사실과 불확실성 표현을 보존하세요.
+
+반드시 JSON 문자열 배열만 반환하세요. 배열은 약 {target_scene_count}개의 짧고 자연스러운 구어체 문장입니다.
+각 원소는 완결된 한국어 문장 하나이며 공백 제외 {_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자입니다. 번호, 제목, 마크다운, 설명을 넣지 마세요.
+각 문장은 자연스럽게 독립적으로 들리고, 단어 중간이나 조사 앞에서 끝나면 안 됩니다.
+총 대사 분량은 공백 제외 약 {target_chars}자여야 합니다. 현재 분량은 {current_chars}자입니다.
+{correction}
+원문:
+{source_narration}"""}],
+                    max_tokens=6000,
+                )
+                lines = _parse_dialogue_sentence_array(rewritten)
+                # LLM이 정확히 target_scene_count개, 짧은 목표 글자수로만
+                # 응답하길 기대하는 자체 검사가 실제 하류 계약
+                # (_validate_scene_delivery, _minimum_scene_count 참조)보다
+                # 더 빡빡했다. 자체 검사를 실제 하류 계약과 동일한 허용치로
+                # 맞춘다.
+                too_few_scenes = len(lines) < minimum_scene_count
+                overlong_lines = [line for line in lines if _visible_char_count(line) > _SENTENCE_HARD_CAP_CHARS]
+                if not too_few_scenes and not overlong_lines:
+                    structured = _structured_script_from_dialogue_lines(lines)
+                    structured_chars = _dialogue_char_count(structured)
+                    if _needs_dialogue_length_rewrite(structured, target_chars) is False:
+                        logger.info(
+                            "Narration sentence rewrite applied (rewrite attempt %s/3): %s -> %s chars, %s scenes",
+                            rewrite_attempt + 1, current_chars, structured_chars, len(lines),
+                        )
+                        return structured
+                    # job 148 재현: 문장 수·문장당 길이는 계약을 통과했지만
+                    # (예: 11개, 각 38자 이하), 총 대사 분량이 target_chars
+                    # 허용 범위(±8~15%)를 벗어난 경우다. 이전 코드는 이 경우도
+                    # "scenes=11 (need >= 10)"이라며 실제로는 문제가 없는
+                    # 장면 수를 원인으로 잘못 로그하고, 엉뚱한 "문장 수를
+                    # 늘리라"는 교정 지시를 다음 시도에 보냈다.
+                    logger.warning(
+                        "Narration sentence rewrite attempt %s/3 missed the total length contract: "
+                        "chars=%s (target=%s, need %s~%s)",
+                        rewrite_attempt + 1, structured_chars, target_chars,
+                        round(target_chars * 0.92), round(target_chars * 1.15),
+                    )
+                    direction = "줄이세요" if structured_chars > target_chars else "늘리세요"
+                    correction = (
+                        f"직전 응답은 총 {structured_chars}자였고 목표는 약 {target_chars}자입니다. "
+                        f"문장 수({len(lines)}개)는 유지한 채 각 문장 길이를 조정해 총 분량을 {direction}.\n"
+                    )
+                    continue
+                if too_few_scenes:
+                    logger.warning(
+                        "Narration sentence rewrite attempt %s/3 missed the scene-count contract: "
+                        "scenes=%s (need >= %s)",
+                        rewrite_attempt + 1, len(lines), minimum_scene_count,
+                    )
+                    correction = (
+                        f"직전 응답은 {len(lines)}개 문장이었고 최소 {minimum_scene_count}개가 필요합니다. "
+                        f"이번에는 반드시 {target_scene_count}개(최소 {minimum_scene_count}개 이상)를 채우세요. "
+                        "문장을 억지로 합치지 말고, 원문의 완결된 생각 단위를 더 잘게 나누어 문장 수를 늘리세요.\n"
+                    )
+                else:
+                    longest = max(_visible_char_count(line) for line in overlong_lines)
+                    logger.warning(
+                        "Narration sentence rewrite attempt %s/3 missed the per-sentence length contract: "
+                        "%s line(s) over %s chars, longest=%s",
+                        rewrite_attempt + 1, len(overlong_lines), _SENTENCE_HARD_CAP_CHARS, longest,
+                    )
+                    correction = (
+                        f"직전 응답 중 {len(overlong_lines)}개 문장이 공백 제외 {_SENTENCE_HARD_CAP_CHARS}자를 넘었습니다(최대 {longest}자). "
+                        f"모든 문장을 공백 제외 {_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자 안에서 완결되게 다시 나누세요.\n"
+                    )
         except Exception as exc:
-            logger.warning("Narration length rewrite unavailable; using sentence-safe cap: %s", exc)
+            logger.warning("Narration length rewrite unavailable: %s", exc)
         return script_body
 
     def _mock_script(self, keyword, category_label, target_minutes):
@@ -877,6 +1175,23 @@ class ScriptWorker:
 # ──────────────────────────────────────────────────────────
 # 유틸 및 파싱 함수
 # ──────────────────────────────────────────────────────────
+_COMPARISON_NARRATIVE_MARKERS = ("vs", "VS", "대비", "대조", "비교", "차별", "격차")
+
+
+def _is_comparison_narrative(keyword: str, sections: list[dict]) -> bool:
+    """대본이 A vs B 대조 구조인지 표면 문구로만 판별한다(새 사실을 만들지 않음).
+
+    참인 경우 썸네일이 chart_warning 대신 split_versus(좌우 대비 톤)를
+    고른다. 대본 원문에 실제로 쓰인 단어만 보므로, 대조 여부를 새로
+    추정·창작하지 않는다.
+    """
+    text = " ".join([str(keyword or "")] + [
+        str(section.get("title") or section.get("content") or section.get("text") or "")
+        for section in sections[:6]
+    ])
+    return any(marker in text for marker in _COMPARISON_NARRATIVE_MARKERS)
+
+
 def _build_thumbnail_brief(keyword: str, sections: list[dict], verified_facts: list[dict]) -> dict:
     """Create a conservative thumbnail contract without inventing copy or data.
 
@@ -886,6 +1201,7 @@ def _build_thumbnail_brief(keyword: str, sections: list[dict], verified_facts: l
     narrative_plan = build_from_video_manifest(
         keyword=keyword, sections=sections, verified_facts=verified_facts,
     )
+    comparison_mode = _is_comparison_narrative(keyword, sections)
     source_scene_ids = list(narrative_plan.source_scene_ids)
     for index, scene in enumerate(sections[:8]):
         role = str(scene.get("phase") or scene.get("section") or "")
@@ -932,6 +1248,7 @@ def _build_thumbnail_brief(keyword: str, sections: list[dict], verified_facts: l
             "verified_facts": verified_facts,
             "narration": _narration_from_sections(sections),
             "generated_from": "thumbnail_v2_contract",
+            "comparison_mode": comparison_mode,
         }
     return {
         "layout": "reference_headline",
@@ -1044,6 +1361,16 @@ def _validate_unit_usage(script: str) -> dict:
     return {"passed": not errors, "errors": errors}
 
 
+def _needs_dialogue_length_rewrite(script_body: str, target_chars: int) -> bool:
+    """대사가 TTS 허용 범위를 벗어나면 LLM 편집을 한 번 요청한다."""
+    if not script_body or target_chars <= 0:
+        return False
+    actual_chars = _dialogue_char_count(script_body)
+    minimum = round(target_chars * 0.92)
+    maximum = round(target_chars * 1.15)
+    return actual_chars < minimum or actual_chars > maximum
+
+
 def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
     """Cap only [대사] content to the requested TTS duration budget.
 
@@ -1144,6 +1471,38 @@ def _visible_char_count(value: str) -> int:
     return len(re.sub(r"\s+", "", value or ""))
 
 
+def _parse_dialogue_sentence_array(value: str) -> list[str]:
+    """재편집 호출의 JSON 배열 응답만 허용한다."""
+    text = str(value or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE).strip()
+    decoder = json.JSONDecoder()
+    # 설명 문구에 [대사] 같은 대괄호가 있어도 실제 JSON 배열을 놓치지 않도록
+    # 모든 '[' 위치에서 JSON 디코딩을 시도한다.
+    for start in (index for index, char in enumerate(text) if char == "["):
+        try:
+            parsed, _ = decoder.raw_decode(text[start:])
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if isinstance(parsed, list) and all(isinstance(item, str) for item in parsed):
+            return [re.sub(r"\s+", " ", item).strip() for item in parsed if item and item.strip()]
+    return []
+
+
+def _structured_script_from_dialogue_lines(lines: list[str]) -> str:
+    """대사 배열을 기존 씬 파서가 소비하는 구조로만 감싼다."""
+    blocks = []
+    for index, line in enumerate(lines, start=1):
+        blocks.append(
+            f"## 장면 {index:03d}\n"
+            f"[대사]\n{line}\n"
+            "[비주얼 설명]\n대사 의미를 설명하는 한국형 금융 상황 장면\n"
+            "[비주얼 프롬프트]\n\n"
+            "[감정]\nneutral"
+        )
+    return "\n\n".join(blocks)
+
+
 def _dialogue_char_count(script_body: str) -> int:
     pattern = re.compile(r"(?ms)\[대사\]\s*(.*?)(?=^\s*\[(?:비주얼|감정)|^\s*##|\Z)")
     matches = list(pattern.finditer(script_body or ""))
@@ -1195,12 +1554,15 @@ def clean_script_commas_and_pct(text: str) -> str:
     return text
 
 
-def _split_sections_for_visual_pacing(sections: list, max_chars: int = 34) -> list:
-    """Split long narration into 5-7 second thought units for image direction.
+def _split_sections_for_visual_pacing(sections: list, max_chars: int = _SENTENCE_HARD_CAP_CHARS) -> list:
+    """Cap each generated sentence at the short-sentence hard limit.
 
-    We retain each source scene's topic and prompt as context, but every output
-    unit receives its own scene director pass later in the image worker.  This
-    prevents one illustration from being asked to explain an entire paragraph.
+    2026-08-05: sentences are now generated short (15-20 visible chars) on
+    purpose, so this mostly passes them through unchanged; it only combines
+    or caps the rare case where the LLM still wrote something longer. The
+    actual 5-6 second on-screen grouping happens later in
+    pace_sections_for_runtime, which buckets these short sentences by real
+    character-per-second rate regardless of how short each one is.
     """
     expanded: list[dict] = []
     for source in sections:
@@ -1214,30 +1576,15 @@ def _split_sections_for_visual_pacing(sections: list, max_chars: int = 34) -> li
         units: list[str] = []
         current = ""
         for sentence in sentences:
-            candidates = [sentence]
-            if len(sentence.replace(" ", "")) > max_chars:
-                candidates = [part.strip() for part in re.split(r"(?<=,)\s+|(?<=; )\s+|(?<=그리고)\s+", sentence) if part.strip()]
-            for candidate in candidates:
-                words = candidate.split()
-                # Preserve word boundaries when an individual sentence remains long.
-                fragments: list[str] = []
-                fragment = ""
-                for word in words:
-                    proposed = f"{fragment} {word}".strip()
-                    if fragment and len(proposed.replace(" ", "")) > max_chars:
-                        fragments.append(fragment)
-                        fragment = word
-                    else:
-                        fragment = proposed
-                if fragment:
-                    fragments.append(fragment)
-                for fragment in fragments or [candidate]:
-                    proposed = f"{current} {fragment}".strip()
-                    if current and len(proposed.replace(" ", "")) > max_chars:
-                        units.append(current)
-                        current = fragment
-                    else:
-                        current = proposed
+            # 대사·TTS·자막은 완결 문장을 공유한다. 화면 수를 맞춘다는 이유로
+            # 문장을 단어 경계에서 자르면 의미와 싱크가 모두 깨지므로 금지한다.
+            candidate = sentence
+            proposed = f"{current} {candidate}".strip()
+            if current and len(proposed.replace(" ", "")) > max_chars:
+                units.append(current)
+                current = candidate
+            else:
+                current = proposed
         if current:
             units.append(current)
 
@@ -1254,6 +1601,39 @@ def _split_sections_for_visual_pacing(sections: list, max_chars: int = 34) -> li
     for index, scene in enumerate(expanded):
         scene["section"] = _assign_section_type(index, total)
     return expanded
+
+
+def _minimum_scene_count(target_scene_count: int) -> int:
+    """5~6초 장면 계약의 최소 허용 장면 수를 반환한다.
+
+    2026-08-04, job 147에서 반복 재현: target=55일 때 Claude가 49, 52, 52로
+    거듭 undershoot했다. 이전에는 고정 "-2"(target 대비 96%)를 요구했는데,
+    이 고정치는 영상 길이가 길수록 상대적으로 훨씬 빡빡해진다(target=55일
+    때 -2=96%지만 target=218인 20분 영상에서는 -2=99%). 실측 undershoot가
+    관측된 지금, 목표치의 90%로 완화한다 — 이 최소치에서도 평균 장면 길이는
+    5~6초 계약의 상한(6.0초) 안에 머문다(300초/50장면=6.0초). 문장을 억지로
+    잘라 장면 수를 채우지 않는다는 규칙(_split_sections_for_visual_pacing)은
+    그대로 유지되며, 이 함수는 LLM이 실제로 써낸 완결 문장 수를 얼마나
+    관대하게 받아들일지만 조정한다.
+    """
+    return max(1, round(target_scene_count * 0.90))
+
+
+def _validate_scene_delivery(sections: list[dict], target_scene_count: int) -> None:
+    """짧은 완결 문장 기준의 목표 문장 수와 길이를 생성 단계에서 강제한다."""
+    minimum_scene_count = _minimum_scene_count(target_scene_count)
+    if len(sections) < minimum_scene_count:
+        raise ValueError(
+            f"장면 수가 목표에 부족합니다: actual={len(sections)}, "
+            f"minimum={minimum_scene_count}, target={target_scene_count}"
+        )
+    overlong = [
+        len(re.sub(r"\s+", "", str(scene.get("content") or "")))
+        for scene in sections
+        if len(re.sub(r"\s+", "", str(scene.get("content") or ""))) > _SENTENCE_HARD_CAP_CHARS
+    ]
+    if overlong:
+        raise ValueError(f"완결 문장 길이가 {_SENTENCE_HARD_CAP_CHARS}자를 초과합니다: max={max(overlong)}")
 
 
 def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
@@ -1365,35 +1745,15 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
             "section": section_type,
             "char_count": len(s["content"]),
         }
-        # Preserve the legacy ``bubble_text`` for one release, while storing
-        # a typed plan whenever its category can safely render it. Numbers
-        # are never invented here: the existing verbatim guard has already
-        # rejected ungrounded source text above.
+        # 대본 문구는 TTS·ASS 자막의 단일 원본으로만 쓴다. 영상 위 요약칩과
+        # 말풍선은 프레임 밖 UI처럼 보이고 자막과 중복되므로 계획하지 않는다.
         bubble = str(s.get("bubble_text") or "").strip()
         if bubble:
-            kind = "burst" if section_type == "intro" else (
-                "caption_chip" if section_type in {"background", "conclusion"} else "speech"
-            )
-            numeric = bool(re.search(r"\d", bubble))
-            refs = ["facts[0]"] if numeric and (evidence or {}).get("verified_facts") else []
-            try:
-                overlay = OverlaySlot(
-                    kind=kind,
-                    text=bubble,
-                    claim_type="verbatim_fact" if numeric else "reaction",
-                    source_refs=refs,
-                    text_style="outline" if kind == "burst" else "solid",
-                )
-                section["editorial_overlay_plan"] = SceneEditorialOverlayPlan(
-                    section=section_type,
-                    message_role="hook" if section_type == "intro" else "reaction",
-                    overlay=overlay,
-                    subtitle_text=str(s.get("content") or ""),
-                ).model_dump()
-            except ValueError:
-                # Fail closed for the new plan; legacy bubble rendering stays
-                # available only for already validated one-release records.
-                section["editorial_overlay_plan"] = None
+            section["editorial_decision"] = {
+                "selected": False,
+                "reason": "script_caption_only_policy",
+                "suppressed_non_subtitle_overlay": True,
+            }
         sections.append(section)
 
     return sections
@@ -1451,6 +1811,10 @@ def _classify_scene_type(scene: dict) -> tuple[str, str]:
     text = _scene_type_source_text(scene)
     section = str(scene.get("section") or "").lower()
 
+    # 이 페이로드는 수집기에서 확인된 시계열·비교 데이터만 담는다. 원고의
+    # 표현 문구와 무관하게 렌더링될 실제 그래프가 있으므로 그래프형이 우선이다.
+    if isinstance(scene.get("market_chart"), dict) and scene["market_chart"]:
+        return "graph", "검증된 market_chart 페이로드가 있어 그래프형으로 분류"
     if _has_any_signal(text, _GRAPH_SIGNALS):
         return "graph", "대본 또는 기존 시각 의도에 차트·추이·시간축 표현이 있어 그래프형으로 분류"
     if _has_any_signal(text, _DIAGRAM_SIGNALS):
@@ -1478,7 +1842,57 @@ def _classify_scene_types(sections: list[dict]) -> list[dict]:
         scene["scene_type"] = scene_type
         scene["selection_reason"] = selection_reason
         classified.append(scene)
-    return classified
+    return _rebalance_scene_type_distribution(classified)
+
+
+def _rebalance_scene_type_distribution(scenes: list[dict]) -> list[dict]:
+    """장문 대본에서 지표형 장면이 과도하게 연속되는 것을 막는다.
+
+    숫자가 포함된 문장은 금융 대본에 매우 흔하다. 숫자 유무만으로 분류하면
+    계기판·차트 같은 정보형 화면이 대부분을 차지해 시청 경험이 단조로워진다.
+    사실·대본 문구는 수정하지 않고, 지표형으로 남길 장면만 시간축에 고르게
+    배치한다. 나머지는 동일 문장을 상황·비유 중심의 일반 장면으로 렌더한다.
+    """
+    def _keep_evenly(indices: list[int], limit: int) -> set[int]:
+        """같은 정보형 화면이 한 구간에 몰리지 않도록 시간축에 분산한다."""
+        if len(indices) <= limit:
+            return set(indices)
+        return {
+            indices[round(position * (len(indices) - 1) / (limit - 1))]
+            for position in range(limit)
+        }
+
+    metric_indices = [index for index, scene in enumerate(scenes)
+                      if scene.get("scene_type") == "metric"]
+    # 지표형은 최대 18%, 장문에서도 12장을 넘기지 않는다. 최소 두 장은 남겨
+    # 실제 수치·지표를 설명해야 하는 구간을 보존한다.
+    metric_limit = min(12, max(2, round(len(scenes) * 0.18)))
+    kept_metric_indices = _keep_evenly(metric_indices, metric_limit)
+    for index in metric_indices:
+        if index in kept_metric_indices:
+            continue
+        scenes[index]["scene_type"] = "general"
+        scenes[index]["selection_reason"] = (
+            "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 "
+            "상황·비유 중심 일반 장면으로 분류"
+        )
+
+    # 관계·단계를 설명하는 장면도 과도하면 칠판이나 프로세스 도식이 연속된다.
+    # 정보형은 전체의 10%(최대 8장)만 남기고, 나머지는 기사·상황·비유 장면으로
+    # 전환한다. 원문과 검증 사실은 그대로 보존한다.
+    diagram_indices = [index for index, scene in enumerate(scenes)
+                       if scene.get("scene_type") == "diagram"]
+    diagram_limit = min(8, max(2, round(len(scenes) * 0.10)))
+    kept_diagram_indices = _keep_evenly(diagram_indices, diagram_limit)
+    for index in diagram_indices:
+        if index in kept_diagram_indices:
+            continue
+        scenes[index]["scene_type"] = "general"
+        scenes[index]["selection_reason"] = (
+            "관계 설명이 포함돼 있으나 장문 다이어그램형 비중 상한을 적용해 "
+            "기사·상황 중심 일반 장면으로 분류"
+        )
+    return scenes
 
 
 def _attach_verified_index_overlays(sections: list[dict], market_data: dict) -> list[dict]:

@@ -4,6 +4,9 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     fonts-nanum \
     fontconfig \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-kor \
     && fc-cache -fv \
     && rm -rf /var/lib/apt/lists/*
 

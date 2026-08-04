@@ -1,0 +1,199 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_bigtech_ai",
+      "attempt": 1,
+      "attempt_id": "90bbb8d13e474ccb8c939767d54233b0",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-03T08:12:13.414294+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "style"
+        ],
+        "visual_mode": "semantic_illustration",
+        "visual_mode_contract": {
+          "asset_source": "v5_gemini_scene",
+          "text_policy": "strict_textless",
+          "overlay_policy": "ass_subtitle_only",
+          "numeric_visual_policy": "prohibited",
+          "character_policy": "fixed_reference_when_character_required"
+        },
+        "style_contract_version": "2026-08-03-r4-korean-nonnumeric-three-mode-v1",
+        "selected_archetype": "data_lab",
+        "surface_caption": null,
+        "prompt_sha256": "e349ac80a83a0b94465efd04bcb977cd17a439207e30dc3debe83b96f8e85599"
+      },
+      "completed_at": "2026-08-03T08:12:49.064087+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "semantic_chip_kospi",
+      "attempt": 1,
+      "attempt_id": "a6f415cabed84ddeb8b1aa87ec5145f9",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-03T08:12:50.532692+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "character",
+          "style"
+        ],
+        "visual_mode": "semantic_illustration",
+        "visual_mode_contract": {
+          "asset_source": "v5_gemini_scene",
+          "text_policy": "strict_textless",
+          "overlay_policy": "ass_subtitle_only",
+          "numeric_visual_policy": "prohibited",
+          "character_policy": "fixed_reference_when_character_required"
+        },
+        "style_contract_version": "2026-08-03-r4-korean-nonnumeric-three-mode-v1",
+        "selected_archetype": "risk_control_room",
+        "surface_caption": null,
+        "prompt_sha256": "d48bcb6042b2b7ae251fe4c0228c798f809708401011d2f714d9b63997fb7878"
+      },
+      "completed_at": "2026-08-03T08:13:22.439316+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "info_semiconductor",
+      "attempt": 1,
+      "attempt_id": "42b908317b524ec19aebc7b047502dd4",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-03T08:13:23.950367+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "character",
+          "style"
+        ],
+        "visual_mode": "archetype_explainer",
+        "visual_mode_contract": {
+          "asset_source": "v5_gemini_scene",
+          "text_policy": "single_script_caption_on_primary_prop",
+          "overlay_policy": "ass_subtitle_only",
+          "numeric_visual_policy": "prohibited",
+          "character_policy": "fixed_reference_when_character_required"
+        },
+        "style_contract_version": "2026-08-03-r4-korean-nonnumeric-three-mode-v1",
+        "selected_archetype": "data_lab",
+        "surface_caption": {
+          "english": "SEMICONDUCTOR GOES DOWN",
+          "korean": "반도체 섹터의 약세 가능성과 확인할 흐름",
+          "direction": "down",
+          "target": "one broad curved presentation wall"
+        },
+        "prompt_sha256": "39c49dc5a7d364bb1230f22828a8f0b3c35bcceefc1bf2e6efa04b24813c45a7"
+      },
+      "completed_at": "2026-08-03T08:14:11.809341+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "info_dollar",
+      "attempt": 1,
+      "attempt_id": "1227607372e94b7991019c6b1565e36d",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_503",
+      "reserved_at": "2026-08-03T08:14:13.217107+00:00",
+      "request_metadata": {
+        "automatic_retry": false,
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "reference_roles": [
+          "character",
+          "style"
+        ],
+        "visual_mode": "archetype_explainer",
+        "visual_mode_contract": {
+          "asset_source": "v5_gemini_scene",
+          "text_policy": "single_script_caption_on_primary_prop",
+          "overlay_policy": "ass_subtitle_only",
+          "numeric_visual_policy": "prohibited",
+          "character_policy": "fixed_reference_when_character_required"
+        },
+        "style_contract_version": "2026-08-03-r4-korean-nonnumeric-three-mode-v1",
+        "selected_archetype": "weather_map",
+        "surface_caption": {
+          "english": "DOLLAR UNDER PRESSURE",
+          "korean": "달러 약세와 환율 흐름이 국내 시장에 주",
+          "direction": "down",
+          "target": "the broad central geographic region of the single large curved illuminated map wall"
+        },
+        "prompt_sha256": "ff0ec1bd07da5694ed313bb31fbbcba653fa51dcb0843062e9ab94fe66056253"
+      },
+      "completed_at": "2026-08-03T08:15:59.356433+00:00",
+      "status_code": 503
+    }
+  ],
+  "total_krw": 1016,
+  "budget_overrun_krw": 0
+}

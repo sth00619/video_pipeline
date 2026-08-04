@@ -75,13 +75,14 @@ def make_length_contract(
 ) -> dict[str, Any]:
     """Calculate an explicit target before prose is generated.
 
-    CPM is the normal-speed rate.  A 1.05x requested voice therefore fits 5%
-    more spoken characters into the same requested duration.
+    기본 CPM은 정상 속도 기준이므로 속도를 반영한다. 다만 보정값은 이미
+    음성·모델·속도 조합별 실제 결과에서 측정한 값이므로 속도를 다시 곱하지
+    않는다. 같은 속도를 두 번 적용하면 장문 대본이 짧아지는 문제가 생긴다.
     """
     safe_minutes = max(1, int(target_minutes or 1))
     safe_speed = max(0.5, min(float(speed or 1.0), 1.5))
     calibrated_cpm, samples = resolve_cpm(base_cpm, voice_id, model_id, safe_speed)
-    effective_cpm = calibrated_cpm * safe_speed
+    effective_cpm = calibrated_cpm if samples >= 2 else calibrated_cpm * safe_speed
     # Avoid banker's rounding: a half-character budget should round up so the
     # displayed target is intuitive to operators.
     target_chars = int(safe_minutes * effective_cpm + 0.5)

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
+from PIL import ImageChops
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -26,6 +27,13 @@ def _png(color: str = "#334155") -> bytes:
     return output.getvalue()
 
 
+def _changed_bbox(base: bytes, rendered: bytes):
+    return ImageChops.difference(
+        Image.open(io.BytesIO(base)).convert("RGB"),
+        Image.open(io.BytesIO(rendered)).convert("RGB"),
+    ).getbbox()
+
+
 def test_verified_fact_changes_only_the_declared_prop_surface():
     base = _png()
     result = apply_facts_to_surfaces(base, (
@@ -40,7 +48,9 @@ def test_verified_fact_changes_only_the_declared_prop_surface():
     rendered = Image.open(io.BytesIO(result)).convert("RGB")
     assert rendered.size == original.size
     assert rendered.getpixel((20, 20)) == original.getpixel((20, 20))
-    assert rendered.getpixel((200, 180)) != original.getpixel((200, 180))
+    left, top, right, bottom = _changed_bbox(base, result)
+    assert 128 <= left < right <= 461
+    assert 144 <= top < bottom <= 245
 
 
 def test_verified_fact_requires_provenance_and_in_canvas_anchor():
@@ -91,6 +101,50 @@ def test_scene_adapter_rejects_a_value_not_in_verified_fact():
         assert "원문" in str(exc)
 
 
+def test_upward_trend_uses_only_start_and_end_values_present_in_verified_fact():
+    scene = {
+        "verified_facts": [{
+            "fact": "기준금리는 2.50%에서 2.75%로 0.25%p 인상됐다.",
+            "figure": "2.50% → 2.75% (+0.25%p)",
+        }],
+        "v5_verified_overlays": [{
+            "label": "인상폭",
+            "value": "0.25%p",
+            "start_value": "2.50%",
+            "end_value": "2.75%",
+            "visualization": "upward_trend",
+            "source_ref": "verified_facts[0]",
+            "anchor": {"x": .20, "y": .20, "width": .30, "height": .25, "kind": "embedded_monitor"},
+        }],
+    }
+
+    fact = facts_from_verified_scene(scene)[0]
+    rendered = apply_facts_to_surfaces(_png(), (fact,))
+
+    assert fact.visualization == "upward_trend"
+    assert fact.start_value == "2.50%"
+    assert fact.end_value == "2.75%"
+    assert _changed_bbox(_png(), rendered) is not None
+
+
+def test_upward_trend_rejects_an_unverified_endpoint():
+    scene = {
+        "verified_facts": [{"fact": "기준금리는 2.75%로 인상됐다.", "figure": "2.75%"}],
+        "v5_verified_overlays": [{
+            "label": "인상폭",
+            "value": "2.75%",
+            "start_value": "2.50%",
+            "end_value": "2.75%",
+            "visualization": "upward_trend",
+            "source_ref": "verified_facts[0]",
+            "anchor": {"x": .20, "y": .20, "width": .30, "height": .25, "kind": "embedded_monitor"},
+        }],
+    }
+
+    with pytest.raises(ValueError, match="시작·종료값"):
+        facts_from_verified_scene(scene)
+
+
 def test_embedded_monitor_updates_only_an_existing_display_interior():
     base = _png("#0f2940")
     result = apply_facts_to_surfaces(base, (
@@ -103,7 +157,9 @@ def test_embedded_monitor_updates_only_an_existing_display_interior():
     ))
     rendered = Image.open(io.BytesIO(result)).convert("RGB")
     assert rendered.getpixel((20, 20)) == Image.open(io.BytesIO(base)).convert("RGB").getpixel((20, 20))
-    assert rendered.getpixel((640, 280)) != Image.open(io.BytesIO(base)).convert("RGB").getpixel((640, 280))
+    left, top, right, bottom = _changed_bbox(base, result)
+    assert 448 <= left < right <= 806
+    assert 216 <= top < bottom <= 346
 
 
 def test_v5_contract_rejects_fact_anchor_outside_selected_primary_surface():
@@ -141,8 +197,9 @@ def test_v5_contract_accepts_fact_anchor_inside_selected_primary_surface():
 
     from app.v5.overlay.diegetic_fact_overlay import apply_verified_scene_facts
 
-    rendered = Image.open(io.BytesIO(apply_verified_scene_facts(_png(), scene))).convert("RGB")
-    assert rendered.getpixel((450, 350)) != Image.open(io.BytesIO(_png())).convert("RGB").getpixel((450, 350))
+    base = _png()
+    rendered_bytes = apply_verified_scene_facts(base, scene)
+    assert _changed_bbox(base, rendered_bytes) is not None
 
 
 @pytest.mark.parametrize("archetype", sorted(PRIMARY_SURFACE_REGIONS))

@@ -25,7 +25,6 @@ load_dotenv(ROOT.parent.parent / ".env")
 
 from app.utils.budget import ProviderRequestAudit
 from app.v5.cost_ledger import Bucket, BudgetExceeded, CostLedger, FxProvider
-from app.v5.overlay.diegetic_fact_overlay import apply_verified_scene_facts
 from app.v5.providers.gemini_provider import GeminiModel, GeminiProvider, GeminiProviderError
 from app.v5.scene.runtime_contract import attach_v5_scene_contracts
 from app.workers.script_worker import _classify_scene_types
@@ -75,10 +74,23 @@ def _worker_scene(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _reject_numeric_overlay_payload(scene: dict[str, Any]) -> None:
+    """대본 의미형 문구 전용 파일럿에 수치·사실 오버레이가 섞이지 않게 차단한다."""
+    scene_id = str(scene.get("scene_id") or "(unknown)")
+    prohibited_keys = ("verified_facts", "v5_verified_overlays", "market_chart", "numeric_overlays")
+    supplied = [key for key in prohibited_keys if scene.get(key)]
+    if supplied:
+        raise ValueError(
+            f"{scene_id}: 수치·사실 오버레이는 이 파일럿에서 사용할 수 없습니다: {', '.join(supplied)}"
+        )
+
+
 def _planned_scenes(payload: dict[str, Any]) -> list[dict[str, Any]]:
     source = list(payload.get("scenes") or [])
     if len(source) != 3:
         raise ValueError("이 파일럿은 검증 사실이 있는 정보형 3씬을 입력으로 요구합니다.")
+    for scene in source:
+        _reject_numeric_overlay_payload(scene)
     source.append(dict(GENERAL_SCENE))
     classified = _classify_scene_types([_worker_scene(raw) for raw in source])
     planned = attach_v5_scene_contracts(classified)
@@ -100,6 +112,10 @@ def main() -> int:
     parser.add_argument("--run-id", default="v5_actual_four_scene_pilot_20260801")
     parser.add_argument("--scene-ids", nargs="+", help="실제 호출할 씬 ID만 지정한다. 미지정 시 4씬 전체를 사용한다.")
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="이미 저장된 원본·최종 PNG를 복구하고, 해당 씬의 Gemini 재호출을 금지합니다.",
+    )
     args = parser.parse_args()
     if not args.run_id.replace("_", "").replace("-", "").isalnum():
         raise ValueError("run-id는 영문·숫자·밑줄·하이픈만 사용할 수 있습니다.")
@@ -125,7 +141,9 @@ def main() -> int:
     request_ledger_path = out_dir / "_request_ledger.json"
     manifest_path = out_dir / "_manifest.json"
     summary: dict[str, Any] = {
-        "status": "preflight_passed_no_api_call" if not args.execute else "running",
+        "status": "preflight_passed_no_api_call" if not args.execute else (
+            "recovering_without_api_call" if args.resume else "running"
+        ),
         "run_id": args.run_id,
         "scene_count": len(scenes),
         "model": GeminiModel.PRO.value,
@@ -142,7 +160,7 @@ def main() -> int:
                 "tier": scene["v5_render_contract"]["tier"],
                 "visual_text_policy": scene["v5_render_contract"]["visual_text_policy"],
                 "style_contract_version": scene["v5_render_contract"]["style_contract_version"],
-                "verified_overlay_present": bool(scene.get("v5_verified_overlays")),
+                "verified_overlay_present": False,
             }
             for scene in scenes
         ],
@@ -157,6 +175,17 @@ def main() -> int:
     for index, scene in enumerate(scenes):
         contract = scene["v5_render_contract"]
         scene_id = str(scene["scene_id"])
+        raw_path = out_dir / f"{scene_id}_background.png"
+        final_path = out_dir / f"{scene_id}.png"
+        if args.resume and raw_path.is_file() and raw_path.stat().st_size > 0 and final_path.is_file() and final_path.stat().st_size > 0:
+            results.append({
+                "scene_id": scene_id,
+                "status": "recovered_existing_file",
+                "background_path": str(raw_path),
+                "final_path": str(final_path),
+                "cost_status": "request_ledger_reconciliation_required",
+            })
+            continue
         ledger.guard(Bucket.IMAGE_FINAL, unit_usd)
         audit = ProviderRequestAudit.for_path(
             path=request_ledger_path,
@@ -180,14 +209,10 @@ def main() -> int:
                 contract["prompt_en"], model=GeminiModel.PRO, width=2048, height=1152,
                 seed=601 + index, reference_image_paths=references, request_audit=audit,
             )
-            raw_path = out_dir / f"{scene_id}_background.png"
             raw_path.parent.mkdir(parents=True, exist_ok=True)
             raw_path.write_bytes(result.image_bytes)
-            final_path = out_dir / f"{scene_id}.png"
-            if scene.get("v5_verified_overlays"):
-                final_path.write_bytes(apply_verified_scene_facts(result.image_bytes, scene))
-            else:
-                final_path.write_bytes(result.image_bytes)
+            # 최종 문구는 프롬프트의 소품 표면에만 포함한다. Pillow 수치 오버레이는 사용하지 않는다.
+            final_path.write_bytes(result.image_bytes)
             entry = ledger.record(
                 scene_id=scene_id, provider="gemini", model=GeminiModel.PRO.value,
                 request_kind="generate", bucket=Bucket.IMAGE_FINAL, estimated_usd=unit_usd,
@@ -204,7 +229,13 @@ def main() -> int:
             break
 
     summary.update({
-        "status": "completed" if len(results) == len(scenes) and all(item["status"] == "ok" for item in results) else "incomplete_or_blocked",
+        "status": (
+            "completed_recovered_no_api_call"
+            if len(results) == len(scenes) and all(item["status"] == "recovered_existing_file" for item in results)
+            else "completed"
+            if len(results) == len(scenes) and all(item["status"] in {"ok", "recovered_existing_file"} for item in results)
+            else "incomplete_or_blocked"
+        ),
         "cost_status": "unverified_until_console_reconciliation",
         "console_reconciliation_required_before_next_paid_stage": True,
         "request_ledger_path": str(request_ledger_path),
@@ -213,7 +244,7 @@ def main() -> int:
     })
     _write(manifest_path, summary)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0 if summary["status"] == "completed" else 4
+    return 0 if summary["status"] in {"completed", "completed_recovered_no_api_call"} else 4
 
 
 if __name__ == "__main__":

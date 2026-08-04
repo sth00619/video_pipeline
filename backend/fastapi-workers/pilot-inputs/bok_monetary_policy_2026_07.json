@@ -1,0 +1,83 @@
+{
+  "topic": "2026년 7월 한국은행 기준금리 인상과 물가",
+  "source": {
+    "publisher": "한국은행",
+    "published_at": "2026-07-16",
+    "url": "https://www.bok.or.kr/portal/bbs/P0000559/view.do?depth=200690&menuNo=200690&nttId=11062942&programType=newsData&relate=Y"
+  },
+  "scenes": [
+    {
+      "scene_id": "policy_rate_graph",
+      "scene_type": "graph",
+      "content": "금융 데이터 연구실에서 마스코트가 하나의 중심 홀로그램 패널을 보며 통화정책의 방향을 설명한다. 모델은 문자나 숫자를 그리지 않는다.",
+      "verified_facts": [
+        {
+          "figure": "2.75%",
+          "fact": "한국은행은 2026년 7월 16일 기준금리를 2.75%로 인상했다.",
+          "source_url": "https://www.bok.or.kr/portal/bbs/P0000559/view.do?depth=200690&menuNo=200690&nttId=11062942&programType=newsData&relate=Y",
+          "published_at": "2026-07-16"
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "기준금리",
+          "value": "2.75%",
+          "source_ref": "verified_facts[0]",
+          "anchor": {"x": 0.20, "y": 0.20, "width": 0.25, "height": 0.15, "kind": "embedded_monitor"}
+        }
+      ]
+    },
+    {
+      "scene_id": "policy_transmission_diagram",
+      "scene_type": "diagram",
+      "visual_archetype": "data_lab",
+      "content": "마스코트가 큰 벽면형 홀로그램 상승 추세선 앞에서 기준금리 인상의 흐름을 설명한다. 모델은 문자나 숫자를 그리지 않는다.",
+      "visual_constraints": "Use one broad physical in-wall holographic chart surface behind the mascot, integrated flush with the room architecture. The chart wall fills the left two-thirds of the frame and carries one unmistakable abstract rising trajectory from lower-left to upper-right with two large round endpoints. It is a story-first editorial economics illustration: the character points at the high endpoint and the wall, graph, light and character share one continuous composition. Do not use a world map, a separate monitor, a floating UI card, books, paper, chalkboards, letters, numerals, equations, X shapes, cross shapes, triangles, equals signs, or glyph-like marks. Keep every non-primary prop non-textual.",
+      "verified_facts": [
+        {
+          "figure": "2.50% → 2.75% (+0.25%p)",
+          "fact": "한국은행은 기준금리를 2.50%에서 2.75%로 0.25%p 인상했다고 밝혔다.",
+          "source_url": "https://www.bok.or.kr/portal/bbs/P0000559/view.do?depth=200690&menuNo=200690&nttId=11062942&programType=newsData&relate=Y",
+          "published_at": "2026-07-16"
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "인상폭",
+          "value": "0.25%p",
+          "source_ref": "verified_facts[0]",
+          "visualization": "upward_trend",
+          "start_value": "2.50%",
+          "end_value": "2.75%",
+          "anchor": {"x": 0.13, "y": 0.13, "width": 0.45, "height": 0.46, "kind": "embedded_monitor"}
+        }
+      ]
+    },
+    {
+      "scene_id": "inflation_metric",
+      "scene_type": "metric",
+      "content": "위험 관리실의 중앙 아날로그 게이지 앞에서 마스코트가 물가 위험 지표를 설명한다. 모델은 문자나 숫자를 그리지 않는다.",
+      "verified_facts": [
+        {
+          "figure": "3.2%",
+          "fact": "2026년 6월 소비자물가 상승률은 3.2%였다.",
+          "source_url": "https://www.bok.or.kr/portal/bbs/P0000559/view.do?depth=200690&menuNo=200690&nttId=11062942&programType=newsData&relate=Y",
+          "published_at": "2026-07-16"
+        }
+      ],
+      "v5_verified_overlays": [
+        {
+          "label": "소비자물가",
+          "value": "3.2%",
+          "source_ref": "verified_facts[0]",
+          "anchor": {"x": 0.40, "y": 0.30, "width": 0.20, "height": 0.15, "kind": "gauge_caption"}
+        }
+      ]
+    },
+    {
+      "scene_id": "policy_general",
+      "scene_type": "general",
+      "content": "항구의 경보등이 있는 연속적인 배경에서 마스코트가 통화정책을 이해하기 위한 준비를 한다. 모델은 문자나 숫자를 그리지 않는다."
+    }
+  ]
+}

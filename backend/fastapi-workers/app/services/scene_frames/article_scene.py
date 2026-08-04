@@ -18,6 +18,8 @@ def _font(size: int):
     for path in (
         "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
         "/app/assets/fonts/NanumGothicBold.ttf",
+        "C:/Windows/Fonts/malgunbd.ttf",
+        "C:/Windows/Fonts/malgun.ttf",
         "/System/Library/Fonts/AppleSDGothicNeo.ttc",
     ):
         try:

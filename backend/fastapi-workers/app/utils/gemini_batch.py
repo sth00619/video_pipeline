@@ -156,15 +156,8 @@ def poll(job_id: int) -> dict[str, Any]:
             path.write_bytes(raw)
         scene = dict(scene)
         scene.update({"image_path": str(path), "generation_method": "gemini_pro_batch_2k", "quality_score": 90, "batch_job_name": manifest["batch_name"]})
-        raw_path = image_dir / f"scene_{scene['index']:03d}_raw.png"
-        try:
-            from app.postprocess.text_overlay import add_headline
-            path.replace(raw_path)
-            add_headline(str(raw_path), str(path), str(scene.get("headline") or ""), str(scene.get("headline_mood") or "neutral"))
-        except Exception as exc:
-            logger.warning("Batch headline overlay skipped for scene %s: %s", scene["index"], exc)
-            if raw_path.exists() and not path.exists():
-                raw_path.replace(path)
+        # 배치 경로도 정규 생성 경로와 동일하게 이미지 위 요약 문구를 합성하지
+        # 않는다. 장면 내 영문 문구는 V5 프롬프트의 소품 표면에서만 생성한다.
         completed.append(scene)
     completed.sort(key=lambda scene: scene.get("index", 0))
     manifest["state"] = "BATCH_STATE_SUCCEEDED"

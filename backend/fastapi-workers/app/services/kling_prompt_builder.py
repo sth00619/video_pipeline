@@ -51,17 +51,45 @@ KLING_MOTION_TEMPLATES = {
         "4–5s: one existing warm light or already-present sparkle effect brightens gently and fades. "
         "Do not create trophies, coins, labels, numbers, charts, or text; do not alter any existing overlay. Camera remains locked."
     ),
+    "ambient_context": (
+        "0s: keep every person and mascot completely still. Animate only one existing practical light, "
+        "one existing cable or machine glow, and a few small dust motes. 3s: the glow returns to its original state. "
+        "Do not introduce a mascot, person, hand, sign, text, number, chart, or new prop. Camera remains locked."
+    ),
 }
 
 
-def build_kling_motion_prompt(scene_motion_type: str) -> dict:
-    """씬의 모션 유형에 맞는 고정 카메라 프롬프트와 네거티브를 반환한다."""
-    motion_type = scene_motion_type or "walking_intro"
+def build_kling_motion_prompt(scene_or_motion_type) -> dict:
+    """장면 메타데이터를 반영한 고정 카메라 프롬프트와 네거티브를 반환한다."""
+    scene = scene_or_motion_type if isinstance(scene_or_motion_type, dict) else {}
+    motion_type = str(scene.get("motion_type") if scene else scene_or_motion_type or "walking_intro")
+    if scene and not bool(scene.get("character_required", True)) and not scene.get("motion_type"):
+        motion_type = "ambient_context"
     if motion_type not in KLING_MOTION_TEMPLATES:
         logger.warning("Unknown motion type: %s. Defaulting to walking_intro.", motion_type)
         motion_type = "walking_intro"
 
+    # 대본/에디터가 준 동작·감정·편집 신호를 실제 요청에 반영한다. 값이
+    # 비어 있으면 템플릿만 사용하며, 숫자/사실 데이터를 새로 만들지 않는다.
+    action = str(scene.get("character_action") or scene.get("action") or "").strip()
+    emotion = str(scene.get("emotion_tag") or scene.get("emotion") or "").strip()
+    edit = str(scene.get("edit_marker") or scene.get("edit") or "").strip()
+    metadata_clause = " ".join(
+        clause for clause in (
+            f"Character action: {action}." if action else "",
+            f"Emotion: {emotion}." if emotion else "",
+            f"Edit beat: {edit}." if edit else "",
+        ) if clause
+    )
+
+    style_prefix = KLING_MOTION_TEMPLATES["_style_prefix"]
+    if scene and not bool(scene.get("character_required", True)):
+        style_prefix = style_prefix.replace(
+            "Animate only the mascot, one existing reactive prop, and one light or particle effect. ",
+            "Animate only one existing reactive prop and one light or particle effect; do not introduce a mascot or person. ",
+        )
+
     return {
-        "prompt": KLING_MOTION_TEMPLATES["_style_prefix"] + KLING_MOTION_TEMPLATES[motion_type],
+        "prompt": style_prefix + metadata_clause + " " + KLING_MOTION_TEMPLATES[motion_type],
         "negative_prompt": KLING_MOTION_TEMPLATES["_negative"],
     }

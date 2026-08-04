@@ -85,6 +85,25 @@ def test_v4_success_record_does_not_duplicate_a_reserved_gemini_attempt(tmp_path
     assert ledger["items"][0]["kind"] == "gemini_pro_request"
 
 
+def test_kling_success_record_does_not_duplicate_a_reserved_request(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(budget, "_job_path", lambda _job_id, _name: tmp_path / _name)
+    monkeypatch.setattr(budget.runtime_config, "get", lambda: {
+        "img_cost_flash_1k_usd": 0.05,
+        "img_cost_pro_2k_usd": 0.1,
+        "kling_cost_per_clip_usd": 0.35,
+        "usd_krw": 1000,
+        "max_budget_per_video_krw": 1000,
+    })
+    audit = ProviderRequestAudit.for_kling(job_id=1, scene_key="kling:0")
+    token = audit.before_attempt(attempt=1)
+    audit.after_attempt(token, status_code=200, outcome="succeeded")
+
+    ledger = record_cost(1, "kling", scene_key="kling:0")
+    assert ledger["total_krw"] == 350
+    assert len(ledger["items"]) == 1
+    assert ledger["items"][0]["kind"] == "kling_request"
+
+
 def test_provider_records_each_retry_before_post(tmp_path: Path, monkeypatch):
     class Response:
         def __init__(self, status_code: int, request_id: str):

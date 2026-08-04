@@ -1,0 +1,97 @@
+{
+  "job_id": 2026080212,
+  "created_at": "2026-08-02T09:17:48.789147+00:00",
+  "status": "completed",
+  "selected": [],
+  "skipped": [
+    {
+      "scene_id": "5",
+      "fact_index": 9,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "5",
+      "fact_index": 16,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "0",
+      "fact_index": 12,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "4",
+      "fact_index": 6,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "4",
+      "fact_index": 10,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "4",
+      "fact_index": 11,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "4",
+      "fact_index": 12,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "4",
+      "fact_index": 13,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "4",
+      "fact_index": 15,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "4",
+      "fact_index": 16,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "5",
+      "fact_index": 6,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "5",
+      "fact_index": 10,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "5",
+      "fact_index": 11,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "5",
+      "fact_index": 12,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "5",
+      "fact_index": 13,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    },
+    {
+      "scene_id": "5",
+      "fact_index": 15,
+      "reason": "EVIDENCE_SENTENCE_UNVERIFIED"
+    }
+  ],
+  "narration_hashes": {
+    "0": "ff639c47208a58148b64ade732b8c19bd14909dcd0ac7673d873a043beda62c0",
+    "1": "db1450e98bfb18a2ba9ccd29844cccc500604b5f1ea278b0a6294b48d241fe8b",
+    "2": "240e95822824a1911270c27fbaa50c764eb4505598e629a0b9cad19d02eb4a5c",
+    "3": "72335df19d07aa4ebcacc90d700fa02bdc8efa08fede298fac08e640e436d871",
+    "4": "1aea1ca9225fe8e0fe5d28b4a36ebab140f5104e83693b49562fb508f48200e6",
+    "5": "7eb1c8505a271a522f25c4020c64ab47f2385ed388f57dae71c67399754fbc4c"
+  },
+  "selected_count": 0
+}

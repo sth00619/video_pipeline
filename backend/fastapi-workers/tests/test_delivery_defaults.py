@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from app import runtime_config
 from app.utils.script_length import make_length_contract
@@ -15,6 +16,13 @@ class DeliveryDefaultsTests(unittest.TestCase):
     def test_default_voice_delivery_matches_reference_breaths(self):
         self.assertEqual(runtime_config.value("tts_speed"), 0.9)
         self.assertEqual(runtime_config.value("tts_sentence_pause_ms"), 350)
+
+    @patch("app.utils.script_length.resolve_cpm", return_value=(400.0, 2))
+    def test_speed_specific_calibration_is_not_scaled_twice(self, _resolve_cpm):
+        contract = make_length_contract(5, base_cpm=445, speed=0.9)
+
+        self.assertEqual(contract["target_chars"], 2000)
+        self.assertEqual(contract["effective_cpm"], 400.0)
         self.assertEqual(runtime_config.value("tts_paragraph_pause_ms"), 400)
         self.assertEqual(runtime_config.value("tts_thought_group_pause_ms"), 70)
         characters = [

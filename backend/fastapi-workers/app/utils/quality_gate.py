@@ -195,6 +195,7 @@ def assess_subtitles(chunks: list[dict[str, Any]], audio_duration: float, max_ch
     score = max(0, 100 - 20 * len(warnings))
     return {
         "score": score,
+        "passed": score >= 80,
         "warnings": warnings,
         "cue_count": len(chunks),
         "coverage": round(coverage, 4),

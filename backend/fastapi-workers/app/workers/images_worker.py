@@ -12,8 +12,10 @@
 비용: Fal.ai/Gemini API 콜 비용 + FFmpeg 로컬 코딩
 """
 import os
+import io
 import json
 import hashlib
+import math
 import logging
 import random
 import time
@@ -35,15 +37,93 @@ from app.v5.scene.runtime_contract import (
     prompt_for_scene,
     v5_provider_options,
 )
-from app.postprocess.text_overlay import add_headline
+from app.v5.scene.longform_visual_mix import apply_longform_visual_mix
+from app.v5.providers.gemini_provider import _load_default_references
 from app.utils.budget import ProviderRequestAudit, plan_preflight, record_cost, write_preflight
 from app.utils.intro_motion import infer_total_duration_seconds, select_intro_motion_scene_indices, scene_duration_seconds
+from app.utils.narration_contract import build_script_contract, verify_tts_against_script_contract
 from app.utils.gemini_pressure import gemini_pressure
 from app.utils.image_job_lock import acquire_image_job_lock, release_image_job_lock
 from app.utils.retry_policy import classify_image_error, error_signature
 from app.services.info_surface.info_scene_templates import select_template
 
 logger = logging.getLogger(__name__)
+
+
+def _ocr_review_reasons(scenes: list[dict]) -> list[str]:
+    """OCR 추정 사실은 AUTO 모드에서도 사용자 확인 없이는 확정할 수 없다."""
+    reasons: list[str] = []
+    for scene in scenes:
+        facts = scene.get("verified_facts") or scene.get("facts") or []
+        if not isinstance(facts, list):
+            continue
+        if any(
+            isinstance(fact, dict)
+            and str(fact.get("confidence") or fact.get("source_type") or fact.get("provenance") or "").lower() == "ocr_estimate"
+            for fact in facts
+        ):
+            reasons.append(f"OCR_ESTIMATE:scene_{scene.get('index', 'unknown')}")
+    return reasons
+
+
+def _resolved_visual_mode(scene: dict) -> str:
+    if _article_evidence_path(scene):
+        return "article_evidence"
+    contract = scene.get("v5_render_contract") or {}
+    mode = str(scene.get("visual_mode") or contract.get("visual_mode") or "").strip()
+    if mode:
+        return mode
+    return "archetype_explainer" if (scene.get("art_direction") or {}).get("character_required") else "semantic_illustration"
+
+
+def _visual_mix_audit(scenes: list[dict]) -> dict:
+    counts = Counter(_resolved_visual_mode(scene) for scene in scenes)
+    total = len(scenes)
+    failures: list[str] = []
+    if total >= 9:
+        minimum_article = max(1, math.ceil(total * 0.05))
+        minimum_generated = max(1, math.ceil(total * 0.25))
+        if counts["article_evidence"] < minimum_article:
+            failures.append(f"article_evidence:{counts['article_evidence']}<{minimum_article}")
+        for mode in ("semantic_illustration", "archetype_explainer"):
+            if counts[mode] < minimum_generated:
+                failures.append(f"{mode}:{counts[mode]}<{minimum_generated}")
+    return {"passed": not failures, "counts": dict(counts), "failures": failures}
+
+
+def _manual_review_reasons(scenes: list[dict], image_quality: dict | None = None) -> list[str]:
+    """의미 검수·구성 다양성·반복도를 통과하지 못하면 자동 확정을 차단한다."""
+    reasons = _ocr_review_reasons(scenes)
+    for scene in scenes:
+        if scene.get("retry_recommended"):
+            reasons.append(f"IMAGE_RETRY_RECOMMENDED:scene_{scene.get('index', 'unknown')}")
+
+    quality = image_quality or {}
+    semantic = quality.get("semantic_alignment") or {}
+    if bool(runtime_config.value("visual_qa_enabled")) and not semantic.get("reviewed"):
+        reasons.append("VISUAL_QA_UNAVAILABLE")
+    expected_semantic_reviews = min(len(scenes), int(runtime_config.value("visual_qa_max_scenes")), 24)
+    if bool(runtime_config.value("visual_qa_enabled")) and len(semantic.get("reviewed") or []) < expected_semantic_reviews:
+        reasons.append(
+            f"VISUAL_QA_INCOMPLETE:{len(semantic.get('reviewed') or [])}<{expected_semantic_reviews}"
+        )
+    for warning in semantic.get("warnings") or []:
+        if str(warning).startswith(("visual_qa_http_", "visual_qa_error", "visual_qa_invalid_json")):
+            reasons.append(f"VISUAL_QA_ERROR:{warning}")
+    for warning in (quality.get("art_direction") or {}).get("warnings") or []:
+        reasons.append(f"ART_DIRECTION:{warning}")
+    mix = quality.get("visual_mix") or _visual_mix_audit(scenes)
+    for failure in mix.get("failures") or []:
+        reasons.append(f"VISUAL_MIX:{failure}")
+
+    fingerprints = Counter(
+        hashlib.sha256(str(scene.get("prompt_en") or scene.get("prompt") or "").encode("utf-8")).hexdigest()
+        for scene in scenes if str(scene.get("prompt_en") or scene.get("prompt") or "").strip()
+    )
+    duplicate_limit = max(3, math.ceil(len(scenes) * 0.10))
+    if fingerprints and max(fingerprints.values()) > duplicate_limit:
+        reasons.append(f"PROMPT_LAYOUT_REPETITION:{max(fingerprints.values())}>{duplicate_limit}")
+    return sorted(set(reasons))
 
 
 def _apply_info_scene_template(scene: dict) -> tuple[dict, object | None]:
@@ -302,7 +382,8 @@ class ImagesWorker:
                  character_image_path: str = None, character_style_prompt: str = None,
                  character_poses_dir: str = None,
                  lora_model_id: str = None, lora_trigger_word: str = None,
-                 lora_scale: float = 1.0) -> dict:
+                 lora_scale: float = 1.0, autonomy_mode: str | None = None,
+                 budget_limit_krw: int | None = None, budget_policy_version: str | None = None) -> dict:
         """
         씬별 이미지를 생성합니다.
 
@@ -323,6 +404,8 @@ class ImagesWorker:
                 script_meta_json=script_meta_json, character_image_path=character_image_path,
                 character_style_prompt=character_style_prompt, character_poses_dir=character_poses_dir,
                 lora_model_id=lora_model_id, lora_trigger_word=lora_trigger_word, lora_scale=lora_scale,
+                autonomy_mode=autonomy_mode,
+                budget_limit_krw=budget_limit_krw, budget_policy_version=budget_policy_version,
             )
         finally:
             release_image_job_lock(job_id, lock_token)
@@ -332,10 +415,13 @@ class ImagesWorker:
                   character_image_path: str = None, character_style_prompt: str = None,
                   character_poses_dir: str = None,
                   lora_model_id: str = None, lora_trigger_word: str = None,
-                  lora_scale: float = 1.0) -> dict:
+                  lora_scale: float = 1.0, autonomy_mode: str | None = None,
+                  budget_limit_krw: int | None = None, budget_policy_version: str | None = None) -> dict:
         market_snapshot = {}
         self.market_snapshot = {}
         self.evidence_audit = {}
+        self.visual_mix_plan: dict = {}
+        self.tts_subtitle_sync: dict = {"passed": None, "reason": "tts_metadata_not_supplied"}
         script_data: dict = {}
         # scenes_meta가 주어지지 않은 경우 script_meta_json에서 복원
         if script_meta_json:
@@ -369,8 +455,32 @@ class ImagesWorker:
                 logger.error(f"script_meta_json에서 씬 목록 추출 실패: {e}")
                 scenes_meta = []
 
+        # 기존 이미지 생성 경로는 유지한다. 다만 TTS 메타데이터가 함께 온
+        # 정상 롱폼 경로에서는 이미지가 다른 대본에서 출발하지 않았는지 먼저 막는다.
+        if tts_meta_json and script_data:
+            try:
+                tts_data = json.loads(tts_meta_json)
+                if isinstance(tts_data, str):
+                    tts_data = json.loads(tts_data)
+                contract = script_data.get("narration_contract") or build_script_contract(
+                    str(script_data.get("script") or ""),
+                    list(script_data.get("sections") or script_data.get("scenes") or []),
+                )
+                self.tts_subtitle_sync = verify_tts_against_script_contract(tts_data, contract)
+            except Exception as exc:
+                raise RuntimeError(f"이미지 단계 대본·TTS·자막 계보 검증 실패: {exc}") from exc
+
         if not scenes_meta:
             scenes_meta = []
+        still_image_pilot = bool(script_data.get("still_image_pilot"))
+        if still_image_pilot:
+            test_budget_limit = int(runtime_config.value("gemini_test_image_budget_krw"))
+            if test_budget_limit <= 0:
+                raise RuntimeError("정지 이미지 파일럿 예산은 0원보다 커야 합니다.")
+            budget_limit_krw = min(
+                test_budget_limit,
+                int(budget_limit_krw) if budget_limit_krw is not None else test_budget_limit,
+            )
 
         if scenes_meta and bool(runtime_config.value("article_evidence_auto_enabled")):
             try:
@@ -399,6 +509,15 @@ class ImagesWorker:
                     "selected": [],
                 }
 
+        # 기사 캡처가 확정된 뒤에만 전체 대본의 장면 계보를 세 유형으로
+        # 배정한다. 원문·TTS 문장·장면 순서는 바꾸지 않는다.
+        if scenes_meta and not still_image_pilot:
+            scenes_meta, self.visual_mix_plan = apply_longform_visual_mix(scenes_meta)
+
+        # V5 visual_mode를 먼저 확정해야 기사형·상황형 장면에 마스코트를
+        # 강제로 넣는 기존 art-direction 계약을 피할 수 있다.
+        if scenes_meta and all(scene.get("scene_type") for scene in scenes_meta):
+            scenes_meta = attach_v5_scene_contracts(scenes_meta)
         if scenes_meta and not all(scene.get("art_direction") for scene in scenes_meta):
             scenes_meta = direct_scenes([
                 enrich_scene_plan(scene, i, len(scenes_meta))
@@ -406,13 +525,27 @@ class ImagesWorker:
             ])
         # ScriptWorker가 이미 확정한 scene_type을 운영 이미지 경로까지
         # 보존한다. 이 단계는 순수 계획만 만들며 이미지 API를 호출하지 않는다.
-        if scenes_meta and all(scene.get("scene_type") for scene in scenes_meta):
-            scenes_meta = attach_v5_scene_contracts(scenes_meta)
+        visual_mix_preflight = _visual_mix_audit(scenes_meta)
+        if not still_image_pilot and scenes_meta and not visual_mix_preflight["passed"]:
+            raise RuntimeError(
+                "IMAGE_MIX_PREFLIGHT_FAILED: 기사형·상황형·정보형 구성 비율이 기준을 충족하지 않습니다: "
+                + ", ".join(visual_mix_preflight["failures"])
+            )
         budget_preflight = None
         if scenes_meta:
             billable_scenes = [scene for scene in scenes_meta if not _article_evidence_path(scene)]
-            # Cost is planned before the first image call.  A high Pro limit
-            # is reduced to Flash coverage rather than rejecting a whole job.
+            # 재개 실행에서는 이미 검증되어 저장된 PNG를 다시 생성하거나 비용에
+            # 포함하지 않는다. Kling은 아직 생성하지 않았으므로 별도로 계속 예약한다.
+            pending_billable_scenes = [
+                scene for index, scene in enumerate(scenes_meta)
+                if not _article_evidence_path(scene)
+                and not (
+                    (cached_path := Path(f"/app/data/jobs/{job_id}/images/scene_{index:03d}.png")).is_file()
+                    and cached_path.stat().st_size > 15000
+                )
+            ]
+            # 모든 Pro 요청 비용을 첫 이미지 호출 전에 확인하며, 초과 시
+            # 품질을 낮추지 않고 작업 전체를 거절한다.
             estimated_total_duration = infer_total_duration_seconds(
                 scenes_meta,
                 float(runtime_config.value("scene_duration_sec")),
@@ -428,7 +561,7 @@ class ImagesWorker:
                 short_threshold=float(runtime_config.value("intro_motion_short_threshold")),
                 max_clips=(
                     0
-                    if not bool(runtime_config.value("intro_motion_enabled"))
+                    if still_image_pilot or not bool(runtime_config.value("intro_motion_enabled"))
                     else min(
                         2 if bool(runtime_config.value("intro_motion_test_mode")) else int(runtime_config.value("intro_motion_clip_count")),
                         int(runtime_config.value("intro_motion_clip_count")),
@@ -436,13 +569,51 @@ class ImagesWorker:
                 ),
                 clip_seconds=float(runtime_config.value("intro_motion_clip_seconds")),
             )
-            budget_preflight = plan_preflight(
-                len(billable_scenes),
-                str(runtime_config.value("image_quality_tier")),
-                int(runtime_config.value("pro_image_max_scenes")),
-                len(intro_motion_indices),
-                template_scene_count=sum(1 for scene in billable_scenes if select_template(scene, scene.get("proposed_template_id")) is not None),
+            template_scene_count = sum(
+                1 for scene in pending_billable_scenes
+                if select_template(scene, scene.get("proposed_template_id")) is not None
             )
+
+            def make_budget_preflight(kling_count: int) -> dict:
+                return plan_preflight(
+                    len(pending_billable_scenes),
+                    str(runtime_config.value("image_quality_tier")),
+                    int(runtime_config.value("pro_image_max_scenes")),
+                    kling_count,
+                    template_scene_count=template_scene_count,
+                    # 썸네일은 본편의 사람 검수·승인 뒤에 별도 단계로 만든다.
+                    # 이미지 생성 단계에서 비용을 예약하거나 자동으로 시작하지 않는다.
+                    include_thumbnail=False,
+                    budget_limit_krw=budget_limit_krw,
+                    policy_version=budget_policy_version,
+                )
+
+            requested_motion_count = len(intro_motion_indices)
+            gemini_image_only_budget = bool(
+                budget_policy_version and "gemini-image-only" in budget_policy_version
+            )
+            # Gemini 정지 이미지 예산에는 Fal 모션을 넣지 않는다. Fal은 이미지
+            # 검수 후 조립 단계에서 선택한 장면만 별도 비용으로 실행한다.
+            budget_preflight = make_budget_preflight(
+                0 if gemini_image_only_budget else requested_motion_count
+            )
+            # 선행 단계에서 사용한 비용만큼 잔여 예산이 줄면, 본문 이미지 품질은
+            # 유지하고 선택 사항인 인트로 Kling만 뒤 장면부터 축소한다.
+            while (
+                not gemini_image_only_budget
+                and not budget_preflight["allowed"]
+                and intro_motion_indices
+            ):
+                intro_motion_indices.remove(max(intro_motion_indices))
+                budget_preflight = make_budget_preflight(len(intro_motion_indices))
+            if len(intro_motion_indices) != requested_motion_count:
+                budget_preflight["actions"].append(
+                    "intro_motion_clips_reduced_for_remaining_budget:"
+                    f"{requested_motion_count}->{len(intro_motion_indices)}"
+                )
+            if gemini_image_only_budget:
+                budget_preflight["gemini_image_only_budget"] = True
+                budget_preflight["fal_motion_clips_reserved_separately"] = requested_motion_count
             if not billable_scenes:
                 # plan_preflight normally reserves one generated thumbnail;
                 # an evidence-only job has no generated still at all.
@@ -458,6 +629,8 @@ class ImagesWorker:
             budget_preflight["intro_motion_target_seconds"] = motion_target_seconds
             budget_preflight["intro_motion_planned_seconds"] = planned_motion_seconds
             budget_preflight["intro_motion_estimated_total_seconds"] = estimated_total_duration
+            budget_preflight["still_image_pilot"] = still_image_pilot
+            budget_preflight["resumed_scene_count"] = len(billable_scenes) - len(pending_billable_scenes)
             write_preflight(job_id, budget_preflight)
             if not budget_preflight["allowed"]:
                 raise RuntimeError(
@@ -469,7 +642,7 @@ class ImagesWorker:
             tiered_billable_scenes = plan_image_quality_tiers(
                 billable_scenes,
                 runtime_config.value("image_quality_tier"),
-                int(budget_preflight["pro_scene_count"]),
+                len(billable_scenes),
             )
             tiered_iter = iter(tiered_billable_scenes)
             scenes_meta = [scene if _article_evidence_path(scene) else next(tiered_iter) for scene in scenes_meta]
@@ -477,6 +650,42 @@ class ImagesWorker:
             # 하향되지 않도록 다시 명시한다.
             if all(scene.get("scene_type") for scene in scenes_meta):
                 scenes_meta = attach_v5_scene_contracts(scenes_meta)
+
+            # ── use_kling 씬 마킹 ──────────────────────────────────────────────
+            # intro_motion_indices(예산 확정 후의 최종 클립 목록)를 기반으로
+            # 각 씬에 use_kling 필드를 기록한다.
+            # longform_worker의 _has_manual_kling_selection()이 이 필드를 읽어
+            # Kling 호출 여부를 결정한다. 필드가 하나라도 있으면 manual 선택으로
+            # 인식하므로, 전체 씬에 True/False를 반드시 채워야 한다.
+            # - 기사 캡처 씬: 항상 False (이미 캡처 이미지 사용)
+            # - V5 검증 사실 오버레이 씬: 항상 False (수치 변형 방지)
+            # - 그 외 intro_motion_indices 해당 씬: True
+            _billable_idx_map = {
+                orig_idx: bill_idx
+                for bill_idx, orig_idx in enumerate(
+                    idx for idx, s in enumerate(scenes_meta)
+                    if not _article_evidence_path(s)
+                )
+            }
+            for _scene_idx, _scene in enumerate(scenes_meta):
+                if _article_evidence_path(_scene):
+                    _scene["use_kling"] = False
+                    continue
+                _v5_overlays = _scene.get("v5_verified_overlays")
+                _has_fact_overlay = isinstance(_v5_overlays, list) and bool(_v5_overlays)
+                if _has_fact_overlay:
+                    _scene["use_kling"] = False
+                    continue
+                _bill_idx = _billable_idx_map.get(_scene_idx)
+                _scene["use_kling"] = (
+                    _bill_idx is not None and _bill_idx in intro_motion_indices
+                )
+            logger.info(
+                "use_kling 마킹 완료: 총 %d씬 중 %d씬 True (intro_motion_indices=%s)",
+                len(scenes_meta),
+                sum(1 for s in scenes_meta if s.get("use_kling")),
+                sorted(intro_motion_indices),
+            )
 
         # Visual direction is deliberately separate from script writing. One
         # coordinated request assigns a distinct role/costume/action to every
@@ -500,12 +709,16 @@ class ImagesWorker:
                     scene["scene_spec"] = spec.to_dict()
                     scene["headline"] = spec.headline
 
-        # A selected channel character is an identity lock, not an additional
-        # suggestion next to the legacy Goldie sheet.  Passing both images to
-        # Gemini was the source of the unwanted mint/coin character mixture.
+        # V5 최종 경로는 승인된 캐릭터·화풍 참조 2장을 같은 순서로 반드시 전달한다.
+        # 단일 캐릭터 시트만 보내면서 두 번째 스타일 참조를 언급하면 계약이 모순된다.
+        is_v5_final_batch = any(is_v5_final_lane_scene(scene) for scene in scenes_meta)
         selected_character_exists = bool(character_image_path and Path(character_image_path).exists())
         character_reference_paths = []
-        reference_candidates = [character_image_path] if selected_character_exists else [str(DEFAULT_CHARACTER_SHEET)]
+        reference_candidates = (
+            _load_default_references()
+            if is_v5_final_batch
+            else [character_image_path] if selected_character_exists else [str(DEFAULT_CHARACTER_SHEET)]
+        )
         for path in reference_candidates:
             if path and Path(path).exists() and path not in character_reference_paths:
                 character_reference_paths.append(path)
@@ -677,6 +890,7 @@ class ImagesWorker:
             )
             scene_market_snapshot = scene.get("market_snapshot") or market_snapshot
             character_required = bool(art_direction.get("character_required", True))
+            effective_reference_paths = character_reference_paths if character_required else []
             pose_asset = art_direction.get("pose_asset") or pose
             # Keep a successful composite render on the normal quality path.
             # (The direct AI path assigns this inside its retry loop.)
@@ -717,7 +931,7 @@ class ImagesWorker:
             if ai_provider:
                 try:
                     effective_character_style = character_style_prompt if character_required else "none"
-                    if use_composite:
+                    if use_composite and character_required:
                         # [S2-3] 이중 레이어 합성
                         bg_path = str(job_dir / f"scene_{i:03d}_bg.png")
                         background_path = bg_path
@@ -731,8 +945,6 @@ class ImagesWorker:
                             fallback_pose=(scene.get("art_direction") or {}).get("fallback_pose") or pose,
                         )
                             
-                        if runtime_config.value("image_headline_overlay"):
-                            add_headline(img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
                     else:
                         # [Sprint 3 & S5] LoRA 또는 기본 일체형 모드 + AI 품질 검수 자동 재생성
                         max_retries = 1 if is_v5_scene else 2
@@ -757,8 +969,8 @@ class ImagesWorker:
                                     output_path=raw_img_path,
                                     section=section,
                                     keyword=prompt_en[:30],
-                                    character_image_path=character_reference_paths[0] if character_reference_paths else None,
-                                    character_image_paths=character_reference_paths,
+                                    character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
+                                    character_image_paths=effective_reference_paths,
                                     character_style_prompt=effective_character_style,
                                     lora_model_id=lora_model_id,
                                     lora_trigger_word=lora_trigger_word,
@@ -772,7 +984,7 @@ class ImagesWorker:
                                 gemini_request_audit=ProviderRequestAudit.for_job(
                                     job_id=job_id,
                                     scene_key=f"image:{i}",
-                                    model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                    model=str(image_profile.get("model") or "gemini-3-pro-image"),
                                 ),
                                 style_locked=bool(spec) or bool(provider_options.get("style_locked")),
                                 suppress_legacy_style_lock=bool(provider_options.get("suppress_legacy_style_lock")),
@@ -783,13 +995,10 @@ class ImagesWorker:
                                     last_pro_request_finished_at = time.monotonic()
                             # [S5] AI 품질 자동 검수
                             if os.path.exists(raw_img_path) and os.path.getsize(raw_img_path) > 15000:
-                                if runtime_config.value("image_headline_overlay"):
-                                    add_headline(raw_img_path, img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
-                                else:
-                                    # Generated typography distracts from the scene.  Keep
-                                    # the clean Pro frame and render spoken text as subtitles.
-                                    import shutil
-                                    shutil.copy2(raw_img_path, img_path)
+                                # 이미지 위 요약 헤드라인은 소품 표면 계약을 깨고
+                                # ASS 자막과 중복되므로 모든 운영 경로에서 합성하지 않는다.
+                                import shutil
+                                shutil.copy2(raw_img_path, img_path)
                                 self._apply_image_overlays(scene, img_path)
                                 # v4 보드 검출 실패는 이 경로에서만 한 번 더 생성한다.
                                 # 일반 제공자 재시도와 분리해 비용/manifest 의미를 보존한다.
@@ -797,8 +1006,8 @@ class ImagesWorker:
                                     regen_prompt = prompt_en + " Regenerate this same template with the blank physical board much larger, unobstructed, and clearly separated from the character."
                                     ai_provider.generate_image(
                                         prompt=regen_prompt, output_path=raw_img_path, section=section, keyword=regen_prompt[:30],
-                                        character_image_path=character_reference_paths[0] if character_reference_paths else None,
-                                        character_image_paths=character_reference_paths, character_style_prompt=effective_character_style,
+                                        character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
+                                        character_image_paths=effective_reference_paths, character_style_prompt=effective_character_style,
                                         lora_model_id=lora_model_id, lora_trigger_word=lora_trigger_word, lora_scale=lora_scale,
                                         image_provider=runtime_config.value("image_provider"), gemini_model=image_profile.get("model"),
                                         gemini_image_size=image_profile.get("image_size"), gemini_service_tier=runtime_config.value("gemini_service_tier"),
@@ -806,12 +1015,14 @@ class ImagesWorker:
                                         gemini_request_audit=ProviderRequestAudit.for_job(
                                             job_id=job_id,
                                             scene_key=f"template_regen:{i}",
-                                            model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                            model=str(image_profile.get("model") or "gemini-3-pro-image"),
                                         ),
                                         style_locked=bool(spec),
                                     )
                                     self._replace_with_regenerated_surface_source(scene, raw_img_path, img_path)
-                                    record_cost(job_id, "pro" if image_profile.get("tier") == "pro" else "flash", scene_key=f"template_regen:{i}")
+                                    # ProviderRequestAudit가 이 Gemini Pro 요청을 이미 원장에
+                                    # 기록한다. 여기서 다시 record_cost를 호출하면 한 요청이
+                                    # 두 번 합산된다.
                                     self._apply_image_overlays(scene, img_path)
                                 quality_score = 95 if lora_model_id else 90
                                 break
@@ -832,7 +1043,7 @@ class ImagesWorker:
                             var_img_path = str(job_dir / f"scene_{i:03d}_var_{v}.jpg")
                             var_prompt = prompt_en + f", alternate visual angle version {v}"
                             try:
-                                if use_composite:
+                                if use_composite and character_required:
                                     var_bg_path = str(job_dir / f"scene_{i:03d}_bg_var_{v}.png")
                                     self._generate_background_layer(
                                         ai_provider, var_prompt, var_bg_path, section, pose, image_profile,
@@ -853,7 +1064,7 @@ class ImagesWorker:
                                         output_path=var_raw_path,
                                         section=section,
                                         keyword=var_prompt[:30],
-                                        character_image_path=character_reference_paths[0] if character_reference_paths else None,
+                                        character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
                                         character_style_prompt=effective_character_style,
                                         lora_model_id=lora_model_id,
                                         image_provider=runtime_config.value("image_provider"),
@@ -862,21 +1073,19 @@ class ImagesWorker:
                                         gemini_request_audit=ProviderRequestAudit.for_job(
                                             job_id=job_id,
                                             scene_key=f"image:{i}:variation:{v}",
-                                            model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                            model=str(image_profile.get("model") or "gemini-3-pro-image"),
                                         ),
                                     )
                                     import shutil
                                     shutil.copy2(var_raw_path, var_img_path)
                                     self._apply_image_overlays(scene, var_img_path)
-                                if runtime_config.value("image_headline_overlay"):
-                                    add_headline(var_img_path, var_img_path, spec.headline if spec else scene.get("headline", ""), spec.mood if spec else "neutral")
                                 logger.info(f"Generated hold-time split variation {v} for scene {i} -> {var_img_path}")
                             except Exception as var_ex:
                                 logger.warning(f"Failed to generate hold-time split variation {v} for scene {i}: {var_ex}. Copying original.")
                                 import shutil
                                 shutil.copy2(img_path, var_img_path)
 
-                    record_cost(job_id, "pro" if image_profile.get("tier") == "pro" else "flash", scene_key=f"image:{i}")
+                    # Gemini Pro 직접 호출은 ProviderRequestAudit가 단일 비용 원장이다.
                     generated.append({
                         **scene,
                         "index": i,
@@ -885,7 +1094,7 @@ class ImagesWorker:
                         "background_path": background_path,
                         "clean_plate_path": background_path,
                         "asset_layout_metadata": _asset_layout_metadata(scene, background_path),
-                        "generation_method": "composite" if use_composite else ("flux_lora" if lora_model_id else image_profile.get("tier", "flash") + "_gemini"),
+                        "generation_method": "composite" if use_composite else "pro_gemini",
                         "quality_score": quality_score or 85,
                         "prompt_en": prompt_en,
                         "prompt_ko": prompt_ko,
@@ -992,8 +1201,10 @@ class ImagesWorker:
         image_quality["art_direction"] = assess_art_diversity(generated)
         image_quality["semantic_alignment"] = semantic_quality
         image_quality["scene_metadata_contract"] = _scene_metadata_contract(scenes_meta, generated)
+        image_quality["visual_mix"] = _visual_mix_audit(generated)
         persist_quality_report(job_id, "images", image_quality)
         logger.info(f"이미지 생성 완료: {len(generated)}개, quality={image_quality['score']}")
+        review_reasons = _manual_review_reasons(generated, image_quality)
         return {
             "job_id": job_id,
             "scenes": generated,
@@ -1001,7 +1212,11 @@ class ImagesWorker:
             "gifs": [],
             "gif_count": 0,
             "quality_report": {"images": image_quality},
+            "tts_subtitle_sync": self.tts_subtitle_sync,
             "evidence_audit": self.evidence_audit,
+            "visual_mix_plan": self.visual_mix_plan,
+            "requires_manual_review": bool(review_reasons),
+            "review_reasons": review_reasons,
         }
 
     def _generate_parallel_scenes(
@@ -1104,13 +1319,20 @@ class ImagesWorker:
             raw_img_path = str(job_dir / f"scene_{index:03d}_raw.png")
             background_path = None
             image_profile = ctx["image_profile"]
-            tier = image_profile.get("tier", "flash")
+            character_required = bool(ctx["art_direction"].get("character_required", True))
+            effective_reference_paths = character_reference_paths if character_required else []
+            tier = image_profile.get("tier", "pro")
             scene_fingerprint = fingerprint(ctx)
             # Legacy files without a manifest remain resumable; once a
             # manifest exists, a changed prompt/profile forces regeneration.
             if valid_image(img_path) and (str(index) not in image_manifest or image_manifest.get(str(index)) == scene_fingerprint):
                 # Validate/recreate the final composited still from its saved
                 # source image on every resume entry point.
+                # V5 검증 수치 오버레이는 원본 Gemini 출력 위에만 한 번 적용한다.
+                # 이미 합성된 PNG에 재개 실행이 겹쳐 쓰면 값이 누적되므로, 보존한
+                # raw 이미지를 먼저 복원한 뒤 최신 검증 사실을 다시 반영한다.
+                if is_v5_final_lane_scene(ctx) and valid_image(raw_img_path):
+                    shutil.copy2(raw_img_path, img_path)
                 self._apply_image_overlays(ctx, img_path)
                 resumed_clean_plate = str(job_dir / f"scene_{index:03d}_bg.png")
                 if not Path(resumed_clean_plate).is_file():
@@ -1130,7 +1352,7 @@ class ImagesWorker:
                 provider_request_started = False
                 try:
                     Path(raw_img_path).unlink(missing_ok=True)
-                    if use_composite:
+                    if use_composite and character_required:
                         bg_path = str(job_dir / f"scene_{index:03d}_bg.png")
                         background_path = bg_path
                         self._generate_background_layer(
@@ -1147,9 +1369,6 @@ class ImagesWorker:
                             fallback_pose=ctx["art_direction"].get("fallback_pose") or ctx["pose"],
                         )
                             
-                        # ③ 말풍선은 캐릭터 위에
-                        if runtime_config.value("image_headline_overlay"):
-                            add_headline(img_path, img_path, ctx["headline"], ctx["headline_mood"])
                     else:
                         gemini_pressure.acquire()
                         provider_request_started = True
@@ -1158,9 +1377,9 @@ class ImagesWorker:
                             output_path=raw_img_path,
                             section=ctx["section"],
                             keyword=ctx["prompt_en"][:30],
-                            character_image_path=character_reference_paths[0] if character_reference_paths else None,
-                            character_image_paths=character_reference_paths,
-                            character_style_prompt=character_style_prompt if ctx["art_direction"].get("character_required", True) else "none",
+                            character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
+                            character_image_paths=effective_reference_paths,
+                            character_style_prompt=character_style_prompt if character_required else "none",
                             lora_model_id=lora_model_id,
                             lora_trigger_word=lora_trigger_word,
                             lora_scale=lora_scale,
@@ -1173,7 +1392,7 @@ class ImagesWorker:
                             gemini_request_audit=ProviderRequestAudit.for_job(
                                 job_id=job_id,
                                 scene_key=f"image:{index}",
-                                model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                model=str(image_profile.get("model") or "gemini-3-pro-image"),
                             ),
                             style_locked=bool(ctx["spec"]) or bool(provider_options.get("style_locked")),
                             suppress_legacy_style_lock=bool(provider_options.get("suppress_legacy_style_lock")),
@@ -1191,8 +1410,8 @@ class ImagesWorker:
                             regen_prompt = ctx["prompt_en"] + " Regenerate this same template with the blank physical board much larger, unobstructed, and clearly separated from the character."
                             ai_provider.generate_image(
                                 prompt=regen_prompt, output_path=raw_img_path, section=ctx["section"], keyword=regen_prompt[:30],
-                                character_image_path=character_reference_paths[0] if character_reference_paths else None,
-                                character_image_paths=character_reference_paths, character_style_prompt=character_style_prompt if ctx["art_direction"].get("character_required", True) else "none",
+                                character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
+                                character_image_paths=effective_reference_paths, character_style_prompt=character_style_prompt if character_required else "none",
                                 lora_model_id=lora_model_id, lora_trigger_word=lora_trigger_word, lora_scale=lora_scale,
                                 image_provider=runtime_config.value("image_provider"), gemini_model=image_profile.get("model"),
                                 gemini_image_size=image_profile.get("image_size"), gemini_service_tier=runtime_config.value("gemini_service_tier"),
@@ -1200,16 +1419,14 @@ class ImagesWorker:
                                 gemini_request_audit=ProviderRequestAudit.for_job(
                                     job_id=job_id,
                                     scene_key=f"template_regen:{index}",
-                                    model=str(image_profile.get("model") or "gemini-3.1-flash-image"),
+                                    model=str(image_profile.get("model") or "gemini-3-pro-image"),
                                 ),
                                 style_locked=bool(ctx["spec"]),
                             )
                             self._replace_with_regenerated_surface_source(ctx, raw_img_path, img_path)
-                            record_cost(job_id, "pro" if tier == "pro" else "flash", scene_key=f"template_regen:{index}")
+                            # 재생성 요청도 ProviderRequestAudit가 이미 기록한다.
                             self._apply_image_overlays(ctx, img_path)
                         
-                        if runtime_config.value("image_headline_overlay"):
-                            add_headline(img_path, img_path, ctx["headline"], ctx["headline_mood"])
 
                     if not valid_image(img_path):
                         raise RuntimeError("final image validation failed")
@@ -1262,9 +1479,7 @@ class ImagesWorker:
                     result = future.result()
                     image_manifest[str(index)] = result.pop("_fingerprint", "")
                     persist_manifest()
-                    if result.get("generation_method") != "resumed_existing":
-                        tier = str((result.get("image_profile") or {}).get("tier") or "flash")
-                        record_cost(job_id, "pro" if tier == "pro" else "flash")
+                    # 병렬 Gemini Pro 요청의 비용은 ProviderRequestAudit가 기록한다.
                     results.append(result)
                     logger.info("Parallel image scene complete: job=%s scene=%s", job_id, index)
                 except Exception as exc:
@@ -1309,8 +1524,7 @@ class ImagesWorker:
                         result = future.result()
                         image_manifest[str(index)] = result.pop("_fingerprint", "")
                         persist_manifest()
-                        tier = str((result.get("image_profile") or {}).get("tier") or "flash")
-                        record_cost(job_id, "pro" if tier == "pro" else "flash")
+                        # 복구 요청 역시 ProviderRequestAudit가 비용을 기록한다.
                         results.append(result)
                         logger.info("Image recovery scene complete: job=%s scene=%s", job_id, index)
                     except Exception as exc:
@@ -1351,8 +1565,10 @@ class ImagesWorker:
         image_quality["art_direction"] = assess_art_diversity(generated)
         image_quality["semantic_alignment"] = semantic_quality
         image_quality["scene_metadata_contract"] = _scene_metadata_contract(scenes_meta, generated)
+        image_quality["visual_mix"] = _visual_mix_audit(generated)
         persist_quality_report(job_id, "images", image_quality)
         logger.info("Parallel image generation complete: job=%s scenes=%s quality=%s", job_id, len(generated), image_quality["score"])
+        review_reasons = _manual_review_reasons(generated, image_quality)
         return {
             "job_id": job_id,
             "scenes": generated,
@@ -1360,8 +1576,12 @@ class ImagesWorker:
             "gifs": [],
             "gif_count": 0,
             "quality_report": {"images": image_quality},
+            "tts_subtitle_sync": self.tts_subtitle_sync,
             "budget_preflight": budget_preflight,
             "evidence_audit": self.evidence_audit,
+            "visual_mix_plan": self.visual_mix_plan,
+            "requires_manual_review": bool(review_reasons),
+            "review_reasons": review_reasons,
         }
 
     # ============================
@@ -1399,7 +1619,7 @@ class ImagesWorker:
             gemini_request_audit=ProviderRequestAudit.for_job(
                 job_id=job_id,
                 scene_key=scene_key,
-                model=str((image_profile or {}).get("model") or "gemini-3.1-flash-image"),
+                model=str((image_profile or {}).get("model") or "gemini-3-pro-image"),
             ),
             )
         except Exception as exc:
@@ -1731,21 +1951,48 @@ class ImagesWorker:
         layered = scene.get("layered_scene") or load_layer_manifest(img_path)
         if isinstance(layered, dict) and layered.get("surface_image_path"):
             self._resume_layered_scene(scene, img_path, layered)
+            self._apply_verified_fact_overlay(scene, img_path)
             return
         self._normalize_canvas(img_path)
-        # V5 정보 씬의 실제 값은 AI 프롬프트가 아니라 검증된 사실 원문과
-        # 명시 좌표를 통과한 물리 표면 교체만 사용한다. 일반 씬은 이 경로를 타지 않는다.
+        # V5는 이미지 모델이 만든 글자를 쓰지 않는다. 대본의 짧은 문구만
+        # 후처리로 합성하여 화풍과 캐릭터의 일관성을 유지한다.
         if isinstance(scene.get("v5_render_contract"), dict):
-            if scene.get("v5_verified_overlays") or scene.get("market_chart"):
-                from app.v5.overlay.verified_surface_payload import market_chart_from_verified_scene
-
-                chart = market_chart_from_verified_scene(scene)
-                if chart is None:
-                    raise ValueError("V5 정보형 씬에는 검증된 물리 표면 데이터가 필요합니다.")
-                scene["market_chart"] = chart
-                self._apply_info_surface_plan(scene, img_path)
+            self._apply_verified_fact_overlay(scene, img_path)
             return
-        self._apply_info_surface_plan(scene, img_path)
+        # 기존 chart warp/data-cutaway 경로는 운영 이미지 생성에서 사용하지 않는다.
+        return
+
+    def _apply_verified_fact_overlay(self, scene: dict, img_path: str) -> None:
+        """검증 수치 오버레이 계획이 있는 V5 장면에만 소품 표면 텍스트를 합성한다.
+
+        ``v5_verified_overlays``는 ``runtime_contract.attach_v5_scene_contracts``가
+        이 장면이 실제로 그려진 archetype의 primary 표면 안에서만 만든 계획이다.
+        여기서는 좌표·값을 가공하지 않고, 렌더 직전 마지막 검증
+        (``facts_from_verified_scene``)을 통과해야만 실제로 합성한다. 검증
+        실패는 조용히 삼키지 않는다: 00 문서의 "조용한 폴백 금지" 원칙에 따라
+        예외를 그대로 올려 이 씬의 이미지 생성이 실패로 이어지게 한다.
+        """
+        overlays = scene.get("v5_verified_overlays")
+        if not isinstance(overlays, list) or not overlays:
+            return
+        from app.v5.overlay.diegetic_fact_overlay import apply_verified_scene_facts
+
+        with open(img_path, "rb") as handle:
+            source_bytes = handle.read()
+        with Image.open(io.BytesIO(source_bytes)) as probe:
+            original_format = probe.format or "PNG"
+        rendered_png = apply_verified_scene_facts(source_bytes, scene)
+        with Image.open(io.BytesIO(rendered_png)) as rendered:
+            if original_format in {"JPEG", "JPG"}:
+                rendered.convert("RGB").save(img_path, "JPEG", quality=95)
+            else:
+                rendered.save(img_path, original_format)
+        logger.info(
+            "scene %s verified fact overlay baked: %d surface value(s) -> %s",
+            scene.get("scene_id") or scene.get("id") or "?",
+            len(overlays),
+            img_path,
+        )
 
     def _replace_with_regenerated_surface_source(self, scene: dict, raw_img_path: str, img_path: str) -> None:
         """재생성된 보드를 다음 검출·워프의 새 원본으로 확정한다.
@@ -1788,7 +2035,6 @@ class ImagesWorker:
         from app.services.scene_layers import write_layer_manifest
 
         self._normalize_canvas(background_path)
-        self._apply_info_surface_plan(scene, background_path)
         direction = scene.get("art_direction") or {}
         if direction.get("character_required", True):
             placement_x = 0.02 if "left" in str(direction.get("character_placement") or "").lower() else CHAR_OVERLAY_X_RATIO
@@ -1831,10 +2077,8 @@ class ImagesWorker:
         if not Path(surface_path).is_file():
             logger.warning("Layer manifest has no usable surface plate for %s", output_path)
             return output_path
-        # Calling this against the background preserves/reuses its `_source`
-        # sibling, so a changed verified chart gets a fresh warp without ever
-        # involving the foreground character pixels.
-        self._apply_info_surface_plan(scene, surface_path)
+        # 검증 사실은 생성 직후 V5 슬롯 renderer가 적용한다. 재개 시에는
+        # 기존 합성 결과를 다시 warp하지 않아 캐릭터 영역을 보존한다.
         if foreground_asset and Path(foreground_asset).is_file():
             from app.services.scene_layers import compose_character_foreground, write_layer_manifest
             placement = str(layered.get("character_placement") or "right third")
@@ -1862,271 +2106,6 @@ class ImagesWorker:
             plan["final_image_path"] = str(output_path)
         scene["final_image_path"] = str(output_path)
         return str(output_path)
-
-    def _apply_info_surface_plan(self, scene: dict, img_path: str) -> str:
-        """Resolve detector/fallbacks into the final PNG/JPEG used by all later stages."""
-        if not bool(runtime_config.value("info_surface_enabled")):
-            return img_path
-        try:
-            import hashlib
-            import json
-            import shutil
-            import cv2
-            import numpy as np
-            from app.services.info_surface.contracts import (
-                INFO_SURFACE_CHART_STYLE_VERSION,
-                INFO_SURFACE_COMPOSITOR_VERSION,
-                INFO_SURFACE_DETECTOR_VERSION,
-                INFO_SURFACE_PHASE_B_VERSION,
-                INFO_SURFACE_PLAN_VERSION,
-                MIN_DIEGETIC_CHART_SHORT_SIDE_PX,
-                plan_from_scene,
-            )
-            from app.services.info_surface.detector import detect_surface_quad, detection_from_normalized_region
-            from app.services.info_surface.warp_compositor import composite_planar, render_data_cutaway
-
-            plan = plan_from_scene(scene)
-            chart = scene.get("market_chart")
-            if plan is None or not isinstance(chart, dict):
-                return img_path
-
-            # Preserve the generated still separately from the composited
-            # output.  This makes a resume deterministic even after the final
-            # PNG has been overwritten by a prior warp or cutaway.
-            final_path = Path(img_path)
-            source_path = Path(scene.get("source_image_path") or final_path.with_name(f"{final_path.stem}_source{final_path.suffix}"))
-            if not source_path.is_file():
-                shutil.copy2(final_path, source_path)
-
-            def sha256(path: Path) -> str:
-                digest = hashlib.sha256()
-                with path.open("rb") as handle:
-                    for block in iter(lambda: handle.read(1024 * 1024), b""):
-                        digest.update(block)
-                return digest.hexdigest()
-
-            source_hash = sha256(source_path)
-            previous_plan = scene.get("info_surface_plan") if isinstance(scene.get("info_surface_plan"), dict) else {}
-            attempt_history = list(previous_plan.get("render_attempts") or [])[-19:]
-
-            def record_attempt(outcome: str, reason: str | None = None) -> None:
-                """Append provenance; a later success must not erase a failure."""
-                attempt_history.append({
-                    "outcome": outcome,
-                    "reason": reason,
-                    "render_mode": plan.render_mode,
-                    "source_sha256": source_hash,
-                    "final_sha256": sha256(final_path) if final_path.is_file() else None,
-                })
-                plan.render_attempts = attempt_history[-20:]
-                if plan.render_mode == "DATA_CUTAWAY":
-                    plan.replacement_of_scene_id = plan.scene_id
-
-            def request_template_regeneration(reason: str) -> bool:
-                """템플릿 보드 실패는 예산 승인된 경우에만 한 번 재생성한다."""
-                if not plan.template_id or not bool(scene.get("_template_regeneration_enabled")):
-                    return False
-                if bool(scene.get("_template_regeneration_attempted")):
-                    return False
-                scene["_template_regeneration_attempted"] = True
-                scene["_template_regeneration_request"] = reason
-                plan.render_attempts = attempt_history + [{"outcome": "REGENERATE_REQUESTED", "reason": reason, "render_mode": plan.render_mode}]
-                scene["info_surface_plan"] = plan.model_dump()
-                return True
-            render_fingerprint = hashlib.sha256(json.dumps({
-                "source_sha256": source_hash,
-                "plan": plan.model_dump(mode="json"),
-                "chart": chart,
-                "versions": {
-                    "plan": INFO_SURFACE_PLAN_VERSION,
-                    "detector": INFO_SURFACE_DETECTOR_VERSION,
-                    "compositor": INFO_SURFACE_COMPOSITOR_VERSION,
-                    "chart_style": INFO_SURFACE_CHART_STYLE_VERSION,
-                    "phase_b": INFO_SURFACE_PHASE_B_VERSION,
-                },
-            }, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")).hexdigest()
-            previous = scene.get("info_surface_final_fingerprint")
-            if final_path.is_file() and previous == render_fingerprint:
-                final_hash = sha256(final_path)
-                if final_hash == scene.get("info_surface_final_sha256"):
-                    plan.source_image_path = str(source_path)
-                    plan.final_image_path = str(final_path)
-                    plan.render_attempts = attempt_history
-                    scene["info_surface_plan"] = plan.model_dump()
-                    scene["final_image_path"] = str(final_path)
-                    return str(final_path)
-
-            plan.source_image_path = str(source_path)
-            if plan.render_mode == "DATA_CUTAWAY":
-                result = render_data_cutaway(chart, self.CANVAS_SIZE, Image.open(source_path))
-                result.convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
-                plan.final_image_path = str(final_path)
-                record_attempt("DATA_CUTAWAY", plan.items[0].fallback_reason)
-                scene["info_surface_plan"] = plan.model_dump()
-                scene["final_image_path"] = str(final_path)
-                scene["source_image_path"] = str(source_path)
-                scene["info_surface_final_fingerprint"] = render_fingerprint
-                scene["info_surface_final_sha256"] = sha256(final_path)
-                return str(final_path)
-            if plan.surface is None or plan.surface.geometry != "planar_quad":
-                # P0 intentionally does not guess a shape for clouds/curved
-                # surfaces. Preserve data provenance and let the typed overlay
-                # planner use the role-specific fallback.
-                plan.render_mode = "DATA_CUTAWAY" if plan.items[0].role == "chart" else "GRAPHIC_LAYER"
-                plan.fallback_chain.append("unsupported_surface_geometry")
-                plan.chart_semantics_reduced = False
-                if plan.render_mode == "DATA_CUTAWAY":
-                    render_data_cutaway(chart, self.CANVAS_SIZE, Image.open(source_path)).convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
-                    plan.timeline_mode = "one_to_one_replace"
-                plan.final_image_path = str(final_path)
-                record_attempt(plan.render_mode, "unsupported_surface_geometry")
-                scene["info_surface_plan"] = plan.model_dump()
-                scene["final_image_path"] = str(final_path)
-                scene["source_image_path"] = str(source_path)
-                scene["info_surface_final_fingerprint"] = render_fingerprint
-                scene["info_surface_final_sha256"] = sha256(final_path)
-                return str(final_path)
-            bgr = cv2.cvtColor(np.asarray(Image.open(source_path).convert("RGB")), cv2.COLOR_RGB2BGR)
-            v5_contract = scene.get("v5_render_contract")
-            v5_region = v5_contract.get("primary_surface_region") if isinstance(v5_contract, dict) else None
-            if isinstance(v5_region, (list, tuple)) and len(v5_region) == 4:
-                detection = detection_from_normalized_region(bgr, tuple(float(value) for value in v5_region))
-            else:
-                detection = detect_surface_quad(bgr, plan.surface)
-            if detection is None or detection.confidence < float(runtime_config.value("info_surface_quad_min_confidence")):
-                if request_template_regeneration("quad_not_found"):
-                    return str(final_path)
-                plan.render_mode = "DATA_CUTAWAY" if plan.items[0].role == "chart" else "GRAPHIC_LAYER"
-                plan.fallback_chain.append("quad_not_found")
-                plan.items[0].resolved_mode = plan.render_mode
-                if plan.render_mode == "DATA_CUTAWAY":
-                    result = render_data_cutaway(chart, self.CANVAS_SIZE, Image.open(source_path))
-                    result.convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
-                    plan.timeline_mode = "one_to_one_replace"
-                plan.final_image_path = str(final_path)
-                record_attempt(plan.render_mode, "quad_not_found")
-                scene["info_surface_plan"] = plan.model_dump()
-                scene["final_image_path"] = str(final_path)
-                scene["source_image_path"] = str(source_path)
-                scene["info_surface_final_fingerprint"] = render_fingerprint
-                scene["info_surface_final_sha256"] = sha256(final_path)
-                return str(final_path)
-            available = float(np.count_nonzero((detection.surface_mask > 0) & (detection.occluder_mask == 0))) / max(1, np.count_nonzero(detection.surface_mask))
-            quad = detection.quad
-            short_side = min(
-                np.linalg.norm(quad[1] - quad[0]), np.linalg.norm(quad[2] - quad[3]),
-                np.linalg.norm(quad[3] - quad[0]), np.linalg.norm(quad[2] - quad[1]),
-            )
-            too_small = plan.items[0].role == "chart" and short_side < MIN_DIEGETIC_CHART_SHORT_SIDE_PX
-            if available < .60 or too_small:
-                if request_template_regeneration("surface_occluded" if available < .60 else "surface_too_small_for_1080p_type"):
-                    return str(final_path)
-                plan.render_mode = "DATA_CUTAWAY" if plan.items[0].role == "chart" else "GRAPHIC_LAYER"
-                fallback_reason = "surface_occluded" if available < .60 else "surface_too_small_for_1080p_type"
-                plan.fallback_chain.append(fallback_reason)
-                plan.items[0].resolved_mode = plan.render_mode
-                if plan.render_mode == "DATA_CUTAWAY":
-                    render_data_cutaway(chart, self.CANVAS_SIZE, Image.open(source_path)).convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
-                    plan.timeline_mode = "one_to_one_replace"
-            else:
-                diagram = None
-                if plan.diagram_kind and plan.diagram_kind not in {"none", "hero_stat"}:
-                    from app.services.info_surface.narrative_diagrams import render_diagram
-                    from app.services.info_surface.warp_compositor import diegetic_supersample_factor
-                    quad = detection.quad
-                    width = max(96, int(max(np.linalg.norm(quad[1] - quad[0]), np.linalg.norm(quad[2] - quad[3])) * 1.7))
-                    height = max(72, int(max(np.linalg.norm(quad[3] - quad[0]), np.linalg.norm(quad[2] - quad[1])) * 1.7))
-                    diagram_spec = _diagram_spec_from_scene(scene, plan)
-                    supersample = diegetic_supersample_factor((width, height), quad, inset_ratio=plan.surface.inset_ratio, text_candidates=tuple(item.label for item in diagram_spec.items))
-                    from dataclasses import replace
-                    diagram_spec = replace(
-                        diagram_spec,
-                        support_font_scale=float(supersample.get("support_font_scale", 1.0)),
-                        support_stroke_scale=float(supersample.get("support_stroke_scale", 1.0)),
-                    )
-                    render_size = (max(width, round(width * supersample["factor"])), max(height, round(height * supersample["factor"])))
-                    diagram = render_diagram(diagram_spec, render_size)
-                else:
-                    supersample = None
-                result = composite_planar(Image.open(source_path).convert("RGBA"), chart, plan, detection, content_override=diagram)
-                result.convert("RGB").save(final_path, "PNG" if final_path.suffix.lower() == ".png" else "JPEG", quality=95)
-                plan.detection = detection.as_dict()
-                if supersample is not None:
-                    plan.chart_render_metadata = {**(plan.chart_render_metadata or {}), "diagram_supersample": supersample, "diagram_render_size": list(diagram.size)}
-                # Phase B is intentionally inert unless this explicit flag is
-                # enabled. Its absence must leave the v3 Phase A PNG byte-for-
-                # byte on the normal path.
-                if bool(runtime_config.value("info_surface_harmonizer_enabled")):
-                    self._apply_phase_b_harmonizer(scene, final_path, plan, detection)
-            plan.final_image_path = str(final_path)
-            record_attempt(plan.render_mode, fallback_reason if available < .60 or too_small else None)
-            scene["info_surface_plan"] = plan.model_dump()
-            scene["final_image_path"] = str(final_path)
-            scene["source_image_path"] = str(source_path)
-            scene["info_surface_final_fingerprint"] = render_fingerprint
-            scene["info_surface_final_sha256"] = sha256(final_path)
-            return str(final_path)
-        except Exception as exc:
-            logger.warning("info-surface composition skipped for %s: %s", img_path, exc)
-            v5_contract = scene.get("v5_render_contract")
-            chart = scene.get("market_chart")
-            has_verified_v5_surface = isinstance(v5_contract, dict) and (
-                bool(scene.get("v5_verified_overlays"))
-                or (isinstance(chart, dict) and chart.get("verified") is True)
-            )
-            if has_verified_v5_surface:
-                # 검증 사실이 있어야 하는 V5 정보 씬은 합성 실패를 숨기면 안 된다.
-                # 빈 정보면이나 과거 AI 장식값을 최종 산출물로 내보내는 대신
-                # 호출자가 명시적으로 실패를 처리하도록 예외를 유지한다.
-                raise
-            return img_path
-
-    def _apply_phase_b_harmonizer(self, scene: dict, final_path: Path, plan, detection) -> None:
-        """Optional one-shot crop harmonization; gate failure always keeps Phase A."""
-        import cv2
-        import numpy as np
-        from app.services.info_surface.phase_b.contracts import BarSpec, ExpectedText, HarmonizeRequest
-        from app.services.info_surface.phase_b.harmonizer import harmonize_surface
-        from app.services.info_surface.phase_b.ocr_readers import GeminiVisionReader, TesseractReader
-        from app.services.info_surface.phase_b.providers import FalCannyProvider, GeminiEditProvider
-
-        frame = cv2.imread(str(final_path))
-        if frame is None:
-            plan.phase_b = {"accepted": False, "fallback_reason": "frame_load_failed"}
-            return
-        quad = detection.quad
-        min_x, min_y = np.min(quad, axis=0).astype(int); max_x, max_y = np.max(quad, axis=0).astype(int)
-        crop_bbox = (int(min_x), int(min_y), max(1, int(max_x - min_x)), max(1, int(max_y - min_y)))
-        hero = plan.hero_stat
-        texts = [item.text for item in plan.items if item.text]
-        if hero:
-            texts.extend([hero.headline_value, hero.headline_unit_label, hero.meaning_line])
-        metadata = dict(plan.chart_render_metadata or {})
-        raw_w, raw_h = metadata.get("canvas_size") or (1, 1)
-        bars = [
-            BarSpec(
-                bbox=(12 + round(float(item["bbox"][0]) / raw_w * crop_bbox[2]), 12 + round(float(item["bbox"][1]) / raw_h * crop_bbox[3]), max(1, round(float(item["bbox"][2]) / raw_w * crop_bbox[2])), max(1, round(float(item["bbox"][3]) / raw_h * crop_bbox[3]))),
-                value=float(item["value"]), fill_rgb=tuple(item["fill_rgb"]),
-            ) for item in metadata.get("bars") or []
-        ]
-        kind = str(plan.surface.surface_kind if plan.surface else "paper").lower()
-        surface_kind = "chalkboard" if "chalk" in kind else "monitor" if "monitor" in kind else "signboard" if "sign" in kind else "clipboard" if "clip" in kind else "paper"
-        provider_name = str(runtime_config.value("info_surface_harmonizer_provider"))
-        reader_name = str(runtime_config.value("info_surface_harmonizer_reader"))
-        request = HarmonizeRequest(
-            scene_id=plan.scene_id, surface_kind=surface_kind, crop_bbox_in_frame=crop_bbox,
-            expected_texts=[ExpectedText(text=text) for text in dict.fromkeys(texts)], bars=bars,
-            palette_rgb=[(7, 26, 58), (255, 244, 214), (246, 190, 40), (201, 75, 60)],
-            style_prompt=f"hand-inked cartoon texture appropriate for {surface_kind}; preserve all glyphs and geometry",
-            strength=float(runtime_config.value("info_surface_harmonizer_strength")), provider=provider_name,
-        )
-        provider = FalCannyProvider() if provider_name == "fal_canny" else GeminiEditProvider()
-        reader = TesseractReader() if reader_name == "tesseract" else GeminiVisionReader()
-        composite_mask = (detection.surface_mask > 0) & (detection.occluder_mask == 0)
-        report, final = harmonize_surface(request, frame, provider, reader, composite_mask_full=composite_mask, output_path=str(final_path))
-        plan.phase_b = report.model_dump()
-        if report.accepted:
-            cv2.imwrite(str(final_path), final)
 
     def _check_panel_blank_qc(self, img_path: str):
         """

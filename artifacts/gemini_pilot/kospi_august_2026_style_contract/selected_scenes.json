@@ -1,0 +1,23 @@
+[
+  {
+    "scene_id": "scene_000",
+    "scene_type": "graph",
+    "visual_archetype": "briefing_podium",
+    "title": "공포 지수가 식었다",
+    "content": "공포가 식고 시장의 긴장이 완화되는 흐름을 설명합니다."
+  },
+  {
+    "scene_id": "scene_001",
+    "scene_type": "graph",
+    "visual_archetype": "trade_calculator",
+    "title": "달러가 흔들렸다",
+    "content": "달러가 압박을 받는 시장 흐름을 설명합니다."
+  },
+  {
+    "scene_id": "scene_003",
+    "scene_type": "metric",
+    "visual_archetype": "risk_control_room",
+    "title": "7월의 공포",
+    "content": "시장 공포와 위험 신호를 설명합니다."
+  }
+]

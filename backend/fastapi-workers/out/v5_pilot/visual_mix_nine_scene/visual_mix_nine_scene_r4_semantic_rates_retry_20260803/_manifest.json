@@ -1,0 +1,252 @@
+{
+  "run_id": "visual_mix_nine_scene_r4_semantic_rates_retry_20260803",
+  "status": "completed",
+  "mode_counts": {
+    "article_evidence": 3,
+    "semantic_illustration": 3,
+    "archetype_explainer": 3
+  },
+  "article_assets": [
+    {
+      "scene_id": "article_kospi",
+      "source_url": "https://www.yna.co.kr/amp/view/AKR20260617148400008",
+      "image_path": "/app/data/jobs/820261/evidence/article_fb003d8ec5a32896.png",
+      "metadata_path": "/app/data/jobs/820261/evidence/article_fb003d8ec5a32896.json"
+    },
+    {
+      "scene_id": "article_us_market",
+      "source_url": "https://www.yna.co.kr/view/AKR20260227179400008",
+      "image_path": "/app/data/jobs/820262/evidence/article_57fcc70904c7a813.png",
+      "metadata_path": "/app/data/jobs/820262/evidence/article_57fcc70904c7a813.json"
+    },
+    {
+      "scene_id": "article_sector",
+      "source_url": "https://www.yna.co.kr/amp/view/AKR20260630149500008",
+      "image_path": "/app/data/jobs/820263/evidence/article_8bfa33730fae79df.png",
+      "metadata_path": "/app/data/jobs/820263/evidence/article_8bfa33730fae79df.json"
+    }
+  ],
+  "article_scenes": [
+    {
+      "scene_id": "article_kospi",
+      "visual_mode": "article_evidence",
+      "asset_source": "verified_article_capture",
+      "text_policy": "source_capture_only",
+      "overlay_policy": "underline_highlight_and_source_credit_only",
+      "numeric_visual_policy": "source_document_only",
+      "character_policy": "no_generated_mascot"
+    },
+    {
+      "scene_id": "article_us_market",
+      "visual_mode": "article_evidence",
+      "asset_source": "verified_article_capture",
+      "text_policy": "source_capture_only",
+      "overlay_policy": "underline_highlight_and_source_credit_only",
+      "numeric_visual_policy": "source_document_only",
+      "character_policy": "no_generated_mascot"
+    },
+    {
+      "scene_id": "article_sector",
+      "visual_mode": "article_evidence",
+      "asset_source": "verified_article_capture",
+      "text_policy": "source_capture_only",
+      "overlay_policy": "underline_highlight_and_source_credit_only",
+      "numeric_visual_policy": "source_document_only",
+      "character_policy": "no_generated_mascot"
+    }
+  ],
+  "gemini_budget_preflight": {
+    "planned_at": "2026-08-03T08:07:16.230651+00:00",
+    "scene_count": 6,
+    "quality_tier": "pro",
+    "pro_scene_count": 6,
+    "flash_scene_count": 0,
+    "kling_clip_count": 0,
+    "estimated_cost_krw": 1239,
+    "budget_limit_krw": 5000,
+    "retry_buffer_pct": 10.0,
+    "allowed": true,
+    "policy_version": "runtime-default",
+    "actions": [],
+    "reason": null,
+    "template_scene_count": 0,
+    "template_retry_reserve_krw": 0,
+    "template_regeneration_enabled": true,
+    "rates": {
+      "img_cost_pro_2k_usd": 0.134,
+      "kling_cost_per_clip_usd": 0.35,
+      "usd_krw": 1400.0
+    }
+  },
+  "generated_scenes": [
+    {
+      "scene_id": "semantic_rates_flow",
+      "visual_mode": "semantic_illustration",
+      "archetype": "weather_map",
+      "caption": null,
+      "overlay_policy": "ass_subtitle_only",
+      "numeric_visual_policy": "prohibited",
+      "character_policy": "fixed_reference_when_character_required"
+    },
+    {
+      "scene_id": "semantic_bigtech_ai",
+      "visual_mode": "semantic_illustration",
+      "archetype": "data_lab",
+      "caption": null,
+      "overlay_policy": "ass_subtitle_only",
+      "numeric_visual_policy": "prohibited",
+      "character_policy": "fixed_reference_when_character_required"
+    },
+    {
+      "scene_id": "semantic_chip_kospi",
+      "visual_mode": "semantic_illustration",
+      "archetype": "risk_control_room",
+      "caption": null,
+      "overlay_policy": "ass_subtitle_only",
+      "numeric_visual_policy": "prohibited",
+      "character_policy": "fixed_reference_when_character_required"
+    },
+    {
+      "scene_id": "info_semiconductor",
+      "visual_mode": "archetype_explainer",
+      "archetype": "data_lab",
+      "caption": "SEMICONDUCTOR GOES DOWN",
+      "overlay_policy": "ass_subtitle_only",
+      "numeric_visual_policy": "prohibited",
+      "character_policy": "fixed_reference_when_character_required"
+    },
+    {
+      "scene_id": "info_dollar",
+      "visual_mode": "archetype_explainer",
+      "archetype": "weather_map",
+      "caption": "DOLLAR UNDER PRESSURE",
+      "overlay_policy": "ass_subtitle_only",
+      "numeric_visual_policy": "prohibited",
+      "character_policy": "fixed_reference_when_character_required"
+    },
+    {
+      "scene_id": "info_fear",
+      "visual_mode": "archetype_explainer",
+      "archetype": "risk_control_room",
+      "caption": "FEAR IS COOLING",
+      "overlay_policy": "ass_subtitle_only",
+      "numeric_visual_policy": "prohibited",
+      "character_policy": "fixed_reference_when_character_required"
+    }
+  ],
+  "article_policy": "verified_source_capture_only",
+  "numeric_financial_overlay": "prohibited",
+  "automatic_retry": false,
+  "reference_artifacts": [
+    {
+      "role": "character",
+      "filename": "character_reference_v4_identity_clean.png",
+      "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+    },
+    {
+      "role": "style",
+      "filename": "style_reference_v4_medium_clean.png",
+      "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+    }
+  ],
+  "cost_status": "unverified_until_console_reconciliation",
+  "console_reconciliation_required_before_next_paid_stage": true,
+  "request_ledger_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/_request_ledger.json",
+  "results": [
+    {
+      "scene_id": "article_kospi",
+      "status": "verified_source_asset_emphasized",
+      "plain_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/article_kospi_plain.png",
+      "final_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/article_kospi.png",
+      "source_url": "https://www.yna.co.kr/amp/view/AKR20260617148400008",
+      "emphasis": {
+        "requested_body": "highlight_underline",
+        "effective_body": "highlight_underline",
+        "rect_downgraded": false
+      },
+      "cost_status": "no_image_generation_cost"
+    },
+    {
+      "scene_id": "article_us_market",
+      "status": "verified_source_asset_emphasized",
+      "plain_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/article_us_market_plain.png",
+      "final_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/article_us_market.png",
+      "source_url": "https://www.yna.co.kr/view/AKR20260227179400008",
+      "emphasis": {
+        "requested_body": "highlight_underline",
+        "effective_body": "highlight_underline",
+        "rect_downgraded": false
+      },
+      "cost_status": "no_image_generation_cost"
+    },
+    {
+      "scene_id": "article_sector",
+      "status": "verified_source_asset_emphasized",
+      "plain_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/article_sector_plain.png",
+      "final_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/article_sector.png",
+      "source_url": "https://www.yna.co.kr/amp/view/AKR20260630149500008",
+      "emphasis": {
+        "requested_body": "highlight_underline",
+        "effective_body": "highlight_underline",
+        "rect_downgraded": false
+      },
+      "cost_status": "no_image_generation_cost"
+    },
+    {
+      "scene_id": "semantic_rates_flow",
+      "status": "ok",
+      "seconds": 37.8,
+      "background_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/semantic_rates_flow_background.png",
+      "final_path": "/app/out/v5_pilot/visual_mix_nine_scene/visual_mix_nine_scene_r4_semantic_rates_retry_20260803/semantic_rates_flow.png",
+      "cost_status": "unverified_until_console_reconciliation",
+      "visual_mode_contract": {
+        "asset_source": "v5_gemini_scene",
+        "text_policy": "strict_textless",
+        "overlay_policy": "ass_subtitle_only",
+        "numeric_visual_policy": "prohibited",
+        "character_policy": "fixed_reference_when_character_required"
+      },
+      "style_contract_version": "2026-08-03-r4-korean-nonnumeric-three-mode-v1",
+      "prompt_sha256": "18bedbb3cabdc3fc2b46792c731602e81ebb4f892057a1056611d32d45f5f3b7"
+    }
+  ],
+  "generated_result_count": 1,
+  "executed_generated_scene_ids": [
+    "semantic_rates_flow"
+  ],
+  "ledger": {
+    "video_id": "visual_mix_nine_scene_r4_semantic_rates_retry_20260803",
+    "total_spent_krw": 254,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 254,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "semantic_rates_flow",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1785744474.9648342
+      }
+    ]
+  }
+}

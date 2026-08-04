@@ -1,0 +1,13 @@
+{
+  "keyword": "8월 코스피 전망",
+  "job_id": 2026080217,
+  "target_minutes": 10,
+  "selected_scene_count": 6,
+  "selected_by_type": {
+    "graph": 2,
+    "diagram": 2,
+    "metric": 2
+  },
+  "used_real_llm": true,
+  "claude_model": "claude-sonnet-4-6"
+}

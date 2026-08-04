@@ -15,6 +15,7 @@ from app.workers.images_worker import ImagesWorker, _scene_metadata_contract
 from app.workers.longform_worker import (
     _apply_editorial_overlays,
     _apply_speech_bubble_overlay,
+    _build_kling_motion_plan,
     _cap_intro_motion_for_short_video,
     _can_reuse_scene_clip,
     _cleanup_scene_clips,
@@ -30,6 +31,26 @@ from app.workers.images_worker import _character_regions
 
 
 class DataGraphicsAndMotionTests(unittest.TestCase):
+
+    def test_kling_motion_plan_records_only_the_opening_window(self):
+        plan = _build_kling_motion_plan(
+            scenes=[{"scene_id": f"s-{index}", "duration": 5} for index in range(4)],
+            total_duration=20,
+            target_seconds=15,
+            selected_seconds=15,
+            selected_indices={0, 1, 2},
+            requested_indices={0, 2},
+            protected_fact_indices={1},
+            clip_modes={0: "kling", 1: "static", 2: "kling", 3: "static"},
+            failures={},
+            has_manual_selection=True,
+        )
+
+        self.assertEqual(plan["window_start_seconds"], 0.0)
+        self.assertEqual(plan["window_end_seconds"], 15.0)
+        self.assertEqual(plan["requested_scene_indices"], [0, 2])
+        self.assertEqual(plan["delivered_scene_indices"], [0, 2])
+        self.assertEqual(plan["protected_verified_fact_scene_indices"], [1])
     def test_image_metadata_contract_reports_future_field_passthrough(self):
         source = [{"index": 0, "future_overlay": {"required": True}, "market_chart": {"verified": True}}]
         output = [{**source[0], "image_path": "/tmp/scene.png"}]
@@ -88,6 +109,22 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
         ))
         self.assertFalse(_should_request_kling_for_scene(
             information_scene, selected_for_intro_motion=True, has_manual_kling_selection=False,
+        ))
+
+    def test_v5_motion_contract_requires_explicit_textless_semantic_selection(self):
+        textless = {
+            "motion_contract": {"eligible": True, "requires_explicit_selection": True},
+            "use_kling": True,
+        }
+        captioned = {
+            "motion_contract": {"eligible": False, "requires_explicit_selection": True},
+            "use_kling": True,
+        }
+        self.assertTrue(_should_request_kling_for_scene(
+            textless, selected_for_intro_motion=True, has_manual_kling_selection=True,
+        ))
+        self.assertFalse(_should_request_kling_for_scene(
+            captioned, selected_for_intro_motion=True, has_manual_kling_selection=True,
         ))
 
     def test_static_retry_cache_cannot_bypass_requested_kling_motion(self):
@@ -178,14 +215,22 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
         self.assertTrue(_has_manual_kling_selection([{"use_kling": False}, {}]))
         self.assertTrue(_has_manual_kling_selection([{"use_kling": True}, {}]))
 
-    def test_speech_bubble_runtime_toggle_can_disable_overlay(self):
+    def test_speech_bubble_is_always_suppressed_by_script_caption_policy(self):
         self.assertFalse(_requires_verified_index_card({
             "index_data": {"verified": True, "name": "KOSPI"}
         }))
-        with patch("app.workers.longform_worker.runtime_config.value", return_value=False):
+        with patch("app.workers.longform_worker.runtime_config.value", return_value=True):
             self.assertTrue(_apply_speech_bubble_overlay(
                 {"bubble_text": "remove me"}, "unused.mp4", Path("."), 0, 5.0, 1
             ))
+
+    def test_numeric_bubble_is_suppressed_without_rendering(self):
+        scene = {"bubble_text": "1001포인트 상승"}
+        with patch("app.workers.longform_worker.runtime_config.value", return_value=True):
+            self.assertTrue(_apply_speech_bubble_overlay(
+                scene, "unused.mp4", Path("."), 0, 5.0, 1
+            ))
+        self.assertEqual(scene["overlay_provenance"][0]["skipped_reason"], "script_caption_only_policy")
 
     def test_one_minute_fal_proof_is_capped_to_four_opening_scenes(self):
         self.assertEqual(_cap_intro_motion_for_short_video(60, 12), 4)
@@ -321,11 +366,12 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
         }
         self.assertFalse(_requires_verified_market_chart(scene))
 
-    def test_verified_chart_without_final_surface_is_rejected_not_ffmpeg_overlaid(self):
+    def test_verified_chart_is_skipped_by_non_numeric_visual_policy(self):
         scene = {
             "market_chart": {"verified": True, "source": "fixture", "points": [{"close": 1}] * 5},
         }
-        self.assertFalse(_apply_editorial_overlays(scene, "/missing.mp4", Path("/tmp"), 1, 5.0, 0))
+        self.assertTrue(_apply_editorial_overlays(scene, "/missing.mp4", Path("/tmp"), 1, 5.0, 0))
+        self.assertEqual(scene["overlay_provenance"][0]["skipped_reason"], "non_numeric_visual_policy")
 
 
 if __name__ == "__main__":

@@ -51,6 +51,11 @@ public class VideoJob {
     private String policyJson;
 
     private BigDecimal budgetCap;
+
+    /** Gemini 정지 이미지 전용 상한. Fal 모션 및 다른 단계 비용과 분리해 기록한다. */
+    @Column(name = "gemini_image_budget_cap")
+    private BigDecimal geminiImageBudgetCap;
+
     private BigDecimal costAccumulated;
 
     private boolean makeShorts;
@@ -74,7 +79,7 @@ public class VideoJob {
     private String characterOverride;
 
     @Builder.Default
-    private boolean dataVisualsEnabled = true;
+    private boolean dataVisualsEnabled = false;
 
     /** GUIDED 작업에서 TTS 생성 전에 사용자가 선택한 목소리. */
     @Column(name = "tts_voice_id", length = 100)

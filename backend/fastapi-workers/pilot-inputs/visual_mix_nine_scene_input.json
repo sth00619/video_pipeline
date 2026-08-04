@@ -1,0 +1,16 @@
+{
+  "topic": "8월 코스피 전망 실제 대본 기반 롱폼 장면 구성 검증",
+  "scenes": [
+    {"scene_id": "article_kospi", "visual_mode": "article_evidence", "topic": "코스피 주간 전망", "article_capture_json": "C:/app/data/jobs/820261/evidence/article_fb003d8ec5a32896.json"},
+    {"scene_id": "article_us_market", "visual_mode": "article_evidence", "topic": "미국 증시 뉴스의 국내 시장 영향", "article_capture_json": "C:/app/data/jobs/820262/evidence/article_57fcc70904c7a813.json"},
+    {"scene_id": "article_sector", "visual_mode": "article_evidence", "topic": "반도체 섹터 관련 뉴스", "article_capture_json": "C:/app/data/jobs/820263/evidence/article_8bfa33730fae79df.json"},
+
+    {"scene_id": "semantic_rates_flow", "scene_type": "general", "visual_mode": "semantic_illustration", "visual_archetype": "weather_map", "character_required": true, "content": "연준의 금리 신호와 원·달러 환율이 외국인 자금 흐름에 영향을 주는 경로를 설명합니다.", "visual_intent": "A broadcast weather-map metaphor showing capital-flow winds crossing from the United States toward Korea, with directional bands and a calm-to-storm contrast, no text and no numbers."},
+    {"scene_id": "semantic_bigtech_ai", "scene_type": "general", "visual_mode": "semantic_illustration", "visual_archetype": "data_lab", "character_required": false, "content": "빅테크 실적이 AI 투자 우려를 해소할 수 있을지가 8월 시장 방향의 변수입니다.", "visual_intent": "A tactile broadcast analysis studio where a giant processor-and-server pipeline feeds an uncertain profit turbine, with one side glowing healthy and the other side flashing a warning, no mascot, no text, and no numbers."},
+    {"scene_id": "semantic_chip_kospi", "scene_type": "general", "visual_mode": "semantic_illustration", "visual_archetype": "risk_control_room", "character_required": true, "content": "삼성전자와 SK하이닉스의 실적 체력이 확인되면 코스피 반등의 근거가 될 수 있습니다.", "visual_intent": "Two large semiconductor modules power a broad market engine while connected sector gears begin to move, presented as one continuous physical control-room scene, no text and no numbers."},
+
+    {"scene_id": "info_semiconductor", "scene_type": "graph", "visual_mode": "archetype_explainer", "content": "반도체 섹터의 약세 가능성과 확인할 흐름을 설명합니다.", "visual_intent": "A graph with semiconductor chips and circuit patterns."},
+    {"scene_id": "info_dollar", "scene_type": "graph", "visual_mode": "archetype_explainer", "content": "달러 약세와 환율 흐름이 국내 시장에 주는 영향을 설명합니다.", "visual_intent": "A world-map silhouette, trade-flow arrows, and a broad descending non-numeric currency-pressure chart."},
+    {"scene_id": "info_fear", "scene_type": "metric", "visual_mode": "archetype_explainer", "content": "시장의 공포가 진정되는 과정과 남은 변동성 위험을 설명합니다.", "visual_intent": "A market risk index gauge showing fear cooling without values."}
+  ]
+}

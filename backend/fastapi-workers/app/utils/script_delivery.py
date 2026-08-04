@@ -96,6 +96,85 @@ def _edit_marker(text: str, emotion: str) -> str:
     return "scene_change"
 
 
+def pace_sections_for_runtime(
+    sections: list[dict[str, Any]], target_seconds: int, *, min_seconds: float = 4.5,
+    target_seconds_per_scene: float = 5.5, max_seconds: float = 6.5,
+) -> list[dict[str, Any]]:
+    """짧은 대사 조각을 5~6초 체류 장면으로 다시 묶는다.
+
+    이 단계는 대본의 단어·문장 순서를 바꾸지 않는다. TTS와 ASS가 소비할
+    원문은 유지한 채, 같은 흐름의 짧은 문장만 하나의 화면에 묶는다. 따라서
+    5분 영상이 9장 정지화면으로 늘어지는 일과 2~3초마다 무의미하게 화면이
+    바뀌는 일을 모두 막는다.
+    """
+    if not sections or target_seconds <= 0:
+        return [dict(section) for section in sections]
+    visible = [len(re.sub(r"\s+", "", str(item.get("content") or item.get("text") or ""))) for item in sections]
+    total_chars = sum(visible)
+    if total_chars <= 0:
+        return [dict(section) for section in sections]
+    chars_per_second = total_chars / float(target_seconds)
+    minimum = max(1, round(chars_per_second * min_seconds))
+    target = max(minimum, round(chars_per_second * target_seconds_per_scene))
+    maximum = max(target, round(chars_per_second * max_seconds))
+
+    fragments: list[dict[str, Any]] = []
+    for source in sections:
+        raw_text = str(source.get("content") or source.get("text") or "").strip()
+        sentences = split_sentences(raw_text)
+        # 대본 작가가 두 문장을 한 블록에 남긴 경우에만 문장 경계에서 푼다.
+        # 절대 글자 수로 잘라 TTS와 자막 원문을 훼손하지 않는다.
+        if len(sentences) > 1 and len(re.sub(r"\s+", "", raw_text)) > maximum:
+            for sentence in sentences:
+                item = dict(source)
+                item["content"] = sentence
+                item["text"] = sentence
+                item["text_for_tts"] = sentence
+                fragments.append(item)
+        else:
+            fragments.append(dict(source))
+
+    paced: list[dict[str, Any]] = []
+    bucket: list[dict[str, Any]] = []
+    bucket_chars = 0
+
+    def flush() -> None:
+        nonlocal bucket, bucket_chars
+        if not bucket:
+            return
+        first = dict(bucket[0])
+        texts = [str(item.get("content") or item.get("text") or "").strip() for item in bucket]
+        merged = " ".join(text for text in texts if text)
+        first["content"] = merged
+        first["text"] = merged
+        first["text_for_tts"] = merged
+        first["source_section_indexes"] = [
+            index for item in bucket for index in (item.get("source_section_indexes") or [item.get("scene_id")])
+        ]
+        first["runtime_pacing"] = {
+            "target_seconds_per_scene": target_seconds_per_scene,
+            "source_fragment_count": len(bucket),
+            "visible_char_count": bucket_chars,
+        }
+        paced.append(first)
+        bucket = []
+        bucket_chars = 0
+
+    for source in fragments:
+        char_count = len(re.sub(r"\s+", "", str(source.get("content") or source.get("text") or "")))
+        candidate_count = bucket_chars + char_count
+        # 이미 최소 읽기 길이에 도달한 경우만 다음 조각으로 넘긴다. 단일 문장이
+        # 상한보다 길면 문장 중간을 자르지 않고 독립 장면으로 보존한다.
+        if bucket and candidate_count > maximum and bucket_chars >= minimum:
+            flush()
+        bucket.append(dict(source))
+        bucket_chars += char_count
+        if bucket_chars >= target:
+            flush()
+    flush()
+    return paced
+
+
 def annotate_sections(sections: list[dict[str, Any]], target_seconds: int) -> list[dict[str, Any]]:
     """Add only metadata; existing section content stays byte-for-byte intact."""
     total_chars = sum(len(re.sub(r"\s+", "", str(item.get("content") or item.get("text") or ""))) for item in sections) or 1

@@ -1,0 +1,1203 @@
+{
+  "job_id": 2026080222,
+  "scenes": [
+    {
+      "scene_id": "scene_000",
+      "scene_type": "graph",
+      "visual_archetype": "briefing_podium",
+      "title": "공포 지수가 식었다",
+      "content": "공포가 식고 시장의 긴장이 완화되는 흐름을 설명합니다.",
+      "text": "공포가 식고 시장의 긴장이 완화되는 흐름을 설명합니다.",
+      "visual_type": "character_explainer",
+      "visual_plan": {
+        "objective": "character explains a causal scenario",
+        "visual_type": "character_explainer",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 0,
+        "source_scene_count": 3
+      },
+      "pose": "explaining",
+      "art_direction": {
+        "family": "cause_effect",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "smart casual presenter outfit",
+        "role_costume": "anchor",
+        "costume_state": "neutral",
+        "pose_asset": "anchor_neutral",
+        "fallback_pose": "explaining",
+        "character_required": true,
+        "camera": "wide establishing shot",
+        "lighting": "dramatic rim light",
+        "reference_composition": {
+          "id": "cause_effect",
+          "character_placement": "left third",
+          "character_area_target": 0.48,
+          "information_area_target": 0.3
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": false
+      },
+      "style_profile": "editorial_comic_2d",
+      "v5_render_contract": {
+        "scene_id": "scene_000",
+        "scene_type": "graph",
+        "selection": {
+          "scene_type": "graph",
+          "archetype": "briefing_podium",
+          "alternatives": [
+            "data_lab",
+            "weather_map",
+            "trade_calculator"
+          ],
+          "selection_reason": "파일럿 장면 다양성을 위한 명시적 archetype 선택",
+          "physical_surfaces": [
+            "the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium",
+            "podium nameplates",
+            "teleprompters"
+          ],
+          "primary_physical_surface": "the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium"
+        },
+        "scene_spec": {
+          "scene_id": "scene_000",
+          "archetype": "briefing_podium",
+          "emotion": "explain",
+          "costume": "reporter",
+          "pose": "present",
+          "frame_occupancy": 0.42,
+          "character_position": "right"
+        },
+        "prompt_en": "<prop_surface_priority> PROP SURFACE — broad curved presentation wall behind the podium. The exact English words 'FEAR IS COOLING' are written DIRECTLY ON THE BROAD CURVED PRESENTATION WALL BEHIND THE PODIUM surface. The text 'FEAR IS COOLING' is PHYSICALLY PART OF THE broad curved presentation wall behind the podium — it looks like it was printed, painted, or written ON the physical surface, not floating in mid-air, not a separate text layer, not a sticker placed on top. It is physically part of that prop and has the same material texture and lighting as the broad curved presentation wall behind the podium around it. Put a bold downward trend arrow and descending non-numeric bar-and-line chart directly below the words on that same surface. The prop itself is the message. No Korean characters, no numerals, no other English words, no brand marks, and no floating text anywhere else in the image. </prop_surface_priority> <character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, calm friendly explaining expression, gentle smile, wearing a brown fedora and a navy TV-anchor suit, one arm extended presenting, open palm gesture </character> <composition> Premium economic-explainer cartoon illustration. The gold coin mascot character occupies the RIGHT 40% of the frame. The background prop (chalkboard / screen / map / board) occupies the LEFT 55% of the frame. Character is full-body visible. The character MUST wear a BROWN FEDORA HAT. If the archetype provides a costume accessory (hard hat / graduation cap / headphones), it is added ON TOP of or INSTEAD of the fedora ONLY when the archetype explicitly defines it. Default is always the brown fedora. Character expression must match scene tone: down market = worried/sweating expression, up market = confident/happy expression, neutral = calm/explaining expression. Keep clear foreground, midground, and background depth around the one designated physical explanatory prop. </composition> <scene> SCENE VARIATION SEED: scene_000; use a distinct camera angle, prop arrangement, and lighting balance for this seed. STAGE: a formal policy and CEO press briefing room with one broad briefing surface embedded flush into the center back wall behind a central podium. KEY PROPS: a central podium, fixed microphones, press seating, broadcast cameras, ceiling lights, flag-color ribbons without emblems, and floor cables. LIGHTING: calm neutral press-room lighting with a focused warm key light and soft blue wall illumination. DECORATIVE DETAIL: non-writing briefing diagrams, microphone forms, camera silhouettes, ribbon colors, and cable lines. </scene> <art_direction> Cartoon illustration style with THICK BOLD BLACK INK OUTLINES (3-5px equivalent), flat cel shading with strong color contrast, NO watercolor, NO painterly effect, NO soft gradients, NO photorealism. Bright saturated colors, hard shadow edges, professional cartoon broadcast quality. The mascot is a cute gold coin character: perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. ALWAYS wearing a BROWN FEDORA HAT — this is non-negotiable, never omit the hat. Navy blue suit with white shirt and tie. White cartoon gloves. Brown cartoon shoes. Full body visible, proportional cartoon body. NO Korean characters anywhere in the image. NO floating text overlays separate from props. NO UI panels or boxes added on top of the scene. All text must be physically embedded in props (printed on signs, written on boards, displayed on screens). Use ONE archetype setting only — do not mix props from different settings. NO mixing chalkboard + scale + control panel in the same scene. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. Do not add a second information-bearing prop or borrow objects from another archetype setting. </background_information_density> <semantic_surface> FEAR IS COOLING physical prop surface with down direction </semantic_surface> <fact_surface_contract> IN-SCENE FACT-SURFACE CONTRACT: this is a graph scene. The only permitted information-bearing prop is the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium. Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, not an overlay placed on top of the frame. Every other gauge, map, placard, document, and console must show only needles, color blocks, abstract shapes, or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations.  For this briefing-podium scene, do not substitute the designated flush wall surface with a podium nameplate, teleprompter, press badge, microphone logo, flag emblem, freestanding briefing board, side screen, lower-third banner, or floating alert panel. Every podium plaque, fixed microphone, press seat, camera, ceiling light, flag-color ribbon, floor cable, and secondary screen must remain non-textual.  Outside the designated primary surface, do not create any monitor, screen, display, dashboard, kiosk, digital signage, teleprompter, or screen-shaped rectangular information device at all, even when blank or filled only with color blocks. Use only scene-native physical objects, lighting, material texture, abstract geometry, and non-screen silhouettes for background density. Only the exact script-derived English caption named in the PROP SURFACE section may appear on this primary prop. Do not add any other readable words, figures, labels, or values. </fact_surface_contract> <reserve> Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. Show only continuous background texture in those areas. Do not place the mascot's face or hands there. </reserve> <layout_contract> LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display. </layout_contract> <exclusions> DO NOT INCLUDE Korean text, Korean subtitles, any numeral, factual value, channel logo, watermark, generic floating dashboard card, detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. The gold coin mascot is the only anthropomorphic character; every other prop must be inanimate. </exclusions>",
+        "provider": "gemini_pro",
+        "tier": "hero",
+        "visual_text_policy": "script_captioned",
+        "style_contract_version": "2026-08-02-r2-target-cartoon-style-lock-v1",
+        "primary_surface_region": [
+          0.23,
+          0.16,
+          0.56,
+          0.46
+        ],
+        "surface_caption": {
+          "english": "FEAR IS COOLING",
+          "korean": "공포 지수가 식었다",
+          "direction": "down",
+          "target": "the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium"
+        },
+        "verified_overlay_mode": "prompt_embedded_script_caption",
+        "verified_overlay_present": false
+      },
+      "v5_scene_type_selection": {
+        "scene_type": "graph",
+        "archetype": "briefing_podium",
+        "alternatives": [
+          "data_lab",
+          "weather_map",
+          "trade_calculator"
+        ],
+        "selection_reason": "파일럿 장면 다양성을 위한 명시적 archetype 선택",
+        "physical_surfaces": [
+          "the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium",
+          "podium nameplates",
+          "teleprompters"
+        ],
+        "primary_physical_surface": "the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium"
+      },
+      "v5_scene_spec": {
+        "scene_id": "scene_000",
+        "archetype": "briefing_podium",
+        "emotion": "explain",
+        "costume": "reporter",
+        "pose": "present",
+        "frame_occupancy": 0.42,
+        "character_position": "right"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "pro_only_policy",
+        "v5_final_lane": true
+      },
+      "scene_spec": {
+        "scene_id": "0",
+        "narration": "공포가 식고 시장의 긴장이 완화되는 흐름을 설명합니다.",
+        "headline": "공포가 식다",
+        "metaphor": "골디가 활활 타오르던 모닥불을 부채로 부쳐 불꽃을 잦아들게 하며, 주변 얼음 조각들이 서서히 녹아 평온한 풀밭으로 바뀌는 장면으로 시장 긴장 완화를 표현한다.",
+        "character_role": "소방 대원",
+        "character_costume": "노란 방화복과 방화 헬멧, 흰 장갑, 금빛 동전 몸체가 드러나는 짧은 소매 방화 재킷",
+        "character_action": "두 손으로 커다란 부채를 힘차게 부쳐 모닥불 불꽃을 낮추고, 한쪽 발로 불씨를 살살 밟아 끄는 동작",
+        "character_emotion": "안도하며 뿌듯하게 미소 짓는 표정, 볼이 발그레함",
+        "setting": "한여름 초원 한가운데, 돌로 둘러싸인 캠프파이어 자리, 멀리 파란 하늘과 뭉게구름",
+        "props": [
+          "large folding fan",
+          "dying campfire with fading embers",
+          "melting ice chunks on the ground",
+          "stone fire ring",
+          "green meadow grass patch"
+        ],
+        "camera": "미디엄 샷, 골디를 중심으로 약간 낮은 앵글에서 부채질 동작을 강조, 불꽃과 얼음 녹은 물웅덩이가 전경에 배치",
+        "side_characters": "없음",
+        "mood": "positive",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "공포가 식다",
+      "_template_regeneration_enabled": false,
+      "index": 0,
+      "section": "scene_0",
+      "prompt_en": "<prop_surface_priority> PROP SURFACE — broad curved presentation wall behind the podium. The exact English words 'FEAR IS COOLING' are written DIRECTLY ON THE BROAD CURVED PRESENTATION WALL BEHIND THE PODIUM surface. The text 'FEAR IS COOLING' is PHYSICALLY PART OF THE broad curved presentation wall behind the podium — it looks like it was printed, painted, or written ON the physical surface, not floating in mid-air, not a separate text layer, not a sticker placed on top. It is physically part of that prop and has the same material texture and lighting as the broad curved presentation wall behind the podium around it. Put a bold downward trend arrow and descending non-numeric bar-and-line chart directly below the words on that same surface. The prop itself is the message. No Korean characters, no numerals, no other English words, no brand marks, and no floating text anywhere else in the image. </prop_surface_priority> <character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, calm friendly explaining expression, gentle smile, wearing a brown fedora and a navy TV-anchor suit, one arm extended presenting, open palm gesture </character> <composition> Premium economic-explainer cartoon illustration. The gold coin mascot character occupies the RIGHT 40% of the frame. The background prop (chalkboard / screen / map / board) occupies the LEFT 55% of the frame. Character is full-body visible. The character MUST wear a BROWN FEDORA HAT. If the archetype provides a costume accessory (hard hat / graduation cap / headphones), it is added ON TOP of or INSTEAD of the fedora ONLY when the archetype explicitly defines it. Default is always the brown fedora. Character expression must match scene tone: down market = worried/sweating expression, up market = confident/happy expression, neutral = calm/explaining expression. Keep clear foreground, midground, and background depth around the one designated physical explanatory prop. </composition> <scene> SCENE VARIATION SEED: scene_000; use a distinct camera angle, prop arrangement, and lighting balance for this seed. STAGE: a formal policy and CEO press briefing room with one broad briefing surface embedded flush into the center back wall behind a central podium. KEY PROPS: a central podium, fixed microphones, press seating, broadcast cameras, ceiling lights, flag-color ribbons without emblems, and floor cables. LIGHTING: calm neutral press-room lighting with a focused warm key light and soft blue wall illumination. DECORATIVE DETAIL: non-writing briefing diagrams, microphone forms, camera silhouettes, ribbon colors, and cable lines. </scene> <art_direction> Cartoon illustration style with THICK BOLD BLACK INK OUTLINES (3-5px equivalent), flat cel shading with strong color contrast, NO watercolor, NO painterly effect, NO soft gradients, NO photorealism. Bright saturated colors, hard shadow edges, professional cartoon broadcast quality. The mascot is a cute gold coin character: perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. ALWAYS wearing a BROWN FEDORA HAT — this is non-negotiable, never omit the hat. Navy blue suit with white shirt and tie. White cartoon gloves. Brown cartoon shoes. Full body visible, proportional cartoon body. NO Korean characters anywhere in the image. NO floating text overlays separate from props. NO UI panels or boxes added on top of the scene. All text must be physically embedded in props (printed on signs, written on boards, displayed on screens). Use ONE archetype setting only — do not mix props from different settings. NO mixing chalkboard + scale + control panel in the same scene. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. Do not add a second information-bearing prop or borrow objects from another archetype setting. </background_information_density> <semantic_surface> FEAR IS COOLING physical prop surface with down direction </semantic_surface> <fact_surface_contract> IN-SCENE FACT-SURFACE CONTRACT: this is a graph scene. The only permitted information-bearing prop is the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium. Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, not an overlay placed on top of the frame. Every other gauge, map, placard, document, and console must show only needles, color blocks, abstract shapes, or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations.  For this briefing-podium scene, do not substitute the designated flush wall surface with a podium nameplate, teleprompter, press badge, microphone logo, flag emblem, freestanding briefing board, side screen, lower-third banner, or floating alert panel. Every podium plaque, fixed microphone, press seat, camera, ceiling light, flag-color ribbon, floor cable, and secondary screen must remain non-textual.  Outside the designated primary surface, do not create any monitor, screen, display, dashboard, kiosk, digital signage, teleprompter, or screen-shaped rectangular information device at all, even when blank or filled only with color blocks. Use only scene-native physical objects, lighting, material texture, abstract geometry, and non-screen silhouettes for background density. Only the exact script-derived English caption named in the PROP SURFACE section may appear on this primary prop. Do not add any other readable words, figures, labels, or values. </fact_surface_contract> <reserve> Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. Show only continuous background texture in those areas. Do not place the mascot's face or hands there. </reserve> <layout_contract> LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display. </layout_contract> <exclusions> DO NOT INCLUDE Korean text, Korean subtitles, any numeral, factual value, channel logo, watermark, generic floating dashboard card, detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. The gold coin mascot is the only anthropomorphic character; every other prop must be inanimate. </exclusions>",
+      "prompt_ko": "공포가 식고 시장의 긴장이 완화되는 흐름을 설명합니다.",
+      "market_snapshot": {},
+      "headline_mood": "positive",
+      "bubble_text": "",
+      "motion_type": "",
+      "market_chart": null,
+      "index_data": null,
+      "v5_provider_options": {
+        "image_provider": "gemini",
+        "gemini_model": "gemini-3-pro-image",
+        "gemini_image_size": "2K",
+        "gemini_service_tier": "standard",
+        "gemini_max_attempts": 1,
+        "suppress_legacy_style_lock": true,
+        "style_locked": true,
+        "gemini_reference_contract_declared": true
+      },
+      "image_path": "/app/data/jobs/2026080222/images/scene_000.png",
+      "background_path": null,
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "left",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.015,
+            "y": 0.1,
+            "width": 0.41,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "generation_method": "pro_gemini",
+      "quality_score": 100,
+      "character_regions": [
+        {
+          "x": 0.015,
+          "y": 0.1,
+          "width": 0.41,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    },
+    {
+      "scene_id": "scene_001",
+      "scene_type": "graph",
+      "visual_archetype": "trade_calculator",
+      "title": "달러가 흔들렸다",
+      "content": "달러가 압박을 받는 시장 흐름을 설명합니다.",
+      "text": "달러가 압박을 받는 시장 흐름을 설명합니다.",
+      "visual_type": "character_explainer",
+      "visual_plan": {
+        "objective": "character explains a causal scenario",
+        "visual_type": "character_explainer",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 1,
+        "source_scene_count": 3
+      },
+      "pose": "thinking",
+      "art_direction": {
+        "family": "split_outcomes",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "growth_gold",
+          "colors": "mostly deep navy and white, one warm yellow emphasis, muted gray"
+        },
+        "wardrobe": "neutral analyst outfit with contrasting light",
+        "role_costume": "referee",
+        "costume_state": "neutral",
+        "pose_asset": "referee_neutral",
+        "fallback_pose": "thinking",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "bright editorial daylight",
+        "reference_composition": {
+          "id": "split_comparison",
+          "character_placement": "center foreground",
+          "character_area_target": 0.3,
+          "information_area_target": 0.48,
+          "scene_recipe": "a dramatic left-versus-right physical world split: one stressed environment and one stabilised environment, the mascot mediating in the foreground; two large blank illustrated parchment notices at upper left and upper right, with one blank white burst between them",
+          "information_surfaces": [
+            {
+              "kind": "parchment",
+              "x": 0.05,
+              "y": 0.07,
+              "width": 0.32,
+              "height": 0.28
+            },
+            {
+              "kind": "burst",
+              "x": 0.4,
+              "y": 0.05,
+              "width": 0.2,
+              "height": 0.25
+            },
+            {
+              "kind": "parchment",
+              "x": 0.63,
+              "y": 0.07,
+              "width": 0.32,
+              "height": 0.28
+            }
+          ]
+        },
+        "character_placement": "center foreground",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": false
+      },
+      "style_profile": "editorial_comic_2d",
+      "v5_render_contract": {
+        "scene_id": "scene_001",
+        "scene_type": "graph",
+        "selection": {
+          "scene_type": "graph",
+          "archetype": "trade_calculator",
+          "alternatives": [
+            "data_lab",
+            "weather_map",
+            "briefing_podium"
+          ],
+          "selection_reason": "파일럿 장면 다양성을 위한 명시적 archetype 선택",
+          "physical_surfaces": [
+            "the broad engraved front plinth directly beneath the scale's central pillar",
+            "printed documents",
+            "wall diagrams"
+          ],
+          "primary_physical_surface": "the broad engraved front plinth directly beneath the scale's central pillar"
+        },
+        "scene_spec": {
+          "scene_id": "scene_001",
+          "archetype": "trade_calculator",
+          "emotion": "confidence",
+          "costume": "vest",
+          "pose": "think",
+          "frame_occupancy": 0.42,
+          "character_position": "right"
+        },
+        "prompt_en": "<prop_surface_priority> PROP SURFACE — broad engraved front plinth directly beneath the brass balance scale's central pillar. The exact English words 'DOLLAR UNDER PRESSURE' are written DIRECTLY ON THE BROAD ENGRAVED FRONT PLINTH DIRECTLY BENEATH THE BRASS BALANCE SCALE'S CENTRAL PILLAR surface. The text 'DOLLAR UNDER PRESSURE' is PHYSICALLY PART OF THE broad engraved front plinth directly beneath the brass balance scale's central pillar — it looks like it was printed, painted, or written ON the physical surface, not floating in mid-air, not a separate text layer, not a sticker placed on top. It is physically part of that prop and has the same material texture and lighting as the broad engraved front plinth directly beneath the brass balance scale's central pillar around it. Put a bold downward trend arrow and descending non-numeric bar-and-line chart directly below the words on that same surface. The prop itself is the message. No Korean characters, no numerals, no other English words, no brand marks, and no floating text anywhere else in the image. </prop_surface_priority> <character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, smug confident half-lidded eyes, subtle smirk, wearing a brown fedora hat and navy blue suit with white shirt and tie, hand on chin in a thinking pose, holding a pen </character> <composition> Premium economic-explainer cartoon illustration. The gold coin mascot character occupies the RIGHT 40% of the frame. The background prop (chalkboard / screen / map / board) occupies the LEFT 55% of the frame. Character is full-body visible. The character MUST wear a BROWN FEDORA HAT. If the archetype provides a costume accessory (hard hat / graduation cap / headphones), it is added ON TOP of or INSTEAD of the fedora ONLY when the archetype explicitly defines it. Default is always the brown fedora. Character expression must match scene tone: down market = worried/sweating expression, up market = confident/happy expression, neutral = calm/explaining expression. Keep clear foreground, midground, and background depth around the one designated physical explanatory prop. </composition> <scene> SCENE VARIATION SEED: scene_001; use a distinct camera angle, prop arrangement, and lighting balance for this seed. STAGE: a stately trade calculation chamber centered on one large brass balance scale mounted on an engraved stone plinth. KEY PROPS: one large brass balance scale, its broad engraved front plinth, and a small stack of closed ledger books. LIGHTING: dark navy chamber light with focused amber spotlight and restrained red-alert rim light. DECORATIVE DETAIL: engraved metal texture, balance-chain detail, and non-writing etched directional marks only on the scale setting. </scene> <art_direction> Cartoon illustration style with THICK BOLD BLACK INK OUTLINES (3-5px equivalent), flat cel shading with strong color contrast, NO watercolor, NO painterly effect, NO soft gradients, NO photorealism. Bright saturated colors, hard shadow edges, professional cartoon broadcast quality. The mascot is a cute gold coin character: perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. ALWAYS wearing a BROWN FEDORA HAT — this is non-negotiable, never omit the hat. Navy blue suit with white shirt and tie. White cartoon gloves. Brown cartoon shoes. Full body visible, proportional cartoon body. NO Korean characters anywhere in the image. NO floating text overlays separate from props. NO UI panels or boxes added on top of the scene. All text must be physically embedded in props (printed on signs, written on boards, displayed on screens). Use ONE archetype setting only — do not mix props from different settings. NO mixing chalkboard + scale + control panel in the same scene. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. Do not add a second information-bearing prop or borrow objects from another archetype setting. </background_information_density> <semantic_surface> DOLLAR UNDER PRESSURE physical prop surface with down direction </semantic_surface> <fact_surface_contract> IN-SCENE FACT-SURFACE CONTRACT: this is a graph scene. The only permitted information-bearing prop is the broad engraved front plinth directly beneath the scale's central pillar. Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, not an overlay placed on top of the frame. Every other gauge, screen, map, placard, document, and console must show only needles, color blocks, abstract shapes, or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations.  For this trade-calculator scene, do not substitute the designated plinth with a freestanding information plaque, desk display, framed dashboard, separate board, podium sign, or any other standalone panel.Only the exact script-derived English caption named in the PROP SURFACE section may appear on this primary prop. Do not add any other readable words, figures, labels, or values. </fact_surface_contract> <reserve> Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. Show only continuous background texture in those areas. Do not place the mascot's face or hands there. </reserve> <layout_contract> LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display. </layout_contract> <exclusions> DO NOT INCLUDE Korean text, Korean subtitles, any numeral, factual value, channel logo, watermark, generic floating dashboard card, detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. The gold coin mascot is the only anthropomorphic character; every other prop must be inanimate. </exclusions>",
+        "provider": "gemini_pro",
+        "tier": "hero",
+        "visual_text_policy": "script_captioned",
+        "style_contract_version": "2026-08-02-r2-target-cartoon-style-lock-v1",
+        "primary_surface_region": [
+          0.36,
+          0.68,
+          0.38,
+          0.25
+        ],
+        "surface_caption": {
+          "english": "DOLLAR UNDER PRESSURE",
+          "korean": "달러가 흔들렸다",
+          "direction": "down",
+          "target": "the broad engraved front plinth directly beneath the scale's central pillar"
+        },
+        "verified_overlay_mode": "prompt_embedded_script_caption",
+        "verified_overlay_present": false
+      },
+      "v5_scene_type_selection": {
+        "scene_type": "graph",
+        "archetype": "trade_calculator",
+        "alternatives": [
+          "data_lab",
+          "weather_map",
+          "briefing_podium"
+        ],
+        "selection_reason": "파일럿 장면 다양성을 위한 명시적 archetype 선택",
+        "physical_surfaces": [
+          "the broad engraved front plinth directly beneath the scale's central pillar",
+          "printed documents",
+          "wall diagrams"
+        ],
+        "primary_physical_surface": "the broad engraved front plinth directly beneath the scale's central pillar"
+      },
+      "v5_scene_spec": {
+        "scene_id": "scene_001",
+        "archetype": "trade_calculator",
+        "emotion": "confidence",
+        "costume": "vest",
+        "pose": "think",
+        "frame_occupancy": 0.42,
+        "character_position": "right"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "pro_only_policy",
+        "v5_final_lane": true
+      },
+      "scene_spec": {
+        "scene_id": "1",
+        "narration": "달러가 압박을 받는 시장 흐름을 설명합니다.",
+        "headline": "달러 흔들림",
+        "metaphor": "골디가 거대한 달러 기호 모양의 추(pendulum)를 양손으로 붙잡고 흔들리는 것을 막으려 하지만 추가 좌우로 크게 흔들려 중심을 잃고 발이 들리는 장면으로 달러 압박을 표현한다.",
+        "character_role": "곡예사",
+        "character_costume": "은빛 스팽글 곡예복, 금빛 허리띠, 흰 장갑, 머리에 반짝이는 은빛 고깔모자",
+        "character_action": "흔들리는 거대한 추를 두 팔로 꽉 붙잡고 버티려 하지만 발이 바닥에서 들릴 만큼 좌우로 크게 쏠리는 동작, 다리가 허공에 뜬 상태",
+        "character_emotion": "당황하고 긴장된 표정, 눈이 커지고 식은땀 방울이 이마에 맺힘",
+        "setting": "서커스 천막 안, 화려한 조명 아래 공중에 매달린 추 장치, 바닥에는 톱밥이 깔린 원형 무대",
+        "props": [
+          "giant dollar-sign-shaped pendulum weight",
+          "thick rope attached to ceiling beam",
+          "sawdust-covered circular stage floor",
+          "colorful circus tent interior with striped canvas",
+          "swinging motion blur trails on pendulum"
+        ],
+        "camera": "와이드 미디엄 샷, 추의 흔들림 궤적이 화면 좌우를 가득 채우도록 앵글 설정, 골디는 화면 중앙 약간 하단",
+        "side_characters": "없음",
+        "mood": "alert",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "달러 흔들림",
+      "_template_regeneration_enabled": false,
+      "index": 1,
+      "section": "scene_1",
+      "prompt_en": "<prop_surface_priority> PROP SURFACE — broad engraved front plinth directly beneath the brass balance scale's central pillar. The exact English words 'DOLLAR UNDER PRESSURE' are written DIRECTLY ON THE BROAD ENGRAVED FRONT PLINTH DIRECTLY BENEATH THE BRASS BALANCE SCALE'S CENTRAL PILLAR surface. The text 'DOLLAR UNDER PRESSURE' is PHYSICALLY PART OF THE broad engraved front plinth directly beneath the brass balance scale's central pillar — it looks like it was printed, painted, or written ON the physical surface, not floating in mid-air, not a separate text layer, not a sticker placed on top. It is physically part of that prop and has the same material texture and lighting as the broad engraved front plinth directly beneath the brass balance scale's central pillar around it. Put a bold downward trend arrow and descending non-numeric bar-and-line chart directly below the words on that same surface. The prop itself is the message. No Korean characters, no numerals, no other English words, no brand marks, and no floating text anywhere else in the image. </prop_surface_priority> <character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, smug confident half-lidded eyes, subtle smirk, wearing a brown fedora hat and navy blue suit with white shirt and tie, hand on chin in a thinking pose, holding a pen </character> <composition> Premium economic-explainer cartoon illustration. The gold coin mascot character occupies the RIGHT 40% of the frame. The background prop (chalkboard / screen / map / board) occupies the LEFT 55% of the frame. Character is full-body visible. The character MUST wear a BROWN FEDORA HAT. If the archetype provides a costume accessory (hard hat / graduation cap / headphones), it is added ON TOP of or INSTEAD of the fedora ONLY when the archetype explicitly defines it. Default is always the brown fedora. Character expression must match scene tone: down market = worried/sweating expression, up market = confident/happy expression, neutral = calm/explaining expression. Keep clear foreground, midground, and background depth around the one designated physical explanatory prop. </composition> <scene> SCENE VARIATION SEED: scene_001; use a distinct camera angle, prop arrangement, and lighting balance for this seed. STAGE: a stately trade calculation chamber centered on one large brass balance scale mounted on an engraved stone plinth. KEY PROPS: one large brass balance scale, its broad engraved front plinth, and a small stack of closed ledger books. LIGHTING: dark navy chamber light with focused amber spotlight and restrained red-alert rim light. DECORATIVE DETAIL: engraved metal texture, balance-chain detail, and non-writing etched directional marks only on the scale setting. </scene> <art_direction> Cartoon illustration style with THICK BOLD BLACK INK OUTLINES (3-5px equivalent), flat cel shading with strong color contrast, NO watercolor, NO painterly effect, NO soft gradients, NO photorealism. Bright saturated colors, hard shadow edges, professional cartoon broadcast quality. The mascot is a cute gold coin character: perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. ALWAYS wearing a BROWN FEDORA HAT — this is non-negotiable, never omit the hat. Navy blue suit with white shirt and tie. White cartoon gloves. Brown cartoon shoes. Full body visible, proportional cartoon body. NO Korean characters anywhere in the image. NO floating text overlays separate from props. NO UI panels or boxes added on top of the scene. All text must be physically embedded in props (printed on signs, written on boards, displayed on screens). Use ONE archetype setting only — do not mix props from different settings. NO mixing chalkboard + scale + control panel in the same scene. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. Do not add a second information-bearing prop or borrow objects from another archetype setting. </background_information_density> <semantic_surface> DOLLAR UNDER PRESSURE physical prop surface with down direction </semantic_surface> <fact_surface_contract> IN-SCENE FACT-SURFACE CONTRACT: this is a graph scene. The only permitted information-bearing prop is the broad engraved front plinth directly beneath the scale's central pillar. Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, not an overlay placed on top of the frame. Every other gauge, screen, map, placard, document, and console must show only needles, color blocks, abstract shapes, or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations.  For this trade-calculator scene, do not substitute the designated plinth with a freestanding information plaque, desk display, framed dashboard, separate board, podium sign, or any other standalone panel.Only the exact script-derived English caption named in the PROP SURFACE section may appear on this primary prop. Do not add any other readable words, figures, labels, or values. </fact_surface_contract> <reserve> Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. Show only continuous background texture in those areas. Do not place the mascot's face or hands there. </reserve> <layout_contract> LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display. </layout_contract> <exclusions> DO NOT INCLUDE Korean text, Korean subtitles, any numeral, factual value, channel logo, watermark, generic floating dashboard card, detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. The gold coin mascot is the only anthropomorphic character; every other prop must be inanimate. </exclusions>",
+      "prompt_ko": "달러가 압박을 받는 시장 흐름을 설명합니다.",
+      "market_snapshot": {},
+      "headline_mood": "alert",
+      "bubble_text": "",
+      "motion_type": "",
+      "market_chart": null,
+      "index_data": null,
+      "v5_provider_options": {
+        "image_provider": "gemini",
+        "gemini_model": "gemini-3-pro-image",
+        "gemini_image_size": "2K",
+        "gemini_service_tier": "standard",
+        "gemini_max_attempts": 1,
+        "suppress_legacy_style_lock": true,
+        "style_locked": true,
+        "gemini_reference_contract_declared": true
+      },
+      "image_path": "/app/data/jobs/2026080222/images/scene_001.png",
+      "background_path": null,
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "generation_method": "pro_gemini",
+      "quality_score": 100,
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    },
+    {
+      "scene_id": "scene_003",
+      "scene_type": "metric",
+      "visual_archetype": "risk_control_room",
+      "title": "7월의 공포",
+      "content": "시장 공포와 위험 신호를 설명합니다.",
+      "text": "시장 공포와 위험 신호를 설명합니다.",
+      "visual_type": "character_explainer",
+      "visual_plan": {
+        "objective": "character explains a causal scenario",
+        "visual_type": "character_explainer",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 2,
+        "source_scene_count": 3
+      },
+      "pose": "explorer",
+      "art_direction": {
+        "family": "character_role",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "risk_crimson",
+          "colors": "mostly charcoal and white, one deep crimson warning, muted gray"
+        },
+        "wardrobe": "field explorer vest and utility cap",
+        "role_costume": "field_reporter",
+        "costume_state": "worried",
+        "pose_asset": "field_reporter_worried",
+        "fallback_pose": "explorer",
+        "character_required": true,
+        "camera": "low-angle hero shot",
+        "lighting": "cinematic practical lights",
+        "reference_composition": {
+          "id": "role_story",
+          "character_placement": "left third",
+          "character_area_target": 0.5,
+          "information_area_target": 0.25
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": false
+      },
+      "style_profile": "editorial_comic_2d",
+      "v5_render_contract": {
+        "scene_id": "scene_003",
+        "scene_type": "metric",
+        "selection": {
+          "scene_type": "metric",
+          "archetype": "risk_control_room",
+          "alternatives": [
+            "data_lab",
+            "retail_shock",
+            "trade_calculator",
+            "weather_map",
+            "port_emergency"
+          ],
+          "selection_reason": "파일럿 장면 다양성을 위한 명시적 archetype 선택",
+          "physical_surfaces": [
+            "the single large central analog gauge dial face embedded at eye level in the curved operations wall",
+            "metal warning plaques",
+            "control console"
+          ],
+          "primary_physical_surface": "the single large central analog gauge dial face embedded at eye level in the curved operations wall"
+        },
+        "scene_spec": {
+          "scene_id": "scene_003",
+          "archetype": "risk_control_room",
+          "emotion": "concern",
+          "costume": "formal",
+          "pose": "present",
+          "frame_occupancy": 0.42,
+          "character_position": "right"
+        },
+        "prompt_en": "<prop_surface_priority> PROP SURFACE — single large central analog gauge dial face embedded at eye level in the curved operations wall. The exact English words 'MARKET FEAR' are written DIRECTLY ON THE SINGLE LARGE CENTRAL ANALOG GAUGE DIAL FACE EMBEDDED AT EYE LEVEL IN THE CURVED OPERATIONS WALL surface. The text 'MARKET FEAR' is PHYSICALLY PART OF THE single large central analog gauge dial face embedded at eye level in the curved operations wall — it looks like it was printed, painted, or written ON the physical surface, not floating in mid-air, not a separate text layer, not a sticker placed on top. It is physically part of that prop and has the same material texture and lighting as the single large central analog gauge dial face embedded at eye level in the curved operations wall around it. Put a bold downward trend arrow and descending non-numeric bar-and-line chart directly below the words on that same surface. The prop itself is the message. No Korean characters, no numerals, no other English words, no brand marks, and no floating text anywhere else in the image. </prop_surface_priority> <character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, worried frightened face, spiral or wide eyes, sweat drops, wearing a brown fedora hat and navy blue suit with white shirt and tie, holding a cane, one arm extended presenting, open palm gesture </character> <composition> Premium economic-explainer cartoon illustration. The gold coin mascot character occupies the RIGHT 40% of the frame. The background prop (chalkboard / screen / map / board) occupies the LEFT 55% of the frame. Character is full-body visible. The character MUST wear a BROWN FEDORA HAT. If the archetype provides a costume accessory (hard hat / graduation cap / headphones), it is added ON TOP of or INSTEAD of the fedora ONLY when the archetype explicitly defines it. Default is always the brown fedora. Character expression must match scene tone: down market = worried/sweating expression, up market = confident/happy expression, neutral = calm/explaining expression. Keep clear foreground, midground, and background depth around the one designated physical explanatory prop. </composition> <scene> SCENE VARIATION SEED: scene_003; use a distinct camera angle, prop arrangement, and lighting balance for this seed. STAGE: a unified high-end market risk control room with one continuous curved operations wall and a broad central floor. KEY PROPS: a cracked shipping crate beside a closed golden umbrella, analog risk gauges, color-only chart silhouettes, alert lamps, and a large physical console. LIGHTING: a continuous cool-blue ambient room light with localized red warning glow and warm protective gold highlights, without a dividing line. DECORATIVE DETAIL: connected circuit paths, curved signal arcs, red-to-gold light gradients, gauge needles, and abstract non-linguistic chart forms in one uninterrupted space. </scene> <art_direction> Cartoon illustration style with THICK BOLD BLACK INK OUTLINES (3-5px equivalent), flat cel shading with strong color contrast, NO watercolor, NO painterly effect, NO soft gradients, NO photorealism. Bright saturated colors, hard shadow edges, professional cartoon broadcast quality. The mascot is a cute gold coin character: perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. ALWAYS wearing a BROWN FEDORA HAT — this is non-negotiable, never omit the hat. Navy blue suit with white shirt and tie. White cartoon gloves. Brown cartoon shoes. Full body visible, proportional cartoon body. NO Korean characters anywhere in the image. NO floating text overlays separate from props. NO UI panels or boxes added on top of the scene. All text must be physically embedded in props (printed on signs, written on boards, displayed on screens). Use ONE archetype setting only — do not mix props from different settings. NO mixing chalkboard + scale + control panel in the same scene. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. Do not add a second information-bearing prop or borrow objects from another archetype setting. </background_information_density> <semantic_surface> MARKET FEAR physical prop surface with down direction </semantic_surface> <fact_surface_contract> IN-SCENE FACT-SURFACE CONTRACT: this is a metric scene. The only permitted information-bearing prop is the single large central analog gauge dial face embedded at eye level in the curved operations wall. Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, not an overlay placed on top of the frame. Every other gauge, screen, map, placard, document, and console must show only needles, color blocks, abstract shapes, or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations.  For this risk-control-room scene, do not substitute the designated gauge dial face with a separate warning plaque, independent console screen, floating alert panel, desk display, framed dashboard, standalone sign, or any other panel. Every secondary gauge, warning plaque, console screen, control dial, signal lamp, floor marking, wall indicator, shipping crate, and closed umbrella must remain non-textual. Only the exact script-derived English caption named in the PROP SURFACE section may appear on this primary prop. Do not add any other readable words, figures, labels, or values. </fact_surface_contract> <reserve> Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. Show only continuous background texture in those areas. Do not place the mascot's face or hands there. </reserve> <layout_contract> LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display. </layout_contract> <exclusions> DO NOT INCLUDE Korean text, Korean subtitles, any numeral, factual value, channel logo, watermark, generic floating dashboard card, detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. The gold coin mascot is the only anthropomorphic character; every other prop must be inanimate. </exclusions>",
+        "provider": "gemini_pro",
+        "tier": "hero",
+        "visual_text_policy": "script_captioned",
+        "style_contract_version": "2026-08-02-r2-target-cartoon-style-lock-v1",
+        "primary_surface_region": [
+          0.33,
+          0.23,
+          0.34,
+          0.38
+        ],
+        "surface_caption": {
+          "english": "MARKET FEAR",
+          "korean": "월의 공포",
+          "direction": "down",
+          "target": "the single large central analog gauge dial face embedded at eye level in the curved operations wall"
+        },
+        "verified_overlay_mode": "prompt_embedded_script_caption",
+        "verified_overlay_present": false
+      },
+      "v5_scene_type_selection": {
+        "scene_type": "metric",
+        "archetype": "risk_control_room",
+        "alternatives": [
+          "data_lab",
+          "retail_shock",
+          "trade_calculator",
+          "weather_map",
+          "port_emergency"
+        ],
+        "selection_reason": "파일럿 장면 다양성을 위한 명시적 archetype 선택",
+        "physical_surfaces": [
+          "the single large central analog gauge dial face embedded at eye level in the curved operations wall",
+          "metal warning plaques",
+          "control console"
+        ],
+        "primary_physical_surface": "the single large central analog gauge dial face embedded at eye level in the curved operations wall"
+      },
+      "v5_scene_spec": {
+        "scene_id": "scene_003",
+        "archetype": "risk_control_room",
+        "emotion": "concern",
+        "costume": "formal",
+        "pose": "present",
+        "frame_occupancy": 0.42,
+        "character_position": "right"
+      },
+      "image_profile": {
+        "tier": "pro",
+        "model": "gemini-3-pro-image",
+        "image_size": "2K",
+        "reason": "pro_only_policy",
+        "v5_final_lane": true
+      },
+      "scene_spec": {
+        "scene_id": "2",
+        "narration": "시장 공포와 위험 신호를 설명합니다.",
+        "headline": "7월의 공포",
+        "metaphor": "골디가 짙은 안개가 낀 숲속 갈림길에서 붉은 경고 깃발을 손에 쥔 채 뒤를 돌아보며 긴장하는 장면으로, 길 위에 덫과 가시덤불이 가득한 위험한 시장 환경을 표현한다.",
+        "character_role": "탐험가",
+        "character_costume": "짙은 카키색 탐험 재킷, 챙 넓은 탐험 모자, 흰 장갑, 어깨에 멘 낡은 가방",
+        "character_action": "갈림길 앞에서 한 발을 멈추고, 한 손에 붉은 깃발을 높이 들며, 고개를 뒤로 돌려 뒤쪽을 경계하는 동작, 몸이 살짝 웅크림",
+        "character_emotion": "긴장하고 불안한 표정, 눈썹이 올라가고 동공이 흔들리는 듯한 묘사",
+        "setting": "한여름 7월 짙은 안개가 낀 어두운 숲속 갈림길, 나뭇가지 사이로 붉은 노을빛이 스며드는 황혼 배경",
+        "props": [
+          "red warning flag on a stick",
+          "rusty bear trap on the forest path",
+          "thorny bush blocking one fork of the trail",
+          "dense fog rolling across the ground",
+          "gnarled tree with twisted branches overhead"
+        ],
+        "camera": "로우 앵글 미디엄 샷, 갈림길의 두 방향이 모두 보이도록 넓게 잡고 골디를 중앙에 배치, 안개가 화면 하단을 덮어 자연스러운 저디테일 영역 형성",
+        "side_characters": "없음",
+        "mood": "negative",
+        "thumbnail_anchor": "",
+        "thumbnail_copy_zone": "auto",
+        "thumbnail_overlay_zone": "auto",
+        "thumbnail_target": "",
+        "diegetic_surface_kind": ""
+      },
+      "headline": "7월의 공포",
+      "_template_regeneration_enabled": false,
+      "index": 2,
+      "section": "scene_2",
+      "prompt_en": "<prop_surface_priority> PROP SURFACE — single large central analog gauge dial face embedded at eye level in the curved operations wall. The exact English words 'MARKET FEAR' are written DIRECTLY ON THE SINGLE LARGE CENTRAL ANALOG GAUGE DIAL FACE EMBEDDED AT EYE LEVEL IN THE CURVED OPERATIONS WALL surface. The text 'MARKET FEAR' is PHYSICALLY PART OF THE single large central analog gauge dial face embedded at eye level in the curved operations wall — it looks like it was printed, painted, or written ON the physical surface, not floating in mid-air, not a separate text layer, not a sticker placed on top. It is physically part of that prop and has the same material texture and lighting as the single large central analog gauge dial face embedded at eye level in the curved operations wall around it. Put a bold downward trend arrow and descending non-numeric bar-and-line chart directly below the words on that same surface. The prop itself is the message. No Korean characters, no numerals, no other English words, no brand marks, and no floating text anywhere else in the image. </prop_surface_priority> <character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, worried frightened face, spiral or wide eyes, sweat drops, wearing a brown fedora hat and navy blue suit with white shirt and tie, holding a cane, one arm extended presenting, open palm gesture </character> <composition> Premium economic-explainer cartoon illustration. The gold coin mascot character occupies the RIGHT 40% of the frame. The background prop (chalkboard / screen / map / board) occupies the LEFT 55% of the frame. Character is full-body visible. The character MUST wear a BROWN FEDORA HAT. If the archetype provides a costume accessory (hard hat / graduation cap / headphones), it is added ON TOP of or INSTEAD of the fedora ONLY when the archetype explicitly defines it. Default is always the brown fedora. Character expression must match scene tone: down market = worried/sweating expression, up market = confident/happy expression, neutral = calm/explaining expression. Keep clear foreground, midground, and background depth around the one designated physical explanatory prop. </composition> <scene> SCENE VARIATION SEED: scene_003; use a distinct camera angle, prop arrangement, and lighting balance for this seed. STAGE: a unified high-end market risk control room with one continuous curved operations wall and a broad central floor. KEY PROPS: a cracked shipping crate beside a closed golden umbrella, analog risk gauges, color-only chart silhouettes, alert lamps, and a large physical console. LIGHTING: a continuous cool-blue ambient room light with localized red warning glow and warm protective gold highlights, without a dividing line. DECORATIVE DETAIL: connected circuit paths, curved signal arcs, red-to-gold light gradients, gauge needles, and abstract non-linguistic chart forms in one uninterrupted space. </scene> <art_direction> Cartoon illustration style with THICK BOLD BLACK INK OUTLINES (3-5px equivalent), flat cel shading with strong color contrast, NO watercolor, NO painterly effect, NO soft gradients, NO photorealism. Bright saturated colors, hard shadow edges, professional cartoon broadcast quality. The mascot is a cute gold coin character: perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. ALWAYS wearing a BROWN FEDORA HAT — this is non-negotiable, never omit the hat. Navy blue suit with white shirt and tie. White cartoon gloves. Brown cartoon shoes. Full body visible, proportional cartoon body. NO Korean characters anywhere in the image. NO floating text overlays separate from props. NO UI panels or boxes added on top of the scene. All text must be physically embedded in props (printed on signs, written on boards, displayed on screens). Use ONE archetype setting only — do not mix props from different settings. NO mixing chalkboard + scale + control panel in the same scene. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. Do not add a second information-bearing prop or borrow objects from another archetype setting. </background_information_density> <semantic_surface> MARKET FEAR physical prop surface with down direction </semantic_surface> <fact_surface_contract> IN-SCENE FACT-SURFACE CONTRACT: this is a metric scene. The only permitted information-bearing prop is the single large central analog gauge dial face embedded at eye level in the curved operations wall. Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, not an overlay placed on top of the frame. Every other gauge, screen, map, placard, document, and console must show only needles, color blocks, abstract shapes, or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations.  For this risk-control-room scene, do not substitute the designated gauge dial face with a separate warning plaque, independent console screen, floating alert panel, desk display, framed dashboard, standalone sign, or any other panel. Every secondary gauge, warning plaque, console screen, control dial, signal lamp, floor marking, wall indicator, shipping crate, and closed umbrella must remain non-textual. Only the exact script-derived English caption named in the PROP SURFACE section may appear on this primary prop. Do not add any other readable words, figures, labels, or values. </fact_surface_contract> <reserve> Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. Show only continuous background texture in those areas. Do not place the mascot's face or hands there. </reserve> <layout_contract> LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display. </layout_contract> <exclusions> DO NOT INCLUDE Korean text, Korean subtitles, any numeral, factual value, channel logo, watermark, generic floating dashboard card, detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. The gold coin mascot is the only anthropomorphic character; every other prop must be inanimate. </exclusions>",
+      "prompt_ko": "시장 공포와 위험 신호를 설명합니다.",
+      "market_snapshot": {},
+      "headline_mood": "negative",
+      "bubble_text": "",
+      "motion_type": "",
+      "market_chart": null,
+      "index_data": null,
+      "v5_provider_options": {
+        "image_provider": "gemini",
+        "gemini_model": "gemini-3-pro-image",
+        "gemini_image_size": "2K",
+        "gemini_service_tier": "standard",
+        "gemini_max_attempts": 1,
+        "suppress_legacy_style_lock": true,
+        "style_locked": true,
+        "gemini_reference_contract_declared": true
+      },
+      "image_path": "/app/data/jobs/2026080222/images/scene_002.png",
+      "background_path": null,
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "left",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.015,
+            "y": 0.1,
+            "width": 0.41,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "generation_method": "pro_gemini",
+      "quality_score": 100,
+      "character_regions": [
+        {
+          "x": 0.015,
+          "y": 0.1,
+          "width": 0.41,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "quality_flags": [],
+      "retry_recommended": false
+    }
+  ],
+  "scene_count": 3,
+  "gifs": [],
+  "gif_count": 0,
+  "quality_report": {
+    "images": {
+      "score": 100,
+      "warnings": [],
+      "image_count": 3,
+      "scene_metrics": [
+        {
+          "index": 0,
+          "score": 100,
+          "warnings": [],
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.7778,
+          "brightness": 130.9,
+          "contrast": 66.9,
+          "color_variation": 55.1,
+          "perceptual_hash": "0011101110100001000111110000010000110111111100000011111110000011111111111000001111111111110000010111111111111101001111111111111100111111111111100011110111111110001110011110110101111001110010000011100111000000000010010000000000000000000000000000000000000000",
+          "retry_recommended": false
+        },
+        {
+          "index": 1,
+          "score": 100,
+          "warnings": [],
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.7778,
+          "brightness": 81.7,
+          "contrast": 47.6,
+          "color_variation": 49.9,
+          "perceptual_hash": "0001111100000000000111110000000000011111100000000001111110000000000111111001110000011111101111000000010000111100001111011011110000111111111111000011111111011000001111111001010000111111110001000011111111000000011111111110000011111111111000000011111111000000",
+          "retry_recommended": false
+        },
+        {
+          "index": 2,
+          "score": 100,
+          "warnings": [],
+          "width": 1920,
+          "height": 1080,
+          "aspect_ratio": 1.7778,
+          "brightness": 126.5,
+          "contrast": 53.4,
+          "color_variation": 78.3,
+          "perceptual_hash": "0000000000000000001000000000000011111111111110111101111111101000000111111100001001011111100001111111111111110010111111111111111111011111111111100101111110110000011010010000000010000000000000000000000000001000000000101100100000001111100010000000111111101100",
+          "retry_recommended": false
+        }
+      ],
+      "retry_recommended_indices": [],
+      "art_direction": {
+        "score": 100,
+        "warnings": [],
+        "families": [
+          "cause_effect",
+          "split_outcomes",
+          "character_role"
+        ],
+        "palettes": [
+          "editorial_blue",
+          "growth_gold",
+          "risk_crimson"
+        ],
+        "pose_assets": [
+          "anchor_neutral",
+          "referee_neutral",
+          "field_reporter_worried"
+        ]
+      },
+      "semantic_alignment": {
+        "enabled": true,
+        "reviewed": [],
+        "skipped": [
+          0,
+          1,
+          2
+        ],
+        "warnings": [
+          "visual_qa_http_404",
+          "visual_qa_http_404",
+          "visual_qa_http_404"
+        ],
+        "score": null
+      },
+      "scene_metadata_contract": {
+        "passed": true,
+        "source_keys": [
+          "art_direction",
+          "content",
+          "headline",
+          "image_profile",
+          "pose",
+          "scene_id",
+          "scene_spec",
+          "scene_type",
+          "style_profile",
+          "text",
+          "title",
+          "v5_render_contract",
+          "v5_scene_spec",
+          "v5_scene_type_selection",
+          "visual_archetype",
+          "visual_plan",
+          "visual_type"
+        ],
+        "output_keys": [
+          "_template_regeneration_enabled",
+          "art_direction",
+          "asset_layout_metadata",
+          "background_path",
+          "bubble_text",
+          "character_regions",
+          "clean_plate_path",
+          "content",
+          "generation_method",
+          "headline",
+          "headline_mood",
+          "image_path",
+          "image_profile",
+          "index",
+          "index_data",
+          "market_chart",
+          "market_snapshot",
+          "motion_type",
+          "pose",
+          "prompt_en",
+          "prompt_ko",
+          "quality_flags",
+          "quality_score",
+          "retry_recommended",
+          "scene_id",
+          "scene_spec",
+          "scene_type",
+          "section",
+          "style_profile",
+          "text",
+          "title",
+          "v5_provider_options",
+          "v5_render_contract",
+          "v5_scene_spec",
+          "v5_scene_type_selection",
+          "visual_archetype",
+          "visual_plan",
+          "visual_type"
+        ],
+        "missing_keys": [],
+        "market_chart_count": 0,
+        "index_data_count": 0,
+        "motion_type_count": 0
+      }
+    }
+  },
+  "budget_preflight": {
+    "planned_at": "2026-08-02T13:25:05.762849+00:00",
+    "scene_count": 3,
+    "quality_tier": "pro",
+    "pro_scene_count": 3,
+    "flash_scene_count": 0,
+    "kling_clip_count": 0,
+    "estimated_cost_krw": 619,
+    "budget_limit_krw": 620,
+    "retry_buffer_pct": 10.0,
+    "allowed": true,
+    "policy_version": "style-contract-pilot-3x188-2026-08-02",
+    "actions": [],
+    "reason": null,
+    "template_scene_count": 0,
+    "template_retry_reserve_krw": 0,
+    "template_regeneration_enabled": true,
+    "rates": {
+      "img_cost_pro_2k_usd": 0.134,
+      "kling_cost_per_clip_usd": 0.35,
+      "usd_krw": 1400.0
+    },
+    "intro_motion_target_seconds": 45.0,
+    "intro_motion_planned_seconds": 0.0,
+    "intro_motion_estimated_total_seconds": 16.5,
+    "still_image_pilot": true
+  },
+  "evidence_audit": {
+    "job_id": 2026080222,
+    "created_at": "2026-08-02T13:25:05.758254+00:00",
+    "status": "unavailable",
+    "selected": [],
+    "skipped": [],
+    "reason": "verified_facts_or_naver_api_hub_credentials_missing"
+  },
+  "requires_manual_review": false,
+  "review_reasons": []
+}

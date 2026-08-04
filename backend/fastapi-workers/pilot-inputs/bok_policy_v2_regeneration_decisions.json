@@ -1,0 +1,16 @@
+{
+  "decisions": [
+    {
+      "scene_id": "policy_transmission_diagram",
+      "decision": "REGENERATE",
+      "reviewed_attempt": 1,
+      "reason": "원본 칠판에 읽을 수 있는 X 형태의 모델 생성 기호가 남아 strict_textless 계약을 위반했다. 문자·숫자·수식 기호가 전혀 없는 교실 장면이 필요하다."
+    },
+    {
+      "scene_id": "inflation_metric",
+      "decision": "REGENERATE",
+      "reviewed_attempt": 1,
+      "reason": "원형 금화 마스코트 대신 청록색 문서형 캐릭터가 생성되어 고정 채널 마스코트의 원형 실루엣·재질 계약을 위반했다."
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-from app.workers.script_worker import ScriptWorker, _classify_scene_types
+from app.workers.script_worker import ScriptWorker, _classify_scene_types, _needs_dialogue_length_rewrite
 
 
 def test_scene_type_classification_keeps_reason_for_each_supported_type():
@@ -48,3 +48,37 @@ def test_mock_script_response_also_contains_scene_type_contract():
     assert result["sections"]
     assert all(scene["scene_type"] in {"general", "metric", "graph", "diagram", "text"} for scene in result["sections"])
     assert all(scene["selection_reason"] for scene in result["sections"])
+
+
+def test_longform_numeric_scenes_are_rebalanced_into_general_situations():
+    scenes = _classify_scene_types([
+        {"section": "data", "content": f"시장 지표 {index}%의 변화를 설명합니다."}
+        for index in range(30)
+    ])
+
+    metric_scenes = [scene for scene in scenes if scene["scene_type"] == "metric"]
+    general_scenes = [scene for scene in scenes if scene["scene_type"] == "general"]
+
+    assert len(metric_scenes) == 5  # round(30 * 0.18)
+    assert len(general_scenes) == 25
+    assert all("상한" in scene["selection_reason"] for scene in general_scenes)
+
+
+def test_longform_diagram_scenes_are_rebalanced_into_general_situations():
+    scenes = _classify_scene_types([
+        {"section": "scenario", "content": f"공급망 단계와 연결 관계 {index}를 설명합니다."}
+        for index in range(30)
+    ])
+
+    diagram_scenes = [scene for scene in scenes if scene["scene_type"] == "diagram"]
+    general_scenes = [scene for scene in scenes if scene["scene_type"] == "general"]
+
+    assert len(diagram_scenes) == 3  # round(30 * 0.10)
+    assert len(general_scenes) == 27
+    assert all("상한" in scene["selection_reason"] for scene in general_scenes)
+
+
+def test_short_dialogue_requests_a_length_rewrite_before_tts():
+    assert _needs_dialogue_length_rewrite("가" * 900, 1_000) is True
+    assert _needs_dialogue_length_rewrite("가" * 920, 1_000) is False
+    assert _needs_dialogue_length_rewrite("가" * 1_151, 1_000) is True

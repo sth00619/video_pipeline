@@ -100,7 +100,7 @@ def highlighter(layer: Image.Image, bbox: NormalizedBBox | list[float], color: s
     ImageDraw.Draw(layer, "RGBA").rounded_rectangle((left, top, right, bottom), radius=8, fill=fill)
 
 
-def highlight_multiply(base: Image.Image, bboxes: Iterable[NormalizedBBox | list[float]], color: str = "#39E65A", pad_x: int = 6, pad_y: int = 4) -> Image.Image:
+def highlight_multiply(base: Image.Image, bboxes: Iterable[NormalizedBBox | list[float]], color: str = "#FFE35A", pad_x: int = 6, pad_y: int = 4) -> Image.Image:
     """Apply a crisp editorial highlighter without washing out black glyphs."""
     layer = Image.new("RGB", base.size, "white")
     draw = ImageDraw.Draw(layer)

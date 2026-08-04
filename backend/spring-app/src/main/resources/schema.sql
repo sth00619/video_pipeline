@@ -3,6 +3,9 @@
 ALTER TABLE IF EXISTS video_job
     ADD COLUMN IF NOT EXISTS data_visuals_enabled boolean NOT NULL DEFAULT true;
 
+ALTER TABLE IF EXISTS video_job
+    ADD COLUMN IF NOT EXISTS gemini_image_budget_cap numeric(38,2);
+
 ALTER TABLE IF EXISTS channel_profile
     ADD COLUMN IF NOT EXISTS watermark_path varchar(500);
 

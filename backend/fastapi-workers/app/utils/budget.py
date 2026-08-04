@@ -57,17 +57,20 @@ class ProviderRequestAudit:
     @classmethod
     def for_job(cls, *, job_id: int, scene_key: str, model: str) -> "ProviderRequestAudit":
         """V4 공용 비용 원장에 Gemini 시도를 기록한다."""
+        if model != "gemini-3-pro-image":
+            raise ValueError("이미지 생성 모델은 gemini-3-pro-image만 허용합니다.")
         rates = runtime_config.get()
-        is_pro = model == "gemini-3-pro-image"
+        preflight = load_preflight(job_id) or {}
         return cls(
             path=_job_path(job_id, "cost_ledger.json"),
             scene_key=scene_key,
             provider="gemini",
             model=model,
-            request_kind="gemini_pro_request" if is_pro else "gemini_flash_request",
-            unit_usd=float(rates["img_cost_pro_2k_usd"] if is_pro else rates["img_cost_flash_1k_usd"]),
+            request_kind="gemini_pro_request",
+            unit_usd=float(rates["img_cost_pro_2k_usd"]),
             usd_krw=float(rates["usd_krw"]),
-            budget_limit_krw=int(rates["max_budget_per_video_krw"]),
+            budget_limit_krw=int(preflight.get("budget_limit_krw") or rates["max_budget_per_video_krw"]),
+            request_metadata={"policy_version": preflight.get("policy_version", "runtime-default")},
         )
 
     @classmethod
@@ -83,16 +86,35 @@ class ProviderRequestAudit:
         request_metadata: dict[str, Any] | None = None,
     ) -> "ProviderRequestAudit":
         """V5처럼 작업 디렉터리가 다른 실행에도 같은 게이트를 사용한다."""
+        if model != "gemini-3-pro-image":
+            raise ValueError("이미지 생성 모델은 gemini-3-pro-image만 허용합니다.")
         return cls(
             path=path,
             scene_key=scene_key,
             provider="gemini",
             model=model,
-            request_kind="gemini_pro_request" if model == "gemini-3-pro-image" else "gemini_flash_request",
+            request_kind="gemini_pro_request",
             unit_usd=unit_usd,
             usd_krw=usd_krw,
             budget_limit_krw=budget_limit_krw,
             request_metadata=request_metadata,
+        )
+
+    @classmethod
+    def for_kling(cls, *, job_id: int, scene_key: str) -> "ProviderRequestAudit":
+        """Kling image-to-video 요청도 네트워크 호출 전에 비용을 예약한다."""
+        rates = runtime_config.get()
+        preflight = load_preflight(job_id) or {}
+        return cls(
+            path=_job_path(job_id, "cost_ledger.json"),
+            scene_key=scene_key,
+            provider="fal",
+            model="kling_image_to_video",
+            request_kind="kling_request",
+            unit_usd=float(rates["kling_cost_per_clip_usd"]),
+            usd_krw=float(rates["usd_krw"]),
+            budget_limit_krw=int(preflight.get("budget_limit_krw") or rates["max_budget_per_video_krw"]),
+            request_metadata={"policy_version": preflight.get("policy_version", "runtime-default")},
         )
 
     def before_attempt(self, *, attempt: int, model: str | None = None) -> str:
@@ -165,68 +187,57 @@ def _krw(usd: float, rate: float) -> int:
     return round(usd * rate)
 
 
-def _estimate(scene_count: int, pro_count: int, kling_count: int, cfg: dict[str, Any]) -> int:
-    flash_count = max(0, scene_count - pro_count)
+def _estimate(pro_count: int, kling_count: int, cfg: dict[str, Any]) -> int:
     usd = (
-        flash_count * float(cfg["img_cost_flash_1k_usd"])
-        + pro_count * float(cfg["img_cost_pro_2k_usd"])
+        pro_count * float(cfg["img_cost_pro_2k_usd"])
         + kling_count * float(cfg["kling_cost_per_clip_usd"])
     )
     return round(_krw(usd, float(cfg["usd_krw"])) * (1 + float(cfg["budget_retry_buffer_pct"]) / 100))
 
 
-def plan_preflight(scene_count: int, quality_tier: str, requested_pro: int, requested_kling: int, *, template_scene_count: int = 0) -> dict[str, Any]:
-    """Plan a complete video below the ceiling, degrading expensive tiers first."""
+def plan_preflight(
+    scene_count: int,
+    quality_tier: str,
+    requested_pro: int,
+    requested_kling: int,
+    *,
+    template_scene_count: int = 0,
+    include_thumbnail: bool = True,
+    budget_limit_krw: int | None = None,
+    policy_version: str | None = None,
+) -> dict[str, Any]:
+    """모든 Pro 요청을 사전 예약 가능한지 확인하고 초과 시 즉시 거절한다."""
+    if str(quality_tier or "pro").lower() != "pro":
+        raise ValueError("이미지 품질 tier는 pro만 허용합니다.")
     cfg = runtime_config.get()
-    max_budget = int(cfg["max_budget_per_video_krw"])
-    pro_count = scene_count if quality_tier == "pro" else (0 if quality_tier == "flash" else min(scene_count, max(0, requested_pro)))
+    configured_max = int(cfg["max_budget_per_video_krw"])
+    max_budget = configured_max if budget_limit_krw is None else int(budget_limit_krw)
+    if max_budget <= 0 or max_budget > configured_max:
+        raise ValueError(f"작업별 예산 상한은 1~{configured_max}원 범위여야 합니다.")
+    pro_count = max(0, scene_count)
     pro_count += 1  # [TASK 5] 썸네일 1장은 항상 Pro 2K로 고정 렌더링되므로 예산 견적에 +1 반영
+    if not include_thumbnail:
+        pro_count -= 1
     kling_count = max(0, requested_kling)
-    actions: list[str] = []
-    estimated = _estimate(scene_count, pro_count, kling_count, cfg)
-
-    # Upgrade quality is optional. Calculate the highest number of Pro scenes
-    # affordable while preserving Flash coverage for every scene and the intro.
-    if estimated > max_budget and pro_count:
-        baseline = _estimate(scene_count, 0, kling_count, cfg)
-        unit_delta = _krw(float(cfg["img_cost_pro_2k_usd"]) - float(cfg["img_cost_flash_1k_usd"]), float(cfg["usd_krw"]))
-        buffered_delta = max(1, round(unit_delta * (1 + float(cfg["budget_retry_buffer_pct"]) / 100)))
-        affordable_pro = max(0, min(pro_count, (max_budget - baseline) // buffered_delta))
-        if affordable_pro < pro_count:
-            actions.append(f"pro_scenes:{pro_count}->{affordable_pro}")
-            pro_count = affordable_pro
-            estimated = _estimate(scene_count, pro_count, kling_count, cfg)
-
-    # Motion is optional as well. Never reduce below three when it was
-    # requested; below that, deterministic static-image rendering remains the
-    # completion-safe fallback.
-    if estimated > max_budget and kling_count:
-        minimum = min(3, kling_count)
-        while kling_count > minimum and estimated > max_budget:
-            kling_count -= 1
-            estimated = _estimate(scene_count, pro_count, kling_count, cfg)
-        if kling_count != requested_kling:
-            actions.append(f"kling_clips:{requested_kling}->{kling_count}")
+    estimated = _estimate(pro_count, kling_count, cfg)
 
     # 템플릿 장면은 보드 검출 실패 시 한 번만 재생성할 수 있으므로,
     # 해당 장면 tier 비용의 25%를 사전 예비비로 잡는다.
-    retry_unit = float(cfg["img_cost_pro_2k_usd"] if quality_tier == "pro" else cfg["img_cost_flash_1k_usd"])
+    retry_unit = float(cfg["img_cost_pro_2k_usd"])
     template_retry_reserve = round(_krw(template_scene_count * retry_unit * .25, float(cfg["usd_krw"])))
-    regen_enabled = estimated + template_retry_reserve <= max_budget
-    if template_scene_count and not regen_enabled:
-        actions.append("template_regeneration:disabled_budget_reserve")
-        template_retry_reserve = 0
     estimated_with_reserve = estimated + template_retry_reserve
     allowed = estimated_with_reserve <= max_budget
+    regen_enabled = allowed
     return {
         "planned_at": datetime.now(timezone.utc).isoformat(), "scene_count": scene_count,
-        "quality_tier": quality_tier, "pro_scene_count": pro_count, "flash_scene_count": max(0, scene_count - pro_count),
+        "quality_tier": "pro", "pro_scene_count": pro_count, "flash_scene_count": 0,
         "kling_clip_count": kling_count, "estimated_cost_krw": estimated_with_reserve, "budget_limit_krw": max_budget,
         "retry_buffer_pct": float(cfg["budget_retry_buffer_pct"]), "allowed": allowed,
-        "actions": actions, "reason": None if allowed else "minimum_complete_plan_exceeds_budget",
+        "policy_version": str(policy_version or "runtime-default"),
+        "actions": [], "reason": None if allowed else "pro_only_plan_exceeds_budget",
         "template_scene_count": template_scene_count, "template_retry_reserve_krw": template_retry_reserve,
         "template_regeneration_enabled": regen_enabled,
-        "rates": {key: cfg[key] for key in ("img_cost_flash_1k_usd", "img_cost_pro_2k_usd", "kling_cost_per_clip_usd", "usd_krw")},
+        "rates": {key: cfg[key] for key in ("img_cost_pro_2k_usd", "kling_cost_per_clip_usd", "usd_krw")},
     }
 
 
@@ -268,6 +279,31 @@ def load_preflight(job_id: int) -> dict[str, Any] | None:
         return None
 
 
+def load_cost_ledger_summary(job_id: int) -> dict[str, Any]:
+    """Spring/UI가 읽을 수 있는 작업별 비용 원장 스냅샷을 반환한다.
+
+    이미지·Kling처럼 FastAPI가 실제 provider 요청을 보낸 비용의 기준값은 이
+    파일이다. 예약 상태도 합계에 포함해, 응답 대기 중인 요청으로 예산을
+    초과하는 일이 없도록 한다.
+    """
+    cfg = runtime_config.get()
+    path = _job_path(job_id, "cost_ledger.json")
+    with _LOCK:
+        ledger = _load_ledger(path)
+        items = [dict(item) for item in ledger["items"] if isinstance(item, dict)]
+    total = int(ledger.get("total_krw", 0))
+    limit = int(cfg["max_budget_per_video_krw"])
+    return {
+        "job_id": int(job_id),
+        "currency": "KRW",
+        "total_krw": total,
+        "budget_limit_krw": limit,
+        "remaining_krw": max(0, limit - total),
+        "budget_overrun_krw": max(0, total - limit),
+        "items": list(reversed(items[-100:])),
+    }
+
+
 def can_charge_overlay_vision(job_id: int, scene_key: str) -> bool:
     """Reserve vision fallback for at most one attempt per data scene.
 
@@ -295,8 +331,10 @@ def record_cost(job_id: int, kind: str, count: int = 1, *, scene_key: str | None
     같은 장면 키의 Gemini 시도가 있으면 이 함수는 기존 원장을 그대로 반환한다.
     """
     rates = runtime_config.get()
+    if kind == "flash":
+        raise ValueError("Flash 비용 기록은 Pro-only 이미지 정책에서 허용되지 않습니다.")
     unit_usd = {
-        "flash": float(rates["img_cost_flash_1k_usd"]), "pro": float(rates["img_cost_pro_2k_usd"]),
+        "pro": float(rates["img_cost_pro_2k_usd"]),
         "kling": float(rates["kling_cost_per_clip_usd"]),
         "overlay_vision": float(os.getenv("OVERLAY_VISION_COST_USD", "0.03")),
     }.get(kind, 0.0)
@@ -304,8 +342,9 @@ def record_cost(job_id: int, kind: str, count: int = 1, *, scene_key: str | None
     path = _job_path(job_id, "cost_ledger.json")
     with _LOCK:
         ledger = _load_ledger(path)
-        if scene_key and any(
-            str(item.get("kind", "")).startswith("gemini_")
+        provider_by_kind = {"pro": "gemini", "kling": "fal"}
+        if scene_key and provider_by_kind.get(kind) and any(
+            item.get("provider") == provider_by_kind[kind]
             and item.get("scene_key") == scene_key
             for item in ledger["items"]
             if isinstance(item, dict)

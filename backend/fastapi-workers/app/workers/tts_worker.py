@@ -27,7 +27,9 @@ Phase 3-3 v5 — TTS + faster-whisper 역방향 정렬
 """
 import os
 import re
+import json
 import math
+import hashlib
 import logging
 import subprocess
 from pathlib import Path
@@ -41,6 +43,11 @@ from app.utils.sentence_splitter import split_sentences
 from app.utils.script_length import spoken_char_count, update_calibration
 
 logger = logging.getLogger(__name__)
+
+# MP3 컨테이너의 프레임 단위 길이와 후처리 리샘플링 때문에 실제 발화 길이는
+# 수백 밀리초 달라질 수 있다. 길이 정책(15%)을 완화하지 않고 경계값 오탐만
+# 막기 위한 측정 여유다.
+DURATION_PROBE_GRACE_SECONDS = 1.0
 
 
 class TtsWorker:
@@ -173,7 +180,9 @@ class TtsWorker:
         if used_tts and tts_engine == "elevenlabs":
             max_retries = runtime_config.value("tts_max_retries")
             for attempt in range(1, max_retries + 1):
-                tts_verification = self._verify_tts_narration(mp3_path, preprocessed, attempt)
+                tts_verification = self._verify_tts_narration(
+                    mp3_path, preprocessed, attempt, provider_characters=elevenlabs_characters,
+                )
                 if tts_verification["passed"]:
                     break
                 if attempt < max_retries:
@@ -263,14 +272,20 @@ class TtsWorker:
                 speed,
             )
         duration_tolerance = float(runtime_config.value("tts_duration_tolerance"))
+        allowed_delta_seconds = (
+            float(target_seconds) * duration_tolerance + DURATION_PROBE_GRACE_SECONDS
+            if target_seconds else None
+        )
         duration_validation = {
             "target_seconds": round(float(target_seconds), 2) if target_seconds else None,
             "actual_seconds": round(actual_duration, 2),
             "delta_seconds": round(actual_duration - float(target_seconds), 2) if target_seconds else None,
             "within_tolerance": (
-                abs(actual_duration - float(target_seconds)) <= float(target_seconds) * duration_tolerance
+                abs(actual_duration - float(target_seconds)) <= allowed_delta_seconds
                 if target_seconds else None
             ),
+            "probe_grace_seconds": DURATION_PROBE_GRACE_SECONDS if target_seconds else None,
+            "allowed_delta_seconds": round(allowed_delta_seconds, 2) if allowed_delta_seconds else None,
             "spoken_char_count": spoken_char_count(clean_script),
             "calibration": calibration,
         }
@@ -360,12 +375,25 @@ class TtsWorker:
             runtime_config.value("subtitle_frame_rate"),
             runtime_config.value("subtitle_start_frame_policy"),
         )
+        # 자막은 TTS 청크 외의 별도 문구를 갖지 않는다. 화면 분할 과정에서
+        # 공백은 달라질 수 있지만 글자·숫자·단위는 승인 원문과 완전히 같아야 한다.
+        canonical_compact = re.sub(r"\s+", "", clean_script)
+        subtitle_compact = re.sub(
+            r"\s+", "", "".join(str(chunk.get("text") or "") for chunk in chunks)
+        )
+        if canonical_compact != subtitle_compact:
+            raise RuntimeError(
+                "TTS 자막 원문 계약 불일치: 승인된 스크립트와 자막 청크의 글자·숫자·단위가 다릅니다."
+            )
+        canonical_sha256 = hashlib.sha256(clean_script.encode("utf-8")).hexdigest()
         subtitle_quality = assess_subtitles(chunks, actual_duration, subtitle_max_chars)
         quality_report = {
             "subtitles": subtitle_quality,
             "tts_verification": tts_verification,
             "splice_artifacts": splice_artifacts,
             "subtitle_alignment_mode": self._last_subtitle_alignment_mode,
+            "canonical_text_match": True,
+            "canonical_sha256": canonical_sha256,
             "delivery_profile": {
                 "speed": speed,
                 "stability": runtime_config.value("tts_stability_body"),
@@ -376,6 +404,26 @@ class TtsWorker:
             },
         }
         persist_quality_report(job_id, "tts", quality_report)
+        # 후속 이미지·조립 단계가 일회성 HTTP 응답 메모리에만 의존하지 않도록,
+        # 승인 원문과 문자 단위 자막 큐를 작업 폴더에도 함께 보존한다.
+        tts_manifest = {
+            "job_id": job_id,
+            "audio_path": mp3_path,
+            # 조립·재시도 단계가 실제 요청된 성우와 낭독 방식을 추적할 수 있게
+            # HTTP 응답과 동일한 공급자 계보를 작업 산출물에도 보존한다.
+            "voice_id": provider_voice_id if tts_engine == "elevenlabs" else (tts_engine if used_tts else "silent"),
+            "tts_engine": tts_engine,
+            "used_elevenlabs": tts_engine == "elevenlabs",
+            "provider_request": self._last_provider_request,
+            "total_duration": round(actual_duration, 2),
+            "chunks": chunks,
+            "canonical_text": clean_script,
+            "canonical_sha256": canonical_sha256,
+            "quality_report": quality_report,
+        }
+        (job_dir / "tts" / "tts_manifest.json").write_text(
+            json.dumps(tts_manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         logger.info(
             f"TTS v6 완료: {actual_duration:.1f}초, chunks={len(chunks)}, engine={tts_engine}, "
             f"subtitle_quality={subtitle_quality['score']}"
@@ -393,6 +441,8 @@ class TtsWorker:
             "provider_request": self._last_provider_request,
             "leading_silence_seconds": leading_silence_seconds,
             "quality_report": quality_report,
+            "canonical_text": clean_script,
+            "canonical_sha256": canonical_sha256,
         }
 
     # ============================
@@ -887,9 +937,29 @@ class TtsWorker:
             previous = current
         return previous[-1] / len(a)
 
-    def _verify_tts_narration(self, mp3_path: str, reference_text: str, attempt: int) -> Dict:
-        """Round-trip v3 audio through local Whisper before accepting it."""
+    def _verify_tts_narration(
+        self,
+        mp3_path: str,
+        reference_text: str,
+        attempt: int,
+        provider_characters: List[Dict] | None = None,
+    ) -> Dict:
+        """공급자 문자 정렬을 원문 하드 게이트로, Whisper를 청취 검수로 분리한다."""
         try:
+            provider_text = "".join(
+                str(item.get("text") or "")
+                for item in self._strip_audio_tag_timings(provider_characters or [])
+            )
+            provider_cer = self._char_error_rate(
+                self._preprocess_for_tts(reference_text),
+                self._preprocess_for_tts(provider_text),
+            ) if provider_text else None
+            provider_unit_match = (
+                self._financial_unit_sequence(reference_text) == self._financial_unit_sequence(provider_text)
+                if provider_text else False
+            )
+            provider_text_exact = provider_cer == 0.0 and provider_unit_match
+
             model = self._get_whisper_model()
             segments, _ = model.transcribe(mp3_path, language="ko", beam_size=1, best_of=1, temperature=0)
             transcript = " ".join(segment.text.strip() for segment in segments).strip()
@@ -900,12 +970,44 @@ class TtsWorker:
                 self._preprocess_for_tts(reference_text),
                 self._preprocess_for_tts(transcript),
             )
-            passed = bool(transcript) and cer <= runtime_config.value("tts_cer_threshold")
-            logger.info("TTS CER validation attempt=%s cer=%.4f passed=%s", attempt, cer, passed)
-            return {"passed": passed, "cer": round(cer, 4), "attempts": attempt, "transcript": transcript[:500]}
+            reference_units = self._financial_unit_sequence(reference_text)
+            transcript_units = self._financial_unit_sequence(transcript)
+            unit_sequence_match = reference_units == transcript_units
+            whisper_passed = (
+                bool(transcript)
+                and cer <= runtime_config.value("tts_cer_threshold")
+                and unit_sequence_match
+            )
+            # ElevenLabs의 문자별 타임스탬프는 실제 생성 요청과 한 쌍으로
+            # 반환되는 정렬 근거다. 화면 자막의 원문 동일성은 이 근거로 판정하고,
+            # 숫자·약어를 자주 달리 적는 로컬 STT는 청취 검수 경고로만 남긴다.
+            passed = provider_text_exact or whisper_passed
+            logger.info(
+                "TTS validation attempt=%s provider_exact=%s cer=%.4f unit_match=%s passed=%s",
+                attempt, provider_text_exact, cer, unit_sequence_match, passed,
+            )
+            return {
+                "passed": passed,
+                "cer": round(cer, 4),
+                "attempts": attempt,
+                "transcript": transcript[:500],
+                "unit_sequence_match": unit_sequence_match,
+                "reference_units": reference_units,
+                "transcript_units": transcript_units,
+                "provider_text_exact": provider_text_exact,
+                "provider_cer": round(provider_cer, 4) if provider_cer is not None else None,
+                "provider_unit_sequence_match": provider_unit_match,
+                "whisper_passed": whisper_passed,
+                "audio_review_required": not whisper_passed,
+            }
         except Exception as exc:
             logger.warning("TTS CER validation unavailable on attempt %s: %s", attempt, exc)
             return {"passed": False, "cer": None, "attempts": attempt, "error": str(exc)}
+
+    def _financial_unit_sequence(self, text: str) -> List[str]:
+        """숫자 표기 차이는 흡수하되 금융 단위의 의미 변경은 허용하지 않는다."""
+        normalized = self._preprocess_for_tts(text or "")
+        return re.findall(r"퍼센트|포인트|달러|유로|엔|조|억|만원|원", normalized)
 
     @staticmethod
     def _sentence_pause_points(

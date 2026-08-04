@@ -46,9 +46,14 @@ public class JobService {
         // 영상 길이: null이면 20분 default
         Integer targetMinutes = request.getLongformTargetMinutes() != null
                 ? request.getLongformTargetMinutes() : 20;
+        BigDecimal policyBudgetCap = PricingConfig.budgetCapForTargetMinutes(targetMinutes);
 
         Autonomy requestedAutonomy = request.getAutonomy() == Autonomy.AUTO
                 ? Autonomy.AUTO : Autonomy.GUIDED;
+
+        BigDecimal effectiveVideoBudget = request.getBudgetCap() == null
+                ? policyBudgetCap
+                : request.getBudgetCap().min(policyBudgetCap);
 
         VideoJob job = VideoJob.builder()
                 .title(request.getTitle())
@@ -62,9 +67,9 @@ public class JobService {
                 .makeShorts(request.isMakeShorts())
                 .shortsCount(request.getShortsCount())
                 .longformTargetMinutes(targetMinutes)
-                .budgetCap(request.getBudgetCap() == null
-                        ? PricingConfig.VIDEO_BUDGET_CAP_KRW
-                        : request.getBudgetCap().min(PricingConfig.VIDEO_BUDGET_CAP_KRW))
+                .budgetCap(effectiveVideoBudget)
+                .geminiImageBudgetCap(PricingConfig.geminiImageBudgetCapFor(
+                        request.getGeminiImageBudgetCap(), effectiveVideoBudget))
                 .costAccumulated(BigDecimal.ZERO)
                 .policyJson(request.getPolicyJson())
                 .channelId(request.getChannelId())
@@ -142,12 +147,13 @@ public class JobService {
             generateYoutubePackage(jobId);
         }
 
-        String mockYoutubeUrl = "https://youtu.be/mock_youtube_video_" + jobId + "_" + System.currentTimeMillis();
-        job.setYoutubeUrl(mockYoutubeUrl);
-        job.setStatus(JobStatus.PUBLISHED);
+        // 실제 OAuth 업로드와 YouTube 응답 검증이 연결되기 전에는 가짜 URL이나
+        // PUBLISHED 상태를 만들지 않는다. 사용자는 명시적으로 게시 대기 상태를 본다.
+        job.setYoutubeUrl(null);
+        job.setStatus(JobStatus.PUBLISH_PENDING);
         jobRepository.save(job);
         
-        log.info("유튜브 영상 퍼블리시 완료: jobId={}, url={}", jobId, mockYoutubeUrl);
+        log.info("유튜브 게시 대기: 실제 업로드 연동이 아직 구성되지 않았습니다. jobId={}", jobId);
         return JobResponse.from(job);
     }
 
@@ -162,7 +168,9 @@ public class JobService {
         Optional<Asset> scriptAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
         if (scriptAssetOpt.isEmpty()) {
             log.warn("대본 에셋이 없어 유튜브 패키지 생성을 건너뜁니다. jobId={}", jobId);
-            return;
+            IllegalStateException exception = new IllegalStateException("유튜브 패키지 생성에 대본 에셋이 필요합니다.");
+            saveYoutubePackageFailure(jobId, "SCRIPT_ASSET", exception);
+            throw exception;
         }
         
         String scriptText = "";
@@ -179,6 +187,8 @@ public class JobService {
             longformMeta = fastApiClient.generateYoutubeMetadata(scriptText, false);
         } catch (Exception e) {
             log.error("롱폼 유튜브 메타데이터 생성 실패: {}", e.getMessage());
+            saveYoutubePackageFailure(jobId, "LONGFORM_METADATA", e);
+            longformMeta = fallbackYoutubeMetadata(job, false);
         }
         
         if (job.isMakeShorts()) {
@@ -191,6 +201,8 @@ public class JobService {
                 shortsMeta = fastApiClient.generateYoutubeMetadata(shortsScriptText, true);
             } catch (Exception e) {
                 log.error("쇼츠 유튜브 메타데이터 생성 실패: {}", e.getMessage());
+            saveYoutubePackageFailure(jobId, "SHORTS_METADATA", e);
+                shortsMeta = fallbackYoutubeMetadata(job, true);
             }
         }
         
@@ -244,6 +256,8 @@ public class JobService {
                     referenceStyleProfile, null, false);
         } catch (Exception e) {
             log.error("롱폼 썸네일 생성 실패: {}", e.getMessage());
+            saveYoutubePackageFailure(jobId, "LONGFORM_THUMBNAIL", e);
+            return;
         }
         
         if (job.isMakeShorts()) {
@@ -260,6 +274,7 @@ public class JobService {
                         referenceStyleProfile, null, false);
             } catch (Exception e) {
                 log.error("쇼츠 썸네일 생성 실패: {}", e.getMessage());
+                saveYoutubePackageFailure(jobId, "SHORTS_THUMBNAIL", e);
             }
         }
         
@@ -293,6 +308,19 @@ public class JobService {
 
     private String longformTitleFallback(VideoJob job) {
         return job.getTitle() == null ? "시장 핵심 이슈" : job.getTitle();
+    }
+
+    /** 공급자 메타데이터 API가 불가해도 완성된 영상·썸네일 배포 흐름을 유지한다. */
+    private Map<String, Object> fallbackYoutubeMetadata(VideoJob job, boolean shorts) {
+        String title = longformTitleFallback(job);
+        if (shorts) title = title + " 쇼츠";
+        Map<String, Object> fallback = new java.util.HashMap<>();
+        fallback.put("titles", java.util.List.of(title));
+        fallback.put("description", "자동 생성 메타데이터를 사용할 수 없어 작업 제목을 기본값으로 사용했습니다.");
+        fallback.put("tags", job.getKeyword() == null || job.getKeyword().isBlank()
+                ? java.util.List.of() : java.util.List.of(job.getKeyword()));
+        fallback.put("generation_status", "fallback_metadata");
+        return fallback;
     }
 
     @SuppressWarnings("unchecked")
@@ -512,6 +540,19 @@ public class JobService {
         fastApiClient.deleteJob(jobId);
 
         log.info("Job {} 삭제 완료", jobId);
+    }
+
+    private void saveYoutubePackageFailure(Long jobId, String stage, Exception error) {
+        Asset failure = Asset.builder()
+                .jobId(jobId)
+                .assetType(AssetType.YOUTUBE_PACKAGE_FAILURE)
+                .metaJson(safeJson(Map.of(
+                        "stage", stage,
+                        "retryable", true,
+                        "message", error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage()
+                )))
+                .build();
+        assetRepository.save(failure);
     }
 
     private String safeJson(Object obj) {

@@ -1,0 +1,10 @@
+{
+  "decisions": [
+    {
+      "scene_id": "policy_transmission_diagram",
+      "decision": "REGENERATE",
+      "reviewed_attempt": 4,
+      "reason": "사용자 검토에서 인상폭 텍스트가 배경과 분리되어 보이고, 지도·노드 배경이 기준금리 인상 의미를 전달하지 못한다고 판정했다. 중앙 벽면에 통합된 상승 추세선과 고정 마스코트 참조를 사용한 후보가 필요하다."
+    }
+  ]
+}
