@@ -115,7 +115,7 @@ GEMINI_PRO_REQUEST_DELAY_SECONDS = float(os.getenv("GEMINI_PRO_REQUEST_DELAY_SEC
 # Bound image API fan-out so a long job is faster without turning rate limits
 # into missing scenes.  These are runtime-tunable through /pipeline/config.
 GEMINI_PARALLEL_ENABLED = os.getenv("GEMINI_PARALLEL_ENABLED", "true").lower() in {"1", "true", "yes"}
-GEMINI_MAX_CONCURRENCY = int(os.getenv("GEMINI_MAX_CONCURRENCY", "6"))
+GEMINI_MAX_CONCURRENCY = int(os.getenv("GEMINI_MAX_CONCURRENCY", "3"))
 GEMINI_RETRY_MAX = int(os.getenv("GEMINI_RETRY_MAX", "3"))
 IMAGE_SAME_ERROR_BREAK_COUNT = int(os.getenv("IMAGE_SAME_ERROR_BREAK_COUNT", "5"))
 GEMINI_RPM_SOFT_CAP = int(os.getenv("GEMINI_RPM_SOFT_CAP", "60"))
@@ -164,9 +164,8 @@ TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "false").lower() 
 # extra silence at every punctuation mark; it makes narration staccato.
 TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "350"))
 TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "400"))
-# ElevenLabs의 원래 억양은 보존하되, 문장 경계가 붙어 들리지 않도록 70ms만
-# 더한다. 이 값은 호흡을 구별하는 수준이며 장면 전환처럼 길게 쉬지 않는다.
-TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "70"))
+# ElevenLabs의 원래 억양은 보존하되, 문장 경계가 자연스럽게 연결되도록 300ms 호흡을 더한다.
+TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "300"))
 TTS_DURATION_TOLERANCE = float(os.getenv("TTS_DURATION_TOLERANCE", "0.25"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))

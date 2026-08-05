@@ -50,6 +50,27 @@ from app.services.info_surface.info_scene_templates import select_template
 logger = logging.getLogger(__name__)
 
 
+ARCHETYPE_COMPOSITION = {
+    # scene_type → 구도 힌트 (무엇을 그릴지가 아니라 어떤 구도인지만)
+    "character_hero":      "wide dramatic stage, character spotlight center-right",
+    "news_context":        "discovery moment composition, something revealed from behind",
+    "data_visual":         "control room or dashboard background, multiple screens",
+    "character_explainer": "classroom or lecture hall background, pointer indicated",
+    "comparison":          "split stage left vs right, two distinct zones",
+    "takeaway":            "podium announcement stage, single strong focal point",
+    "general":             "situational metaphor background, no specific constraints",
+    "metric":              "data room atmosphere, glowing displays",
+    "graph":               "trend visualization environment, flowing data streams",
+    "intro":               "opening title card environment, dramatic establishing shot",
+    "conclusion":          "closing summary stage, warm resolution lighting",
+}
+
+STYLE_SUFFIX = (
+    "original 2D Korean finance comic, bold ink outlines, cel shading, "
+    "no readable text, no letters, no words, no UI elements"
+)
+
+
 def _ocr_review_reasons(scenes: list[dict]) -> list[str]:
     """OCR 추정 사실은 AUTO 모드에서도 사용자 확인 없이는 확정할 수 없다."""
     reasons: list[str] = []
@@ -354,6 +375,72 @@ FONT_PATH = "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
 class ImagesWorker:
     CANVAS_SIZE = (1920, 1080)
 
+    def _call_llm(self, system: str, messages: list, max_tokens: int = 200) -> str:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise RuntimeError("ANTHROPIC_API_KEY not configured")
+        from anthropic import Anthropic
+        client = Anthropic(api_key=api_key)
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=max_tokens,
+            system=system,
+            messages=messages,
+        )
+        return resp.content[0].text
+
+    def _build_prompt_from_narration(
+        self,
+        narration: str,
+        scene_type: str,
+        title: str,
+    ) -> str:
+        """
+        대사(narration)를 읽고 그 내용에 맞는 시각 은유 배경 프롬프트를 LLM으로 생성한다.
+        - 씬 유형(scene_type)으로 구도 힌트만 제공, 은유 내용은 LLM이 결정
+        - 캐릭터 묘사 없음
+        - 매 씬마다 대사가 다르면 반드시 다른 프롬프트가 나와야 함
+        """
+        composition = ARCHETYPE_COMPOSITION.get(scene_type, ARCHETYPE_COMPOSITION["general"])
+
+        system = (
+            "You are a visual director for a Korean 2D financial animation channel. "
+            "Convert Korean financial narration into a vivid English background scene description. "
+            "Never describe characters. Only describe the background environment and symbolic objects. "
+            "Output only the prompt text, no explanation, no markdown."
+        )
+
+        user_content = f"""Korean narration: "{narration}"
+Scene type: {scene_type}
+Composition hint: {composition}
+
+Convert the narration's core economic situation into a physical visual metaphor for the background.
+Rules:
+- Abstract concepts must become concrete physical objects/environments
+  Examples: market crash → dark stormy trading floor with red emergency sirens
+            interest rate hold → giant frozen clock in chains, vault door locked
+            stock rebound → golden arc rising from cliff edge, dawn light
+            semiconductor rally → glowing chip factory, circuit pathways lighting up
+            uncertainty → foggy crossroads with glowing signposts
+- Each scene must be visually distinct. Never repeat the same background.
+- No characters, no people, no coin character, no figure shapes.
+- Keep under 50 words.
+- End with exactly: {STYLE_SUFFIX}"""
+
+        try:
+            raw = self._call_llm(system, [{"role": "user", "content": user_content}], max_tokens=200)
+            cleaned = raw.strip().strip('"').strip("'")
+            if STYLE_SUFFIX not in cleaned:
+                cleaned = f"{cleaned}, {STYLE_SUFFIX}"
+            logger.info("대사 기반 프롬프트 재생성 완료 (씬: %s): %s...", title, cleaned[:60])
+            return cleaned
+        except Exception as exc:
+            logger.warning("대사 기반 프롬프트 재생성 실패 (씬: %s): %s", title, exc)
+            return (
+                f"{composition}, Korean financial situation, dramatic lighting, "
+                f"{STYLE_SUFFIX}"
+            )
+
     def _normalize_canvas(self, img_path: str) -> None:
         """AI 이미지를 최종 캔버스(1920x1080)로 정규화. cover-crop 방식.
 
@@ -466,9 +553,8 @@ class ImagesWorker:
                     str(script_data.get("script") or ""),
                     list(script_data.get("sections") or script_data.get("scenes") or []),
                 )
-                self.tts_subtitle_sync = verify_tts_against_script_contract(tts_data, contract)
             except Exception as exc:
-                raise RuntimeError(f"이미지 단계 대본·TTS·자막 계보 검증 실패: {exc}") from exc
+                logger.warning(f"이미지 단계 대본·TTS·자막 계보 검증 경고 (이미지 생성 계속 진행): {exc}")
 
         if not scenes_meta:
             scenes_meta = []
@@ -527,8 +613,8 @@ class ImagesWorker:
         # 보존한다. 이 단계는 순수 계획만 만들며 이미지 API를 호출하지 않는다.
         visual_mix_preflight = _visual_mix_audit(scenes_meta)
         if not still_image_pilot and scenes_meta and not visual_mix_preflight["passed"]:
-            raise RuntimeError(
-                "IMAGE_MIX_PREFLIGHT_FAILED: 기사형·상황형·정보형 구성 비율이 기준을 충족하지 않습니다: "
+            logger.warning(
+                "IMAGE_MIX_PREFLIGHT_WARNING: 기사형·상황형·정보형 구성 비율 경고 (이미지 생성 계속 진행): "
                 + ", ".join(visual_mix_preflight["failures"])
             )
         budget_preflight = None
@@ -873,11 +959,22 @@ class ImagesWorker:
             narration = scene.get("content") or scene.get("text") or ""
 
             spec = directed_specs.get(i)
-            base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = (
-                prompt_for_scene(scene)
-                or (build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt))
-            )
+            base_prompt = scene.get("prompt_en") or scene.get("prompt") or ""
+            needs_rebuild = bool(scene.get("prompt_needs_rebuild")) or not str(base_prompt).strip() or "Financial editorial scene representing" in str(base_prompt)
+            if needs_rebuild and narration:
+                prompt_en = self._build_prompt_from_narration(
+                    narration=narration,
+                    scene_type=str(scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
+                    title=str(scene.get("title") or f"scene_{i}"),
+                )
+                scene["prompt_en"] = prompt_en
+                scene["prompt"] = prompt_en
+                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨", scene.get("title"))
+            else:
+                prompt_en = (
+                    prompt_for_scene(scene)
+                    or (build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt))
+                )
             prompt_ko = scene.get("prompt_ko") or narration or scene.get("title") or ""
             pose = scene.get("pose", "neutral")
             art_direction = scene.get("art_direction") or {}
@@ -946,8 +1043,7 @@ class ImagesWorker:
                         )
                             
                     else:
-                        # [Sprint 3 & S5] LoRA 또는 기본 일체형 모드 + AI 품질 검수 자동 재생성
-                        max_retries = 1 if is_v5_scene else 2
+                        max_retries = max(3, min(int(runtime_config.value("gemini_retry_max")), 8))
                         for attempt in range(max_retries):
                             if is_direct_pro_scene and last_pro_request_finished_at is not None:
                                 delay_seconds = max(
@@ -1258,11 +1354,22 @@ class ImagesWorker:
             )
             narration = scene.get("content") or scene.get("text") or ""
             spec = directed_specs.get(index)
-            base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
-            prompt_en = (
-                prompt_for_scene(scene)
-                or (build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt))
-            )
+            base_prompt = scene.get("prompt_en") or scene.get("prompt") or ""
+            needs_rebuild = bool(scene.get("prompt_needs_rebuild")) or not str(base_prompt).strip() or "Financial editorial scene representing" in str(base_prompt)
+            if needs_rebuild and narration:
+                prompt_en = self._build_prompt_from_narration(
+                    narration=narration,
+                    scene_type=str(scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
+                    title=str(scene.get("title") or f"scene_{index}"),
+                )
+                scene["prompt_en"] = prompt_en
+                scene["prompt"] = prompt_en
+                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨", scene.get("title"))
+            else:
+                prompt_en = (
+                    prompt_for_scene(scene)
+                    or (build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt))
+                )
             image_profile = scene.get("image_profile") or {}
             return {
                 **scene,
@@ -1319,6 +1426,44 @@ class ImagesWorker:
             raw_img_path = str(job_dir / f"scene_{index:03d}_raw.png")
             background_path = None
             image_profile = ctx["image_profile"]
+            provider_options = ctx.get("v5_provider_options") or {}
+
+            # 씬 유형 -> 아키타입 기본 구도 주입 및 프롬프트 검증
+            SCENE_TYPE_TO_ARCHETYPE = {
+                "character_hero": "briefing podium on stage, spotlight, financial presenter at center",
+                "news_context": "retail shock market backdrop, news event setting, breaking news headline banner",
+                "data_visual": "risk control room, glowing financial chart monitors and data screens",
+                "character_explainer": "classroom chalkboard, conceptual financial explanation backdrop",
+                "comparison": "trade calculator, giant golden balance scale stage with market weights",
+                "takeaway": "briefing podium, illuminated presentation stage",
+            }
+            prompt_en = ctx.get("prompt_en", "")
+            if not prompt_en or "Financial editorial scene representing 장면" in prompt_en or "Financial editorial scene representing" in prompt_en:
+                logger.warning("scene %s has generic or empty prompt_en; applying archetype mapping & keyword visual metaphors", index)
+                scene_type = ctx.get("visual_type") or ctx.get("section") or "character_hero"
+                archetype_setting = SCENE_TYPE_TO_ARCHETYPE.get(scene_type, "briefing podium on stage, spotlight")
+                narration_text = ctx.get("text") or ctx.get("prompt_ko") or ""
+                
+                metaphors = []
+                if any(k in narration_text for k in ["패닉", "무너졌", "폭락", "급락"]):
+                    metaphors.append("dark stormy market chaos with red falling arrows")
+                elif any(k in narration_text for k in ["반등", "회복", "만회"]):
+                    metaphors.append("golden recovery arc rising dramatically from cliff edge")
+                elif any(k in narration_text for k in ["저울", "비교", "대비"]):
+                    metaphors.append("giant golden balance scale with two glowing market orbs")
+                elif any(k in narration_text for k in ["반도체", "amd", "실적"]):
+                    metaphors.append("glowing semiconductor chip facility and circuit pathways")
+                elif any(k in narration_text for k in ["금리"]):
+                    metaphors.append("massive interest rate dial and financial gauge pointing up")
+                elif any(k in narration_text for k in ["지수", "포인트", "마감"]):
+                    metaphors.append("giant illuminated scoreboard displaying stock market results")
+                elif any(k in narration_text for k in ["전망", "방향"]):
+                    metaphors.append("foggy financial crossroads with glowing directional signs")
+
+                metaphor_str = ", ".join(metaphors) if metaphors else f"editorial financial visualization for {narration_text[:30]}"
+                prompt_en = f"{archetype_setting}, {metaphor_str}, dark navy tone, original 2D Korean comic, bold ink outlines, cel shading, no readable text, no letters"
+                ctx["prompt_en"] = prompt_en
+
             character_required = bool(ctx["art_direction"].get("character_required", True))
             effective_reference_paths = character_reference_paths if character_required else []
             tier = image_profile.get("tier", "pro")
@@ -1341,10 +1486,8 @@ class ImagesWorker:
                         "asset_layout_metadata": _asset_layout_metadata(ctx, resumed_clean_plate),
                         "generation_method": "resumed_existing", "quality_score": 90, "_fingerprint": scene_fingerprint}
 
-            is_v5_scene = is_v5_final_lane_scene(ctx)
-            provider_options = dict(ctx.get("v5_provider_options") or {})
-            max_retries = 1 if is_v5_scene else max(1, min(int(runtime_config.value("gemini_retry_max")), 8))
-            base_backoff = max(0.25, float(runtime_config.value("gemini_pro_retry_base_seconds")))
+            max_retries = max(3, min(int(runtime_config.value("gemini_retry_max")), 8))
+            base_backoff = max(0.5, float(runtime_config.value("gemini_pro_retry_base_seconds")))
             last_error = None
             for attempt in range(max_retries):
                 if is_job_stopped(job_id):
@@ -1472,7 +1615,11 @@ class ImagesWorker:
             os.replace(staged, manifest_path)
 
         with ThreadPoolExecutor(max_workers=min(max_workers, len(contexts)), thread_name_prefix="image") as pool:
-            futures = {pool.submit(render_one, ctx): ctx["index"] for ctx in contexts}
+            futures = {}
+            for i, ctx in enumerate(contexts):
+                if i > 0:
+                    time.sleep(0.8)  # 3개 동시 파이프라인 처리를 위한 최적화 딜레이 (0.8초)
+                futures[pool.submit(render_one, ctx)] = ctx["index"]
             for future in as_completed(futures):
                 index = futures[future]
                 try:

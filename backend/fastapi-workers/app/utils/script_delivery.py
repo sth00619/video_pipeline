@@ -172,6 +172,9 @@ def pace_sections_for_runtime(
         if bucket_chars >= target:
             flush()
     flush()
+    for idx, scene in enumerate(paced, start=1):
+        scene["scene_id"] = f"script_scene_{idx:03d}"
+        scene["title"] = f"장면 {idx:03d}"
     return paced
 
 

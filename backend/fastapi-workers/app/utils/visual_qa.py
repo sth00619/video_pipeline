@@ -81,7 +81,7 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 "generationConfig": {"responseMimeType": "application/json", "temperature": 0.1},
             }
             response = requests.post(
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
                 params={"key": api_key}, json=payload, timeout=45,
             )
             if response.status_code != 200:

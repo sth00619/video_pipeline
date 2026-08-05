@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft, Download, CheckCircle, Loader,
-  ThumbsUp, ThumbsDown, Zap, Star, AlertCircle,
+  ThumbsUp, ThumbsDown, Zap, Star, AlertCircle, RotateCcw,
   FileText, Image as ImageIcon, Music, ChevronDown, ChevronUp,
   Clock, Edit, Save, Printer, Scissors, Copy, ExternalLink, Youtube, Info
 } from 'lucide-react'
@@ -51,10 +51,15 @@ const STEP_PROGRESS_INFO = {
 
 const STATUS_ORDER = [
   'DRAFT', 'KEYWORD_PENDING', 'SCRIPT_PENDING', 'TTS_PENDING',
-  'IMAGES_PENDING', 'IMAGES_RETRY_REQUIRED', 'ASSEMBLING', 'PREVIEW_PENDING', 'READY', 'PUBLISHED', 'FAILED'
+  'IMAGES_PENDING', 'IMAGES_RETRY_REQUIRED', 'ASSEMBLING', 'PREVIEW_PENDING', 'READY', 'PUBLISHED'
 ]
+// FAILED는 STATUS_ORDER에 포함하지 않아 indexOf = -1 → 아래 로직이 'idle'을 반환하도록 유도
 
 function getStepStatus(step, job, approvals) {
+  // FAILED 상태: approval 기록이 있는 단계만 done, 나머지는 idle
+  if (['FAILED', 'IMAGES_RETRY_REQUIRED'].includes(job.status) && job.status === 'FAILED') {
+    return approvals.find(a => a.gate === step.gate) ? 'done' : 'idle'
+  }
   if (approvals.find(a => a.gate === step.gate)) return 'done'
   if (['READY','PUBLISHED'].includes(job.status)) return 'done'
   if (job.status === step.pendingStatus) return 'active'
@@ -586,6 +591,16 @@ export default function JobDetail() {
               작업 중지
             </button>
           )}
+          {(job?.status === 'FAILED' || job?.status === 'IMAGES_RETRY_REQUIRED') && (
+            <button
+              onClick={() => retryScriptMut.mutate()}
+              disabled={retryScriptMut.isPending}
+              className="text-sm bg-accent-cyan text-navy-950 hover:opacity-90 disabled:opacity-50 px-4 py-2 rounded-lg transition font-semibold flex items-center gap-1.5"
+            >
+              {retryScriptMut.isPending ? <Loader className="animate-spin" size={14}/> : <RotateCcw size={14}/>}
+              재시도
+            </button>
+          )}
           {isDeletable && (
             <button
               onClick={handleDelete}
@@ -623,15 +638,35 @@ export default function JobDetail() {
         </div>
       )}
 
-      {job.status === 'FAILED' && !scriptData && (
+      {['FAILED', 'IMAGES_RETRY_REQUIRED'].includes(job.status) && (
         <div className="bg-accent-gold/10 border border-accent-gold/30 rounded-xl px-5 py-4 mb-5 flex items-center justify-between gap-4">
-          <p className="text-sm text-accent-gold">스크립트 생성 전 오류가 발생했습니다. 선택한 키워드를 유지한 채 스크립트 단계부터 다시 시작할 수 있습니다.</p>
+          <div>
+            <p className="text-sm font-semibold text-accent-gold">
+              {imageList.length > 0
+                ? '기존 대본·TTS·이미지가 정상 보존되어 있습니다. 동영상 조립 단계부터 즉시 재개할 수 있습니다.'
+                : ttsAssets.length > 0
+                ? '기존 승인 대본과 TTS 음성이 보존되어 있습니다. 이미지 생성 단계부터 즉시 재개할 수 있습니다.'
+                : scriptData
+                ? '기존 승인 대본이 보존되어 있습니다. 음성(TTS) 합성 단계부터 즉시 재개할 수 있습니다.'
+                : '선택한 키워드가 유지되어 있습니다. 대본 생성 단계부터 즉시 재개할 수 있습니다.'}
+            </p>
+            <p className="text-xs text-accent-gold/70 mt-1">
+              이전 단계에서 검증 및 확정된 산출물은 삭제되지 않고 그대로 재사용됩니다.
+            </p>
+          </div>
           <button
             onClick={() => retryScriptMut.mutate()}
             disabled={retryScriptMut.isPending}
-            className="shrink-0 flex items-center gap-1.5 bg-accent-gold text-navy-950 text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+            className="shrink-0 flex items-center gap-1.5 bg-accent-gold text-navy-950 text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition shadow-sm"
           >
-            {retryScriptMut.isPending ? <Loader size={14} className="animate-spin"/> : <Zap size={14}/>}스크립트 재시도
+            {retryScriptMut.isPending ? <Loader size={15} className="animate-spin"/> : <RotateCcw size={15}/>}
+            {imageList.length > 0
+              ? '동영상 조립 재시도'
+              : ttsAssets.length > 0
+              ? '이미지 생성 재시도'
+              : scriptData
+              ? 'TTS 생성 재시도'
+              : '대본 생성 재시도'}
           </button>
         </div>
       )}
@@ -1004,7 +1039,7 @@ export default function JobDetail() {
               isManual || (isGuided && ['keyword', 'tts'].includes(step.key)) || canRetryBlockedImageStep
             )
             const guidedGates = ['KEYWORD','SCRIPT','TTS','IMAGES','PREVIEW']
-            const showGuidedApprove = isGuided && ss === 'active' && guidedGates.includes(step.gate)
+            const showGuidedApprove = (isGuided || isAuto) && ss === 'active' && guidedGates.includes(step.gate)
             const showManualApprove = isManual && ss === 'active' && runningStep !== step.key
 
             return (
@@ -1131,57 +1166,132 @@ export default function JobDetail() {
 
                 {step.key === 'keyword' && kwCandidates.length > 0 && (
                   <div className="px-5 pb-4 border-t border-navy-700">
-                    <p className="text-sm text-navy-400 mt-3 mb-2">후보 {kwCandidates.length}개</p>
+                    <div className="flex items-center justify-between mt-3 mb-3">
+                      <p className="text-sm font-semibold text-navy-300">후보 키워드 {kwCandidates.length}개</p>
+                      <span className="text-xs text-navy-500">점수 100점 만점 (뉴스+수치+카테고리 합산 후 YouTube 데이터 없을 시 100점 기준 환산)</span>
+                    </div>
                     <KeywordMetricGuide />
-                    <div className="space-y-1.5">
+                    <div className="space-y-3">
                       {kwCandidates.map((c, i) => {
                         const hasPublicMetrics = hasYoutubeMetrics(c)
                         const wasAutoSelected = isAuto && job.keyword === c.keyword
+                        const isTop = Number.isFinite(Number(c.score)) && i === 0
+                        const score = Number(c.score) || 0
+                        const newsScore = c.news_score ?? 0
+                        const numericScore = c.market_data_score ?? 0
+                        const categoryScore = c.category_score ?? 0
+                        const youtubeScore = c.youtube_score
+                        const newsCount = c.evidence?.news_count ?? 0
+                        const numericVerified = c.evidence?.numeric_claims_verified
                         return (
-                        <div key={i} className={`px-3.5 py-2.5 rounded-lg ${Number.isFinite(Number(c.score)) && i === 0 ? 'bg-accent-gold/10 border border-accent-gold/20' : 'bg-navy-700/50'}`}>
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                            {Number.isFinite(Number(c.score)) && i === 0 && <Star size={13} className="text-accent-gold fill-accent-gold"/>}
-                            <span className="text-sm">{c.keyword}</span>
-                            {Number.isFinite(Number(c.score)) && i === 0 && <span className="rounded bg-accent-gold/20 px-2 py-0.5 text-xs font-semibold text-accent-gold">증거 점수 1위 · {c.score}점</span>}
-                            {wasAutoSelected && <span className="rounded bg-accent-green/20 px-2 py-0.5 text-xs font-semibold text-accent-green">자동 선택됨</span>}
+                        <div key={i} className={`rounded-xl border transition ${isTop ? 'bg-accent-gold/8 border-accent-gold/30' : 'bg-navy-800/60 border-navy-700/60'}`}>
+                          {/* 헤더 영역 */}
+                          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isTop && <Star size={13} className="text-accent-gold fill-accent-gold flex-shrink-0"/>}
+                              <span className={`font-semibold text-sm truncate ${isTop ? 'text-white' : 'text-navy-200'}`}>{c.keyword}</span>
+                              {isTop && <span className="flex-shrink-0 rounded-full bg-accent-gold/20 px-2 py-0.5 text-xs font-bold text-accent-gold">1위</span>}
+                              {wasAutoSelected && <span className="flex-shrink-0 rounded-full bg-accent-green/20 px-2 py-0.5 text-xs font-semibold text-accent-green">✓ 자동 선택됨</span>}
                             </div>
-                            <div className="text-sm text-navy-400 flex flex-wrap justify-end gap-3">
-                            {hasPublicMetrics ? <>
-                              <span>조회 {metricNumber(c.views)}</span>
-                              <span>구독 {metricNumber(c.subscribers)}</span>
-                              <span>구독자 대비 조회 {metricNumber(c.engagement_ratio, 2)}×</span>
-                              <span>채널 평균 대비 {metricNumber(c.outperformance_index, 2)}×</span>
-                              <span>시간당 조회 {metricNumber(c.velocity_vph)}</span>
-                              <span>좋아요 {c.likes_available === false ? '비공개' : metricNumber(c.likes)}</span>
-                              <span>{c.duration_seconds ? `${Math.round(c.duration_seconds)}초` : '길이 없음'}</span>
-                            </> : <span className="text-navy-500">공개 YouTube 지표 수집 없음</span>}
-                            {(isGuided || job.status === 'TOPIC_EVIDENCE_REQUIRED') && ['KEYWORD_PENDING', 'TOPIC_EVIDENCE_REQUIRED'].includes(job.status) && (
-                              <button
-                                type="button"
-                                onClick={() => confirmKeywordMut.mutate(c.keyword)}
-                                disabled={confirmKeywordMut.isPending}
-                                className="text-accent-cyan font-semibold hover:underline disabled:opacity-50"
-                              >이 키워드 선택</button>
-                            )}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {Number.isFinite(score) && (
+                                <div className={`text-lg font-bold tabular-nums ${isTop ? 'text-accent-gold' : 'text-navy-300'}`}>
+                                  {score}<span className="text-xs font-normal ml-0.5 text-navy-400">점</span>
+                                </div>
+                              )}
+                              {(isGuided || job.status === 'TOPIC_EVIDENCE_REQUIRED') && ['KEYWORD_PENDING', 'TOPIC_EVIDENCE_REQUIRED'].includes(job.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => confirmKeywordMut.mutate(c.keyword)}
+                                  disabled={confirmKeywordMut.isPending}
+                                  className="text-xs bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30 hover:bg-accent-cyan/25 disabled:opacity-50 px-3 py-1 rounded-lg font-semibold transition"
+                                >선택</button>
+                              )}
                             </div>
                           </div>
+
+                          {/* 점수 바 영역 */}
+                          {Number.isFinite(score) && (
+                            <div className="px-4 pb-3 space-y-1.5">
+                              <div className="w-full bg-navy-900/60 rounded-full h-1.5 overflow-hidden">
+                                <div className="h-full rounded-full bg-gradient-to-r from-accent-gold to-accent-cyan transition-all" style={{width: `${Math.min(score, 100)}%`}}/>
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 text-xs mt-2">
+                                {/* 뉴스 점수 */}
+                                <div className="bg-navy-900/40 rounded-lg px-2 py-1.5">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-navy-400">뉴스</span>
+                                    <span className={`font-bold tabular-nums ${newsScore >= 20 ? 'text-accent-green' : newsScore >= 10 ? 'text-accent-gold' : 'text-navy-300'}`}>{newsScore}<span className="text-navy-500 font-normal">/40</span></span>
+                                  </div>
+                                  <div className="w-full bg-navy-800 rounded-full h-1">
+                                    <div className="h-full rounded-full bg-blue-400" style={{width: `${(newsScore/40)*100}%`}}/>
+                                  </div>
+                                  <p className="text-navy-500 mt-1 text-[10px]">{newsCount}건 수집</p>
+                                </div>
+                                {/* 수치 점수 */}
+                                <div className="bg-navy-900/40 rounded-lg px-2 py-1.5">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-navy-400">수치검증</span>
+                                    <span className={`font-bold tabular-nums ${numericScore >= 25 ? 'text-accent-green' : numericScore >= 10 ? 'text-accent-gold' : 'text-navy-300'}`}>{numericScore}<span className="text-navy-500 font-normal">/35</span></span>
+                                  </div>
+                                  <div className="w-full bg-navy-800 rounded-full h-1">
+                                    <div className="h-full rounded-full bg-purple-400" style={{width: `${(numericScore/35)*100}%`}}/>
+                                  </div>
+                                  <p className="text-navy-500 mt-1 text-[10px]">{numericVerified === null ? '수치 없음' : numericVerified ? '검증 완료' : '검증 실패'}</p>
+                                </div>
+                                {/* 카테고리 점수 */}
+                                <div className="bg-navy-900/40 rounded-lg px-2 py-1.5">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-navy-400">카테고리</span>
+                                    <span className={`font-bold tabular-nums ${categoryScore >= 15 ? 'text-accent-green' : categoryScore >= 8 ? 'text-accent-gold' : 'text-navy-300'}`}>{categoryScore}<span className="text-navy-500 font-normal">/20</span></span>
+                                  </div>
+                                  <div className="w-full bg-navy-800 rounded-full h-1">
+                                    <div className="h-full rounded-full bg-orange-400" style={{width: `${(categoryScore/20)*100}%`}}/>
+                                  </div>
+                                  <p className="text-navy-500 mt-1 text-[10px]">시장 지표 연관성</p>
+                                </div>
+                                {/* YouTube 점수 */}
+                                <div className="bg-navy-900/40 rounded-lg px-2 py-1.5">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-navy-400">YouTube</span>
+                                    <span className={`font-bold tabular-nums ${youtubeScore != null && youtubeScore >= 10 ? 'text-accent-green' : youtubeScore != null ? 'text-accent-gold' : 'text-navy-500'}`}>
+                                      {youtubeScore != null ? <>{youtubeScore}<span className="text-navy-500 font-normal">/15</span></> : <span className="text-[10px] font-normal">미수집</span>}
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-navy-800 rounded-full h-1">
+                                    <div className="h-full rounded-full bg-red-400" style={{width: youtubeScore != null ? `${(youtubeScore/15)*100}%` : '0%'}}/>
+                                  </div>
+                                  <p className="text-navy-500 mt-1 text-[10px]">{youtubeScore == null ? '가중치 재배분' : '구독자 대비 조회'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* YouTube 세부 지표 */}
+                          {hasPublicMetrics && (
+                            <div className="mx-4 mb-3 rounded-lg bg-navy-900/40 border border-navy-700/40 px-3 py-2 grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-navy-400">
+                              <span>조회수 <span className="text-navy-200">{metricNumber(c.views)}</span></span>
+                              <span>구독자 <span className="text-navy-200">{metricNumber(c.subscribers)}</span></span>
+                              <span>좋아요 <span className="text-navy-200">{c.likes_available === false ? '비공개' : metricNumber(c.likes)}</span></span>
+                              <span>구독자 대비 <span className="text-accent-cyan font-semibold">{metricNumber(c.engagement_ratio, 2)}×</span></span>
+                              <span>채널 평균 대비 <span className="text-accent-cyan font-semibold">{metricNumber(c.outperformance_index, 2)}×</span></span>
+                              <span>시간당 조회 <span className="text-navy-200">{metricNumber(c.velocity_vph)}</span></span>
+                            </div>
+                          )}
+
+                          {/* 근거 텍스트 */}
                           {(wasAutoSelected || c.reason) && (
-                            <div className={`mt-2 rounded-md border px-3 py-2 text-xs leading-relaxed ${wasAutoSelected ? 'border-accent-green/30 bg-accent-green/10 text-accent-green' : 'border-navy-700 bg-navy-900/30 text-navy-400'}`}>
-                              <span className="font-semibold">{wasAutoSelected ? '자동 선택 이유' : '후보 근거'}: </span>
+                            <div className={`mx-4 mb-3 rounded-lg border px-3 py-2 text-xs leading-relaxed ${wasAutoSelected ? 'border-accent-green/30 bg-accent-green/8 text-accent-green' : 'border-navy-700/50 bg-navy-900/20 text-navy-400'}`}>
+                              <span className="font-semibold">{wasAutoSelected ? '자동 선택 이유' : '선정 근거'}: </span>
                               {wasAutoSelected
                                 ? <>자동 모드는 작업 요청에 전달된 키워드가 있으면 그 키워드를 우선 확정하고, 없으면 후보 우선순위 1위를 선택합니다. {hasPublicMetrics ? '후보 우선순위는 채널 평균 대비 40% · 구독자 대비 조회 30% · 시간당 조회 30%를 반영합니다.' : '공개 YouTube 지표가 없을 때에는 수집된 뉴스·후보 근거 순위를 반영합니다.'} {c.reason || ''}</>
                                 : c.reason}
                             </div>
                           )}
-                          {Number.isFinite(Number(c.score)) && (
-                            <div className="mt-2 grid grid-cols-2 gap-1 text-xs text-navy-400 sm:grid-cols-4">
-                              <span>총점 {c.score}</span><span>뉴스 {c.news_score ?? 0}</span><span>수치 {c.market_data_score ?? 0}</span><span>카테고리 {c.category_score ?? 0}</span>
-                              <span className="col-span-2 sm:col-span-4">YouTube {c.youtube_score == null ? '데이터 없음 · 가중치 재배분' : c.youtube_score} · 뉴스 {c.evidence?.news_count ?? 0}건 · 수치 검증 {c.evidence?.numeric_claims_verified === null ? '해당 없음' : c.evidence?.numeric_claims_verified ? '완료' : '실패'}</span>
-                            </div>
-                          )}
+
+                          {/* 소스 영상 */}
                           {c.source_videos?.length > 0 && (
-                            <div className="mt-1.5 pl-5 text-[11px] text-navy-400 space-y-0.5">
+                            <div className="mx-4 mb-3 pl-3 border-l-2 border-navy-700 text-[11px] text-navy-400 space-y-0.5">
                               {c.source_videos.slice(0, 2).map((video, vi) => (
                                 <a
                                   key={video.video_id || vi}
@@ -1190,19 +1300,19 @@ export default function JobDetail() {
                                   rel="noreferrer"
                                   className="block hover:text-accent-cyan truncate max-w-[680px]"
                                 >
-                                  ↳ {video.title} · 조회 {(video.views || 0).toLocaleString()} · 구독 {(video.subscribers || 0).toLocaleString()} · 좋아요 {video.likes_available === false ? '비공개' : (video.likes || 0).toLocaleString()}
+                                  ↳ {video.title} · 조회 {(video.views || 0).toLocaleString()} · 구독 {(video.subscribers || 0).toLocaleString()}
                                 </a>
                               ))}
-                              <span className="block text-navy-500">평균 시청시간/CTR: 공개 API로 확인 불가</span>
                             </div>
                           )}
                         </div>
                         )
                       })}
                     </div>
-                    {job.keyword && <div className="mt-2 text-sm text-navy-400">✓ 확정: <span className="text-accent-cyan">{job.keyword}</span></div>}
+                    {job.keyword && <div className="mt-3 text-sm text-navy-400 flex items-center gap-1.5"><span className="text-accent-green font-bold">✓</span> 확정: <span className="text-accent-cyan font-semibold">{job.keyword}</span></div>}
                   </div>
                 )}
+
 
                 {step.key === 'script' && scriptData && (
                   <div className="px-5 pb-4 border-t border-navy-700">

@@ -173,13 +173,10 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         character_required=bool(scene.get("character_required", True)),
     )
     visual_mode = _visual_mode(scene, scene_type)
-    information_scene = visual_mode == "archetype_explainer"
+    is_general_selection = bool(selection and selection.scene_type == "general")
+    information_scene = (visual_mode == "archetype_explainer") and not is_general_selection
     visual_mode_contract = VISUAL_MODE_CONTRACTS[visual_mode]
     has_verified_surface_content = False
-    # Gemini가 임의의 영문·수치·차트 값을 그리면 실제 금융 사실처럼 보일 수
-    # 있다. 검증 데이터가 아직 표면 페이로드로 변환되지 않은 정보 장면도
-    # 예외 없이 텍스트 없는 베이스만 생성하고, 모든 읽을 수 있는 정보는
-    # Pillow/FFmpeg의 결정론적 합성 단계에서만 넣는다.
     policy = "script_captioned" if information_scene else "strict_textless"
     semantic_plan = script_visual_plan(scene)
     semantic_direction = semantic_plan["direction"]

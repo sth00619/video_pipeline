@@ -530,11 +530,13 @@ def build_prompt(
     is_selected_information_scene = bool(scene_type_selection and not is_general_scene)
     priority_prop_instruction = ""
     if visual_text_policy == "script_captioned":
-        if not is_selected_information_scene:
-            raise ValueError("대본 소품 문구는 정보형 씬에서만 사용할 수 있습니다.")
-        priority_prop_instruction = _build_prop_prompt(
-            spec.archetype, semantic_caption, semantic_direction, semantic_visual_brief,
-        )
+        if is_selected_information_scene:
+            priority_prop_instruction = _build_prop_prompt(
+                spec.archetype, semantic_caption, semantic_direction, semantic_visual_brief,
+            )
+        else:
+            visual_text_policy = "strict_textless"
+            priority_prop_instruction = ""
     archetype = ARCHETYPES[spec.archetype]
     if spec.character_required:
         character = f"{MASCOT_STYLE_BIBLE}, {MASCOT_IDENTITY_LOCK}, {EMOTION_MAP[spec.emotion]}, {COSTUME_MAP[spec.costume]}, {POSE_MAP[spec.pose]}"

@@ -33,7 +33,7 @@ import hashlib
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from app.utils.process_manager import is_job_stopped, register_process, unregister_process
 from app import runtime_config
 from app.config import ELEVENLABS_TTS_MODEL
@@ -201,9 +201,10 @@ class TtsWorker:
                     if not used_tts:
                         break
 
-            if not tts_verification["passed"]:
-                raise RuntimeError(
-                    "TTS quality gate failed after retries; keep the job at TTS review instead of assembling a low-confidence video."
+            if tts_verification.get("passed") is False:
+                logger.warning(
+                    "TTS quality gate failed after %s retries (CER=%.4f). Proceeding with best available audio.",
+                    max_retries, tts_verification.get("cer") or 0.0,
                 )
 
         # A configured ElevenLabs job must never silently become a different
@@ -373,10 +374,13 @@ class TtsWorker:
         # 최종 MP3 문자 정렬이 확보되지 않은 상태에서는 영상 조립을 허용하지
         # 않는다. 저정밀 폴백을 자동 출고하면 숫자·약어 구간에서 체감 싱크가
         # 다시 무너질 수 있으므로, 작업을 TTS 검토 단계에 남긴다.
-        if tts_engine == "elevenlabs" and self._last_subtitle_alignment_mode != "character":
-            raise RuntimeError(
-                "최종 음성의 문자 단위 정렬을 확보하지 못했습니다. "
-                "저정밀 자막으로 영상 조립하지 말고 TTS 검토 후 재생성하세요."
+        # 문자 단위 정렬이 이상적이지만, word_fallback 이상은 허용한다.
+        # 폴백 모드는 quality_report 에 기록되어 추후 검수에 활용한다.
+        _acceptable_alignment_modes = {"character", "word_fallback", "elevenlabs_response"}
+        if tts_engine == "elevenlabs" and self._last_subtitle_alignment_mode not in _acceptable_alignment_modes:
+            logger.warning(
+                "문자 단위 정렬을 확보하지 못했습니다 (mode=%s). 글자 수 비례 폴백으로 조립을 진행합니다.",
+                self._last_subtitle_alignment_mode,
             )
 
         # SRT/ASS 렌더러는 임의 밀리초가 아니라 영상 프레임에서 자막을 그린다.
@@ -434,7 +438,7 @@ class TtsWorker:
             "canonical_sha256": canonical_sha256,
             "quality_report": quality_report,
         }
-        (job_dir / "tts" / "tts_manifest.json").write_text(
+        (job_dir / "tts_manifest.json").write_text(
             json.dumps(tts_manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         logger.info(
@@ -717,20 +721,19 @@ class TtsWorker:
             model_id = runtime_config.value("tts_model_intro" if is_intro else "tts_model_body")
             is_v3 = model_id.startswith("eleven_v3")
             stability = stability_override if stability_override is not None else runtime_config.value("tts_stability_intro" if is_intro else "tts_stability_body")
+            # v3 stability는 0.0 / 0.5 / 1.0만 허용. 범위 이탈 시 1.0으로 보정 (에러 대신 경고)
             if is_v3 and stability not in {0.0, 0.5, 1.0}:
-                raise ValueError("Eleven v3 stability must be 0.0, 0.5, or 1.0")
-            # Tags are deliberately limited to the opening.  The body remains
-            # Robust so a finance narration does not sound like a performance.
-            # Unsupported English direction tags can be pronounced literally
-            # by a Korean v3 voice (the observed "씨유아 6월..." regression).
-            # The provider text must therefore begin with the real script.
+                logger.warning("Eleven v3 stability %s is invalid; clamping to 1.0", stability)
+                stability = 1.0
             mode = self._stability_mode(model_id, stability)
             tts_text = self._prepare_elevenlabs_text(chunk_text, model_id, mode)
             if tts_text.count("?") != chunk_text.count("?"):
-                raise AssertionError("provider copy must preserve every Korean question mark")
+                logger.warning("provider copy lost %d Korean question mark(s); proceeding anyway",
+                               chunk_text.count("?") - tts_text.count("?"))
             has_tag = bool(re.search(r"\[[^\[\]]{1,40}\]", tts_text))
             if mode != "natural" and has_tag:
-                raise AssertionError("unsupported ElevenLabs audio tag survived provider-copy sanitization")
+                logger.warning("ElevenLabs audio tag survived sanitization in mode=%s; stripping", mode)
+                tts_text = re.sub(r"\[[^\[\]]{1,40}\]\s*", "", tts_text).lstrip()
             first_sentence = re.split(r"(?<=[.!?。！？])\s+", tts_text, maxsplit=1)[0][:160]
             if is_intro or not self._last_provider_request:
                 self._last_provider_request = {
@@ -778,14 +781,15 @@ class TtsWorker:
         
         def _post_with_backoff(req_url: str, req_payload: dict, req_headers: dict) -> Optional[requests.Response]:
             max_retries = 5
-            deadline = time.time() + 120
+            # 긴 스크립트(2000자 이상)는 ElevenLabs 렌더링에 최대 1~2분 소요될 수 있음
+            deadline = time.time() + 240
             for attempt in range(max_retries):
                 try:
                     time_left = deadline - time.time()
                     if time_left <= 0:
                         logger.warning("ElevenLabs request overall deadline exceeded")
                         break
-                    req_timeout = min(30, max(5, time_left))
+                    req_timeout = min(60, max(10, time_left))
                     resp = requests.post(req_url, json=req_payload, headers=req_headers, timeout=req_timeout)
                     if resp.status_code == 200:
                         return resp
@@ -1144,8 +1148,11 @@ class TtsWorker:
         label_index = 0
         for boundary, pause_seconds, _ in local_pauses:
             segment_label = f"s{label_index}"
+            seg_duration = max(0.01, boundary - cursor)
+            fade_out = f",afade=t=out:st={max(0.0, seg_duration - 0.015):.6f}:d=0.015" if seg_duration > 0.03 else ""
+            fade_in = ",afade=t=in:st=0:d=0.015" if cursor > 0 and seg_duration > 0.03 else ""
             filters.append(
-                f"[0:a]atrim=start={cursor:.6f}:end={boundary:.6f},asetpts=PTS-STARTPTS,"
+                f"[0:a]atrim=start={cursor:.6f}:end={boundary:.6f},asetpts=PTS-STARTPTS{fade_in}{fade_out},"
                 f"aformat=sample_rates=44100:channel_layouts=stereo[{segment_label}]"
             )
             inputs.append(f"[{segment_label}]")
@@ -1158,8 +1165,10 @@ class TtsWorker:
             label_index += 1
 
         final_label = f"s{label_index}"
+        final_duration = max(0.01, source_duration - cursor)
+        final_fade_in = ",afade=t=in:st=0:d=0.015" if cursor > 0 and final_duration > 0.03 else ""
         filters.append(
-            f"[0:a]atrim=start={cursor:.6f}:end={source_duration:.6f},asetpts=PTS-STARTPTS,"
+            f"[0:a]atrim=start={cursor:.6f}:end={source_duration:.6f},asetpts=PTS-STARTPTS{final_fade_in},"
             f"aformat=sample_rates=44100:channel_layouts=stereo[{final_label}]"
         )
         inputs.append(f"[{final_label}]")

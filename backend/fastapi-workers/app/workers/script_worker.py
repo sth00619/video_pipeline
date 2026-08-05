@@ -261,7 +261,25 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
 - 각 헤더 아래에는 다음 여섯 개의 태그를 사용해 내용을 채우세요:
   1. [대사] : 실제 한국어로 낭독할 대사 텍스트
   2. [비주얼 설명 (한국어)] : 화면에 보여줄 구체적인 상황과 은유적 배경에 대한 설명 (한국어)
-  3. [비주얼 프롬프트 (영어)] : AI 이미지 생성기용 영어 프롬프트 (오직 배경/분위기/객체만 묘사, 캐릭터 묘사 금지 + 공통 스타일/네거티브 키워드 추가)
+  3. [비주얼 프롬프트 (영어)] : 이 씬의 대사 내용을 시각적 은유 배경으로 변환한 영어 프롬프트.
+
+     필수 규칙:
+     - 대사의 핵심 경제 상황을 반드시 구체적인 물리적 은유로 치환한다.
+       추상 개념 → 구체 사물/장면:
+         지수 발표·종가    → giant illuminated scoreboard, spotlight podium
+         패닉·급락·폭락    → dark stormy trading floor, red emergency sirens, falling arrows
+         반등·회복         → golden recovery arc rising from cliff edge, dawn light breaking
+         비교·저울질       → massive golden balance scale with two glowing orbs
+         금리 부담·동결    → giant lock on a vault door, frozen clock, heavy chain
+         반도체·AI·기술주  → glowing semiconductor chip factory, circuit pathways
+         전망 불확실       → foggy crossroads with glowing signposts, misty fog
+         실적 발표         → glowing corporate report in spotlight, rising bar chart
+         공급망·무역       → container port at night, crane lights, shipping routes
+     - 씬마다 서로 다른 배경을 만들어야 한다. 이전 씬과 동일한 배경 묘사 반복 금지.
+     - 캐릭터(사람, 코인, 지폐, 캐릭터 형상) 묘사 절대 금지. 배경과 상황만.
+     - 반드시 이 스타일 태그로 끝낼 것:
+       original 2D Korean finance comic, bold ink outlines, cel shading, no readable text, no letters
+     - 50단어 이내.
   4. [감정] : 상황에 맞는 캐릭터 표정/포즈 (happy / worried / surprised / pointing / thinking / explaining / neutral 중 하나)
   5. [모션] : 인트로 구간(처음 약 13개 씬)인 경우에만 chart_shock, pointing_explain, thinking_desk, walking_intro, celebration 중 하나를 반드시 선택해 기술하세요. 본문 씬은 비워두거나 제외합니다.
 
@@ -1638,6 +1656,13 @@ def _validate_scene_delivery(sections: list[dict], target_scene_count: int, auto
             raise ValueError(msg)
 
 
+FALLBACK_PROMPT_PATTERN = re.compile(
+    r"Financial editorial scene representing 장면|"
+    r"^Financial editorial scene representing \w+\s*\d*,\s*dark navy",
+    re.IGNORECASE,
+)
+
+
 def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
     """## 씬 제목 또는 ## 섹션명 기준으로 분리하고, 대사/한국어 설명/영어 프롬프트/감정 포즈를 추출합니다."""
     parts = re.split(r'(?m)^##\s*(.+)$', full_text)
@@ -1730,8 +1755,15 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
     for idx, s in enumerate(raw_sections):
         section_type = _assign_section_type(idx, total)
         prompt_en = s["prompt_en"]
-        if not prompt_en:
-            prompt_en = f"Financial editorial scene representing {s['title']}, dark navy tone, original 2D Korean comic, bold ink outlines, cel shading"
+        if not prompt_en or FALLBACK_PROMPT_PATTERN.search(prompt_en):
+            prompt_en = ""
+            prompt_needs_rebuild = True
+            logger.warning(
+                "씬 '%s': [비주얼 프롬프트] 폴백값 감지 — 이미지 워커에서 대사 기반 재생성 예정",
+                s["title"],
+            )
+        else:
+            prompt_needs_rebuild = False
 
         section = {
             "title": s["title"],
@@ -1739,6 +1771,7 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
             "prompt_ko": s["prompt_ko"],
             "prompt_en": prompt_en,
             "prompt": prompt_en,  # Backward compatibility
+            "prompt_needs_rebuild": prompt_needs_rebuild,
             "pose": s["pose"],
             "motion_type": s["motion_type"],
             "bubble_text": s["bubble_text"],

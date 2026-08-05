@@ -92,37 +92,99 @@ public class JobService {
      * the KEYWORD signal and resumes at GenerateScript rather than repeating
      * discovery or creating a second job.
      */
-    @Transactional
-    public JobResponse retryFromScript(Long jobId) {
-        VideoJob job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
-        if (job.getStatus() != JobStatus.FAILED) {
-            throw new IllegalStateException("Only failed jobs can be resumed. Current status: " + job.getStatus());
-        }
-        if (job.getKeyword() == null || job.getKeyword().isBlank()) {
-            throw new IllegalStateException("A selected keyword is required before retrying the script.");
-        }
-        if (!assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCRIPT).isEmpty()) {
-            throw new IllegalStateException("A script already exists; resume from its current review stage instead.");
-        }
-
-        job.setStatus(JobStatus.SCRIPT_PENDING);
-        VideoJob saved = jobRepository.save(job);
-        Runnable resume = () -> {
-            workflowOrchestrator.startPipeline(jobId);
-            workflowOrchestrator.sendApproveSignal(jobId, GateName.KEYWORD.name());
-        };
+    private void runAfterCommit(Runnable runnable) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    resume.run();
+                    runnable.run();
                 }
             });
         } else {
-            resume.run();
+            runnable.run();
         }
-        log.info("Restarting failed job from script generation: jobId={}", jobId);
+    }
+
+    /**
+     * 실패하거나 중단된 작업을 스마트 재개(Smart Resume)합니다.
+     *
+     * 이미 완성/승인된 이전 단계 결과물(키워드/대본/TTS/이미지)이 존재하면
+     * 손상시키지 않고 그대로 보존한 채, 실패한/멈춘 해당 단계부터 즉시 재개합니다.
+     */
+    @Transactional
+    public JobResponse retryFromScript(Long jobId) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        if (job.getStatus() != JobStatus.FAILED && job.getStatus() != JobStatus.IMAGES_RETRY_REQUIRED) {
+            throw new IllegalStateException("Only failed jobs can be resumed. Current status: " + job.getStatus());
+        }
+
+        boolean hasScript = !assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCRIPT).isEmpty();
+        boolean hasTts = !assetRepository.findByJobIdAndAssetType(jobId, AssetType.TTS_AUDIO).isEmpty();
+        boolean hasImages = !assetRepository.findByJobIdAndAssetType(jobId, AssetType.IMAGE_BATCH).isEmpty();
+
+        // 1. 대본, TTS, 이미지까지 모두 정상 생성된 경우 -> 롱폼 조립(ASSEMBLING) 단계부터 재개
+        if (hasScript && hasTts && hasImages) {
+            log.info("기존 대본·TTS·이미지 보존 — 롱폼 조립 단계부터 즉시 재개: jobId={}", jobId);
+            job.setStatus(JobStatus.ASSEMBLING);
+            VideoJob saved = jobRepository.save(job);
+            runAfterCommit(() -> {
+                workflowOrchestrator.startPipeline(jobId);
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.KEYWORD.name());
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.SCRIPT.name());
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.TTS.name());
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.IMAGES.name());
+            });
+            return JobResponse.from(saved);
+        }
+
+        // 2. 이미 대본과 TTS가 확정된 상태인 경우 -> 이미지 생성(IMAGES_PENDING) 단계부터 재개
+        if (hasScript && hasTts) {
+            log.info("기존 대본·TTS 보존 — 이미지 생성 단계부터 즉시 재개: jobId={}", jobId);
+            assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.IMAGE_BATCH);
+            assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+
+            job.setStatus(JobStatus.IMAGES_PENDING);
+            VideoJob saved = jobRepository.save(job);
+            runAfterCommit(() -> {
+                workflowOrchestrator.startPipeline(jobId);
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.KEYWORD.name());
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.SCRIPT.name());
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.TTS.name());
+            });
+            return JobResponse.from(saved);
+        }
+
+        // 3. 대본은 확정 및 승인되었으나 TTS 생성이 되지 않은 경우 -> 기존 대본 보존, TTS(TTS_PENDING)부터 재개
+        if (hasScript) {
+            log.info("기존 승인 대본 보존 — TTS 생성 단계부터 즉시 재개: jobId={}", jobId);
+            assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.TTS_AUDIO);
+            assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.IMAGE_BATCH);
+            assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+
+            job.setStatus(JobStatus.TTS_PENDING);
+            VideoJob saved = jobRepository.save(job);
+            runAfterCommit(() -> {
+                workflowOrchestrator.startPipeline(jobId);
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.KEYWORD.name());
+                workflowOrchestrator.sendApproveSignal(jobId, GateName.SCRIPT.name());
+            });
+            return JobResponse.from(saved);
+        }
+
+        // 4. 대본 이전(키워드 선택만 됨)에서 실패한 경우 -> 선택 키워드 보존, 대본 생성(SCRIPT_PENDING)부터 재개
+        log.info("선택 키워드 보존 — 대본 생성 단계부터 재개: jobId={}", jobId);
+        assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.SCRIPT);
+        assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.TTS_AUDIO);
+        assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.IMAGE_BATCH);
+        assetRepository.deleteByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+
+        job.setStatus(JobStatus.SCRIPT_PENDING);
+        VideoJob saved = jobRepository.save(job);
+        runAfterCommit(() -> {
+            workflowOrchestrator.startPipeline(jobId);
+            workflowOrchestrator.sendApproveSignal(jobId, GateName.KEYWORD.name());
+        });
         return JobResponse.from(saved);
     }
 

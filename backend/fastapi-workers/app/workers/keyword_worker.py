@@ -572,12 +572,9 @@ YouTube 트렌딩 분석 기반 키워드 후보:
             if _candidate_matches_seed(candidate, terms)
         ]
 
-        # The exact requested topic is always the first candidate.  It has no
-        # invented metric or factual claim and is therefore safe even when the
-        # YouTube quota is exhausted or current news has not indexed yet.
-        # The caller adds the input itself as one scored candidate. Do not
-        # synthesize angles or alter the evidence-based ordering here.
-        return related[:limit]
+        # 직접 매칭된 후보가 limit만큼 있으면 바로 반환
+        if len(related) >= limit:
+            return related[:limit]
 
         primary = _seed_candidate(
             normalized_seed,
