@@ -115,6 +115,103 @@ def _youtube_score(candidate: dict) -> int | None:
     return round(min(engagement, 5) / 5 * 7 + min(outperformance, 4) / 4 * 8)
 
 
+def _calculate_momentum(direct_news_24h: list[dict], direct_news_7d: list[dict]) -> tuple[int, str, float]:
+    """Calculate momentum direction and ratio with Low Volume Floor Exception.
+    
+    Labels:
+      - 'protected_low_volume': 7-day news < 4 (Total 1~3 articles, true low-volume niche protection, 0 penalty)
+      - 'rising': 7-day news >= 4 and ratio >= 1.5 (+5 bonus)
+      - 'falling': 7-day news >= 4 and ratio <= 0.5 (-5 penalty)
+      - 'flat': 7-day news >= 4 and 0.5 < ratio < 1.5 (0 neutral)
+    """
+    count_24h = len(direct_news_24h)
+    count_7d = len(direct_news_7d)
+    avg_7d = count_7d / 7.0
+
+    # Low Volume Floor Exception: Total 7-day articles < 4 (1~3 articles) is a true low-volume niche topic.
+    # Do NOT apply negative momentum penalty to low-volume topics.
+    if count_7d < 4:
+        ratio = round(count_24h / max(avg_7d, 0.1), 2) if avg_7d > 0 else 0.0
+        return 0, "protected_low_volume", ratio
+
+    ratio = round(count_24h / avg_7d, 2)
+    if ratio >= 1.5:
+        return 5, "rising", ratio
+    elif ratio <= 0.5:
+        return -5, "falling", ratio
+    else:
+        return 0, "flat", ratio
+
+
+def _calculate_market_volatility(market_data: dict, category: str, candidate: dict) -> tuple[int, float]:
+    """Calculate market move magnitude z-score with 4-tier granular volatility bonuses.
+    
+    Tiers:
+      - z >= 4.0: Extreme volatility (+7 bonus)
+      - 2.0 <= z < 4.0: High volatility (+5 bonus)
+      - 1.0 <= z < 2.0: Moderate volatility (+3 bonus)
+      - z < 1.0: Normal volatility (0 bonus)
+    """
+    if not isinstance(market_data, dict):
+        return 0, 0.0
+    text = f"{candidate.get('keyword', '')} {candidate.get('reason', '')}".casefold()
+    kr = market_data.get("kr") or {}
+    us = market_data.get("us") or {}
+
+    max_change_pct = 0.0
+    indices = []
+    if category in {"KOSPI", "KOSDAQ", "INDIVIDUAL_STOCK"}:
+        idx = kr.get("index") or {}
+        for k in ("kospi", "kosdaq"):
+            if idx.get(k):
+                indices.append(abs(float(idx[k].get("change_pct") or 0)))
+    elif category in {"US_STOCKS", "GLOBAL_MACRO"}:
+        idx = us.get("index") or {}
+        for k in ("sp500", "nasdaq"):
+            if idx.get(k):
+                indices.append(abs(float(idx[k].get("change_pct") or 0)))
+
+    if indices:
+        max_change_pct = max(indices)
+    
+    # Baseline daily volatility std dev assumed to be ~1.2%
+    z_score = round(max_change_pct / 1.2, 2)
+    
+    if z_score >= 4.0:
+        volatility_bonus = 7
+    elif z_score >= 2.0:
+        volatility_bonus = 5
+    elif z_score >= 1.0:
+        volatility_bonus = 3
+    else:
+        volatility_bonus = 0
+
+    return volatility_bonus, z_score
+
+
+def _calculate_global_macro(category: str, candidate: dict) -> tuple[int, float, list[str]]:
+    """Calculate global macro relevance score and events."""
+    text = f"{candidate.get('keyword', '')} {candidate.get('reason', '')}".casefold()
+    global_keywords = {
+        "fomc": "FOMC 일정",
+        "금리": "연준 금리 정책",
+        "cpi": "미국 CPI 발표",
+        "인플레이션": "글로벌 인플레이션",
+        "환율": "달러/원 환율",
+        "유가": "국제 유가",
+        "빅테크": "미국 빅테크 실적",
+        "엔화": "엔화 환율",
+    }
+    found_events = [event for kw, event in global_keywords.items() if kw in text]
+
+    category_upper = (category or "").upper()
+    if category_upper in {"US_STOCKS", "GLOBAL_MACRO"} or found_events:
+        relevance = 1.0 if found_events else 0.8
+        bonus = 5 if relevance >= 0.8 else 0
+        return bonus, relevance, found_events
+    return 0, 0.0, []
+
+
 def score_candidates(candidates: list[dict], news_keywords: list[dict], market_data: dict,
                      category: str, seed: str, extractor: NewsKeywordExtractor | None = None) -> list[dict]:
     """Attach an auditable 0–100 score and raw evidence to each candidate."""
@@ -123,29 +220,44 @@ def score_candidates(candidates: list[dict], news_keywords: list[dict], market_d
     for source_candidate in candidates:
         candidate = dict(source_candidate)
         keyword = str(candidate.get("keyword") or "").strip()
-        # Direct-news scoring is anchored to the editorial brief's distinctive
-        # terms, so a generic category headline cannot masquerade as evidence.
         terms = specific_terms(seed) or specific_terms(keyword)
         lookup_failed = False
+        recent_news_24h: list[dict] = []
+        recent_news_7d: list[dict] = []
+
         try:
-            recent_news = extractor.search_recent_news(keyword or seed, max_age_hours=72, limit=6)
+            recent_news_7d = extractor.search_recent_news(keyword or seed, max_age_hours=24 * 7, limit=12)
+            recent_news_24h = [art for art in recent_news_7d if float(art.get("hoursSincePublish") or 999) <= 24]
         except Exception:
-            recent_news = []
+            recent_news_7d = []
+            recent_news_24h = []
             lookup_failed = True
-        direct_news = [article for article in recent_news if _article_matches(article, terms)]
-        latest = max((_parse_published_at(article.get("publishedAt")) for article in direct_news), default=None)
-        count_score = min(len(direct_news), 4) / 4 * 24
+
+        direct_news_7d = [article for article in recent_news_7d if _article_matches(article, terms)]
+        direct_news_24h = [article for article in recent_news_24h if _article_matches(article, terms)]
+        latest = max((_parse_published_at(article.get("publishedAt")) for article in direct_news_7d), default=None)
+
+        # Base news count & freshness
+        count_score = min(len(direct_news_7d), 4) / 4 * 24
         freshness_score = 0
         if latest:
             age_hours = (datetime.now(timezone.utc) - latest).total_seconds() / 3600
             freshness_score = 16 if age_hours <= 24 else 10 if age_hours <= 72 else 5 if age_hours <= 24 * 7 else 0
-        news_score = round(count_score + freshness_score)
+        
+        # Momentum adjustment (with Low Volume Floor Exception)
+        momentum_bonus, momentum_dir, momentum_ratio = _calculate_momentum(direct_news_24h, direct_news_7d)
+        
+        if lookup_failed:
+            news_score = 0
+        else:
+            news_score = max(0, min(40, round(count_score + freshness_score + momentum_bonus)))
 
+        # Market data & Volatility z-score
         market_outlook = is_market_level_forecast([keyword or seed])
         claims_numbers = [round(float(value), 1) for value in re.findall(
             r"(\d+(?:\.\d+)?)\s*%", f"{candidate.get('keyword', '')} {candidate.get('reason', '')}"
         )]
-        grounded = _grounded_numbers(news_keywords, direct_news, market_data)
+        grounded = _grounded_numbers(news_keywords, direct_news_7d, market_data)
         if claims_numbers:
             numeric_claims_verified: bool | None = all(
                 any(abs(number - evidence) <= 0.1 for evidence in grounded) for number in claims_numbers
@@ -155,15 +267,23 @@ def score_candidates(candidates: list[dict], news_keywords: list[dict], market_d
             numeric_claims_verified = None
             numeric_points = 7
         market_metrics = _market_metrics_for_category(market_data, category, candidate)
-        # A broad market outlook can be evidenced by the live index snapshot
-        # itself.  Give it enough auditable weight to reach the normal 55-point
-        # automatic-confirmation threshold without pretending it has a direct
-        # company-news match.
-        market_data_score = numeric_points + (20 if market_outlook and market_metrics else 10 if market_metrics else 0)
-        category_score = _category_score(market_data, category, candidate)
+        
+        volatility_bonus, z_score = _calculate_market_volatility(market_data, category, candidate)
+        base_market_score = numeric_points + (20 if market_outlook and market_metrics else 10 if market_metrics else 0)
+        market_data_score = max(0, min(35, base_market_score + volatility_bonus))
+
+        # Category score & Global macro relevance
+        global_bonus, global_relevance, global_events = _calculate_global_macro(category, candidate)
+        base_cat_score = _category_score(market_data, category, candidate)
+        category_score = max(0, min(20, base_cat_score + global_bonus))
+
         youtube_score = _youtube_score(candidate)
         raw_score = news_score + market_data_score + category_score
         total_score = raw_score + youtube_score if youtube_score is not None else raw_score * 100 / 85
+
+        if lookup_failed:
+            total_score = 0
+
         candidate.update({
             "score": round(total_score),
             "news_score": news_score,
@@ -172,9 +292,9 @@ def score_candidates(candidates: list[dict], news_keywords: list[dict], market_d
             "youtube_score": youtube_score,
             "metrics_available": youtube_score is not None,
             "evidence": {
-                "news_count": len(direct_news),
+                "news_count": len(direct_news_7d),
                 "latest_news_at": latest.isoformat() if latest else None,
-                "news_sources": sorted({str(article.get("source") or "Google News") for article in direct_news}),
+                "news_sources": sorted({str(article.get("source") or "Google News") for article in direct_news_7d}),
                 "numeric_claims_verified": numeric_claims_verified,
                 "market_metrics": market_metrics,
                 "youtube_data_available": youtube_score is not None,
@@ -182,10 +302,16 @@ def score_candidates(candidates: list[dict], news_keywords: list[dict], market_d
                     video.get("video_id") for video in (candidate.get("source_videos") or []) if video.get("video_id")
                 ],
                 "news_lookup_failed": lookup_failed,
+                "momentum_direction": momentum_dir,
+                "momentum_ratio": momentum_ratio,
+                "market_move_magnitude": z_score,
+                "volume_spike": None,
+                "global_macro_relevance": global_relevance,
+                "related_global_events": global_events,
             },
         })
         candidate["auto_confirm_eligible"] = bool(
-            candidate["score"] >= 55 and (len(direct_news) >= 1 or (market_outlook and bool(market_data)))
+            candidate["score"] >= 55 and (len(direct_news_7d) >= 1 or (market_outlook and bool(market_data)))
         )
         scored.append(candidate)
     return scored

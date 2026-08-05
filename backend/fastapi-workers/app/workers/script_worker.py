@@ -38,6 +38,7 @@ from app.utils.script_style import (
     assess_storytelling,
     get_script_style_guide,
 )
+from app.utils.script_content_depth_analyzer import assess_script_content_depth
 from app.utils.script_length import make_length_contract, spoken_char_count
 from app.utils.narration_contract import build_script_contract
 from app.utils.sentence_splitter import split_sentences
@@ -747,6 +748,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             )
         unit_validation = _validate_unit_usage(full_script)
         thumbnail_brief = _build_thumbnail_brief(keyword, sections, verified_facts)
+        content_depth_quality = assess_script_content_depth(full_script, sections, verified_facts)
 
         return {
             "job_id": job_id,
@@ -768,6 +770,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             "llm_call_count": self._llm_call_count,
             "narrative_plan": narrative_plan,
             "flow_qa": flow_qa,
+            "content_depth_quality": content_depth_quality,
             "requires_manual_review": False if getattr(self, "_current_autonomy_mode", None) == "AUTO" else (
                 bool(rejected_scenes)
                 or any(item.get("fallback") for item in self._llm_provider_log)
@@ -782,6 +785,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 "storytelling": storytelling_quality,
                 "house_style": house_style_quality,
                 "flow": flow_qa,
+                "content_depth": content_depth_quality,
                 "delivery": delivery_validation,
                 "screen_text": {"passed": not rejected_scenes, "rejected_scenes": rejected_scenes},
             },
@@ -828,7 +832,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
         messages.append({"role": "assistant", "content": r1_text})
         fact_check_log.append(f"Round 1 완료: {_count_text(r1_text)}자")
 
-        r2_content = "위 사실들을 비판적으로 검토하여 교차 검증하고 최종 목록을 작성하세요."
+        r2_content = "위 사실들을 비판적으로 검토하여 2개 이상의 출처(source_ref)에서 교차 검증되는지 확인하고, 출처 간 수치/사실 불일치(contradiction)가 있는 경우 명시적으로 표기하여 최종 목록을 작성하세요."
         messages.append({"role": "user", "content": r2_content})
         r2_text = self._call_llm_with_fallback(FACT_CHECK_SYSTEM_PROMPT, messages, max_tokens=3000)
         messages.append({"role": "assistant", "content": r2_text})
@@ -837,7 +841,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
         r3_content = """검토 결과를 반영하여 최종 사실 목록을 아래 JSON 형식으로 출력하세요.
 [
   {
-    "fact": "...", "figure": "...", "source_field": "...", "confidence": 1.0
+    "fact": "...", "figure": "...", "source_field": "...", "source_ref": ["출처1", "출처2"], "confidence": 1.0, "cross_verified": true, "contradiction_detected": false
   }
 ]"""
         messages.append({"role": "user", "content": r3_content})
@@ -1173,17 +1177,38 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
         else:
             text = str(content_blocks)
 
+        parsed_facts = []
         try:
             json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
             if json_match:
-                return json.loads(json_match.group(1).strip())
-            # 코드블록 없이 배열만 있는 경우
-            arr_match = re.search(r'\[[\s\S]*\]', text)
-            if arr_match:
-                return json.loads(arr_match.group())
+                parsed_facts = json.loads(json_match.group(1).strip())
+            else:
+                arr_match = re.search(r'\[[\s\S]*\]', text)
+                if arr_match:
+                    parsed_facts = json.loads(arr_match.group())
         except Exception as e:
             logger.warning(f"verified_facts JSON 파싱 실패: {e}")
-        return []
+            return []
+
+        cleaned_facts = []
+        for item in parsed_facts:
+            if not isinstance(item, dict):
+                continue
+            src_field = str(item.get("source_field") or "unknown")
+            source_refs = item.get("source_ref")
+            if not isinstance(source_refs, list):
+                source_refs = [src_field]
+            
+            cross_verified = bool(item.get("cross_verified") if "cross_verified" in item else len(source_refs) >= 2)
+            contradiction_detected = bool(item.get("contradiction_detected", False))
+
+            item["source_field"] = src_field
+            item["source_ref"] = source_refs
+            item["cross_verified"] = cross_verified
+            item["contradiction_detected"] = contradiction_detected
+            cleaned_facts.append(item)
+
+        return cleaned_facts
 
 
 # ──────────────────────────────────────────────────────────

@@ -259,11 +259,24 @@ class NewsKeywordExtractor:
             logger.warning("최근 Google 뉴스 조회 실패(query=%s): %s", normalized, exc)
             return []
 
+    def search_news_multi_window(self, query: str, limit: int = 12) -> dict:
+        """24시간 뉴스 및 7일 뉴스 조회를 동시에 수행해 모멘텀 비교용 데이터를 반환한다."""
+        recent_24h = self.search_recent_news(query, max_age_hours=24, limit=limit)
+        recent_7d = self.search_recent_news(query, max_age_hours=24 * 7, limit=limit * 2)
+        
+        return {
+            "query": query,
+            "news_24h": recent_24h,
+            "news_7d": recent_7d,
+            "count_24h": len(recent_24h),
+            "count_7d": len(recent_7d),
+            "avg_daily_7d": round(len(recent_7d) / 7.0, 2),
+        }
+
     def _fetch_naver_news(self, query: str, display: int = 20) -> list[dict]:
         """NAVER API HUB 뉴스 검색 → 헤드라인 리스트"""
         try:
             items = NaverApiHubClient().search_news(query, display=display, sort="date").get("items", [])
-            articles = []
             for item in items:
                 title = re.sub(r"<[^>]+>", "", item.get("title", ""))
                 desc = re.sub(r"<[^>]+>", "", item.get("description", ""))
