@@ -52,23 +52,64 @@ public class CostController {
         BigDecimal remaining = cap != null ? cap.subtract(current) : null;
 
         List<CostEstimateDto.CostItemDto> items;
+        List<CostEstimateDto.CostGroupSummaryDto> groupedItems;
         Object rawItems = workerLedger.get("items");
         if (rawItems instanceof List<?> list) {
-            items = list.stream()
+            List<CostEstimateDto.CostItemDto> allItems = list.stream()
                     .filter(Map.class::isInstance)
                     .map(Map.class::cast)
-                    .limit(20)
                     .map(item -> new CostEstimateDto.CostItemDto(
                             String.valueOf(item.getOrDefault("provider", item.getOrDefault("kind", "worker"))),
                             asBigDecimal(item.get("amount_krw")),
                             "KRW",
                             String.valueOf(item.getOrDefault("model", item.getOrDefault("status", "recorded")))))
                     .toList();
+            items = allItems.stream().limit(20).toList();
+
+            Map<String, List<CostEstimateDto.CostItemDto>> grouped = allItems.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            CostEstimateDto.CostItemDto::getProvider,
+                            java.util.LinkedHashMap::new,
+                            java.util.stream.Collectors.toList()
+                    ));
+
+            groupedItems = grouped.entrySet().stream()
+                    .map(entry -> {
+                        String provider = entry.getKey();
+                        int count = entry.getValue().size();
+                        BigDecimal total = entry.getValue().stream()
+                                .map(CostEstimateDto.CostItemDto::getAmount)
+                                .filter(java.util.Objects::nonNull)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        return new CostEstimateDto.CostGroupSummaryDto(provider, count, total, "KRW");
+                    })
+                    .toList();
         } else {
-            items = costService.getLedger(jobId).stream()
+            List<CostLedger> ledgerList = costService.getLedger(jobId);
+            items = ledgerList.stream()
                     .limit(20)
                     .map(l -> new CostEstimateDto.CostItemDto(
                             l.getCategory(), l.getAmount(), l.getCurrency(), l.getNote()))
+                    .toList();
+
+            Map<String, List<CostLedger>> grouped = ledgerList.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            CostLedger::getCategory,
+                            java.util.LinkedHashMap::new,
+                            java.util.stream.Collectors.toList()
+                    ));
+
+            groupedItems = grouped.entrySet().stream()
+                    .map(entry -> {
+                        String category = entry.getKey();
+                        int count = entry.getValue().size();
+                        BigDecimal total = entry.getValue().stream()
+                                .map(CostLedger::getAmount)
+                                .filter(java.util.Objects::nonNull)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        String currency = entry.getValue().isEmpty() ? "KRW" : entry.getValue().get(0).getCurrency();
+                        return new CostEstimateDto.CostGroupSummaryDto(category, count, total, currency);
+                    })
                     .toList();
         }
 
@@ -79,6 +120,7 @@ public class CostController {
                 .remaining(remaining)
                 .status(job.getStatus().name())
                 .items(items)
+                .groupedItems(groupedItems)
                 .build());
     }
 

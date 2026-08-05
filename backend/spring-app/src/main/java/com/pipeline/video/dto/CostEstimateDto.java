@@ -28,6 +28,8 @@ public class CostEstimateDto {
     private String status;
     /** provider별 breakdown. summary 엔드포인트에서만 채워지고 그 외엔 null. */
     private List<CostItemDto> items;
+    /** provider별 합산 집계 정보. */
+    private List<CostGroupSummaryDto> groupedItems;
 
     @Data
     @AllArgsConstructor
@@ -37,5 +39,15 @@ public class CostEstimateDto {
         private BigDecimal amount;
         private String currency;
         private String note;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class CostGroupSummaryDto {
+        private String provider;
+        private int count;
+        private BigDecimal totalAmount;
+        private String currency;
     }
 }

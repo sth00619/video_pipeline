@@ -123,6 +123,7 @@ export default function JobDetail() {
   const [thumbnailPreset, setThumbnailPreset] = useState('')
   const [isGuidedConfirmOpen, setIsGuidedConfirmOpen] = useState(false)
   const [showEngPrompt, setShowEngPrompt] = useState({})
+  const [showCostDetails, setShowCostDetails] = useState(false)
 
   const [selectedVoiceId, setSelectedVoiceId] = useState('default_ko')
   const [previewText, setPreviewText] = useState('오늘 코스피가 올랐다고요? 숫자만 보고 뛰어들면, 시장은 늘 한 발 먼저 웃습니다.')
@@ -1186,17 +1187,22 @@ export default function JobDetail() {
                         return (
                         <div key={i} className={`rounded-xl border transition ${isTop ? 'bg-accent-gold/8 border-accent-gold/30' : 'bg-navy-800/60 border-navy-700/60'}`}>
                           {/* 헤더 영역 */}
-                          <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2">
-                            <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-3.5 pb-2">
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
                               {isTop && <Star size={13} className="text-accent-gold fill-accent-gold flex-shrink-0"/>}
-                              <span className={`font-semibold text-sm truncate ${isTop ? 'text-white' : 'text-navy-200'}`}>{c.keyword}</span>
-                              {isTop && <span className="flex-shrink-0 rounded-full bg-accent-gold/20 px-2 py-0.5 text-xs font-bold text-accent-gold">1위</span>}
-                              {wasAutoSelected && <span className="flex-shrink-0 rounded-full bg-accent-green/20 px-2 py-0.5 text-xs font-semibold text-accent-green">✓ 자동 선택됨</span>}
+                              <span className={`font-semibold text-sm truncate ${isTop ? 'text-slate-900 font-bold' : 'text-slate-800'}`}>{c.keyword}</span>
+                              {isTop && <span className="flex-shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 border border-amber-200">1위</span>}
+                              {wasAutoSelected && <span className="flex-shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200">✓ 자동 선택됨</span>}
+                              {newsCount === 0 && (
+                                <span className="flex-shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-300">
+                                  ⚠️ 뉴스 근거 없음 — 시장 데이터 기반 추정
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               {Number.isFinite(score) && (
-                                <div className={`text-lg font-bold tabular-nums ${isTop ? 'text-accent-gold' : 'text-navy-300'}`}>
-                                  {score}<span className="text-xs font-normal ml-0.5 text-navy-400">점</span>
+                                <div className={`text-lg font-bold tabular-nums ${isTop ? 'text-indigo-600' : 'text-slate-700'}`}>
+                                  {score}<span className="text-xs font-normal ml-0.5 text-slate-500">점</span>
                                 </div>
                               )}
                               {(isGuided || job.status === 'TOPIC_EVIDENCE_REQUIRED') && ['KEYWORD_PENDING', 'TOPIC_EVIDENCE_REQUIRED'].includes(job.status) && (
@@ -1204,7 +1210,7 @@ export default function JobDetail() {
                                   type="button"
                                   onClick={() => confirmKeywordMut.mutate(c.keyword)}
                                   disabled={confirmKeywordMut.isPending}
-                                  className="text-xs bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/30 hover:bg-accent-cyan/25 disabled:opacity-50 px-3 py-1 rounded-lg font-semibold transition"
+                                  className="text-xs bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 px-3 py-1 rounded-lg font-semibold transition shadow-xs"
                                 >선택</button>
                               )}
                             </div>
@@ -1213,55 +1219,65 @@ export default function JobDetail() {
                           {/* 점수 바 영역 */}
                           {Number.isFinite(score) && (
                             <div className="px-4 pb-3 space-y-1.5">
-                              <div className="w-full bg-navy-900/60 rounded-full h-1.5 overflow-hidden">
-                                <div className="h-full rounded-full bg-gradient-to-r from-accent-gold to-accent-cyan transition-all" style={{width: `${Math.min(score, 100)}%`}}/>
+                              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200">
+                                <div className="h-full rounded-full bg-indigo-600 transition-all" style={{width: `${Math.min(score, 100)}%`}}/>
                               </div>
-                              <div className="grid grid-cols-4 gap-2 text-xs mt-2">
-                                {/* 뉴스 점수 */}
-                                <div className="bg-navy-900/40 rounded-lg px-2 py-1.5">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs mt-2.5">
+                                {/* 뉴스 점수 블록 (독립 카드) */}
+                                <div className={`rounded-xl p-2.5 border transition ${newsCount === 0 ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
                                   <div className="flex items-center justify-between mb-1">
-                                    <span className="text-navy-400">뉴스</span>
-                                    <span className={`font-bold tabular-nums ${newsScore >= 20 ? 'text-accent-green' : newsScore >= 10 ? 'text-accent-gold' : 'text-navy-300'}`}>{newsScore}<span className="text-navy-500 font-normal">/40</span></span>
-                                  </div>
-                                  <div className="w-full bg-navy-800 rounded-full h-1">
-                                    <div className="h-full rounded-full bg-blue-400" style={{width: `${(newsScore/40)*100}%`}}/>
-                                  </div>
-                                  <p className="text-navy-500 mt-1 text-[10px]">{newsCount}건 수집</p>
-                                </div>
-                                {/* 수치 점수 */}
-                                <div className="bg-navy-900/40 rounded-lg px-2 py-1.5">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="text-navy-400">수치검증</span>
-                                    <span className={`font-bold tabular-nums ${numericScore >= 25 ? 'text-accent-green' : numericScore >= 10 ? 'text-accent-gold' : 'text-navy-300'}`}>{numericScore}<span className="text-navy-500 font-normal">/35</span></span>
-                                  </div>
-                                  <div className="w-full bg-navy-800 rounded-full h-1">
-                                    <div className="h-full rounded-full bg-purple-400" style={{width: `${(numericScore/35)*100}%`}}/>
-                                  </div>
-                                  <p className="text-navy-500 mt-1 text-[10px]">{numericVerified === null ? '수치 없음' : numericVerified ? '검증 완료' : '검증 실패'}</p>
-                                </div>
-                                {/* 카테고리 점수 */}
-                                <div className="bg-navy-900/40 rounded-lg px-2 py-1.5">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="text-navy-400">카테고리</span>
-                                    <span className={`font-bold tabular-nums ${categoryScore >= 15 ? 'text-accent-green' : categoryScore >= 8 ? 'text-accent-gold' : 'text-navy-300'}`}>{categoryScore}<span className="text-navy-500 font-normal">/20</span></span>
-                                  </div>
-                                  <div className="w-full bg-navy-800 rounded-full h-1">
-                                    <div className="h-full rounded-full bg-orange-400" style={{width: `${(categoryScore/20)*100}%`}}/>
-                                  </div>
-                                  <p className="text-navy-500 mt-1 text-[10px]">시장 지표 연관성</p>
-                                </div>
-                                {/* YouTube 점수 */}
-                                <div className="bg-navy-900/40 rounded-lg px-2 py-1.5">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="text-navy-400">YouTube</span>
-                                    <span className={`font-bold tabular-nums ${youtubeScore != null && youtubeScore >= 10 ? 'text-accent-green' : youtubeScore != null ? 'text-accent-gold' : 'text-navy-500'}`}>
-                                      {youtubeScore != null ? <>{youtubeScore}<span className="text-navy-500 font-normal">/15</span></> : <span className="text-[10px] font-normal">미수집</span>}
+                                    <span className="font-semibold text-slate-700">뉴스 검증</span>
+                                    <span className={`font-bold tabular-nums ${newsScore >= 20 ? 'text-emerald-700' : newsScore >= 10 ? 'text-amber-700' : 'text-slate-600'}`}>
+                                      {newsScore}<span className="text-slate-400 font-normal">/40점</span>
                                     </span>
                                   </div>
-                                  <div className="w-full bg-navy-800 rounded-full h-1">
-                                    <div className="h-full rounded-full bg-red-400" style={{width: youtubeScore != null ? `${(youtubeScore/15)*100}%` : '0%'}}/>
+                                  <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
+                                    <div className="h-full rounded-full bg-blue-500" style={{width: `${(newsScore/40)*100}%`}}/>
                                   </div>
-                                  <p className="text-navy-500 mt-1 text-[10px]">{youtubeScore == null ? '가중치 재배분' : '구독자 대비 조회'}</p>
+                                  <p className={`mt-1.5 text-[11px] font-medium ${newsCount === 0 ? 'text-amber-800 font-semibold' : 'text-slate-600'}`}>
+                                    {newsCount === 0 ? '0건 수집 (시장 추정)' : `${newsCount}건 수집 완료`}
+                                  </p>
+                                </div>
+                                {/* 수치 점수 블록 (독립 카드) */}
+                                <div className="bg-purple-50/40 rounded-xl p-2.5 border border-purple-200">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-semibold text-purple-900">수치 검증</span>
+                                    <span className={`font-bold tabular-nums ${numericScore >= 25 ? 'text-emerald-700' : numericScore >= 10 ? 'text-amber-700' : 'text-slate-600'}`}>
+                                      {numericScore}<span className="text-slate-400 font-normal">/35점</span>
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-purple-100 rounded-full h-1 overflow-hidden">
+                                    <div className="h-full rounded-full bg-purple-600" style={{width: `${(numericScore/35)*100}%`}}/>
+                                  </div>
+                                  <p className="text-purple-800 mt-1.5 text-[11px] font-medium">
+                                    {numericVerified === null ? '수치 주장 없음' : numericVerified ? '시장수치 검증 완료' : '수치 검증 미달'}
+                                  </p>
+                                </div>
+                                {/* 카테고리 점수 블록 (독립 카드) */}
+                                <div className="bg-blue-50/40 rounded-xl p-2.5 border border-blue-200">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-semibold text-blue-900">카테고리</span>
+                                    <span className={`font-bold tabular-nums ${categoryScore >= 15 ? 'text-emerald-700' : categoryScore >= 8 ? 'text-amber-700' : 'text-slate-600'}`}>
+                                      {categoryScore}<span className="text-slate-400 font-normal">/20점</span>
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-blue-100 rounded-full h-1 overflow-hidden">
+                                    <div className="h-full rounded-full bg-blue-600" style={{width: `${(categoryScore/20)*100}%`}}/>
+                                  </div>
+                                  <p className="text-blue-800 mt-1.5 text-[11px] font-medium">KOSPI 마켓 연관</p>
+                                </div>
+                                {/* YouTube 점수 블록 (독립 카드) */}
+                                <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-semibold text-slate-700">YouTube</span>
+                                    <span className={`font-bold tabular-nums ${youtubeScore != null && youtubeScore >= 10 ? 'text-emerald-700' : youtubeScore != null ? 'text-amber-700' : 'text-slate-500'}`}>
+                                      {youtubeScore != null ? <>{youtubeScore}<span className="text-slate-400 font-normal">/15점</span></> : <span className="text-[11px] font-normal text-slate-400">미수집</span>}
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-slate-200 rounded-full h-1 overflow-hidden">
+                                    <div className="h-full rounded-full bg-rose-500" style={{width: youtubeScore != null ? `${(youtubeScore/15)*100}%` : '0%'}}/>
+                                  </div>
+                                  <p className="text-slate-500 mt-1.5 text-[11px] font-medium">{youtubeScore == null ? '100점 가중치 환산' : '구독자 대비 반응'}</p>
                                 </div>
                               </div>
                             </div>
@@ -1933,31 +1949,71 @@ export default function JobDetail() {
           </div>
 
           {costs && (
-            <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
-              <h3 className="text-base font-semibold mb-3">비용 상세</h3>
-              <div className="space-y-2.5 text-sm mb-3">
-                <InfoRow label="누적" value={`₩${Math.round(Number(costs.currentTotal || 0)).toLocaleString()}`}/>
-                <InfoRow label="예산" value={costs.budgetCap ? `₩${Math.round(Number(costs.budgetCap)).toLocaleString()}` : '무제한'}/>
-              </div>
-              {costs.budgetCap && (
-                <div className="mb-3">
-                  <div className="h-2 bg-navy-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-accent-cyan rounded-full transition-all" style={{width:`${Math.min(100,(costs.currentTotal/costs.budgetCap)*100)}%`}}/>
-                  </div>
-                </div>
-              )}
-              {costs.items && costs.items.length > 0 && (
-                <div className="space-y-2 pt-2.5 border-t border-navy-700">
-                  {costs.items.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-navy-400">{item.provider}</span>
-                      <span className="text-gray-200">
-                        {item.currency === 'KRW'
-                          ? `₩${Math.round(Number(item.amount || 0)).toLocaleString()}`
-                          : `$${parseFloat(item.amount || 0).toFixed(3)}`}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <h3 className="text-base font-bold text-slate-900 mb-3">비용 상세</h3>
+              
+              {/* provider별 그룹 합산 표시 */}
+              {costs.groupedItems && costs.groupedItems.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {costs.groupedItems.map((group, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-slate-100 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-800">{group.provider}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
+                          {group.count}건
+                        </span>
+                      </div>
+                      <span className="font-bold text-slate-900">
+                        {group.currency === 'KRW'
+                          ? `₩${Math.round(Number(group.totalAmount || 0)).toLocaleString()}`
+                          : `$${parseFloat(group.totalAmount || 0).toFixed(3)}`}
                       </span>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* 누적 / 예산 요약 */}
+              <div className="space-y-2 text-sm pt-3 border-t border-slate-200 mb-3">
+                <InfoRow label="누적" value={`₩${Math.round(Number(costs.currentTotal || 0)).toLocaleString()}`}/>
+                <InfoRow label="예산" value={costs.budgetCap ? `₩${Math.round(Number(costs.budgetCap)).toLocaleString()}` : '무제한'}/>
+              </div>
+
+              {costs.budgetCap && (
+                <div className="mb-4">
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                    <div className="h-full bg-indigo-600 rounded-full transition-all" style={{width:`${Math.min(100,(costs.currentTotal/costs.budgetCap)*100)}%`}}/>
+                  </div>
+                </div>
+              )}
+
+              {/* 개별 호출 내역 상세 보기 아코디언 토글 */}
+              {costs.items && costs.items.length > 0 && (
+                <div className="pt-2 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowCostDetails(!showCostDetails)}
+                    className="w-full flex items-center justify-between text-xs font-semibold text-slate-600 hover:text-slate-900 py-1.5 transition"
+                  >
+                    <span>개별 호출 내역 ({costs.items.length}건)</span>
+                    <span className="text-slate-400">{showCostDetails ? '▲ 접기' : '▼ 펼치기'}</span>
+                  </button>
+                  {showCostDetails && (
+                    <div className="mt-2 space-y-2 pt-2 border-t border-slate-100 max-h-60 overflow-y-auto pr-1">
+                      {costs.items.map((item, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500 truncate max-w-[160px]" title={item.note || item.provider}>
+                            {item.provider} <span className="text-[10px] text-slate-400">({item.note || '완료'})</span>
+                          </span>
+                          <span className="font-medium text-slate-700">
+                            {item.currency === 'KRW'
+                              ? `₩${Math.round(Number(item.amount || 0)).toLocaleString()}`
+                              : `$${parseFloat(item.amount || 0).toFixed(3)}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
