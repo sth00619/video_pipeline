@@ -1,0 +1,41 @@
+import os
+import pytest
+from app.utils.art_direction import select_archetype_for_scene, keyword_fallback
+
+def test_regression_no_api_key(monkeypatch):
+    """1. ANTHROPIC_API_KEY 미설정 환경에서 keyword_fallback 정상 동작 및 크래시 없음 증명."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    res = select_archetype_for_scene("코스피 지수가 3000포인트를 돌파하며 마감했습니다.", previous_archetypes=["data_lab"])
+    assert res["archetype"] in ["briefing_podium", "data_lab", "risk_control_room", "weather_map"]
+    assert res["reason"] == "내용 키워드 폴백 선택"
+
+def test_regression_llm_exception(monkeypatch):
+    """2. LLM API 호출 중 예외 발생 시 크래시 없이 폴백으로 정상 전환 증명."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "dummy_key")
+    def mock_failing_llm(*args, **kwargs):
+        raise RuntimeError("API Connection Timeout 504")
+
+    res = select_archetype_for_scene("원달러 환율이 폭등하면서 외환 시장에 비상이 걸렸습니다.", previous_archetypes=["briefing_podium"], llm_call=mock_failing_llm)
+    assert res["archetype"] in ["risk_control_room", "weather_map", "data_lab", "port_emergency"]
+    assert res["reason"] == "내용 키워드 폴백 선택"
+
+def test_regression_consecutive_repetition_guard(monkeypatch):
+    """3. 3연속 동일 아키타입 발생 상황에서 하드 가드가 크래시 없이 대안 무대로 교체하는지 증명."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "dummy_key")
+    # LLM이 3번 연속 risk_control_room을 반환하는 상황 모킹
+    def mock_repeating_llm(*args, **kwargs):
+        return '{"archetype": "risk_control_room", "reason": "지수 급락 모니터링", "specific_props": "gauges"}'
+
+    res = select_archetype_for_scene(
+        "지수가 다시 50포인트 폭락했습니다.",
+        previous_archetypes=["risk_control_room", "risk_control_room"],
+        llm_call=mock_repeating_llm
+    )
+    # 3연속 중복 방지로 인해 risk_control_room이 아닌 다른 무대로 교체되어야 함
+    assert res["archetype"] != "risk_control_room"
+    assert "3연속 risk_control_room 중복 방지" in res["reason"]
+
+def test_pure_supply_chain_metaphor(monkeypatch):
+    """4. 항구/부두 단어 없는 순수 공급망 위기 대사에서 port_emergency 시각적 은유 선택 검증."""
+    res = select_archetype_for_scene("글로벌 원자재 및 핵심 부품 수급 차질로 대외 공급망 위기가 심화되고 있습니다.")
+    assert res["archetype"] in ["port_emergency", "risk_control_room", "weather_map"]

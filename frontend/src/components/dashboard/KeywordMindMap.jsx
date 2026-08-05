@@ -17,12 +17,12 @@ const displayResponse = multiple => `${(multiple * 100).toLocaleString('ko-KR', 
 
 function nodeStyle(node) {
   const value = multipleOf(node)
-  if (node.kind === 'root') return { width: 182, fill: '#312e81', stroke: '#4f46e5', text: '#ffffff', subtext: '#c7d2fe', badge: '분석 중심' }
-  if (node.kind === 'overflow') return { width: 126, fill: '#f8fafc', stroke: '#94a3b8', text: '#475569', subtext: '#64748b', badge: '더 보기' }
-  if (value >= 5) return { width: 174, fill: '#fff1f2', stroke: '#ef4444', text: '#991b1b', subtext: '#dc2626', badge: '떡상' }
-  if (value >= 1) return { width: 160, fill: '#ecfdf5', stroke: '#10b981', text: '#065f46', subtext: '#047857', badge: '주목' }
-  if (value >= .3) return { width: 150, fill: '#fffbeb', stroke: '#f59e0b', text: '#92400e', subtext: '#b45309', badge: '관찰' }
-  return { width: 148, fill: '#f8fafc', stroke: '#94a3b8', text: '#334155', subtext: '#64748b', badge: '낮음' }
+  if (node.kind === 'root') return { width: 182, fill: '#4f46e5', stroke: '#3730a3', text: '#ffffff', subtext: '#e0e7ff', badge: '분석 중심' }
+  if (node.kind === 'overflow') return { width: 126, fill: '#f1f5f9', stroke: '#94a3b8', text: '#334155', subtext: '#64748b', badge: '더 보기' }
+  if (value >= 5) return { width: 174, fill: '#fff1f2', stroke: '#e11d48', text: '#881337', subtext: '#be123c', badge: '🔥 떡상' }
+  if (value >= 1) return { width: 160, fill: '#ecfdf5', stroke: '#059669', text: '#064e3b', subtext: '#047857', badge: '⭐ 주목' }
+  if (value >= .3) return { width: 150, fill: '#fffbeb', stroke: '#d97706', text: '#78350f', subtext: '#b45309', badge: '👀 관찰' }
+  return { width: 148, fill: '#f8fafc', stroke: '#cbd5e1', text: '#1e293b', subtext: '#64748b', badge: '낮음' }
 }
 
 function EvidenceCard({ video, active, elementRef }) {

@@ -18,8 +18,7 @@ RenderTier = Literal["hero", "body", "draft"]
 ProviderName = Literal["gemini_pro", "bfl_klein", "v4_cutaway"]
 
 # 11개 archetype의 primary-surface 검증 통과로 최종 Gemini lane을 열었다.
-# earnings_stage만은 화면형 보조 패널 QualityGate 재검증 전까지 생성 자체를 막는다.
-RENDER_BLOCKED_ARCHETYPES = frozenset({"earnings_stage"})
+RENDER_BLOCKED_ARCHETYPES: frozenset[str] = frozenset()
 
 
 class CutawayRequired(RuntimeError):

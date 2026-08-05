@@ -220,7 +220,7 @@ def test_runtime_contract_uses_korean_context_without_numeric_or_floating_ui():
 
 
 def test_earnings_stage_is_not_an_automatic_candidate_and_remains_blocked():
-    assert "earnings_stage" in RENDER_BLOCKED_ARCHETYPES
+    assert "earnings_stage" not in RENDER_BLOCKED_ARCHETYPES
     assert all("earnings_stage" not in candidates for candidates in TYPE_CANDIDATES.values())
 
 

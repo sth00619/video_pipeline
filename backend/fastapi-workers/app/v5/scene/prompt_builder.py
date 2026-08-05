@@ -182,12 +182,6 @@ ARCHETYPES = {
         "warm amber studio spotlights with restrained cool-blue fill light",
         "painted chart strokes, practical studio equipment, cable lines, analog dials, and color-only explanatory marks",
     ),
-    "earnings_stage": Archetype(
-        "a premium corporate earnings presentation stage with one broad briefing surface embedded flush into the center back wall behind a podium",
-        "a central podium, fixed microphones, audience seating, broadcast cameras, ceiling spotlights, stage floor lines, and plain unadorned side walls",
-        "deep navy presentation lighting with a warm spotlight on the presenter and restrained cyan wall glow",
-        "one chart silhouette only inside the central briefing surface, camera outlines, seat rows, podium material, plain wall texture, and light gradients",
-    ),
     "briefing_podium": Archetype(
         "a formal policy and CEO press briefing room with one broad briefing surface embedded flush into the center back wall behind a central podium",
         "a central podium, fixed microphones, press seating, broadcast cameras, ceiling lights, flag-color ribbons without emblems, and floor cables",
@@ -254,7 +248,6 @@ PROP_SURFACE_MAP: dict[str, str] = {
     "data_lab": "broad curved broadcast-analysis wall on the left side of the studio",
     "risk_control_room": "single large central analog gauge dial face embedded at eye level in the curved operations wall",
     "retail_shock": "large checkout price board built into the supermarket counter",
-    "earnings_stage": "broad earnings-briefing wall behind the podium",
     "real_estate_office": "large market guidance board behind the consultation desk",
     "job_market_hall": "large employment-trend board behind the consultation counter",
 }
@@ -292,7 +285,7 @@ def _build_prop_prompt(archetype: str, caption_en: str, direction: str, script_v
 # 신규 archetype의 1차 병렬 검증에서 비문자 보조 모니터가 primary 대체물로
 # 산개했다. 기존 7개 규칙은 동결하고, 신규 4개에만 화면형 소품 자체를 금지한다.
 SCREENLESS_PRIMARY_SURFACE_ARCHETYPES = frozenset({
-    "earnings_stage", "briefing_podium", "real_estate_office", "job_market_hall",
+    "briefing_podium", "real_estate_office", "job_market_hall",
 })
 
 
@@ -330,10 +323,6 @@ DIEGETIC_TEXT_GUIDANCE = {
     "data_lab": (
         "Embed short decorative English labels, sample figures, and axis ticks into holographic map paths, translucent gauge faces, and console etchings; "
         "make them obey the cyan glow, reflection, depth, and perspective of the physical set."
-    ),
-    "earnings_stage": (
-        "Put short decorative English earnings callouts and sample figures only inside the single broad earnings-briefing surface embedded flush "
-        "into the center back wall directly behind the presentation podium; integrate them with the wall illumination, perspective, and chart silhouettes."
     ),
     "briefing_podium": (
         "Put short decorative English policy callouts and one simple diagram only inside the single broad policy-briefing surface embedded flush "
@@ -395,12 +384,6 @@ def _primary_substitute_ban(scene_type_selection: "ArchetypeSelection | None") -
             "Every product shelf, price tag, package, conveyor-belt item, checkout button, receipt roll, secondary screen, store sign, aisle marker, "
             "and alert light must remain non-textual. "
         )
-    if scene_type_selection and scene_type_selection.archetype == "earnings_stage":
-        return (
-            " For this earnings-stage scene, do not substitute the designated flush wall surface with an independent LED board, podium nameplate, "
-            "freestanding slide, side screen, audience badge, camera label, ticker strip, or separate report card. Every podium front, fixed microphone, "
-            "broadcast camera, audience seat, ceiling spotlight, stage floor line, and secondary chart silhouette must remain non-textual. "
-        )
     if scene_type_selection and scene_type_selection.archetype == "briefing_podium":
         return (
             " For this briefing-podium scene, do not substitute the designated flush wall surface with a podium nameplate, teleprompter, press badge, "
@@ -439,12 +422,6 @@ def _third_attempt_layout_ban(scene_type_selection: "ArchetypeSelection | None")
     """P2-F가 두 번 반복된 신규 두 무대의 구체적 화면형 대체물을 막는다."""
     if not scene_type_selection:
         return ""
-    if scene_type_selection.archetype == "earnings_stage":
-        return (
-            " Do not create any additional wall-mounted chart frame, bordered graph panel, or rectangular data display on either side wall, "
-            "even without text. Both side walls must remain plain continuous wall material with only lighting, shadow, and non-rectangular texture; "
-            "the single central embedded briefing surface is the only chart-bearing wall area. "
-        )
     if scene_type_selection.archetype == "job_market_hall":
         return (
             " Do not create any ceiling-mounted or wall-mounted monitor, and the area in front of the consultation counter must not contain any kiosk, "

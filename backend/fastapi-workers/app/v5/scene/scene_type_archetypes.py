@@ -60,11 +60,6 @@ ARCHETYPE_SURFACES: dict[str, tuple[str, ...]] = {
         "wall diagrams",
     ),
     "data_lab": ("one broad curved presentation wall", "analog gauge faces", "console etchings"),
-    "earnings_stage": (
-        "the single broad earnings-briefing surface embedded flush into the center back wall directly behind the presentation podium",
-        "podium nameplates",
-        "independent LED boards",
-    ),
     "briefing_podium": (
         "the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium",
         "podium nameplates",
@@ -95,7 +90,6 @@ PRIMARY_SURFACE_REGIONS: dict[str, tuple[float, float, float, float]] = {
     # 저울 기둥이 아니라 화면 하단의 넓은 저울 받침 전면을 primary로 쓴다.
     "trade_calculator": (0.36, 0.68, 0.38, 0.25),
     "data_lab": (0.12, 0.12, 0.47, 0.48),
-    "earnings_stage": (0.24, 0.18, 0.53, 0.48),
     "briefing_podium": (0.23, 0.16, 0.56, 0.46),
     "real_estate_office": (0.03, 0.10, 0.46, 0.48),
     "job_market_hall": (0.27, 0.03, 0.48, 0.56),
@@ -217,7 +211,7 @@ def recommend_v5_archetype(scene: dict) -> ArchetypeSelection:
         return _selection("general", "port_emergency", "항만·물류 장소 단서가 있어 캐릭터 중심의 port_emergency를 추천")
     if _has_any(text, _GENERAL_CLASSROOM_HINTS):
         return _selection("general", "classroom", "일반 설명·배경 장면이므로 캐릭터 설명 연출이 자연스러운 classroom을 추천")
-    return _selection("general", "port_emergency", "수치 표면이 필요 없는 일반 서사 장면이므로 캐릭터 중심의 port_emergency를 추천")
+    return _selection("general", "briefing_podium", "수치 표면이 필요 없는 일반 서사 장면이므로 방송 발표 무대인 briefing_podium을 추천")
 
 
 def validate_archetype_mapping() -> None:

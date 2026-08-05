@@ -54,51 +54,55 @@ export default function StockMindMap({ onSelectKeyword, selectedKeywords = [] })
   };
 
   return (
-    <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 transition-all duration-300">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm transition-all duration-300">
       <div 
-        className="flex items-center justify-between cursor-pointer select-none mb-2"
+        className="flex items-center justify-between cursor-pointer select-none mb-1"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        <div className="flex items-center gap-2">
-          <Zap className="text-accent-cyan animate-pulse" size={18} />
-          <h2 className="font-bold text-sm">실시간 주식 트렌드 마인드맵</h2>
-          {!isCollapsed && (
-            <span className="text-[10px] text-gray-400 ml-2 hidden sm:inline">
-              키워드를 클릭해 영상을 바로 생성하세요.
-            </span>
-          )}
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+            <Zap className="animate-pulse" size={18} />
+          </div>
+          <div>
+            <h2 className="font-bold text-base text-slate-900">실시간 주식 트렌드 마인드맵</h2>
+            {!isCollapsed && (
+              <p className="text-xs text-slate-500 mt-0.5">
+                관심 있는 키워드를 클릭해 영상 제작에 바로 활용해보세요.
+              </p>
+            )}
+          </div>
         </div>
-        <button className="p-1 hover:bg-navy-700 rounded transition text-gray-400 hover:text-white">
-          {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+        <button className="p-1.5 hover:bg-slate-100 rounded-lg transition text-slate-400 hover:text-slate-700">
+          {isCollapsed ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
         </button>
       </div>
 
       {!isCollapsed && (
-        <div className="space-y-4 mt-4 animate-fadeIn">
+        <div className="space-y-3 mt-4 animate-fadeIn">
           {MINDMAP_DATA.map((cat, idx) => {
             const isExpanded = expandedCategories[cat.category];
             const Icon = cat.icon;
             return (
-              <div key={idx} className="border border-navy-700 rounded-lg overflow-hidden bg-navy-900/10">
+              <div key={idx} className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
                 <button
                   onClick={() => toggleCategory(cat.category)}
-                  className={`w-full flex items-center justify-between p-3 transition hover:bg-navy-700/50 ${isExpanded ? 'bg-navy-700/30' : ''}`}
+                  className={`w-full flex items-center justify-between p-3.5 transition hover:bg-slate-100/80 ${isExpanded ? 'bg-slate-100/60' : ''}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-md ${cat.bg} ${cat.color}`}>
-                      <Icon size={14} />
+                    <div className={`p-2 rounded-lg ${cat.bg} ${cat.color}`}>
+                      <Icon size={16} />
                     </div>
-                    <span className="font-semibold text-sm">{cat.category}</span>
+                    <span className="font-bold text-sm text-slate-800">{cat.category}</span>
                   </div>
-                  {isExpanded ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
+                  {isExpanded ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
                 </button>
 
                 {isExpanded && (
-                  <div className="p-3 bg-navy-900/30 border-t border-navy-700">
+                  <div className="p-4 bg-white border-t border-slate-200/80">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {cat.items.map((item, itemIdx) => (
                         <div key={itemIdx} className="space-y-2">
-                          <div className="text-xs font-bold text-gray-300 border-l-2 border-navy-600 pl-2">
+                          <div className="text-xs font-bold text-slate-800 border-l-2 border-indigo-500 pl-2">
                             {item.name}
                           </div>
                           <div className="flex flex-wrap gap-2 pl-2">
@@ -108,10 +112,10 @@ export default function StockMindMap({ onSelectKeyword, selectedKeywords = [] })
                                 <button
                                   key={kwIdx}
                                   onClick={() => onSelectKeyword(kw)}
-                                  className={`text-[11px] px-2.5 py-1 rounded-full transition border ${
+                                  className={`text-xs px-3 py-1.5 rounded-lg transition border shadow-xs ${
                                     isActive
-                                      ? 'bg-accent-cyan/20 text-accent-cyan border-accent-cyan/80 font-semibold shadow-sm shadow-accent-cyan/10'
-                                      : 'bg-navy-700 text-gray-300 border-navy-600 hover:text-white hover:bg-accent-cyan/20 hover:border-accent-cyan/50'
+                                      ? 'bg-indigo-600 text-white border-indigo-600 font-semibold shadow-sm'
+                                      : 'bg-white text-slate-700 border-slate-200 hover:text-indigo-700 hover:bg-indigo-50/60 hover:border-indigo-300'
                                   }`}
                                 >
                                   {kw}

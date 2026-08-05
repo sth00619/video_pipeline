@@ -168,19 +168,15 @@ def test_unapproved_final_lane_cannot_make_a_paid_render(monkeypatch):
         pass
 
 
-def test_default_final_lane_is_open_but_earnings_stage_remains_blocked(monkeypatch):
+def test_default_final_lane_is_open(monkeypatch):
     router = ImageProviderRouter(
         gemini_pro=_adapter("gemini_pro", "gemini-3-pro-image", Bucket.IMAGE_FINAL, .14),
         bfl_klein=_adapter("bfl_klein", "flux-2-klein-9b", Bucket.IMAGE_DRAFT, .02),
     )
     scene = type(BENCHMARK_SCENES[0])(
-        "earnings-blocked", "earnings_stage", "confidence", "formal", "present", character_position="center",
+        "briefing-open", "briefing_podium", "confidence", "formal", "present", character_position="center",
     )
     ledger = _ledger(monkeypatch)
-
-    try:
-        router.render(RenderSpec(scene, "prompt", "hero"), ledger)
-        assert False, "earnings_stage는 개별 재검증 전 실비 생성이 차단돼야 합니다."
-    except ArchetypeApprovalRequired:
-        pass
+    provider_name, asset = router.render(RenderSpec(scene, "prompt", "hero"), ledger)
+    assert provider_name == "gemini_pro"
     assert not ledger.summary()["entries"]

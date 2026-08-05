@@ -54,7 +54,7 @@ def test_luminous_rectangle_outside_primary_requires_manual_review():
         draw.line((x, 430, x + 55, 245), fill="#567a99", width=10)
     output = io.BytesIO()
     image.save(output, format="PNG")
-    spec = SceneSpec("screen-panel", "earnings_stage", "confidence", "formal", "present", character_position="center")
+    spec = SceneSpec("screen-panel", "briefing_podium", "confidence", "formal", "present", character_position="center")
 
     card = QualityGate.score(output.getvalue(), spec)
 
@@ -73,7 +73,7 @@ def test_luminous_primary_surface_is_excluded_from_screen_detection():
         draw.line((x, 430, x + 55, 245), fill="#45607a", width=10)
     output = io.BytesIO()
     image.save(output, format="PNG")
-    spec = SceneSpec("primary-only", "earnings_stage", "confidence", "formal", "present", character_position="center")
+    spec = SceneSpec("primary-only", "briefing_podium", "confidence", "formal", "present", character_position="center")
 
     card = QualityGate.score(output.getvalue(), spec)
 

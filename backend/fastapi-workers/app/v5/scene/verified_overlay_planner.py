@@ -35,7 +35,6 @@ _OVERLAY_SURFACE_KIND_BY_ARCHETYPE: dict[str, str] = {
     "risk_control_room": "monitor",
     "trade_calculator": "placard",
     "data_lab": "monitor",
-    "earnings_stage": "monitor",
     "briefing_podium": "placard",
     "real_estate_office": "placard",
     "job_market_hall": "monitor",

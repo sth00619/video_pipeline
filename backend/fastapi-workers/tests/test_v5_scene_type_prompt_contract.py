@@ -272,7 +272,7 @@ def test_port_and_retail_forbid_their_likely_substitute_surfaces():
 
 @pytest.mark.parametrize(
     "archetype",
-    ("earnings_stage", "briefing_podium", "real_estate_office", "job_market_hall"),
+    ("briefing_podium", "real_estate_office", "job_market_hall"),
 )
 def test_new_archetypes_ban_nonprimary_screen_devices_by_shape(archetype: str):
     selection = _new_archetype_selection(archetype)
@@ -305,10 +305,6 @@ def test_real_estate_and_job_market_keep_their_device_like_props_noninformationa
 @pytest.mark.parametrize(
     ("archetype", "required_rule"),
     (
-        (
-            "earnings_stage",
-            "do not create any additional wall-mounted chart frame, bordered graph panel, or rectangular data display on either side wall",
-        ),
         (
             "job_market_hall",
             "do not create any ceiling-mounted or wall-mounted monitor, and the area in front of the consultation counter must not contain any kiosk",

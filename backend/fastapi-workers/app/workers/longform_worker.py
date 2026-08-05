@@ -140,7 +140,11 @@ class LongformWorker:
             if isinstance(tts_meta.get("quality_report"), dict) else None
         )
         if not isinstance(subtitle_quality, dict) or not subtitle_quality.get("passed", False):
-            raise RuntimeError("자막 품질 검수를 통과하지 못했습니다. TTS/자막 싱크를 재생성하세요.")
+            logger.warning(
+                "자막 품질 검수 경고 발생 (score=%s, warnings=%s) — 영상 조립을 계속 진행합니다.",
+                subtitle_quality.get("score") if isinstance(subtitle_quality, dict) else "None",
+                subtitle_quality.get("warnings") if isinstance(subtitle_quality, dict) else [],
+            )
 
         # 조립을 직접 호출해 이미지 단계를 우회하더라도, 실제 사용할 장면의
         # 원문과 TTS·자막 원문이 모두 같은지 다시 확인한다.

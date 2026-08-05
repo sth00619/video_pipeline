@@ -1663,6 +1663,29 @@ FALLBACK_PROMPT_PATTERN = re.compile(
 )
 
 
+def _dedupe_similar_consecutive_sentences(text: str) -> str:
+    """씬 내 연속된 유사 문장(80% 이상 유사도 또는 중복 결론) 중복 자동 제거"""
+    sentences = [s.strip() for s in re.split(r"(?<=[.!?。！？])\s+", text or "") if s.strip()]
+    if len(sentences) <= 1:
+        return text or ""
+
+    unique: list[str] = []
+    prev_norm = ""
+    for s in sentences:
+        norm = re.sub(r"[^0-9A-Za-z가-힣]", "", s).lower()
+        if not norm:
+            continue
+        if prev_norm:
+            overlap = sum(1 for c in norm if c in prev_norm) / max(len(norm), len(prev_norm), 1)
+            if norm == prev_norm or overlap >= 0.82:
+                if len(s) > len(unique[-1]):
+                    unique[-1] = s
+                continue
+        unique.append(s)
+        prev_norm = norm
+    return " ".join(unique)
+
+
 def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
     """## 씬 제목 또는 ## 섹션명 기준으로 분리하고, 대사/한국어 설명/영어 프롬프트/감정 포즈를 추출합니다."""
     parts = re.split(r'(?m)^##\s*(.+)$', full_text)
@@ -1684,8 +1707,9 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
                 content = re.sub(r'\[감정.*$', '', content, flags=re.DOTALL).strip()
                 content = re.sub(r'\[대사\]', '', content).strip()
             
-            # 대사와 수치 가공 (콤마 제거, % -> 포인트)
+            # 대사와 수치 가공 (콤마 제거, % -> 포인트) 및 연속 중복/유사 문장 제거
             content = clean_script_commas_and_pct(content)
+            content = _dedupe_similar_consecutive_sentences(content)
             
             # [비주얼 설명 (한국어)] 추출
             prompt_ko_match = re.search(r'\[비주얼 설명\s*(?:\(한국어\))?\]\s*(.*?)(?=\[비주얼 프롬프트|$|\[감정|\[대사)', raw_content, re.DOTALL)

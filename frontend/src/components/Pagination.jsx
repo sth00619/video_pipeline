@@ -12,20 +12,20 @@ export default function Pagination({ total, currentPage, onChange, pageSize = 10
   const from = Math.min((page - 1) * pageSize + 1, total)
   const to = Math.min(page * pageSize, total)
   const pages = pageNumbers(page, pageCount)
-  const buttonClass = 'min-w-8 h-8 px-2 rounded-md border border-navy-600 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-35'
+  const buttonClass = 'min-w-8 h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 transition hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-slate-200 disabled:hover:text-slate-600 shadow-sm'
 
   return (
-    <nav aria-label="목록 페이지 이동" className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-t border-navy-700 bg-navy-950/30">
-      <span className="text-xs text-gray-500">총 {total}개 중 {from}–{to} 표시</span>
-      <div className="flex items-center gap-1" role="list">
-        <button type="button" aria-label="첫 페이지" title="첫 페이지" onClick={() => onChange(1)} disabled={page === 1} className={`${buttonClass} bg-navy-800 text-gray-300 hover:bg-navy-700`}>&lt;&lt;</button>
-        <button type="button" aria-label="이전 페이지" title="이전 페이지" onClick={() => onChange(page - 1)} disabled={page === 1} className={`${buttonClass} bg-navy-800 text-gray-300 hover:bg-navy-700`}>&lt;</button>
+    <nav aria-label="목록 페이지 이동" className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-t border-slate-200 bg-slate-50/50">
+      <span className="text-xs font-medium text-slate-500">총 <strong className="font-semibold text-slate-800">{total}</strong>개 중 {from}–{to} 표시</span>
+      <div className="flex items-center gap-1.5" role="list">
+        <button type="button" aria-label="첫 페이지" title="첫 페이지" onClick={() => onChange(1)} disabled={page === 1} className={buttonClass}>&lt;&lt;</button>
+        <button type="button" aria-label="이전 페이지" title="이전 페이지" onClick={() => onChange(page - 1)} disabled={page === 1} className={buttonClass}>&lt;</button>
         {pages.map((number, index) => number === '…'
-          ? <span key={`ellipsis-${index}`} className="w-5 text-center text-xs text-gray-500" aria-hidden="true">…</span>
-          : <button type="button" key={number} aria-label={`${number}페이지`} aria-current={number === page ? 'page' : undefined} onClick={() => onChange(number)} className={`min-w-8 h-8 px-2 rounded-md border text-xs font-bold transition ${number === page ? 'border-accent-cyan bg-accent-cyan text-navy-950 shadow-glow-cyan' : 'border-navy-700 bg-navy-800 text-gray-400 hover:bg-navy-700 hover:text-white'}`}>{number}</button>
+          ? <span key={`ellipsis-${index}`} className="w-5 text-center text-xs text-slate-400 font-medium" aria-hidden="true">…</span>
+          : <button type="button" key={number} aria-label={`${number}페이지`} aria-current={number === page ? 'page' : undefined} onClick={() => onChange(number)} className={`min-w-8 h-8 px-2.5 rounded-lg border text-xs font-bold transition shadow-sm ${number === page ? 'border-accent-cyan bg-accent-cyan text-white shadow-glow-cyan' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'}`}>{number}</button>
         )}
-        <button type="button" aria-label="다음 페이지" title="다음 페이지" onClick={() => onChange(page + 1)} disabled={page === pageCount} className={`${buttonClass} bg-navy-800 text-gray-300 hover:bg-navy-700`}>&gt;</button>
-        <button type="button" aria-label="마지막 페이지" title="마지막 페이지" onClick={() => onChange(pageCount)} disabled={page === pageCount} className={`${buttonClass} bg-navy-800 text-gray-300 hover:bg-navy-700`}>&gt;&gt;</button>
+        <button type="button" aria-label="다음 페이지" title="다음 페이지" onClick={() => onChange(page + 1)} disabled={page === pageCount} className={buttonClass}>&gt;</button>
+        <button type="button" aria-label="마지막 페이지" title="마지막 페이지" onClick={() => onChange(pageCount)} disabled={page === pageCount} className={buttonClass}>&gt;&gt;</button>
       </div>
     </nav>
   )

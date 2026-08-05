@@ -26,7 +26,7 @@ from PIL import Image, ImageFilter, ImageStat
 from app.utils.process_manager import is_job_stopped
 from app import runtime_config
 from app.utils.quality_gate import enrich_scene_plan, assess_images, persist_quality_report
-from app.utils.art_direction import direct_scenes, plan_image_quality_tiers, compile_editorial_prompt, assess_art_diversity
+from app.utils.art_direction import direct_scenes, plan_image_quality_tiers, compile_editorial_prompt, assess_art_diversity, flag_archetype_content_mismatch
 from app.utils.visual_qa import assess_visual_alignment
 from app.utils import gemini_batch
 from app.pipeline.scene_director import SceneDirector, SceneSpec
@@ -960,16 +960,22 @@ Rules:
 
             spec = directed_specs.get(i)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or ""
-            needs_rebuild = bool(scene.get("prompt_needs_rebuild")) or not str(base_prompt).strip() or "Financial editorial scene representing" in str(base_prompt)
+            mismatch = flag_archetype_content_mismatch(scene)
+            needs_rebuild = (
+                bool(scene.get("prompt_needs_rebuild"))
+                or not str(base_prompt).strip()
+                or "Financial editorial scene representing" in str(base_prompt)
+                or mismatch is not None
+            )
             if needs_rebuild and narration:
                 prompt_en = self._build_prompt_from_narration(
                     narration=narration,
-                    scene_type=str(scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
+                    scene_type=str(scene.get("archetype") or scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
                     title=str(scene.get("title") or f"scene_{i}"),
                 )
                 scene["prompt_en"] = prompt_en
                 scene["prompt"] = prompt_en
-                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨", scene.get("title"))
+                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨 (이유: %s)", scene.get("title"), "아키타입 미스매치 감지" if mismatch else "폴백/빈값 트리거")
             else:
                 prompt_en = (
                     prompt_for_scene(scene)
@@ -1355,16 +1361,22 @@ Rules:
             narration = scene.get("content") or scene.get("text") or ""
             spec = directed_specs.get(index)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or ""
-            needs_rebuild = bool(scene.get("prompt_needs_rebuild")) or not str(base_prompt).strip() or "Financial editorial scene representing" in str(base_prompt)
+            mismatch = flag_archetype_content_mismatch(scene)
+            needs_rebuild = (
+                bool(scene.get("prompt_needs_rebuild"))
+                or not str(base_prompt).strip()
+                or "Financial editorial scene representing" in str(base_prompt)
+                or mismatch is not None
+            )
             if needs_rebuild and narration:
                 prompt_en = self._build_prompt_from_narration(
                     narration=narration,
-                    scene_type=str(scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
+                    scene_type=str(scene.get("archetype") or scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
                     title=str(scene.get("title") or f"scene_{index}"),
                 )
                 scene["prompt_en"] = prompt_en
                 scene["prompt"] = prompt_en
-                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨", scene.get("title"))
+                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨 (이유: %s)", scene.get("title"), "아키타입 미스매치 감지" if mismatch else "폴백/빈값 트리거")
             else:
                 prompt_en = (
                     prompt_for_scene(scene)
