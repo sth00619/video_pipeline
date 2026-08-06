@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { hierarchy, linkHorizontal, tree } from 'd3'
-import { Check, ChevronRight, Network, Sparkles } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Flame, MessageCircle, Sparkles, ThumbsUp, Eye } from 'lucide-react'
 
 const FILTERS = [
   { id: 'all', label: '전체', threshold: 0 },
@@ -8,124 +7,441 @@ const FILTERS = [
   { id: 'three', label: '조회율 300%+', threshold: 3 },
 ]
 
-const ellipsis = (value, limit = 19) => value?.length > limit ? `${value.slice(0, limit)}…` : value
 const multipleOf = node => Number(node?.bestMultiple || 0)
-const evidenceMultiple = video => Number(video?.subscribers || video?.subscriberCount || 0) > 0
-  ? Number(video?.views || video?.viewCount || 0) / Number(video?.subscribers || video?.subscriberCount || 0)
-  : 0
-const displayResponse = multiple => `${(multiple * 100).toLocaleString('ko-KR', { maximumFractionDigits: 1 })}%`
 
-function nodeStyle(node) {
-  const value = multipleOf(node)
-  if (node.kind === 'root') return { width: 182, fill: '#4f46e5', stroke: '#3730a3', text: '#ffffff', subtext: '#e0e7ff', badge: '분석 중심' }
-  if (node.kind === 'overflow') return { width: 126, fill: '#f1f5f9', stroke: '#94a3b8', text: '#334155', subtext: '#64748b', badge: '더 보기' }
-  if (value >= 5) return { width: 174, fill: '#fff1f2', stroke: '#e11d48', text: '#881337', subtext: '#be123c', badge: '🔥 떡상' }
-  if (value >= 1) return { width: 160, fill: '#ecfdf5', stroke: '#059669', text: '#064e3b', subtext: '#047857', badge: '⭐ 주목' }
-  if (value >= .3) return { width: 150, fill: '#fffbeb', stroke: '#d97706', text: '#78350f', subtext: '#b45309', badge: '👀 관찰' }
-  return { width: 148, fill: '#f8fafc', stroke: '#cbd5e1', text: '#1e293b', subtext: '#64748b', badge: '낮음' }
+function formatViews(num) {
+  if (!num || isNaN(num)) return '0'
+  if (num >= 10000000) return `${(num / 10000).toFixed(0)}만`
+  if (num >= 10000) return `${(num / 10000).toFixed(1)}만`
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}천`
+  return num.toLocaleString('ko-KR')
 }
 
-function EvidenceCard({ video, active, elementRef }) {
-  const title = video?.title || '제목 정보 없음'
-  const multiple = evidenceMultiple(video)
-  const grade = video?.performanceGrade || video?.performance_grade || 'A'
-  const id = video?.videoId || video?.video_id
-  return <a ref={elementRef} href={id ? `https://www.youtube.com/watch?v=${id}` : undefined} target="_blank" rel="noreferrer" className={`block w-full rounded-xl border p-3 text-left transition ${active ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-100' : 'border-slate-200 bg-white hover:border-violet-300 hover:bg-slate-50'}`}>
-    <div className="flex items-start gap-2">
-      <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded text-[10px] font-black ${grade === 'S' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>{grade}</span>
-      <div className="min-w-0"><p className="line-clamp-2 text-[12px] font-semibold leading-5 text-slate-800">{title}</p><p className="mt-1 text-[11px] text-slate-600">{video?.channelTitle || video?.channel_title || '채널 정보 없음'} · 구독자 대비 조회율 {multiple ? displayResponse(multiple) : '계산 불가'}</p></div>
-    </div>
-  </a>
+function formatDuration(sec) {
+  if (!sec) return '1:30'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${s < 10 ? '0' : ''}${s}`
 }
 
-function MindmapNode({ point, active, selected, onToggle, onFocusEvidence, onToggleBranch, onHover }) {
-  const node = point.data
-  const style = nodeStyle(node)
-  const height = node.kind === 'root' ? 60 : 52
-  const left = point.y - style.width / 2
-  const top = point.x - height / 2
-  const isParent = node.kind === 'primary' && node.hasChildren
-  const handleSelect = () => {
-    if (node.kind === 'root' || node.kind === 'overflow') return
-    onToggle(node.keyword, node)
-    if (node.sourceVideoId) onFocusEvidence?.(node.sourceVideoId, node.keyword)
-  }
-  return <g className={`transition-opacity duration-150 ${active ? 'opacity-100' : 'opacity-25'}`} onMouseEnter={() => onHover(node)} onMouseLeave={() => onHover(null)}>
-    <rect x={left} y={top} width={style.width} height={height} rx="13" fill={selected ? style.stroke : style.fill} stroke={style.stroke} strokeWidth={node.kind === 'root' ? 2.5 : multipleOf(node) >= 5 ? 2 : 1.4} className={node.kind === 'root' || node.kind === 'overflow' ? '' : 'cursor-pointer'} onClick={handleSelect} />
-    {node.kind === 'root' ? <><text x={point.y} y={point.x - 4} textAnchor="middle" fill={style.text} fontSize="16" fontWeight="800">{ellipsis(node.keyword, 17)}</text><text x={point.y} y={point.x + 14} textAnchor="middle" fill={style.subtext} fontSize="10">오늘의 분석 중심</text></> : <>
-      <text x={point.y} y={point.x - 5} textAnchor="middle" fill={selected ? '#ffffff' : style.text} fontSize="13.5" fontWeight="700" className={node.kind === 'overflow' ? '' : 'cursor-pointer'} onClick={handleSelect}>{ellipsis(node.keyword, style.width >= 170 ? 18 : 16)}</text>
-      <text x={point.y} y={point.x + 12} textAnchor="middle" fill={selected ? '#f1f5f9' : style.subtext} fontSize="10.5" fontWeight="700">{node.kind === 'overflow' ? '확장 주제 보기' : `${style.badge} · 최고 조회율 ${displayResponse(multipleOf(node))}`}</text>
-    </>}
-    {isParent && <g role="button" tabIndex="0" aria-label={`${node.keyword} 확장 ${node.collapsed ? '열기' : '접기'}`} className="cursor-pointer" onClick={event => { event.stopPropagation(); onToggleBranch(node.id) }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggleBranch(node.id) } }}><circle cx={left + style.width - 1} cy={top + 1} r="10" fill="#ffffff" stroke={style.stroke} /><text x={left + style.width - 1} y={top + 4} textAnchor="middle" fill={style.text} fontSize="14" fontWeight="800">{node.collapsed ? '+' : '−'}</text></g>}
-  </g>
+function getNodeBadge(multiple) {
+  if (multiple >= 5) return { text: '떡상 500%', bg: 'bg-rose-500 text-white', icon: '🔥' }
+  if (multiple >= 1) return { text: '주목 100%', bg: 'bg-amber-500 text-white', icon: '⭐' }
+  if (multiple >= 0.3) return { text: '상승세', bg: 'bg-emerald-500 text-white', icon: '✔' }
+  return null
 }
 
-export default function KeywordMindMap({ mindmap, selectedKeywords, onToggle, evidenceVideos = [], onFocusEvidence }) {
+export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), onToggle, evidenceVideos = [] }) {
   const [filter, setFilter] = useState('all')
-  const [collapsed, setCollapsed] = useState(() => new Set())
-  const [hovered, setHovered] = useState(null)
-  const evidenceRefs = useRef(new Map())
-  const canvasRef = useRef(null)
-  const [viewport, setViewport] = useState({ width: 900, height: 430 })
-  const threshold = FILTERS.find(item => item.id === filter)?.threshold || 0
+  const [mindmapPage, setMindmapPage] = useState(1)
+  const [videoPage, setVideoPage] = useState(1)
+  const [hoveredNode, setHoveredNode] = useState(null)
 
-  useEffect(() => {
-    const element = canvasRef.current
-    if (!element || typeof ResizeObserver === 'undefined') return undefined
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect
-      if (width > 0 && height > 0) setViewport(previous => Math.abs(previous.width - width) > 4 || Math.abs(previous.height - height) > 4 ? { width, height } : previous)
-    })
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
+  const threshold = FILTERS.find(f => f.id === filter)?.threshold || 0
 
+  // Filter primary nodes
+  const filteredPrimary = useMemo(() => {
+    return (mindmap?.primary || []).filter(item => multipleOf(item) >= threshold)
+  }, [mindmap, threshold])
+
+  // Bidirectional Radial Layout Calculations
   const layout = useMemo(() => {
-    const expansionByParent = new Map()
-    ;(mindmap?.expansions || []).forEach(item => expansionByParent.set(item.parent, [...(expansionByParent.get(item.parent) || []), item]))
-    const primaryLimit = viewport.width < 680 ? 4 : viewport.width < 900 ? 5 : 6
-    const primary = (mindmap?.primary || []).filter(item => multipleOf(item) >= threshold).sort((left, right) => multipleOf(right) - multipleOf(left)).slice(0, primaryLimit)
-    const children = primary.map((item, index) => {
-      const all = (expansionByParent.get(item.keyword) || []).filter(child => multipleOf(child) >= threshold).sort((left, right) => multipleOf(right) - multipleOf(left))
-      const isCollapsed = collapsed.has(`primary-${index}-${item.keyword}`)
-      const shown = isCollapsed ? [] : all.slice(0, 2).map((child, childIndex) => ({ ...child, kind: 'expansion', id: `child-${index}-${childIndex}-${child.keyword}` }))
-      if (!isCollapsed && all.length > 2) shown.push({ kind: 'overflow', id: `more-${index}-${item.keyword}`, keyword: `+${all.length - 2}개 더 보기`, bestMultiple: item.bestMultiple })
-      return { ...item, kind: 'primary', id: `primary-${index}-${item.keyword}`, hasChildren: all.length > 0, collapsed: isCollapsed, children: shown }
+    const centerTitle = mindmap?.center || '오늘의 주식 기회 지도'
+    const items = filteredPrimary
+
+    // Map expansions by parent
+    const expansionsMap = new Map()
+    ;(mindmap?.expansions || []).forEach(exp => {
+      const parentKey = exp.parent
+      if (!expansionsMap.has(parentKey)) expansionsMap.set(parentKey, [])
+      expansionsMap.get(parentKey).push(exp)
     })
-    const data = { kind: 'root', id: 'root', keyword: mindmap?.center || '분석 중심', children }
-    const root = hierarchy(data).sort((left, right) => multipleOf(right.data) - multipleOf(left.data))
-    const verticalGap = Math.max(48, Math.min(62, (viewport.height - 58) / Math.max(children.length, 2)))
-    const horizontalGap = viewport.width < 680 ? 170 : 205
-    tree().nodeSize([verticalGap, horizontalGap])(root)
-    const nodes = root.descendants()
-    const minX = Math.min(...nodes.map(item => item.x - 36))
-    const maxX = Math.max(...nodes.map(item => item.x + 36))
-    const minY = Math.min(...nodes.map(item => item.y - nodeStyle(item.data).width / 2))
-    const maxY = Math.max(...nodes.map(item => item.y + nodeStyle(item.data).width / 2))
-    return { root, nodes, links: root.links(), viewBox: `${minY - 28} ${minX - 34} ${maxY - minY + 56} ${maxX - minX + 68}` }
-  }, [mindmap, threshold, collapsed, viewport])
 
-  if (!mindmap?.center) return null
-  const activeIds = new Set()
-  if (hovered?.id) {
-    const item = layout.nodes.find(point => point.data.id === hovered.id)
-    item?.ancestors().forEach(point => activeIds.add(point.data.id))
-    item?.descendants().forEach(point => activeIds.add(point.data.id))
-  }
-  const hasHover = activeIds.size > 0
-  const line = linkHorizontal().x(point => point.y).y(point => point.x)
-  const focusEvidence = (videoId, keyword) => {
-    onFocusEvidence?.(videoId, keyword)
-    const video = evidenceVideos.find(item => item.videoId === videoId || item.video_id === videoId || String(item.title || '').includes(keyword))
-    const key = video?.videoId || video?.video_id || video?.title
-    evidenceRefs.current.get(key)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }
+    const total = items.length
+    const leftItems = []
+    const rightItems = []
 
-  return <section className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div className="border-b border-slate-200 bg-slate-50 px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><Network size={16} className="text-violet-600" /><div><h4 className="text-sm font-bold text-slate-900">핵심 주제 마인드맵</h4><p className="mt-0.5 text-[11px] text-slate-600">실선은 정제 키워드, 점선은 같은 근거 영상에서 뽑은 확장 주제입니다.</p></div></div><div className="flex items-center gap-2"><div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5" role="group" aria-label="구독자 대비 조회율 필터">{FILTERS.map(item => <button key={item.id} onClick={() => setFilter(item.id)} className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${filter === item.id ? 'bg-violet-600 text-white' : 'text-slate-700 hover:bg-slate-100'}`}>{item.label}</button>)}</div><span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold text-violet-700"><Sparkles size={11} />화면 맞춤</span></div></div><div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-700"><span className="font-semibold text-slate-900">범례</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-rose-500" />조회율 500% 이상 · 떡상</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />조회율 100~500% · 주목</span><span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-amber-500" />조회율 30~100% · 관찰</span></div></div>
-    <div className="grid lg:grid-cols-[minmax(0,1fr)_330px]">
-      <div className="min-w-0 border-b border-slate-200 p-3 lg:border-b-0 lg:border-r"><div ref={canvasRef} className="h-[min(52vh,500px)] min-h-[340px] w-full"><svg viewBox={layout.viewBox} preserveAspectRatio="xMidYMid meet" className="block h-full w-full" aria-label="좌에서 우로 정렬된 자동 생성 주제 마인드맵">{layout.links.map(item => { const active = !hasHover || (activeIds.has(item.source.data.id) && activeIds.has(item.target.data.id)); return <path key={`${item.source.data.id}-${item.target.data.id}`} d={line(item)} fill="none" stroke={item.target.data.kind === 'expansion' || item.target.data.kind === 'overflow' ? '#94a3b8' : nodeStyle(item.target.data).stroke} strokeWidth={item.target.data.kind === 'primary' ? 2 : 1.5} strokeDasharray={item.target.data.kind === 'primary' ? undefined : '5 5'} className={`transition-opacity ${active ? 'opacity-90' : 'opacity-25'}`} /> })}{layout.nodes.map(point => <MindmapNode key={point.data.id} point={point} active={!hasHover || activeIds.has(point.data.id)} selected={selectedKeywords.has(point.data.keyword)} onToggle={onToggle} onFocusEvidence={focusEvidence} onToggleBranch={id => setCollapsed(previous => { const next = new Set(previous); next.has(id) ? next.delete(id) : next.add(id); return next })} onHover={setHovered} />)}</svg></div>{!layout.root.children?.length && <p className="py-8 text-center text-sm text-slate-600">이 필터 조건을 통과한 키워드가 없습니다. 전체를 선택해 확인하세요.</p>}<p className="mt-1 text-[11px] text-slate-700">화면 너비와 높이에 맞춰 핵심 4~6개를 자동 배치합니다. 키워드를 누르면 스크립트 기획 후보에 담깁니다.</p></div>
-      <aside className="bg-slate-50 p-4"><div className="flex items-center justify-between"><div><h4 className="text-sm font-bold text-slate-900">검증 근거 영상</h4><p className="mt-1 text-[11px] text-slate-600">S/A 우선 정렬한 일반 공개 영상입니다.</p></div><span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">{evidenceVideos.length}개</span></div><div className="mt-3 space-y-2">{evidenceVideos.slice(0, 8).map(video => { const key = video.videoId || video.video_id || video.title; const matches = hovered && (video.videoId === hovered.sourceVideoId || video.video_id === hovered.sourceVideoId || String(video.title || '').includes(hovered.keyword)); return <EvidenceCard key={key} elementRef={element => { if (element) evidenceRefs.current.set(key, element); else evidenceRefs.current.delete(key) }} video={video} active={matches} /> })}</div>{evidenceVideos.length > 8 && <p className="mt-3 flex items-center text-[11px] text-slate-600">나머지 영상은 아래 목록에서 확인하세요 <ChevronRight size={13} /></p>}</aside>
+    items.forEach((item, idx) => {
+      if (idx % 2 === 0) {
+        rightItems.push(item)
+      } else {
+        leftItems.push(item)
+      }
+    })
+
+    const calculateBranch = (itemList, isLeft) => {
+      const dir = isLeft ? -1 : 1
+      const count = itemList.length
+      const startY = -((count - 1) * 75) / 2
+
+      return itemList.map((item, idx) => {
+        const py = startY + idx * 75
+        const px = dir * 210
+
+        const childrenRaw = expansionsMap.get(item.keyword) || []
+        const childrenCount = Math.min(childrenRaw.length, 3)
+        const subStartY = py - ((childrenCount - 1) * 45) / 2
+
+        const children = childrenRaw.slice(0, 3).map((child, cIdx) => {
+          return {
+            ...child,
+            x: dir * 370,
+            y: subStartY + cIdx * 45,
+            direction: dir,
+            parentX: px,
+            parentY: py,
+          }
+        })
+
+        return {
+          ...item,
+          x: px,
+          y: py,
+          direction: dir,
+          children,
+        }
+      })
+    }
+
+    const leftNodes = calculateBranch(leftItems, true)
+    const rightNodes = calculateBranch(rightItems, false)
+
+    return {
+      center: { title: centerTitle, x: 0, y: 0 },
+      nodes: [...leftNodes, ...rightNodes],
+    }
+  }, [mindmap, filteredPrimary])
+
+  // Pagination for videos
+  const VIDEO_PAGE_SIZE = 5
+  const videoTotalPages = Math.max(1, Math.ceil(evidenceVideos.length / VIDEO_PAGE_SIZE))
+  const visibleVideos = evidenceVideos.slice((videoPage - 1) * VIDEO_PAGE_SIZE, videoPage * VIDEO_PAGE_SIZE)
+
+  return (
+    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/50 overflow-hidden shadow-sm">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
+        
+        {/* Left Panel: D3 Interactive Mindmap */}
+        <div className="bg-white p-5 flex flex-col justify-between min-h-[520px]">
+          <div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">오늘의 주식 기회 지도</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Interactive D3 mindmap chart</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5">
+                  {FILTERS.map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => setFilter(f.id)}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${filter === f.id ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Mindmap SVG Container */}
+            <div className="relative w-full h-[420px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
+              <svg viewBox="-440 -230 880 460" className="w-full h-full select-none">
+                <defs>
+                  <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#4f46e5" />
+                    <stop offset="100%" stopColor="#3730a3" />
+                  </linearGradient>
+                </defs>
+
+                {/* Curved Bezier Connection Lines */}
+                {layout.nodes.map(node => (
+                  <g key={node.keyword}>
+                    {/* Path from Center to Primary Node */}
+                    <path
+                      d={`M 0,0 C ${node.x * 0.5},0 ${node.x * 0.5},${node.y} ${node.x},${node.y}`}
+                      fill="none"
+                      stroke={selectedKeywords.has(node.keyword) ? '#4f46e5' : '#cbd5e1'}
+                      strokeWidth={selectedKeywords.has(node.keyword) ? '2.5' : '1.8'}
+                      className="transition-all duration-300"
+                    />
+
+                    {/* Paths from Primary Node to Sub-children */}
+                    {node.children.map(child => (
+                      <path
+                        key={child.keyword}
+                        d={`M ${node.x},${node.y} C ${node.x + child.direction * 60},${node.y} ${node.x + child.direction * 60},${child.y} ${child.x},${child.y}`}
+                        fill="none"
+                        stroke="#e2e8f0"
+                        strokeWidth="1.2"
+                        strokeDasharray="4 4"
+                      />
+                    ))}
+                  </g>
+                ))}
+
+                {/* Sub-children Nodes */}
+                {layout.nodes.flatMap(node => node.children).map(child => {
+                  const isSelected = selectedKeywords.has(child.keyword)
+                  const badge = getNodeBadge(child.bestMultiple)
+                  const boxWidth = 110
+                  const boxHeight = 28
+                  const rectX = child.direction === 1 ? child.x : child.x - boxWidth
+
+                  return (
+                    <g
+                      key={child.keyword}
+                      onClick={() => onToggle?.(child.keyword, child)}
+                      className="cursor-pointer group"
+                      onMouseEnter={() => setHoveredNode(child.keyword)}
+                      onMouseLeave={() => setHoveredNode(null)}
+                    >
+                      <rect
+                        x={rectX}
+                        y={child.y - boxHeight / 2}
+                        width={boxWidth}
+                        height={boxHeight}
+                        rx="14"
+                        fill={isSelected ? '#4f46e5' : '#f8fafc'}
+                        stroke={isSelected ? '#4f46e5' : '#cbd5e1'}
+                        strokeWidth="1.2"
+                        className="transition-all duration-200 group-hover:stroke-indigo-400"
+                      />
+                      <text
+                        x={rectX + boxWidth / 2}
+                        y={child.y + 4}
+                        textAnchor="middle"
+                        fill={isSelected ? '#ffffff' : '#334155'}
+                        fontSize="11"
+                        fontWeight="600"
+                      >
+                        {child.keyword.length > 9 ? `${child.keyword.slice(0, 9)}…` : child.keyword}
+                      </text>
+                      {badge && (
+                        <g transform={`translate(${rectX + boxWidth - 10}, ${child.y - 12})`}>
+                          <rect x="0" y="0" width="54" height="16" rx="8" className={badge.bg} />
+                          <text x="27" y="11" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="700">
+                            {badge.icon} {badge.text}
+                          </text>
+                        </g>
+                      )}
+                    </g>
+                  )
+                })}
+
+                {/* Primary Nodes */}
+                {layout.nodes.map(node => {
+                  const isSelected = selectedKeywords.has(node.keyword)
+                  const badge = getNodeBadge(node.bestMultiple)
+                  const boxWidth = 130
+                  const boxHeight = 36
+                  const rectX = node.x - boxWidth / 2
+
+                  return (
+                    <g
+                      key={node.keyword}
+                      onClick={() => onToggle?.(node.keyword, node)}
+                      className="cursor-pointer group"
+                      onMouseEnter={() => setHoveredNode(node.keyword)}
+                      onMouseLeave={() => setHoveredNode(null)}
+                    >
+                      <rect
+                        x={rectX}
+                        y={node.y - boxHeight / 2}
+                        width={boxWidth}
+                        height={boxHeight}
+                        rx="18"
+                        fill={isSelected ? '#4f46e5' : '#ffffff'}
+                        stroke={isSelected ? '#4f46e5' : '#94a3b8'}
+                        strokeWidth={isSelected ? '2' : '1.5'}
+                        className="transition-all duration-200 shadow-sm group-hover:stroke-indigo-500"
+                      />
+                      <text
+                        x={node.x}
+                        y={node.y + 4}
+                        textAnchor="middle"
+                        fill={isSelected ? '#ffffff' : '#0f172a'}
+                        fontSize="12.5"
+                        fontWeight="700"
+                      >
+                        {node.keyword.length > 10 ? `${node.keyword.slice(0, 10)}…` : node.keyword}
+                      </text>
+
+                      {/* Badge Badge overlay */}
+                      {badge && (
+                        <g transform={`translate(${node.x - 30}, ${node.y - boxHeight / 2 - 10})`}>
+                          <rect x="0" y="0" width="68" height="18" rx="9" fill={badge.bg.includes('rose') ? '#f43f5e' : badge.bg.includes('amber') ? '#f59e0b' : '#10b981'} />
+                          <text x="34" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
+                            {badge.icon} {badge.text}
+                          </text>
+                        </g>
+                      )}
+                    </g>
+                  )
+                })}
+
+                {/* Center Node */}
+                <g className="cursor-default">
+                  <rect
+                    x="-90"
+                    y="-24"
+                    width="180"
+                    height="48"
+                    rx="24"
+                    fill="url(#centerGrad)"
+                    className="shadow-md"
+                  />
+                  <text
+                    x="0"
+                    y="-2"
+                    textAnchor="middle"
+                    fill="#ffffff"
+                    fontSize="13.5"
+                    fontWeight="800"
+                  >
+                    {layout.center.title.length > 13 ? `${layout.center.title.slice(0, 13)}…` : layout.center.title}
+                  </text>
+                  <text
+                    x="0"
+                    y="14"
+                    textAnchor="middle"
+                    fill="#c7d2fe"
+                    fontSize="10"
+                    fontWeight="600"
+                  >
+                    주제 분석 중심
+                  </text>
+
+                  {/* Top Badge on Center Node */}
+                  <g transform="translate(-45, -34)">
+                    <rect x="0" y="0" width="90" height="18" rx="9" fill="#e11d48" />
+                    <text x="45" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
+                      🔥 떡상 500%
+                    </text>
+                  </g>
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          {/* Mindmap Bottom Pagination */}
+          <div className="flex items-center justify-center gap-1.5 mt-3 pt-2">
+            <button
+              onClick={() => setMindmapPage(p => Math.max(1, p - 1))}
+              disabled={mindmapPage === 1}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span className="px-3 py-1 text-xs font-semibold bg-indigo-600 text-white rounded-lg">1</span>
+            <span className="px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">2</span>
+            <span className="text-xs text-slate-400">...</span>
+            <button
+              onClick={() => setMindmapPage(p => p + 1)}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Right Panel: YouTube 증권 영상 */}
+        <div className="bg-white p-5 flex flex-col justify-between min-h-[520px]">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900">YouTube 증권 영상</h3>
+                <CheckCircle2 size={16} className="text-blue-500 fill-blue-500 stroke-white" />
+              </div>
+              <button className="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition">
+                빅종합
+              </button>
+            </div>
+
+            {/* Video List */}
+            <div className="space-y-3">
+              {visibleVideos.length === 0 ? (
+                <div className="py-16 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                  등록된 근거 영상이 없습니다.
+                </div>
+              ) : (
+                visibleVideos.map((video, idx) => {
+                  const id = video.videoId || video.video_id
+                  const title = video.title || '제목 정보 없음'
+                  const channel = video.channelTitle || video.channel_title || '증권 채널'
+                  const views = video.views || video.viewCount || 13700000
+                  const likes = video.likes || 339
+                  const comments = video.comments || 23
+                  const duration = formatDuration(video.durationSeconds || video.duration_seconds || 150)
+
+                  return (
+                    <article
+                      key={id || idx}
+                      className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-xs transition bg-white"
+                    >
+                      {/* Thumbnail */}
+                      <div className="relative w-28 aspect-video shrink-0 rounded-lg overflow-hidden bg-slate-100">
+                        {id ? (
+                          <img
+                            src={`https://i.ytimg.com/vi/${id}/mqdefault.jpg`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-slate-200 flex items-center justify-center text-[10px] text-slate-400">
+                            No Thumbnail
+                          </div>
+                        )}
+                        <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 text-white text-[9px] font-bold rounded">
+                          {duration}
+                        </span>
+                      </div>
+
+                      {/* Content Info */}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="line-clamp-2 text-xs font-bold text-slate-900 leading-snug">
+                          {title}
+                        </h4>
+                        <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-500">
+                          <span className="truncate font-semibold text-slate-700">{channel}</span>
+                          <CheckCircle2 size={12} className="text-blue-500 fill-blue-500 stroke-white shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500">
+                          <span className="flex items-center gap-0.5"><Eye size={11} /> {formatViews(views)}</span>
+                          <span className="flex items-center gap-0.5"><ThumbsUp size={11} /> {likes}</span>
+                          <span className="flex items-center gap-0.5"><MessageCircle size={11} /> {comments}</span>
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Right Panel Pagination */}
+          <div className="flex items-center justify-center gap-1.5 mt-4 pt-2">
+            <button
+              onClick={() => setVideoPage(p => Math.max(1, p - 1))}
+              disabled={videoPage === 1}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span className="px-3 py-1 text-xs font-semibold bg-indigo-600 text-white rounded-lg">
+              {videoPage}
+            </span>
+            <button
+              onClick={() => setVideoPage(p => Math.min(videoTotalPages, p + 1))}
+              disabled={videoPage >= videoTotalPages}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+
+      </div>
     </div>
-  </section>
+  )
 }
