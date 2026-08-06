@@ -55,7 +55,6 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
     const centerTitle = mindmap?.center || '오늘의 주식 기회 지도'
     const items = pagedPrimary
 
-    // Map expansions by parent
     const expansionsMap = new Map()
     ;(mindmap?.expansions || []).forEach(exp => {
       const parentKey = exp.parent
@@ -63,7 +62,6 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
       expansionsMap.get(parentKey).push(exp)
     })
 
-    const total = items.length
     const leftItems = []
     const rightItems = []
 
@@ -116,7 +114,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
       center: { title: centerTitle, x: 0, y: 0 },
       nodes: [...leftNodes, ...rightNodes],
     }
-  }, [mindmap, filteredPrimary])
+  }, [mindmap, pagedPrimary])
 
   // Pagination for videos
   const VIDEO_PAGE_SIZE = 5
@@ -124,11 +122,11 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
   const visibleVideos = evidenceVideos.slice((videoPage - 1) * VIDEO_PAGE_SIZE, videoPage * VIDEO_PAGE_SIZE)
 
   return (
-    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/50 overflow-hidden shadow-sm">
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
+    <div className="w-full">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
         
-        {/* Left Panel: D3 Interactive Mindmap */}
-        <div className="bg-white p-5 flex flex-col justify-between min-h-[520px]">
+        {/* Left Card: D3 Interactive Mindmap */}
+        <div className="xl:col-span-8 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between min-h-[500px]">
           <div>
             <div className="flex items-center justify-between">
               <div>
@@ -151,7 +149,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             </div>
 
             {/* Mindmap SVG Container */}
-            <div className="relative w-full h-[420px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
+            <div className="relative w-full h-[400px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
               <svg viewBox="-440 -230 880 460" className="w-full h-full select-none">
                 <defs>
                   <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -160,10 +158,9 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                   </linearGradient>
                 </defs>
 
-                {/* Curved Bezier Connection Lines */}
+                {/* Connection Lines */}
                 {layout.nodes.map(node => (
                   <g key={node.keyword}>
-                    {/* Path from Center to Primary Node */}
                     <path
                       d={`M 0,0 C ${node.x * 0.5},0 ${node.x * 0.5},${node.y} ${node.x},${node.y}`}
                       fill="none"
@@ -172,7 +169,6 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                       className="transition-all duration-300"
                     />
 
-                    {/* Paths from Primary Node to Sub-children */}
                     {node.children.map(child => (
                       <path
                         key={child.keyword}
@@ -273,7 +269,6 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                         {node.keyword.length > 10 ? `${node.keyword.slice(0, 10)}…` : node.keyword}
                       </text>
 
-                      {/* Badge Badge overlay */}
                       {badge && (
                         <g transform={`translate(${node.x - 30}, ${node.y - boxHeight / 2 - 10})`}>
                           <rect x="0" y="0" width="68" height="18" rx="9" fill={badge.bg.includes('rose') ? '#f43f5e' : badge.bg.includes('amber') ? '#f59e0b' : '#10b981'} />
@@ -318,7 +313,6 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                     주제 분석 중심
                   </text>
 
-                  {/* Top Badge on Center Node */}
                   <g transform="translate(-45, -34)">
                     <rect x="0" y="0" width="90" height="18" rx="9" fill="#e11d48" />
                     <text x="45" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
@@ -330,7 +324,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             </div>
           </div>
 
-          {/* Mindmap Bottom Pagination */}
+          {/* Left Mindmap Pagination */}
           <div className="flex items-center justify-center gap-1.5 mt-3 pt-2">
             <button
               onClick={() => setMindmapPage(p => Math.max(1, p - 1))}
@@ -358,8 +352,8 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
           </div>
         </div>
 
-        {/* Right Panel: YouTube 증권 영상 */}
-        <div className="bg-white p-5 flex flex-col justify-between min-h-[520px]">
+        {/* Right Card: YouTube 증권 영상 */}
+        <div className="xl:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between min-h-[500px]">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -392,7 +386,6 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                       key={id || idx}
                       className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-xs transition bg-white"
                     >
-                      {/* Thumbnail */}
                       <div className="relative w-28 aspect-video shrink-0 rounded-lg overflow-hidden bg-slate-100">
                         {id ? (
                           <img
@@ -410,7 +403,6 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                         </span>
                       </div>
 
-                      {/* Content Info */}
                       <div className="min-w-0 flex-1">
                         <h4 className="line-clamp-2 text-xs font-bold text-slate-900 leading-snug">
                           {title}
@@ -432,7 +424,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             </div>
           </div>
 
-          {/* Right Panel Pagination */}
+          {/* Right Video Pagination */}
           <div className="flex items-center justify-center gap-1.5 mt-4 pt-2">
             <button
               onClick={() => setVideoPage(p => Math.max(1, p - 1))}
