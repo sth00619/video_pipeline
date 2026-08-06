@@ -61,8 +61,6 @@ function MindmapNode({ point, active, selected, onToggle, onFocusEvidence, onTog
 }
 
 export default function KeywordMindMap({ mindmap, selectedKeywords, onToggle, evidenceVideos = [], onFocusEvidence }) {
-  // 조회율 1% 이상은 이미 서버에서 검증한다. 처음부터 100% 필터를 켜면
-  // 유효한 신규 이슈까지 빈 지도처럼 보이므로 기본값은 전체다.
   const [filter, setFilter] = useState('all')
   const [collapsed, setCollapsed] = useState(() => new Set())
   const [hovered, setHovered] = useState(null)

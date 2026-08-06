@@ -128,7 +128,6 @@ export default function DailyKeywordResearch({ onUseKeyword }) {
   const makeMindmap = useMutation({
     mutationFn: payload => apiClient.post('/keywords/mindmap', payload).then(response => response.data),
     onSuccess: (result, payload) => {
-      // 느린 이전 요청이 최신 검색 결과의 지도를 덮어쓰지 않게 한다.
       if (payload.requestId === mindmapRequestRef.current) setMindmap(result)
     },
   })
