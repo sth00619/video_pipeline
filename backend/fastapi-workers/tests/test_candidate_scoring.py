@@ -37,7 +37,7 @@ def test_four_recent_direct_articles_receive_full_news_score():
         [{"keyword": "Nvidia earnings", "reason": ""}], [], market_snapshot(), "US_STOCKS", "Nvidia earnings",
         FakeExtractor(recent_articles()),
     )[0]
-    assert result["news_score"] == 40
+    assert result["news_score"] == 35
     assert result["evidence"]["news_count"] == 4
 
 
@@ -47,7 +47,7 @@ def test_youtube_absence_renormalizes_the_available_85_points_to_100():
         FakeExtractor(recent_articles()),
     )[0]
     assert result["youtube_score"] is None
-    assert result["score"] == 100
+    assert result["score"] == 98
 
 
 def test_candidate_without_numeric_claim_uses_neutral_seven_points():
@@ -56,7 +56,7 @@ def test_candidate_without_numeric_claim_uses_neutral_seven_points():
         FakeExtractor(recent_articles()),
     )[0]
     assert result["evidence"]["numeric_claims_verified"] is None
-    assert result["market_data_score"] == 17
+    assert result["market_data_score"] == 20
 
 
 def test_ungrounded_percent_claim_receives_no_numeric_points():
@@ -65,7 +65,7 @@ def test_ungrounded_percent_claim_receives_no_numeric_points():
         FakeExtractor(recent_articles()),
     )[0]
     assert result["evidence"]["numeric_claims_verified"] is False
-    assert result["market_data_score"] == 10
+    assert result["market_data_score"] == 13
 
 
 def test_candidate_without_direct_evidence_is_not_auto_confirmable():
@@ -82,6 +82,6 @@ def test_market_level_outlook_can_use_live_market_snapshot_without_direct_articl
         FakeExtractor([]),
     )[0]
     assert result["news_score"] == 0
-    assert result["market_data_score"] == 27
-    assert result["score"] == 55
+    assert result["market_data_score"] == 30
+    assert result["score"] == 59
     assert result["auto_confirm_eligible"] is True

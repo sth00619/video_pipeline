@@ -2,19 +2,9 @@
 from __future__ import annotations
 
 from app.pipeline.scene_director import SceneSpec
+from app.utils.art_direction import SHARED_STYLE_LOCK_PROMPT
 
-STYLE_LOCK = (
-    "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. "
-    "Bold clean dark-brown outlines on EVERY element; cel shading with soft gradients; highly saturated, organized colors; "
-    "dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and "
-    "future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. "
-    "A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, "
-    "NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, "
-    "NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. Do not depict screens, dashboards, "
-    "charts, signboards, documents, labels, UI panels, blank white rectangles, empty title cards, empty frames, boards, "
-    "or presentation panels. Use unlabeled physical props and a continuous full-bleed illustrated background instead. "
-    "Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame."
-)
+STYLE_LOCK = SHARED_STYLE_LOCK_PROMPT
 
 # 템플릿 장면에는 빈 물리 보드를 허용한다. 전역 금지문을 그대로 쓰면
 # 생성 모델이 v4의 보드 계약을 무시해 quad 검출이 구조적으로 실패한다.

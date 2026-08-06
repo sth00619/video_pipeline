@@ -14,7 +14,7 @@ def test_every_directed_scene_uses_a_role_costume_asset_with_legacy_fallback():
     ])
     for scene in scenes:
         direction = scene["art_direction"]
-        assert direction["role_costume"] in {"field_reporter", "professor", "anchor", "referee", "analyst"}
+        assert direction["role_costume"] in {"field_reporter", "professor", "anchor", "referee", "analyst", "tuxedo_host", "detective", "safety_vest", "formal"}
         assert direction["costume_state"] in {"neutral", "highlight", "worried"}
         assert direction["pose_asset"].startswith(direction["role_costume"] + "_")
         assert direction["fallback_pose"]
@@ -50,10 +50,11 @@ def test_editorial_prompt_never_allows_model_generated_decorative_labels():
     assert "no decorative labels" in prompt
 
 
-def test_data_composition_alternates_mascot_and_information_surface_sides():
+def test_data_composition_alternates_mascot_and_information_surface_sides(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     scenes = direct_scenes([
         {"section": "data", "content": "KOSPI 최근 추이를 확인합니다."},
-        {"section": "data", "content": "관련 종목의 등락률을 비교합니다."},
+        {"section": "data", "content": "제조업 리스크 지표를 확인합니다."},
     ])
     first, second = (scene["art_direction"] for scene in scenes)
     assert first["reference_composition"]["id"] == "data_lab"

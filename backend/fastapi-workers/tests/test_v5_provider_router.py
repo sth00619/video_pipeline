@@ -177,6 +177,6 @@ def test_default_final_lane_is_open(monkeypatch):
         "briefing-open", "briefing_podium", "confidence", "formal", "present", character_position="center",
     )
     ledger = _ledger(monkeypatch)
-    provider_name, asset = router.render(RenderSpec(scene, "prompt", "hero"), ledger)
-    assert provider_name == "gemini_pro"
-    assert not ledger.summary()["entries"]
+    result = router.render(RenderSpec(scene, "prompt", "hero"), ledger)
+    assert result.model == "gemini-3-pro-image"
+    assert ledger.summary()["entries"]

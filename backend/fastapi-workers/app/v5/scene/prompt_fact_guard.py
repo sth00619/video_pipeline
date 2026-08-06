@@ -34,7 +34,10 @@ def assert_prompt_has_no_verified_numbers(prompt: str, scene: dict[str, Any]) ->
     # 선 두께 같은 화풍 규격은 검증된 금융 수치가 아니다. 이 표현을
     # 제거한 뒤에만 사실 수치와의 중복을 검사한다.
     factual_prompt = re.sub(
-        r"\d+\s*-\s*\d+\s*px\s+equivalent", "", prompt, flags=re.IGNORECASE
+        r"\(?\s*\d+\s*-\s*\d+\s*px(?:\s+equivalent)?\s*\)?", "", prompt, flags=re.IGNORECASE
+    )
+    factual_prompt = re.sub(
+        r"1\s*/\s*3", "", factual_prompt, flags=re.IGNORECASE
     )
     prompt_tokens = _normalized_number_tokens(factual_prompt)
     overlap = sorted(verified & prompt_tokens)

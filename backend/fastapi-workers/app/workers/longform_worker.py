@@ -871,8 +871,13 @@ class LongformWorker:
                             if not _apply_editorial_overlays(scene, clip_path, temp_dir, i, duration, job_id):
                                 raise RuntimeError(f"scene {i} editorial overlay failed")
                             if _verify_video(clip_path):
-                                logger.info(f"씬 {i} Fal 모션 실패 페이드 폴백 완료")
+                                logger.info(f"씬 {i} Fal 모션 실패 페이드 폴백 완료: job_id={job_id}, scene={i}, reason={e}")
                                 _write_scene_clip_meta(clip_path, "fal_fallback_static", clip_fingerprint)
+                                _write_kling_audit(job_id, i, {
+                                    "status": "FAILED_FALLBACK_STATIC",
+                                    "error": str(e),
+                                    "timestamp": datetime.now(timezone.utc).isoformat()
+                                })
                                 return i, clip_path, "fal_fallback_static", str(e)
                         except Exception as fallback_err:
                             logger.error(f"씬 {i} 페이드 폴백 실패, 일반 정적 복구 시도: {fallback_err}")

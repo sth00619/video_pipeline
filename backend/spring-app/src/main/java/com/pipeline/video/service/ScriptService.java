@@ -90,8 +90,12 @@ public class ScriptService {
                 .build();
         assetRepository.save(asset);
 
-        if (autonomyService.isAuto(job) && !Boolean.TRUE.equals(result.getRequiresManualReview())) {
-            log.info("AUTO 모드 — 스크립트 자동 확정");
+        if (autonomyService.isAuto(job)) {
+            if (Boolean.TRUE.equals(result.getRequiresManualReview())) {
+                log.warn("AUTO 모드 — 스크립트 수동 검토 사유가 있으나 AUTO 정책에 따라 자동 확정합니다: jobId={}", jobId);
+            } else {
+                log.info("AUTO 모드 — 스크립트 자동 확정");
+            }
             confirm(jobId, result.getScript(), result.getSections(), "AUTO");
         } else if (Boolean.TRUE.equals(result.getRequiresManualReview())) {
             log.warn("스크립트 수동 검토 대기: jobId={}, reason=mock-or-provider-fallback", jobId);
@@ -413,11 +417,6 @@ public class ScriptService {
 
     private String cleanScriptCommasAndPct(String text) {
         if (text == null) return "";
-        // 1. 퍼센트 치환
-        text = text.replaceAll("([+-]?\\d+\\.?\\d*)\\s*%", "$1포인트");
-        text = text.replaceAll("([+-]?\\d+\\.?\\d*)\\s*퍼센트", "$1포인트");
-        // 2. 천단위 콤마 제거
-        text = text.replaceAll("(\\d{1,3}),(\\d{3})", "$1$2");
         return text;
     }
 

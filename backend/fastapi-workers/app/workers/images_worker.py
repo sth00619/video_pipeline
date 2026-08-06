@@ -553,8 +553,9 @@ Rules:
                     str(script_data.get("script") or ""),
                     list(script_data.get("sections") or script_data.get("scenes") or []),
                 )
+                verify_tts_against_script_contract(tts_data, contract)
             except Exception as exc:
-                logger.warning(f"이미지 단계 대본·TTS·자막 계보 검증 경고 (이미지 생성 계속 진행): {exc}")
+                raise RuntimeError(f"이미지 단계 대본·TTS·자막 계보 검증 실패: {exc}") from exc
 
         if not scenes_meta:
             scenes_meta = []

@@ -49,7 +49,7 @@ def test_visual_modes_control_character_presence_instead_of_forcing_mascot():
         {"text": "핵심 설명", "section": "data", "visual_mode": "archetype_explainer"},
     ])
 
-    assert [scene["art_direction"]["character_required"] for scene in scenes] == [False, False, True]
+    assert [scene["art_direction"]["character_required"] for scene in scenes] == [False, True, True]
 
 
 def test_unavailable_semantic_qa_and_repeated_prompt_require_review(monkeypatch):

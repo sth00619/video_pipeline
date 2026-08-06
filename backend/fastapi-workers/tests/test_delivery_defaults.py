@@ -15,7 +15,7 @@ class DeliveryDefaultsTests(unittest.TestCase):
 
     def test_default_voice_delivery_matches_reference_breaths(self):
         self.assertEqual(runtime_config.value("tts_speed"), 0.9)
-        self.assertEqual(runtime_config.value("tts_sentence_pause_ms"), 350)
+        self.assertEqual(runtime_config.value("tts_sentence_pause_ms"), 200)
 
     @patch("app.utils.script_length.resolve_cpm", return_value=(400.0, 2))
     def test_speed_specific_calibration_is_not_scaled_twice(self, _resolve_cpm):

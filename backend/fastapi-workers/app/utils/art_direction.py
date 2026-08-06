@@ -39,6 +39,43 @@ V5_ARCHETYPES = {
     "job_market_hall":   "채용 게시판 홀 — 고용/일자리 전용",
 }
 
+SHARED_STYLE_LOCK_PROMPT = (
+    "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. "
+    "BOLD THICK BLACK INK OUTLINES (3-5px equivalent) on EVERY element; cel shading with soft gradients; highly saturated, organized colors; "
+    "dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and "
+    "future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. "
+    "A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, "
+    "NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, "
+    "NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. "
+    "NO speech bubbles, comic balloons, caption chips, title cards, lower-thirds, or detached callout boxes. "
+    "Do not depict screens, dashboards, "
+    "charts, signboards, documents, labels, UI panels, blank white rectangles, empty title cards, empty frames, boards, "
+    "or presentation panels. Use unlabeled physical props and a continuous full-bleed illustrated background instead. "
+    "Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame."
+)
+
+SHARED_MASCOT_STYLE_LOCK_PROMPT = (
+    "The gold coin mascot character MUST be prominently sized, occupying at minimum 1/3 of the frame height. "
+    "The circular coin face is ALWAYS fully visible — never obscured by helmets, masks, or visors (any hat or hard hat sits on top of the coin, face remains 100% visible). "
+    "Perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. "
+    "White cartoon gloves, brown cartoon shoes, full body visible, proportional cartoon body."
+)
+
+ARCHETYPE_TO_COSTUME = {
+    "port_emergency": "safety_vest",
+    "retail_shock": "detective",
+    "classroom": "professor",
+    "weather_map": "reporter",
+    "split_stage": "formal",
+    "trade_calculator": "detective",
+    "data_lab": "analyst",
+    "risk_control_room": "analyst",
+    "briefing_podium": "tuxedo_host",
+    "real_estate_office": "formal",
+    "job_market_hall": "formal",
+    "earnings_stage": "tuxedo_host",
+}
+
 ARCHETYPE_TO_FAMILY = {
     "port_emergency": "industry_environment",
     "retail_shock": "industry_environment",
@@ -444,23 +481,16 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if previous_palettes and palette_key == previous_palettes[-1]:
             palette_key = "neutral" if palette_key != "neutral" else "positive"
         wardrobe_key, wardrobe = WARDROBE_BY_FAMILY[family]
-        costume_role = ROLE_COSTUME_BY_FAMILY[family]
+        costume_role = ARCHETYPE_TO_COSTUME.get(archetype) or ROLE_COSTUME_BY_FAMILY.get(family, "analyst")
         costume_state = _costume_state(section, mood)
         render_contract = scene.get("v5_render_contract") or {}
         visual_mode = str(
             scene.get("visual_mode") or render_contract.get("visual_mode") or ""
         ).strip()
-        if visual_mode in {"article_evidence", "semantic_illustration"}:
+        if visual_mode == "article_evidence":
             character_required = False
-        elif visual_mode == "archetype_explainer":
-            character_required = True
         else:
-            character_required = (
-                section == "data"
-                or str(scene.get("visual_type") or "") in {
-                    "character_hero", "character_explainer", "takeaway"
-                }
-            )
+            character_required = True
         pose = scene.get("pose") or wardrobe_key
         camera = CAMERAS[index % len(CAMERAS)]
         composition = dict(REFERENCE_COMPOSITION_BY_FAMILY[family])

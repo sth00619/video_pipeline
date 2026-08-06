@@ -539,6 +539,9 @@ class TtsWorker:
             tts.save(tmp)
             tmp_files.append(tmp)
 
+        for t in tmp_files:
+            self._sanitize_audio_chunk(t, job_id)
+
         import tempfile as tf
         list_file = tf.mktemp(suffix=".txt")
         with open(list_file, "w") as f:
@@ -580,12 +583,31 @@ class TtsWorker:
             return "legacy"
         return {0.0: "creative", 0.5: "natural", 1.0: "robust"}.get(float(stability), "invalid")
 
+    def _sanitize_audio_chunk(self, chunk_path: str, job_id: int = 0) -> str:
+        """각 오디오 청크의 DC offset(highpass=f=20) 및 경계 파형 불연속(10ms afade in/out)을 보정한다."""
+        duration = self._probe_duration(chunk_path)
+        if duration is None or duration <= 0.02:
+            return chunk_path
+        
+        sanitized_path = f"{chunk_path}.sanitized.mp3"
+        fade_out_start = max(0.0, duration - 0.01)
+        af_chain = f"highpass=f=20,afade=t=in:ss=0:d=0.01,afade=t=out:st={fade_out_start:.3f}:d=0.01"
+        ret = self._run_subprocess(
+            f'ffmpeg -i "{chunk_path}" -af "{af_chain}" -c:a libmp3lame -b:a 192k -y "{sanitized_path}" -loglevel error',
+            job_id
+        )
+        if ret == 0 and os.path.exists(sanitized_path):
+            os.replace(sanitized_path, chunk_path)
+        elif os.path.exists(sanitized_path):
+            os.remove(sanitized_path)
+        return chunk_path
+
     def _prepend_leading_silence(self, audio_path: str, seconds: float, job_id: int) -> bool:
         """Prepend a deterministic safety pad without trimming narration."""
         padded_path = f"{audio_path}.lead.mp3"
         ret = self._run_subprocess(
             f'ffmpeg -f lavfi -t {seconds:.3f} -i "anullsrc=r=44100:cl=stereo" '
-            f'-i "{audio_path}" -filter_complex "[0:a][1:a]concat=n=2:v=0:a=1[out]" '
+            f'-i "{audio_path}" -filter_complex "[1:a]highpass=f=20,afade=t=in:ss=0:d=0.01[clean1];[0:a][clean1]concat=n=2:v=0:a=1[out]" '
             f'-map "[out]" -ar 44100 -ac 2 -c:a libmp3lame -b:a 192k '
             f'-y "{padded_path}" -loglevel error',
             job_id,
@@ -593,7 +615,7 @@ class TtsWorker:
         if ret != 0 or not os.path.exists(padded_path):
             logger.warning("anullsrc concat failed, falling back to adelay filter")
             ret_fallback = self._run_subprocess(
-                f'ffmpeg -i "{audio_path}" -af "adelay={int(seconds*1000)}|{int(seconds*1000)}" '
+                f'ffmpeg -i "{audio_path}" -af "highpass=f=20,afade=t=in:ss=0:d=0.01,adelay={int(seconds*1000)}|{int(seconds*1000)}" '
                 f'-y "{padded_path}" -loglevel error',
                 job_id,
             )
@@ -912,6 +934,9 @@ class TtsWorker:
                     if os.path.exists(t): os.remove(t)
                 return False, []
                     
+            for t in tmp_files:
+                self._sanitize_audio_chunk(t, job_id)
+            
             list_file = tf.mktemp(suffix=".txt")
             with open(list_file, "w", encoding="utf-8") as f:
                 for t in tmp_files:
@@ -1096,8 +1121,16 @@ class TtsWorker:
                 )
             )
             pause_seconds = max(0.0, float(pause_ms) / 1000.0)
-            if pause_seconds:
-                pauses.append((max(terminal_end, next_start), pause_seconds))
+            if not pause_seconds:
+                continue
+
+            native_pause = max(0.0, next_start - terminal_end)
+            # ElevenLabs 네이티브 음성에 이미 충분한 호흡(pause_seconds 이상)이 포함되어 있으면
+            # 인공 무음을 추가 연결하지 않고 자연스러운 연속 음성을 유지한다.
+            if native_pause >= pause_seconds and pause_ms_override is not None:
+                continue
+
+            pauses.append((max(terminal_end, next_start), pause_seconds))
         return pauses
 
     @staticmethod
@@ -1149,10 +1182,10 @@ class TtsWorker:
         for boundary, pause_seconds, _ in local_pauses:
             segment_label = f"s{label_index}"
             seg_duration = max(0.01, boundary - cursor)
-            fade_out = f",afade=t=out:st={max(0.0, seg_duration - 0.015):.6f}:d=0.015" if seg_duration > 0.03 else ""
-            fade_in = ",afade=t=in:st=0:d=0.015" if cursor > 0 and seg_duration > 0.03 else ""
+            fade_out = f",afade=t=out:st={max(0.0, seg_duration - 0.03):.6f}:d=0.03" if seg_duration > 0.05 else ""
+            fade_in = ",afade=t=in:st=0:d=0.01" if cursor > 0 and seg_duration > 0.02 else ""
             filters.append(
-                f"[0:a]atrim=start={cursor:.6f}:end={boundary:.6f},asetpts=PTS-STARTPTS{fade_in}{fade_out},"
+                f"[0:a]atrim=start={cursor:.6f}:end={boundary:.6f},asetpts=PTS-STARTPTS,highpass=f=40{fade_in}{fade_out},"
                 f"aformat=sample_rates=44100:channel_layouts=stereo[{segment_label}]"
             )
             inputs.append(f"[{segment_label}]")
@@ -1166,9 +1199,9 @@ class TtsWorker:
 
         final_label = f"s{label_index}"
         final_duration = max(0.01, source_duration - cursor)
-        final_fade_in = ",afade=t=in:st=0:d=0.015" if cursor > 0 and final_duration > 0.03 else ""
+        final_fade_in = ",afade=t=in:st=0:d=0.01" if cursor > 0 and final_duration > 0.02 else ""
         filters.append(
-            f"[0:a]atrim=start={cursor:.6f}:end={source_duration:.6f},asetpts=PTS-STARTPTS{final_fade_in},"
+            f"[0:a]atrim=start={cursor:.6f}:end={source_duration:.6f},asetpts=PTS-STARTPTS,highpass=f=40{final_fade_in},"
             f"aformat=sample_rates=44100:channel_layouts=stereo[{final_label}]"
         )
         inputs.append(f"[{final_label}]")

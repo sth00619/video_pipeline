@@ -15,8 +15,10 @@ CONTRACT_VERSION = "narration-source-v1"
 
 
 def compact_text(value: str) -> str:
-    """자막 줄바꿈만 무시하고 의미 있는 원문 차이는 유지한다."""
-    return re.sub(r"\s+", "", str(value or ""))
+    """자막 줄바꿈 및 쉼표 표기 무시, 의미 있는 원문 차이는 유지한다."""
+    cleaned = re.sub(r"##\s*장면\s*\d*", "", str(value or ""))
+    cleaned = re.sub(r"(?<=\d),(?=\d)", "", cleaned)
+    return re.sub(r"\s+", "", cleaned)
 
 
 def canonical_narration_text(value: str) -> str:
@@ -58,9 +60,10 @@ def build_script_contract(script: str, sections: list[dict[str, Any]]) -> dict[s
     section_text = narration_from_sections(sections)
     if not canonical_text:
         canonical_text = section_text or "내레이션 원문"
-    if compact_text(canonical_text) != compact_text(section_text):
-        logger.warning(
-            "승인 대본 원문과 장면 내레이션에 차이가 있습니다. 장면 텍스트 기준으로 계보 계약을 구성합니다."
+
+    if sections and section_text and compact_text(canonical_text) != compact_text(section_text):
+        raise NarrationContractError(
+            "승인 대본 원문과 장면 내레이션에 차이가 있습니다."
         )
 
     scene_sources: list[dict[str, Any]] = []
@@ -91,9 +94,13 @@ def verify_tts_against_script_contract(
     canonical_sha256 = str(tts_meta.get("canonical_sha256") or "").strip()
     expected_sha256 = str(script_contract.get("canonical_text_sha256") or "").strip()
     chunks = list(tts_meta.get("chunks") or [])
+    chunks_text = compact_text("".join(str(c.get("text", "")) for c in chunks))
 
     if canonical_sha256 != expected_sha256:
-        logger.warning("TTS 원문 해시가 대본 계약과 일부 다릅니다. (경고 기록 후 이미지 생성 계속 진행)")
+        raise NarrationContractError("자막 청크 또는 TTS 원문 해시가 대본 계약과 다릅니다.")
+
+    if chunks_text and compact_text(canonical_text) != chunks_text:
+        raise NarrationContractError("자막 청크 원문이 대본 계약과 다릅니다.")
 
     return {
         "passed": True,

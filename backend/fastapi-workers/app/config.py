@@ -162,10 +162,10 @@ TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
 TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "false").lower() in {"1", "true", "yes"}
 # ElevenLabs already supplies natural Korean sentence breaths.  Do not splice
 # extra silence at every punctuation mark; it makes narration staccato.
-TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "350"))
-TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "400"))
-# ElevenLabs의 원래 억양은 보존하되, 문장 경계가 자연스럽게 연결되도록 300ms 호흡을 더한다.
-TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "300"))
+TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "200"))
+TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "0"))
+# ElevenLabs의 원래 억양은 보존하되, 문장 경계가 자연스럽게 연결되도록 70ms 미세 호흡을 더한다.
+TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "70"))
 TTS_DURATION_TOLERANCE = float(os.getenv("TTS_DURATION_TOLERANCE", "0.25"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))

@@ -1,6 +1,8 @@
 """V5 정보 장면의 무문자 이미지 프롬프트를 구성한다."""
 from __future__ import annotations
 
+from app.utils.art_direction import SHARED_STYLE_LOCK_PROMPT, SHARED_MASCOT_STYLE_LOCK_PROMPT, ARCHETYPE_TO_COSTUME
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
@@ -34,19 +36,7 @@ MASCOT_IDENTITY_LOCK = (
 # 기존 8종 승인본의 미감을 현재 실전 경로에서도 명시적으로 고정한다. 이 계약은
 # 사실값·수치의 생성 지시가 아니라 선·명암·무대 밀도에 관한 그림체 계약이다.
 V5_STYLE_CONTRACT_VERSION = "2026-08-03-r4-korean-nonnumeric-three-mode-v1"
-BASE_STYLE_LOCK_PROMPT = (
-    "Cartoon illustration style with visibly THICK BOLD BLACK INK OUTLINES (3-5px equivalent), "
-    "flat cel shading with strong color contrast, NO watercolor, NO painterly effect, "
-    "NO soft gradients, NO photorealism. "
-    "Bright saturated colors, hard shadow edges, professional cartoon broadcast quality. "
-    "NO Korean characters anywhere in the image. "
-    "NO floating text overlays separate from props. "
-    "NO speech bubbles, comic balloons, caption chips, title cards, lower-thirds, or detached callout boxes. "
-    "NO UI panels, dashboard cards, mini charts, inset widgets, lower-corner panels, secondary monitors, or boxes added on top of or beside the scene. "
-    "All text must be physically embedded in props (printed on signs, written on boards, displayed on screens). "
-    "Use ONE archetype setting only — do not mix props from different settings. "
-    "NO mixing chalkboard + scale + control panel in the same scene."
-)
+BASE_STYLE_LOCK_PROMPT = SHARED_STYLE_LOCK_PROMPT
 
 # 2026-08-04: 헤드웨어 락을 "항상 갈색 페도라"에서 "의상별 헤드웨어 1개만,
 # 절대 두 개를 겹치지 않음"으로 바꿨다. 경제사냥꾼 채널은 씬의 역할(교수=학사모,
@@ -54,15 +44,7 @@ BASE_STYLE_LOCK_PROMPT = (
 # 그 채널 문법을 재현할 수 없다. 대신 실제 헤드웨어 지정은 COSTUME_MAP 각 항목이
 # 전담하고, 여기서는 "정확히 하나만" 규칙만 고정한다. 얼굴·손·발 정체성 락
 # (MASCOT_IDENTITY_LOCK)은 이 변경과 무관하게 그대로 유지된다.
-MASCOT_STYLE_LOCK_PROMPT = (
-    "The mascot is a cute gold coin character: "
-    "perfectly round golden face, big expressive cartoon eyes with white highlights, "
-    "rosy pink cheeks, warm smile or matching expression. "
-    "Headwear is defined entirely by the costume description supplied below — wear exactly the "
-    "single headwear item that costume names, never a second item, and never a blend of two headwear pieces. "
-    "Navy blue suit with white shirt and tie unless the costume overrides the outfit. White cartoon gloves. Brown cartoon shoes. "
-    "Full body visible, proportional cartoon body."
-)
+MASCOT_STYLE_LOCK_PROMPT = SHARED_MASCOT_STYLE_LOCK_PROMPT
 
 STYLE_LOCK_PROMPT = f"{BASE_STYLE_LOCK_PROMPT} {MASCOT_STYLE_LOCK_PROMPT}"
 
@@ -117,7 +99,7 @@ COSTUME_MAP = {
     "professor": "wearing exactly one black graduation mortarboard cap as its only headwear (no fedora), a brown tweed blazer, and round glasses, holding a wooden pointer stick",
     "reporter": "wearing exactly one brown fedora hat as its only headwear, and a navy TV-anchor suit",
     "formal": "wearing exactly one brown fedora hat as its only headwear, and a navy blue suit with white shirt and tie, holding a cane",
-    "safety_vest": "wearing exactly one brown fedora hat as its only headwear, and a navy blue suit under a reflective yellow safety vest",
+    "safety_vest": "wearing exactly one yellow hard hat as its only headwear (no fedora), and a navy blue suit under a reflective yellow safety vest",
     "vest": "wearing exactly one brown fedora hat as its only headwear, and a navy blue suit with white shirt and tie",
     "tuxedo_host": "bare-headed with no hat of any kind (no fedora), wearing a black tuxedo jacket with a red bow tie, holding a golden cane",
     "architect_planner": "wearing exactly one yellow hard hat as its only headwear (no fedora), a brown tool belt over the navy suit, and holding a drafting compass",

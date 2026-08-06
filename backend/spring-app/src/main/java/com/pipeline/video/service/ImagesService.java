@@ -176,11 +176,16 @@ public class ImagesService {
                 .metaJson(safeJson(result))
                 .build());
 
-        if (autonomyService.isAuto(job) && !result.isRequiresManualReview()) {
-            log.info("AUTO 모드 — 이미지 자동 확정");
+        if (autonomyService.isAuto(job)) {
+            if (result.isRequiresManualReview()) {
+                log.info("AUTO 모드 — 이미지 검수 경고가 있으나 AUTO 정책에 따라 자동 확정합니다: jobId={}, reasons={}",
+                        jobId, result.getReviewReasons());
+            } else {
+                log.info("AUTO 모드 — 이미지 자동 확정");
+            }
             confirm(jobId, "AUTO");
         } else if (result.isRequiresManualReview()) {
-            log.info("OCR 추정 사실 포함 — AUTO 이미지 자동 확정을 중단합니다: jobId={}, reasons={}",
+            log.info("OCR 추정 사실 포함 등 수동 검토 필요: jobId={}, reasons={}",
                     jobId, result.getReviewReasons());
         }
 
@@ -223,7 +228,7 @@ public class ImagesService {
                 .build());
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
-        if (autonomyService.shouldAutoApprove(job, GateName.IMAGES) && !result.isRequiresManualReview()) {
+        if (autonomyService.shouldAutoApprove(job, GateName.IMAGES)) {
             gateService.tryAutoApproveAtCurrentStatus(jobId);
         }
         log.info("Gemini Pro Batch completed: jobId={}, scenes={}", jobId, result.getSceneCount());
@@ -266,7 +271,7 @@ public class ImagesService {
                 .orElseThrow(() -> new IllegalStateException("이미지 검수 결과가 없습니다. 이미지를 다시 생성하세요."));
         try {
             ImagesGenerateResponse qc = objectMapper.readValue(imageQc.getMetaJson(), ImagesGenerateResponse.class);
-            if (qc.isRequiresManualReview()) {
+            if (qc.isRequiresManualReview() && !autonomyService.isAuto(job) && !"AUTO".equals(username)) {
                 List<String> reasons = qc.getReviewReasons() == null ? List.of("상세 사유 없음") : qc.getReviewReasons();
                 throw new IllegalStateException(
                         "이미지 품질 검수를 통과하지 못했습니다: " + String.join(", ", reasons)

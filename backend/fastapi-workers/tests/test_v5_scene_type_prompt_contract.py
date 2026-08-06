@@ -41,8 +41,8 @@ def test_information_scene_prompt_requires_one_in_world_physical_surface():
     assert "never place a number or text in a floating card" in prompt
     assert "exact verified facts are composited later by deterministic rendering" in prompt
     assert "do not include any visible typographic mark" not in prompt
-    assert "thick bold black ink outlines (3-5px equivalent)" in prompt
-    assert "no floating text overlays separate from props" in prompt
+    assert "bold thick black ink outlines (3-5px equivalent)" in prompt
+    assert "no text, no letters, no words" in prompt
 
 
 def test_script_captioned_contract_embeds_exact_caption_on_the_primary_prop():
@@ -92,7 +92,7 @@ def test_v5_costumes_declare_exactly_one_headwear_and_never_stack_two():
     fedora_headwear = {
         "brown fedora hat", "graduation mortarboard cap", "yellow hard hat",
     }
-    non_fedora_costumes = {"professor", "tuxedo_host", "architect_planner"}
+    non_fedora_costumes = {"professor", "tuxedo_host", "architect_planner", "safety_vest"}
     assert non_fedora_costumes <= COSTUME_MAP.keys()
 
     for name, costume in COSTUME_MAP.items():

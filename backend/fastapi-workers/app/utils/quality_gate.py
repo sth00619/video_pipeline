@@ -111,6 +111,52 @@ def enrich_scene_plan(scene: dict[str, Any], index: int, total: int) -> dict[str
     return result
 
 
+def assess_image_qa_gates(scene: dict[str, Any]) -> dict[str, Any]:
+    """A-5 QA 게이트: ① 캐릭터 강제 등장, ② 크기 1/3 상한, ③ 동전 얼굴 노출, ④ 숫자가 없는 배경 스크린 검증."""
+    warnings: list[str] = []
+    art_direction = scene.get("art_direction") or {}
+    visual_mode = scene.get("visual_mode") or ""
+
+    # 1. article_evidence 제외 캐릭터 등장 강제
+    if visual_mode != "article_evidence" and not art_direction.get("character_required", True):
+        warnings.append("character_missing_when_required")
+
+    # 2. 캐릭터 프레임 높이 1/3 상한 검증
+    character_regions = scene.get("character_regions") or []
+    if visual_mode != "article_evidence" and character_regions:
+        for reg in character_regions:
+            height_ratio = reg.get("height", 0)
+            if height_ratio < 0.33:
+                warnings.append(f"character_height_below_one_third:{height_ratio:.2f}")
+
+    # 3. 동전 얼굴 노출 검증 (헬멧/마스크가 동전 얼굴을 가리지 않는지 체크)
+    costume = str(art_direction.get("costume_role") or art_direction.get("costume") or "")
+    face_obscured = art_direction.get("face_obscured", False)
+    if face_obscured or costume in {"full_helmet", "visor_mask", "obscured"}:
+        warnings.append("coin_face_obscured_by_headwear")
+
+    # 4. 배경 스크린/보드 숫자 비존재 검증 (AI 프롬프트 내 수치 노출 여부 검사)
+    prompt = str(scene.get("prompt_en") or scene.get("prompt") or "").lower()
+    # 화풍 및 레이아웃 규격 (3-5px, 1/3, 18 percent) 제거 후 프롬프트 내 수치 검사
+    factual_prompt = re.sub(r"\(?\s*\d+\s*-\s*\d+\s*px(?:\s+equivalent)?\s*\)?", "", prompt)
+    factual_prompt = re.sub(r"1\s*/\s*3", "", factual_prompt)
+    factual_prompt = re.sub(r"\b18\s*(?:percent|%)\b", "", factual_prompt)
+    digits_found = re.findall(r"\b\d+(?:\.\d+)?\b", factual_prompt)
+    if digits_found:
+        warnings.append(f"background_screen_contains_digits:{','.join(digits_found)}")
+
+    return {
+        "passed": len(warnings) == 0,
+        "warnings": warnings,
+        "checked_items": [
+            "character_presence",
+            "frame_height_one_third",
+            "coin_face_visibility",
+            "background_textless_digits"
+        ]
+    }
+
+
 def enrich_scene_plans(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [enrich_scene_plan(scene, i, len(scenes)) for i, scene in enumerate(scenes)]
 
