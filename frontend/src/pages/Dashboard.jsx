@@ -131,7 +131,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <SummaryCard icon={<Video size={19}/>} label="롱폼 작업" value={longformCount} onClick={() => update(setType)('LONGFORM')} />
           <SummaryCard icon={<Film size={19}/>} label="쇼츠 프로젝트" value={shortsCount} onClick={() => update(setType)('SHORTS')} />
-          <SummaryCard icon={<DollarSign size={19}/>} label="누적 사용 비용" value={`$${totalCost.toFixed(2)}`} onClick={() => { setType('ALL'); setPage(1) }} />
+          <SummaryCard icon={<DollarSign size={19}/>} label="누적 사용 비용" value={`₩${Math.round(totalCost).toLocaleString('ko-KR')}`} onClick={() => { setType('ALL'); setPage(1) }} />
         </div>
 
         <TrendingSidebar />
@@ -160,7 +160,7 @@ export default function Dashboard() {
                   <td className="px-3 py-4 text-gray-300">{formatCategory(item.category)}<div className="text-xs text-gray-500 mt-1">{item.type === 'LONGFORM' ? `${item.minutes}분` : '세로 쇼츠'}</div></td>
                   <td className="px-3 py-4 text-gray-300">{formatAutonomy(item.mode)}</td>
                   <td className="px-3 py-4"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_CLASS[item.status] || 'bg-navy-700 text-gray-300'}`}>{formatStatus(item.status)}</span></td>
-                  <td className="px-3 py-4 text-right text-gray-300">{item.cost == null ? '-' : `$${item.cost.toFixed(2)}`}</td>
+                  <td className="px-3 py-4 text-right text-gray-300">{item.cost == null ? '-' : `₩${Math.round(Number(item.cost) || 0).toLocaleString('ko-KR')}`}</td>
                   <td className="px-5 py-4 text-right text-xs text-gray-500">{formatDate(item.createdAt)}</td>
                 </tr>)}
                 {!jobsQuery.isLoading && !shortsQuery.isLoading && visible.length === 0 && <tr><td colSpan="7" className="px-5 py-16 text-center text-gray-500">조건에 맞는 영상 작업이 없습니다.</td></tr>}

@@ -177,44 +177,6 @@ export default function Admin() {
           }`}
         >
           <Video className="text-accent-cyan mb-3" size={20} />
-          <div className="text-2xl font-bold">{jobs.length}</div>
-          <div className="text-sm text-gray-400 mt-1">전체 작업</div>
-        </button>
-        <button
-          onClick={() => handleFilterChange('COMPLETED')}
-          className={`text-left bg-navy-800 rounded-xl p-5 border transition hover:bg-navy-700/40 cursor-pointer ${
-            adminFilter === 'COMPLETED' ? 'border-accent-green shadow-sm shadow-accent-green/10' : 'border-navy-700'
-          }`}
-        >
-          <Video className="text-accent-green mb-3" size={20} />
-          <div className="text-2xl font-bold">{completedJobs.length}</div>
-          <div className="text-sm text-gray-400 mt-1">완료된 영상</div>
-        </button>
-        <div className="bg-navy-800 rounded-xl border border-navy-700 p-5">
-          <DollarSign className="text-accent-gold mb-3" size={20} />
-          <div className="text-2xl font-bold">${totalCost.toFixed(2)}</div>
-          <div className="text-sm text-gray-400 mt-1">총 누적 비용</div>
-        </div>
-      </div>
-
-      <div className="mb-6 bg-navy-800 border border-navy-700 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-3"><div><h2 className="font-semibold text-white">외부 API 연결 상태</h2><p className="text-[11px] text-gray-500 mt-1">키가 없으면 키워드 후보는 제한되며, 화면의 ‘unavailable’ 값은 추정하지 않고 그대로 표시합니다.</p></div><span className="text-[11px] text-gray-500">현재 서버 환경 기준</span></div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-          <ProviderBadge label="YouTube Data API v3" configured={integrations.youtube?.configured} />
-          <ProviderBadge label="ElevenLabs" configured={integrations.elevenlabs?.configured} />
-          <ProviderBadge label="Anthropic Claude" configured={integrations.anthropic?.configured} />
-        </div>
-        {integrations.youtube && !integrations.youtube.configured && <div className="mt-4 bg-navy-900/70 rounded-lg p-3 text-[11px] text-gray-400 leading-relaxed">YouTube 키 설정: Google Cloud Console → 프로젝트 생성 → <b>YouTube Data API v3</b> 활성화 → 사용자 인증 정보에서 API 키 생성 → 프로젝트 루트 `.env`의 `YOUTUBE_API_KEY=발급키`에 입력 후 `docker compose up -d --build fastapi-workers spring-app` 실행. 키는 브라우저에 노출하지 않고 FastAPI 서버에서만 사용합니다.</div>}
-      </div>
-
-      <div className="flex gap-4 mb-6 border-b border-navy-700 pb-px">
-        <button
-          onClick={() => setActiveTab('jobs')}
-          className={`pb-3 font-semibold text-sm transition relative ${
-            activeTab === 'jobs' ? 'text-accent-cyan border-b-2 border-accent-cyan' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          작업 목록
         </button>
         <button
           onClick={() => setActiveTab('channels')}

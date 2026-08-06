@@ -77,10 +77,18 @@ public class WorkflowOrchestrator {
                     VideoPipelineWorkflow.class, workflowId);
             workflow.approveGate(gateName);
         } catch (Exception e) {
-            log.error("Signal 전송 실패: workflowId={}, gate={}, error={}",
-                    workflowId, gateName, e.getMessage(), e);
-            // Signal 전송 실패는 기존 gate 승인 흐름을 막으면 안 됨
-            // (DB 상태 전이는 GateService가 이미 완료했으므로 로그만 남김)
+            log.warn("Signal 전송 실패 (Workflow 미실행 또는 종료 상태): workflowId={}, gate={}, error={}",
+                    workflowId, gateName, e.getMessage());
+            try {
+                log.info("Temporal Workflow 재시작 및 게이트 Signal 재전송: workflowId={}, gate={}", workflowId, gateName);
+                startPipeline(jobId);
+                Thread.sleep(500);
+                VideoPipelineWorkflow newWorkflow = workflowClient.newWorkflowStub(
+                        VideoPipelineWorkflow.class, workflowId);
+                newWorkflow.approveGate(gateName);
+            } catch (Exception retryEx) {
+                log.error("Pipeline 재시작 및 Signal 전송 실패: jobId={}, gate={}", jobId, gateName, retryEx);
+            }
         }
     }
 

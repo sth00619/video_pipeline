@@ -1128,11 +1128,23 @@ export default function JobDetail() {
                       </div>
                     )}
                     {(showManualApprove || showGuidedApprove) && (
-                      <button onClick={() => showGuidedApprove
-                        ? handleGuidedGateApprove(step)
-                        : setGateModal({ gate: step.gate, step })}
-                        disabled={runningStep === `${step.key}-approve` || (step.gate === 'TTS' && selectedVoiceId === 'default_ko')}
-                        className="text-sm bg-accent-gold/20 text-accent-gold border border-accent-gold/30 px-4 py-2 rounded-lg hover:bg-accent-gold/30 transition">검토 / 승인</button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setGateModal({ gate: step.gate, step })}
+                          className="text-xs bg-navy-700 text-gray-200 border border-navy-600 px-3 py-2 rounded-lg hover:bg-navy-600 transition font-medium flex items-center gap-1"
+                        >
+                          🔍 상세보기/검토
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleGuidedGateApprove(step)}
+                          disabled={runningStep === `${step.key}-approve` || (step.gate === 'TTS' && selectedVoiceId === 'default_ko')}
+                          className="text-xs bg-accent-gold text-navy-950 font-bold px-3.5 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1 shadow-sm"
+                        >
+                          {runningStep === `${step.key}-approve` ? <Loader size={12} className="animate-spin"/> : '✓'} 승인
+                        </button>
+                      </div>
                     )}
                     {ss === 'active' && isAuto && <Loader size={16} className="animate-spin text-accent-cyan"/>}
                   </div>
@@ -1674,8 +1686,8 @@ export default function JobDetail() {
                   </div>
                 )}
 
-                {((step.key === 'images' || step.key === 'longform') && sortedImageList.length > 0) && (() => {
-                  const isLongform = step.key === 'longform'
+                {(step.key === 'images' && sortedImageList.length > 0) && (() => {
+                  const isLongform = false
                   const curPage = isLongform ? longformScenePage : scenePage
                   const setCurPage = isLongform ? setLongformScenePage : setScenePage
                   const pageCount = isLongform ? longformScenePageCount : scenePageCount
