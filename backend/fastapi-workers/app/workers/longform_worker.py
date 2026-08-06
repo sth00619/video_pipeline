@@ -275,7 +275,11 @@ class LongformWorker:
 
         budget_preflight = load_preflight(job_id)
         if budget_preflight:
-            max_clips_cap = min(max_clips_cap, max(0, int(budget_preflight.get("kling_clip_count", max_clips_cap))))
+            if budget_preflight.get("gemini_image_only_budget"):
+                preflight_kling_cap = int(budget_preflight.get("fal_motion_clips_reserved_separately", max_clips_cap))
+            else:
+                preflight_kling_cap = int(budget_preflight.get("kling_clip_count", max_clips_cap))
+            max_clips_cap = min(max_clips_cap, max(0, preflight_kling_cap))
             logger.info("Budget preflight applies Kling cap=%s, estimate=₩%s", max_clips_cap, budget_preflight.get("estimated_cost_krw"))
 
         max_clips_cap = _cap_intro_motion_for_short_video(total_duration, max_clips_cap)
