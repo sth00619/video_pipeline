@@ -1,0 +1,88 @@
+{
+  "subtitles": {
+    "score": 80,
+    "passed": true,
+    "warnings": [
+      "subtitle_reading_speed_over_12cps:2"
+    ],
+    "cue_count": 34,
+    "coverage": 0.9977,
+    "max_reading_speed_cps": 13.33
+  },
+  "tts_verification": {
+    "passed": true,
+    "cer": 0.1061,
+    "attempts": 1,
+    "transcript": "반도체 어팡이 좋다고 드랍니다. 그런데 SK 하이닉스의 ADR은 금낙했습니다. 이 두 가지가 동시에 사실일 수 있을까요? 지금 시장이 바로 그 상황입니다. 실적 발표를 앞두고 경계십니다. MBDR는 올랐지만 ADR은 반대로 움직였습니다. 반손 악재가 아니라 불확실성의 옷갈림입니다. 그러면 어팡 지편은 어떤 신호를 보냈까요? 샌디스크는 조정 영업이 10조 원을 넘겼습니다. 팔계기업과 4년 장기디약도 매졌습니다. 하이닉스 실적이 아닌 점 주의하세요. 그래도 낸드 수요가 살아 있다는 근거는 됩니다. 그런데 여기에 환율 변수까지 더해집니다. 원달러 환율이 10개월 만에 최저치를 기록했습니다. 환율하락은 실적 수자에 직접 영향을 주는 겁니다. 8월 전망에서 놓치기 쉬운 변수고요. 결국 두 축이 맞서고 있는 셈입니다. 낸드 수요 회복 VS 경계십니와 환율하락 8월 실적 일정과 환율 방향 원정 확인하세요.",
+    "unit_sequence_match": false,
+    "reference_units": [
+      "엔",
+      "조",
+      "조",
+      "원",
+      "원",
+      "달러"
+    ],
+    "transcript_units": [
+      "조",
+      "조",
+      "원",
+      "원",
+      "달러",
+      "원"
+    ],
+    "provider_text_exact": true,
+    "provider_cer": 0.0,
+    "provider_unit_sequence_match": true,
+    "whisper_passed": false,
+    "audio_review_required": true
+  },
+  "splice_artifacts": {
+    "passed": true,
+    "candidate_count": 3,
+    "suspect_count": 0,
+    "noise_db": -40,
+    "min_silence_seconds": 0.1,
+    "edge_sharpness_threshold": 500.0,
+    "candidates": [
+      {
+        "start": 0.0,
+        "end": 0.218,
+        "duration": 0.218,
+        "is_flat_zero": false,
+        "edge_sharpness": 23870,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 1.798,
+        "end": 1.95,
+        "duration": 0.152,
+        "is_flat_zero": false,
+        "edge_sharpness": 15686,
+        "verdict": "자연스러운 저음량 구간입니다."
+      },
+      {
+        "start": 15.701,
+        "end": 15.857,
+        "duration": 0.156,
+        "is_flat_zero": false,
+        "edge_sharpness": 18368,
+        "verdict": "자연스러운 저음량 구간입니다."
+      }
+    ]
+  },
+  "subtitle_alignment_mode": "character",
+  "canonical_text_match": true,
+  "canonical_sha256": "750f53103d6a0ec0f45879c405d990e28c804d1f6f30995b126f6cfd719d9954",
+  "leading_silence": {
+    "applied": true
+  },
+  "delivery_profile": {
+    "speed": 0.9,
+    "stability": 0.5,
+    "sentence_micro_breath_ms": 70,
+    "subtitle_target_chars": 18,
+    "question_mark_count": 2,
+    "caption_timing_source": "elevenlabs_character_timestamps"
+  }
+}

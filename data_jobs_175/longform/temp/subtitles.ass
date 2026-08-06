@@ -1,0 +1,46 @@
+﻿[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Main,NanumGothic,72,&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,2,2,70,70,58,1
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+
+Dialogue: 0,0:00:00.33,0:00:01.77,Main,,0,0,0,,반도체 업황이 좋다고들 합니다.
+Dialogue: 0,0:00:02.03,0:00:03.13,Main,,0,0,0,,그런데 SK하이닉스
+Dialogue: 0,0:00:03.27,0:00:04.50,Main,,0,0,0,,ADR은 급락했습니다.
+Dialogue: 0,0:00:04.67,0:00:05.60,Main,,0,0,0,,이 두 가지가 동시에
+Dialogue: 0,0:00:05.73,0:00:06.50,Main,,0,0,0,,사실일 수 있을까요?
+Dialogue: 0,0:00:06.73,0:00:08.23,Main,,0,0,0,,지금 시장이 바로 그 상황입니다.
+Dialogue: 0,0:00:08.50,0:00:09.40,Main,,0,0,0,,실적 발표를 앞두고
+Dialogue: 0,0:00:09.57,0:00:10.60,Main,,0,0,0,,경계 심리가 퍼졌습니다.
+Dialogue: 0,0:00:10.83,0:00:11.77,Main,,0,0,0,,엔비디아는 올랐지만
+Dialogue: 0,0:00:11.87,0:00:13.30,Main,,0,0,0,,ADR은 반대로 움직였습니다.
+Dialogue: 0,0:00:13.60,0:00:14.40,Main,,0,0,0,,단순 악재가 아니라
+Dialogue: 0,0:00:14.53,0:00:15.70,Main,,0,0,0,,불확실성의 엇갈림입니다.
+Dialogue: 0,0:00:15.93,0:00:16.87,Main,,0,0,0,,그러면 업황 지표는
+Dialogue: 0,0:00:16.97,0:00:17.83,Main,,0,0,0,,어떤 신호를 보낼까요?
+Dialogue: 0,0:00:18.10,0:00:19.27,Main,,0,0,0,,샌디스크는 조정 영업이익
+Dialogue: 0,0:00:19.43,0:00:20.30,Main,,0,0,0,,10조 원을 넘겼습니다.
+Dialogue: 0,0:00:20.57,0:00:21.73,Main,,0,0,0,,8개 기업과 4년 장기
+Dialogue: 0,0:00:21.80,0:00:22.60,Main,,0,0,0,,계약도 맺었습니다.
+Dialogue: 0,0:00:22.77,0:00:23.50,Main,,0,0,0,,하이닉스 실적이
+Dialogue: 0,0:00:23.57,0:00:24.57,Main,,0,0,0,,아닌 점, 주의하세요.
+Dialogue: 0,0:00:24.63,0:00:25.47,Main,,0,0,0,,그래도 낸드 수요가
+Dialogue: 0,0:00:25.57,0:00:26.67,Main,,0,0,0,,살아있다는 근거는 됩니다.
+Dialogue: 0,0:00:26.83,0:00:27.73,Main,,0,0,0,,그런데 여기에 환율
+Dialogue: 0,0:00:27.87,0:00:28.77,Main,,0,0,0,,변수까지 더해집니다.
+Dialogue: 0,0:00:29.03,0:00:29.97,Main,,0,0,0,,원달러 환율이 10개월
+Dialogue: 0,0:00:30.07,0:00:31.30,Main,,0,0,0,,만에 최저치를 기록했습니다.
+Dialogue: 0,0:00:31.57,0:00:32.70,Main,,0,0,0,,환율 하락은 실적 숫자에
+Dialogue: 0,0:00:32.83,0:00:33.83,Main,,0,0,0,,직접 영향을 주는 겁니다.
+Dialogue: 0,0:00:34.07,0:00:35.80,Main,,0,0,0,,8월 전망에서 놓치기 쉬운 변수고요.
+Dialogue: 0,0:00:36.03,0:00:37.60,Main,,0,0,0,,결국 두 축이 맞서고 있는 셈입니다.
+Dialogue: 0,0:00:37.87,0:00:39.03,Main,,0,0,0,,낸드 수요 회복 vs
+Dialogue: 0,0:00:39.20,0:00:40.20,Main,,0,0,0,,경계 심리와 환율 하락.
+Dialogue: 0,0:00:40.43,0:00:42.00,Main,,0,0,0,,8월 실적 일정과 환율 방향,
+Dialogue: 0,0:00:42.17,0:00:42.77,Main,,0,0,0,,먼저 확인하세요.

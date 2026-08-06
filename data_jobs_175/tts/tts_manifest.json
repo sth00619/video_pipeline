@@ -1,0 +1,347 @@
+{
+  "job_id": 175,
+  "audio_path": "/app/data/jobs/175/tts/full.mp3",
+  "voice_id": "dlKJ5VptCbYxal4doUO5",
+  "tts_engine": "elevenlabs",
+  "used_elevenlabs": true,
+  "provider_request": {
+    "model_id": "eleven_v3",
+    "mode": "natural",
+    "has_audio_tag": false,
+    "first_sentence": "반도체 업황이 좋다고들 합니다.",
+    "first_30_chars": "반도체 업황이 좋다고들 합니다. 그런데 SK하이닉스 A",
+    "pause_boundary_policy": "next_spoken_character",
+    "cadence_policy": "native_question_intonation_with_micro_breaths"
+  },
+  "total_duration": 42.87,
+  "chunks": [
+    {
+      "index": 1,
+      "text": "반도체 업황이 좋다고들 합니다.",
+      "start": 0.333333,
+      "end": 1.766667,
+      "duration": 1.433333
+    },
+    {
+      "index": 2,
+      "text": "그런데 SK하이닉스",
+      "start": 2.033333,
+      "end": 3.133333,
+      "duration": 1.1
+    },
+    {
+      "index": 3,
+      "text": "ADR은 급락했습니다.",
+      "start": 3.266667,
+      "end": 4.5,
+      "duration": 1.233333
+    },
+    {
+      "index": 4,
+      "text": "이 두 가지가 동시에",
+      "start": 4.666667,
+      "end": 5.6,
+      "duration": 0.933333
+    },
+    {
+      "index": 5,
+      "text": "사실일 수 있을까요?",
+      "start": 5.733333,
+      "end": 6.5,
+      "duration": 0.766667
+    },
+    {
+      "index": 6,
+      "text": "지금 시장이 바로 그 상황입니다.",
+      "start": 6.733333,
+      "end": 8.233333,
+      "duration": 1.5
+    },
+    {
+      "index": 7,
+      "text": "실적 발표를 앞두고",
+      "start": 8.5,
+      "end": 9.4,
+      "duration": 0.9
+    },
+    {
+      "index": 8,
+      "text": "경계 심리가 퍼졌습니다.",
+      "start": 9.566667,
+      "end": 10.6,
+      "duration": 1.033333
+    },
+    {
+      "index": 9,
+      "text": "엔비디아는 올랐지만",
+      "start": 10.833333,
+      "end": 11.766667,
+      "duration": 0.933333
+    },
+    {
+      "index": 10,
+      "text": "ADR은 반대로 움직였습니다.",
+      "start": 11.866667,
+      "end": 13.3,
+      "duration": 1.433333
+    },
+    {
+      "index": 11,
+      "text": "단순 악재가 아니라",
+      "start": 13.6,
+      "end": 14.4,
+      "duration": 0.8
+    },
+    {
+      "index": 12,
+      "text": "불확실성의 엇갈림입니다.",
+      "start": 14.533333,
+      "end": 15.7,
+      "duration": 1.166667
+    },
+    {
+      "index": 13,
+      "text": "그러면 업황 지표는",
+      "start": 15.933333,
+      "end": 16.866667,
+      "duration": 0.933333
+    },
+    {
+      "index": 14,
+      "text": "어떤 신호를 보낼까요?",
+      "start": 16.966667,
+      "end": 17.833333,
+      "duration": 0.866667
+    },
+    {
+      "index": 15,
+      "text": "샌디스크는 조정 영업이익",
+      "start": 18.1,
+      "end": 19.266667,
+      "duration": 1.166667
+    },
+    {
+      "index": 16,
+      "text": "10조 원을 넘겼습니다.",
+      "start": 19.433333,
+      "end": 20.3,
+      "duration": 0.866667
+    },
+    {
+      "index": 17,
+      "text": "8개 기업과 4년 장기",
+      "start": 20.566667,
+      "end": 21.733333,
+      "duration": 1.166667
+    },
+    {
+      "index": 18,
+      "text": "계약도 맺었습니다.",
+      "start": 21.8,
+      "end": 22.6,
+      "duration": 0.8
+    },
+    {
+      "index": 19,
+      "text": "하이닉스 실적이",
+      "start": 22.766667,
+      "end": 23.5,
+      "duration": 0.733333
+    },
+    {
+      "index": 20,
+      "text": "아닌 점, 주의하세요.",
+      "start": 23.566667,
+      "end": 24.566667,
+      "duration": 1.0
+    },
+    {
+      "index": 21,
+      "text": "그래도 낸드 수요가",
+      "start": 24.633333,
+      "end": 25.466667,
+      "duration": 0.833333
+    },
+    {
+      "index": 22,
+      "text": "살아있다는 근거는 됩니다.",
+      "start": 25.566667,
+      "end": 26.666667,
+      "duration": 1.1
+    },
+    {
+      "index": 23,
+      "text": "그런데 여기에 환율",
+      "start": 26.833333,
+      "end": 27.733333,
+      "duration": 0.9
+    },
+    {
+      "index": 24,
+      "text": "변수까지 더해집니다.",
+      "start": 27.866667,
+      "end": 28.766667,
+      "duration": 0.9
+    },
+    {
+      "index": 25,
+      "text": "원달러 환율이 10개월",
+      "start": 29.033333,
+      "end": 29.966667,
+      "duration": 0.933333
+    },
+    {
+      "index": 26,
+      "text": "만에 최저치를 기록했습니다.",
+      "start": 30.066667,
+      "end": 31.3,
+      "duration": 1.233333
+    },
+    {
+      "index": 27,
+      "text": "환율 하락은 실적 숫자에",
+      "start": 31.566667,
+      "end": 32.7,
+      "duration": 1.133333
+    },
+    {
+      "index": 28,
+      "text": "직접 영향을 주는 겁니다.",
+      "start": 32.833333,
+      "end": 33.833333,
+      "duration": 1.0
+    },
+    {
+      "index": 29,
+      "text": "8월 전망에서 놓치기 쉬운 변수고요.",
+      "start": 34.066667,
+      "end": 35.8,
+      "duration": 1.733333
+    },
+    {
+      "index": 30,
+      "text": "결국 두 축이 맞서고 있는 셈입니다.",
+      "start": 36.033333,
+      "end": 37.6,
+      "duration": 1.566667
+    },
+    {
+      "index": 31,
+      "text": "낸드 수요 회복 vs",
+      "start": 37.866667,
+      "end": 39.033333,
+      "duration": 1.166667
+    },
+    {
+      "index": 32,
+      "text": "경계 심리와 환율 하락.",
+      "start": 39.2,
+      "end": 40.2,
+      "duration": 1.0
+    },
+    {
+      "index": 33,
+      "text": "8월 실적 일정과 환율 방향,",
+      "start": 40.433333,
+      "end": 42.0,
+      "duration": 1.566667
+    },
+    {
+      "index": 34,
+      "text": "먼저 확인하세요.",
+      "start": 42.166667,
+      "end": 42.766667,
+      "duration": 0.6
+    }
+  ],
+  "canonical_text": "반도체 업황이 좋다고들 합니다. 그런데 SK하이닉스 ADR은 급락했습니다. 이 두 가지가 동시에 사실일 수 있을까요? 지금 시장이 바로 그 상황입니다. 실적 발표를 앞두고 경계 심리가 퍼졌습니다. 엔비디아는 올랐지만 ADR은 반대로 움직였습니다. 단순 악재가 아니라 불확실성의 엇갈림입니다. 그러면 업황 지표는 어떤 신호를 보낼까요? 샌디스크는 조정 영업이익 10조 원을 넘겼습니다. 8개 기업과 4년 장기 계약도 맺었습니다. 하이닉스 실적이 아닌 점, 주의하세요. 그래도 낸드 수요가 살아있다는 근거는 됩니다. 그런데 여기에 환율 변수까지 더해집니다. 원달러 환율이 10개월 만에 최저치를 기록했습니다. 환율 하락은 실적 숫자에 직접 영향을 주는 겁니다. 8월 전망에서 놓치기 쉬운 변수고요. 결국 두 축이 맞서고 있는 셈입니다. 낸드 수요 회복 vs 경계 심리와 환율 하락. 8월 실적 일정과 환율 방향, 먼저 확인하세요.",
+  "canonical_sha256": "750f53103d6a0ec0f45879c405d990e28c804d1f6f30995b126f6cfd719d9954",
+  "quality_report": {
+    "subtitles": {
+      "score": 80,
+      "passed": true,
+      "warnings": [
+        "subtitle_reading_speed_over_12cps:2"
+      ],
+      "cue_count": 34,
+      "coverage": 0.9977,
+      "max_reading_speed_cps": 13.33
+    },
+    "tts_verification": {
+      "passed": true,
+      "cer": 0.1061,
+      "attempts": 1,
+      "transcript": "반도체 어팡이 좋다고 드랍니다. 그런데 SK 하이닉스의 ADR은 금낙했습니다. 이 두 가지가 동시에 사실일 수 있을까요? 지금 시장이 바로 그 상황입니다. 실적 발표를 앞두고 경계십니다. MBDR는 올랐지만 ADR은 반대로 움직였습니다. 반손 악재가 아니라 불확실성의 옷갈림입니다. 그러면 어팡 지편은 어떤 신호를 보냈까요? 샌디스크는 조정 영업이 10조 원을 넘겼습니다. 팔계기업과 4년 장기디약도 매졌습니다. 하이닉스 실적이 아닌 점 주의하세요. 그래도 낸드 수요가 살아 있다는 근거는 됩니다. 그런데 여기에 환율 변수까지 더해집니다. 원달러 환율이 10개월 만에 최저치를 기록했습니다. 환율하락은 실적 수자에 직접 영향을 주는 겁니다. 8월 전망에서 놓치기 쉬운 변수고요. 결국 두 축이 맞서고 있는 셈입니다. 낸드 수요 회복 VS 경계십니와 환율하락 8월 실적 일정과 환율 방향 원정 확인하세요.",
+      "unit_sequence_match": false,
+      "reference_units": [
+        "엔",
+        "조",
+        "조",
+        "원",
+        "원",
+        "달러"
+      ],
+      "transcript_units": [
+        "조",
+        "조",
+        "원",
+        "원",
+        "달러",
+        "원"
+      ],
+      "provider_text_exact": true,
+      "provider_cer": 0.0,
+      "provider_unit_sequence_match": true,
+      "whisper_passed": false,
+      "audio_review_required": true
+    },
+    "splice_artifacts": {
+      "passed": true,
+      "candidate_count": 3,
+      "suspect_count": 0,
+      "noise_db": -40,
+      "min_silence_seconds": 0.1,
+      "edge_sharpness_threshold": 500.0,
+      "candidates": [
+        {
+          "start": 0.0,
+          "end": 0.218,
+          "duration": 0.218,
+          "is_flat_zero": false,
+          "edge_sharpness": 23870,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 1.798,
+          "end": 1.95,
+          "duration": 0.152,
+          "is_flat_zero": false,
+          "edge_sharpness": 15686,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 15.701,
+          "end": 15.857,
+          "duration": 0.156,
+          "is_flat_zero": false,
+          "edge_sharpness": 18368,
+          "verdict": "자연스러운 저음량 구간입니다."
+        }
+      ]
+    },
+    "subtitle_alignment_mode": "character",
+    "canonical_text_match": true,
+    "canonical_sha256": "750f53103d6a0ec0f45879c405d990e28c804d1f6f30995b126f6cfd719d9954",
+    "leading_silence": {
+      "applied": true
+    },
+    "delivery_profile": {
+      "speed": 0.9,
+      "stability": 0.5,
+      "sentence_micro_breath_ms": 70,
+      "subtitle_target_chars": 18,
+      "question_mark_count": 2,
+      "caption_timing_source": "elevenlabs_character_timestamps"
+    }
+  }
+}

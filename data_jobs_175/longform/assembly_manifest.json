@@ -1,0 +1,1354 @@
+{
+  "job_id": 175,
+  "video_path": "/app/data/jobs/175/longform/final.mp4",
+  "resolution": "1920x1080",
+  "kling_motion_plan": {
+    "policy": "opening_contiguous_window",
+    "video_duration_seconds": 42.87,
+    "window_start_seconds": 0.0,
+    "window_end_seconds": 45.0,
+    "selected_scene_seconds": 0.0,
+    "clip_seconds": 5.0,
+    "clip_count_cap": 12,
+    "manual_scene_filter_applied": true,
+    "candidate_scene_indices": [],
+    "requested_scene_indices": [],
+    "delivered_scene_indices": [],
+    "protected_verified_fact_scene_indices": [],
+    "failed_scene_indices": [],
+    "scene_windows": [
+      {
+        "index": 0,
+        "scene_id": "script_scene_001",
+        "start_seconds": 0.0,
+        "end_seconds": 4.149
+      },
+      {
+        "index": 1,
+        "scene_id": "script_scene_002",
+        "start_seconds": 4.149,
+        "end_seconds": 7.867
+      },
+      {
+        "index": 2,
+        "scene_id": "script_scene_003",
+        "start_seconds": 7.867,
+        "end_seconds": 12.953
+      },
+      {
+        "index": 3,
+        "scene_id": "script_scene_004",
+        "start_seconds": 12.953,
+        "end_seconds": 17.794
+      },
+      {
+        "index": 4,
+        "scene_id": "script_scene_005",
+        "start_seconds": 17.794,
+        "end_seconds": 22.489
+      },
+      {
+        "index": 5,
+        "scene_id": "script_scene_006",
+        "start_seconds": 22.489,
+        "end_seconds": 26.6
+      },
+      {
+        "index": 6,
+        "scene_id": "script_scene_007",
+        "start_seconds": 26.6,
+        "end_seconds": 31.357
+      },
+      {
+        "index": 7,
+        "scene_id": "script_scene_008",
+        "start_seconds": 31.357,
+        "end_seconds": 35.764
+      },
+      {
+        "index": 8,
+        "scene_id": "script_scene_009",
+        "start_seconds": 35.764,
+        "end_seconds": 40.137
+      },
+      {
+        "index": 9,
+        "scene_id": "script_scene_010",
+        "start_seconds": 40.137,
+        "end_seconds": 42.87
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "scene_id": "script_scene_001",
+      "index": 0,
+      "image_path": "/app/data/jobs/175/images/scene_000.png",
+      "used_in_final_video": true,
+      "start_seconds": 0.0,
+      "end_seconds": 4.149,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "character_hero",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_002",
+      "index": 1,
+      "image_path": "/app/data/jobs/175/images/scene_001.png",
+      "used_in_final_video": true,
+      "start_seconds": 4.149,
+      "end_seconds": 7.867,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "character_hero",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_003",
+      "index": 2,
+      "image_path": "/app/data/jobs/175/images/scene_002.png",
+      "used_in_final_video": true,
+      "start_seconds": 7.867,
+      "end_seconds": 12.953,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "news_context",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_004",
+      "index": 3,
+      "image_path": "/app/data/jobs/175/images/scene_003.png",
+      "used_in_final_video": true,
+      "start_seconds": 12.953,
+      "end_seconds": 17.794,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "data_visual",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_005",
+      "index": 4,
+      "image_path": "/app/data/jobs/175/images/scene_004.png",
+      "used_in_final_video": true,
+      "start_seconds": 17.794,
+      "end_seconds": 22.489,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "data_visual",
+      "character_regions": [
+        {
+          "x": 0.015,
+          "y": 0.1,
+          "width": 0.41,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "left",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.015,
+            "y": 0.1,
+            "width": 0.41,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_006",
+      "index": 5,
+      "image_path": "/app/data/jobs/175/images/scene_005.png",
+      "used_in_final_video": true,
+      "start_seconds": 22.489,
+      "end_seconds": 26.6,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "character_explainer",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_007",
+      "index": 6,
+      "image_path": "/app/data/jobs/175/images/scene_006.png",
+      "used_in_final_video": true,
+      "start_seconds": 26.6,
+      "end_seconds": 31.357,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "comparison",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_008",
+      "index": 7,
+      "image_path": "/app/data/jobs/175/images/scene_007.png",
+      "used_in_final_video": true,
+      "start_seconds": 31.357,
+      "end_seconds": 35.764,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "comparison",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_009",
+      "index": 8,
+      "image_path": "/app/data/jobs/175/images/scene_008.png",
+      "used_in_final_video": true,
+      "start_seconds": 35.764,
+      "end_seconds": 40.137,
+      "use_kling": true,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "takeaway",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    },
+    {
+      "scene_id": "script_scene_010",
+      "index": 9,
+      "image_path": "/app/data/jobs/175/images/scene_009.png",
+      "used_in_final_video": true,
+      "start_seconds": 40.137,
+      "end_seconds": 42.87,
+      "use_kling": false,
+      "kling_requested": false,
+      "kling_delivery_mode": "static",
+      "generation_method": "pro_gemini",
+      "visual_type": "takeaway",
+      "character_regions": [
+        {
+          "x": 0.555,
+          "y": 0.1,
+          "width": 0.43,
+          "height": 0.79,
+          "source": "art_direction_estimate"
+        }
+      ],
+      "clean_plate_path": null,
+      "asset_layout_metadata": {
+        "face_bbox": null,
+        "gaze_direction": null,
+        "hand_regions": [],
+        "saliency_map_version": "edge_energy_8x8_v1",
+        "saliency_grid": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "negative_space": null,
+        "negative_spaces": [],
+        "subject_side": "right",
+        "clean_plate_path": null,
+        "duplicate_character_count": null,
+        "character_regions": [
+          {
+            "x": 0.555,
+            "y": 0.1,
+            "width": 0.43,
+            "height": 0.79,
+            "source": "art_direction_estimate"
+          }
+        ]
+      },
+      "annotations": [],
+      "market_chart": null
+    }
+  ]
+}

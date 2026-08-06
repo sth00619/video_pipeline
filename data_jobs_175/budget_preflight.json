@@ -1,0 +1,30 @@
+{
+  "planned_at": "2026-08-06T17:57:17.076012+00:00",
+  "scene_count": 10,
+  "quality_tier": "pro",
+  "pro_scene_count": 10,
+  "flash_scene_count": 0,
+  "kling_clip_count": 0,
+  "estimated_cost_krw": 2158,
+  "budget_limit_krw": 15000,
+  "retry_buffer_pct": 10.0,
+  "allowed": true,
+  "policy_version": "gemini-image-only-2026-08-04",
+  "actions": [],
+  "reason": null,
+  "template_scene_count": 2,
+  "template_retry_reserve_krw": 94,
+  "template_regeneration_enabled": true,
+  "rates": {
+    "img_cost_pro_2k_usd": 0.134,
+    "kling_cost_per_clip_usd": 0.35,
+    "usd_krw": 1400.0
+  },
+  "gemini_image_only_budget": true,
+  "fal_motion_clips_reserved_separately": 9,
+  "intro_motion_target_seconds": 45.0,
+  "intro_motion_planned_seconds": 45.0,
+  "intro_motion_estimated_total_seconds": 60.0,
+  "still_image_pilot": false,
+  "resumed_scene_count": 0
+}

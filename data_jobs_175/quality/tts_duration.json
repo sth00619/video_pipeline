@@ -1,0 +1,15 @@
+{
+  "target_seconds": 60.0,
+  "actual_seconds": 42.87,
+  "delta_seconds": -17.13,
+  "within_tolerance": false,
+  "probe_grace_seconds": 1.0,
+  "allowed_delta_seconds": 16.0,
+  "spoken_char_count": 353,
+  "calibration": {
+    "observed_cpm": 494.09,
+    "calibrated_cpm": 458.79,
+    "samples": 22
+  },
+  "passed": false
+}
