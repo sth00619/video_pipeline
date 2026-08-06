@@ -44,10 +44,16 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
     return (mindmap?.primary || []).filter(item => multipleOf(item) >= threshold)
   }, [mindmap, threshold])
 
+  const MINDMAP_PAGE_SIZE = 6
+  const mindmapTotalPages = Math.max(1, Math.ceil(filteredPrimary.length / MINDMAP_PAGE_SIZE))
+  const pagedPrimary = useMemo(() => {
+    return filteredPrimary.slice((mindmapPage - 1) * MINDMAP_PAGE_SIZE, mindmapPage * MINDMAP_PAGE_SIZE)
+  }, [filteredPrimary, mindmapPage])
+
   // Bidirectional Radial Layout Calculations
   const layout = useMemo(() => {
     const centerTitle = mindmap?.center || '오늘의 주식 기회 지도'
-    const items = filteredPrimary
+    const items = pagedPrimary
 
     // Map expansions by parent
     const expansionsMap = new Map()
@@ -333,12 +339,19 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             >
               <ChevronLeft size={15} />
             </button>
-            <span className="px-3 py-1 text-xs font-semibold bg-indigo-600 text-white rounded-lg">1</span>
-            <span className="px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer">2</span>
-            <span className="text-xs text-slate-400">...</span>
+            {Array.from({ length: mindmapTotalPages }, (_, i) => i + 1).map(p => (
+              <button
+                key={p}
+                onClick={() => setMindmapPage(p)}
+                className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${mindmapPage === p ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+              >
+                {p}
+              </button>
+            ))}
             <button
-              onClick={() => setMindmapPage(p => p + 1)}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100"
+              onClick={() => setMindmapPage(p => Math.min(mindmapTotalPages, p + 1))}
+              disabled={mindmapPage >= mindmapTotalPages}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
             >
               <ChevronRight size={15} />
             </button>
