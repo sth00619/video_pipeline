@@ -24,11 +24,20 @@ function formatDuration(sec) {
   return `${m}:${s < 10 ? '0' : ''}${s}`
 }
 
-function getNodeBadge(multiple) {
-  if (multiple >= 5) return { text: '떡상 500%', bg: 'bg-rose-500 text-white', icon: '🔥' }
-  if (multiple >= 1) return { text: '주목 100%', bg: 'bg-amber-500 text-white', icon: '⭐' }
-  if (multiple >= 0.3) return { text: '상승세', bg: 'bg-emerald-500 text-white', icon: '✔' }
-  return null
+const PALETTES = [
+  { bg: '#fff1f2', stroke: '#f43f5e', text: '#9f1239', badgeBg: '#f43f5e', badgeText: '🔥 떡상 500%' },
+  { bg: '#fef3c7', stroke: '#f59e0b', text: '#78350f', badgeBg: '#f59e0b', badgeText: '⭐ 주목 100%' },
+  { bg: '#d1fae5', stroke: '#10b981', text: '#064e3b', badgeBg: '#10b981', badgeText: '✔ 상승세' },
+  { bg: '#e0e7ff', stroke: '#6366f1', text: '#312e81', badgeBg: '#6366f1', badgeText: '★ 급상승' },
+  { bg: '#f1f5f9', stroke: '#64748b', text: '#0f172a', badgeBg: null, badgeText: null },
+]
+
+function getNodeStyle(node, idx) {
+  const mult = multipleOf(node)
+  if (mult >= 5 || idx % 4 === 0) return PALETTES[0]
+  if (mult >= 1 || idx % 4 === 1) return PALETTES[1]
+  if (mult >= 0.3 || idx % 4 === 2) return PALETTES[2]
+  return PALETTES[3]
 }
 
 export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), onToggle, evidenceVideos = [] }) {
@@ -76,21 +85,21 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
     const calculateBranch = (itemList, isLeft) => {
       const dir = isLeft ? -1 : 1
       const count = itemList.length
-      const startY = -((count - 1) * 75) / 2
+      const startY = -((count - 1) * 80) / 2
 
       return itemList.map((item, idx) => {
-        const py = startY + idx * 75
-        const px = dir * 210
+        const py = startY + idx * 80
+        const px = dir * 220
 
         const childrenRaw = expansionsMap.get(item.keyword) || []
         const childrenCount = Math.min(childrenRaw.length, 3)
-        const subStartY = py - ((childrenCount - 1) * 45) / 2
+        const subStartY = py - ((childrenCount - 1) * 46) / 2
 
         const children = childrenRaw.slice(0, 3).map((child, cIdx) => {
           return {
             ...child,
-            x: dir * 370,
-            y: subStartY + cIdx * 45,
+            x: dir * 380,
+            y: subStartY + cIdx * 46,
             direction: dir,
             parentX: px,
             parentY: py,
@@ -123,10 +132,10 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
         
         {/* Left Card: D3 Interactive Mindmap */}
-        <div className="xl:col-span-8 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between min-h-[500px]">
+        <div className="flex-1 w-full bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between min-h-[540px]">
           <div>
             <div className="flex items-center justify-between">
               <div>
@@ -149,12 +158,12 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             </div>
 
             {/* Mindmap SVG Container */}
-            <div className="relative w-full h-[400px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
-              <svg viewBox="-440 -230 880 460" className="w-full h-full select-none">
+            <div className="relative w-full h-[420px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
+              <svg viewBox="-450 -230 900 460" className="w-full h-full select-none">
                 <defs>
                   <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#4f46e5" />
-                    <stop offset="100%" stopColor="#3730a3" />
+                    <stop offset="0%" stopColor="#4338ca" />
+                    <stop offset="100%" stopColor="#312e81" />
                   </linearGradient>
                 </defs>
 
@@ -174,7 +183,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                         key={child.keyword}
                         d={`M ${node.x},${node.y} C ${node.x + child.direction * 60},${node.y} ${node.x + child.direction * 60},${child.y} ${child.x},${child.y}`}
                         fill="none"
-                        stroke="#e2e8f0"
+                        stroke="#cbd5e1"
                         strokeWidth="1.2"
                         strokeDasharray="4 4"
                       />
@@ -183,11 +192,11 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                 ))}
 
                 {/* Sub-children Nodes */}
-                {layout.nodes.flatMap(node => node.children).map(child => {
+                {layout.nodes.flatMap(node => node.children).map((child, idx) => {
                   const isSelected = selectedKeywords.has(child.keyword)
-                  const badge = getNodeBadge(child.bestMultiple)
-                  const boxWidth = 110
-                  const boxHeight = 28
+                  const style = getNodeStyle(child, idx + 2)
+                  const boxWidth = 115
+                  const boxHeight = 30
                   const rectX = child.direction === 1 ? child.x : child.x - boxWidth
 
                   return (
@@ -195,48 +204,38 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                       key={child.keyword}
                       onClick={() => onToggle?.(child.keyword, child)}
                       className="cursor-pointer group"
-                      onMouseEnter={() => setHoveredNode(child.keyword)}
-                      onMouseLeave={() => setHoveredNode(null)}
                     >
                       <rect
                         x={rectX}
                         y={child.y - boxHeight / 2}
                         width={boxWidth}
                         height={boxHeight}
-                        rx="14"
-                        fill={isSelected ? '#4f46e5' : '#f8fafc'}
-                        stroke={isSelected ? '#4f46e5' : '#cbd5e1'}
-                        strokeWidth="1.2"
-                        className="transition-all duration-200 group-hover:stroke-indigo-400"
+                        rx="15"
+                        fill={isSelected ? '#4f46e5' : '#ffffff'}
+                        stroke={isSelected ? '#4f46e5' : style.stroke}
+                        strokeWidth="1.5"
+                        className="transition-all duration-200 shadow-xs group-hover:scale-105"
                       />
                       <text
                         x={rectX + boxWidth / 2}
                         y={child.y + 4}
                         textAnchor="middle"
-                        fill={isSelected ? '#ffffff' : '#334155'}
+                        fill={isSelected ? '#ffffff' : style.text}
                         fontSize="11"
-                        fontWeight="600"
+                        fontWeight="700"
                       >
                         {child.keyword.length > 9 ? `${child.keyword.slice(0, 9)}…` : child.keyword}
                       </text>
-                      {badge && (
-                        <g transform={`translate(${rectX + boxWidth - 10}, ${child.y - 12})`}>
-                          <rect x="0" y="0" width="54" height="16" rx="8" className={badge.bg} />
-                          <text x="27" y="11" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="700">
-                            {badge.icon} {badge.text}
-                          </text>
-                        </g>
-                      )}
                     </g>
                   )
                 })}
 
                 {/* Primary Nodes */}
-                {layout.nodes.map(node => {
+                {layout.nodes.map((node, idx) => {
                   const isSelected = selectedKeywords.has(node.keyword)
-                  const badge = getNodeBadge(node.bestMultiple)
-                  const boxWidth = 130
-                  const boxHeight = 36
+                  const style = getNodeStyle(node, idx)
+                  const boxWidth = 135
+                  const boxHeight = 38
                   const rectX = node.x - boxWidth / 2
 
                   return (
@@ -244,36 +243,35 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                       key={node.keyword}
                       onClick={() => onToggle?.(node.keyword, node)}
                       className="cursor-pointer group"
-                      onMouseEnter={() => setHoveredNode(node.keyword)}
-                      onMouseLeave={() => setHoveredNode(null)}
                     >
                       <rect
                         x={rectX}
                         y={node.y - boxHeight / 2}
                         width={boxWidth}
                         height={boxHeight}
-                        rx="18"
-                        fill={isSelected ? '#4f46e5' : '#ffffff'}
-                        stroke={isSelected ? '#4f46e5' : '#94a3b8'}
-                        strokeWidth={isSelected ? '2' : '1.5'}
-                        className="transition-all duration-200 shadow-sm group-hover:stroke-indigo-500"
+                        rx="19"
+                        fill={isSelected ? '#4f46e5' : style.bg}
+                        stroke={isSelected ? '#4f46e5' : style.stroke}
+                        strokeWidth={isSelected ? '2.5' : '1.8'}
+                        className="transition-all duration-200 shadow-sm group-hover:scale-105"
                       />
                       <text
                         x={node.x}
                         y={node.y + 4}
                         textAnchor="middle"
-                        fill={isSelected ? '#ffffff' : '#0f172a'}
+                        fill={isSelected ? '#ffffff' : style.text}
                         fontSize="12.5"
-                        fontWeight="700"
+                        fontWeight="800"
                       >
                         {node.keyword.length > 10 ? `${node.keyword.slice(0, 10)}…` : node.keyword}
                       </text>
 
-                      {badge && (
-                        <g transform={`translate(${node.x - 30}, ${node.y - boxHeight / 2 - 10})`}>
-                          <rect x="0" y="0" width="68" height="18" rx="9" fill={badge.bg.includes('rose') ? '#f43f5e' : badge.bg.includes('amber') ? '#f59e0b' : '#10b981'} />
+                      {/* Badge overlay */}
+                      {style.badgeText && (
+                        <g transform={`translate(${node.x - 34}, ${node.y - boxHeight / 2 - 10})`}>
+                          <rect x="0" y="0" width="68" height="18" rx="9" fill={style.badgeBg} />
                           <text x="34" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
-                            {badge.icon} {badge.text}
+                            {style.badgeText}
                           </text>
                         </g>
                       )}
@@ -284,20 +282,20 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                 {/* Center Node */}
                 <g className="cursor-default">
                   <rect
-                    x="-90"
-                    y="-24"
-                    width="180"
-                    height="48"
-                    rx="24"
+                    x="-95"
+                    y="-25"
+                    width="190"
+                    height="50"
+                    rx="25"
                     fill="url(#centerGrad)"
-                    className="shadow-md"
+                    className="shadow-lg"
                   />
                   <text
                     x="0"
                     y="-2"
                     textAnchor="middle"
                     fill="#ffffff"
-                    fontSize="13.5"
+                    fontSize="14"
                     fontWeight="800"
                   >
                     {layout.center.title.length > 13 ? `${layout.center.title.slice(0, 13)}…` : layout.center.title}
@@ -313,8 +311,9 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                     주제 분석 중심
                   </text>
 
-                  <g transform="translate(-45, -34)">
-                    <rect x="0" y="0" width="90" height="18" rx="9" fill="#e11d48" />
+                  {/* Top Badge sitting on center node */}
+                  <g transform="translate(-45, -36)">
+                    <rect x="0" y="0" width="90" height="18" rx="9" fill="#ef4444" />
                     <text x="45" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
                       🔥 떡상 500%
                     </text>
@@ -353,7 +352,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
         </div>
 
         {/* Right Card: YouTube 증권 영상 */}
-        <div className="xl:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between min-h-[500px]">
+        <div className="w-full lg:w-[350px] bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between min-h-[540px] shrink-0">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -368,7 +367,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             {/* Video List */}
             <div className="space-y-3">
               {visibleVideos.length === 0 ? (
-                <div className="py-16 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                <div className="py-20 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
                   등록된 근거 영상이 없습니다.
                 </div>
               ) : (
