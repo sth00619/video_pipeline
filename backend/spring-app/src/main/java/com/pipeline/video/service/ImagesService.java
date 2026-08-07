@@ -178,12 +178,17 @@ public class ImagesService {
 
         if (autonomyService.isAuto(job)) {
             if (result.isRequiresManualReview()) {
-                log.info("AUTO 모드 — 이미지 검수 경고가 있으나 AUTO 정책에 따라 자동 확정합니다: jobId={}, reasons={}",
+                // AUTO 모드라도 이미지 검수 실패 시 자동 확정 차단 — MANUAL/GUIDED와 동일 품질 게이트 적용
+                // "no silent quality-degrading fallbacks" 원칙 준수 (AGENTS.md)
+                job.setStatus(JobStatus.IMAGES_RETRY_REQUIRED);
+                jobRepository.save(job);
+                log.warn("AUTO 모드 — 이미지 검수 실패로 자동 확정 차단, 수동 검토 대기: jobId={}, reasons={}",
                         jobId, result.getReviewReasons());
+                // confirm() 호출하지 않음 — 사람이 직접 UI에서 검수 후 확정 필요
             } else {
                 log.info("AUTO 모드 — 이미지 자동 확정");
+                confirm(jobId, "AUTO");
             }
-            confirm(jobId, "AUTO");
         } else if (result.isRequiresManualReview()) {
             log.info("OCR 추정 사실 포함 등 수동 검토 필요: jobId={}, reasons={}",
                     jobId, result.getReviewReasons());
@@ -271,7 +276,9 @@ public class ImagesService {
                 .orElseThrow(() -> new IllegalStateException("이미지 검수 결과가 없습니다. 이미지를 다시 생성하세요."));
         try {
             ImagesGenerateResponse qc = objectMapper.readValue(imageQc.getMetaJson(), ImagesGenerateResponse.class);
-            if (qc.isRequiresManualReview() && !autonomyService.isAuto(job) && !"AUTO".equals(username)) {
+            // AUTO 모드는 변경 1에서 isRequiresManualReview()=true 시 이미 차단되어 이 경로에 진입하지 않음.
+            // username="AUTO" 는 내부 자동 확정 경로이며 별도 게이트를 거친 것으로 간주 (현재 범위 내 신뢰 경계).
+            if (qc.isRequiresManualReview() && !"AUTO".equals(username)) {
                 List<String> reasons = qc.getReviewReasons() == null ? List.of("상세 사유 없음") : qc.getReviewReasons();
                 throw new IllegalStateException(
                         "이미지 품질 검수를 통과하지 못했습니다: " + String.join(", ", reasons)

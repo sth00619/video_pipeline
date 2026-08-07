@@ -35,6 +35,21 @@ PUBLISHERS: dict[str, PublisherRule] = {
     "yna.co.kr": PublisherRule("yna.co.kr", "연합뉴스", ("article.story-news", "div#articleWrap", "article"), ("header", "nav", "aside", ".share", ".related", ".ad", "footer", ".comment"), "en.yna.co.kr", "www.yna.co.kr"),
     "mk.co.kr": PublisherRule("mk.co.kr", "매일경제", ("div.news_cnt_detail_wrap", "article"), ("header", "nav", ".sns_area", ".ad_boundary", "aside", "footer")),
     "yonhapnewstv.co.kr": PublisherRule("yonhapnewstv.co.kr", "연합뉴스TV", ("article", ".article-content"), ("header", "nav", "aside", ".ad", "footer")),
+    "hankyung.com": PublisherRule("hankyung.com", "한국경제", ("article", "#articletxt", "div.article-body"), ("header", "nav", "aside", ".ad", "footer")),
+    "sedaily.com": PublisherRule("sedaily.com", "서울경제", ("article", "div.v_news_detail"), ("header", "nav", "aside", ".ad", "footer")),
+    "edaily.co.kr": PublisherRule("edaily.co.kr", "이데일리", ("article", "div.news_body"), ("header", "nav", "aside", ".ad", "footer")),
+    "mt.co.kr": PublisherRule("mt.co.kr", "머니투데이", ("article", "div#textBody"), ("header", "nav", "aside", ".ad", "footer")),
+    "fnnews.com": PublisherRule("fnnews.com", "파이낸셜뉴스", ("article", "div#article_content"), ("header", "nav", "aside", ".ad", "footer")),
+    "heraldcorp.com": PublisherRule("heraldcorp.com", "헤럴드경제", ("article", "div#articleText"), ("header", "nav", "aside", ".ad", "footer")),
+    "chosun.com": PublisherRule("chosun.com", "조선일보", ("article", "section.article-body"), ("header", "nav", "aside", ".ad", "footer")),
+    "joongang.co.kr": PublisherRule("joongang.co.kr", "중앙일보", ("article", "div#article_body"), ("header", "nav", "aside", ".ad", "footer")),
+    "donga.com": PublisherRule("donga.com", "동아일보", ("article", "div.article_txt"), ("header", "nav", "aside", ".ad", "footer")),
+    "ytn.co.kr": PublisherRule("ytn.co.kr", "YTN", ("article", "div.article_text"), ("header", "nav", "aside", ".ad", "footer")),
+    "kbs.co.kr": PublisherRule("kbs.co.kr", "KBS뉴스", ("article", "div#cont_newstxt"), ("header", "nav", "aside", ".ad", "footer")),
+    "sbs.co.kr": PublisherRule("sbs.co.kr", "SBS뉴스", ("article", "div.main_text"), ("header", "nav", "aside", ".ad", "footer")),
+    "imbc.com": PublisherRule("imbc.com", "MBC뉴스", ("article", "div.news_txt"), ("header", "nav", "aside", ".ad", "footer")),
+    "news1.kr": PublisherRule("news1.kr", "뉴스1", ("article", "div#articles_detail"), ("header", "nav", "aside", ".ad", "footer")),
+    "newsis.com": PublisherRule("newsis.com", "뉴시스", ("article", "div.article_body"), ("header", "nav", "aside", ".ad", "footer")),
 }
 
 

@@ -278,12 +278,9 @@ class ArticleEvidencePlanner:
         if not bool(runtime_config.value("article_evidence_auto_enabled")):
             audit["status"] = "disabled"
             return EvidencePlannerResult(output, audit)
-        if not verified_facts or (
-            not naver_api_hub_configured()
-            and not self._discovery_injected
-        ):
+        if not verified_facts:
             audit["status"] = "unavailable"
-            audit["reason"] = "verified_facts_or_naver_api_hub_credentials_missing"
+            audit["reason"] = "verified_facts_missing"
             self._persist_audit(job_id, audit)
             return EvidencePlannerResult(output, audit)
 
