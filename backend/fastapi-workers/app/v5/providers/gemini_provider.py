@@ -113,8 +113,10 @@ class GeminiProvider:
             reference_contract = (
                 f"Reference image {character_index} is the authoritative channel mascot identity model sheet. "
                 f"Preserve the mascot identity from image {character_index} exactly: one round gold-coin silhouette, the same face proportions, "
-                "eye shape, iris treatment, rim thickness, and dark outline weight. Keep exactly one brown fedora hat, navy suit, "
-                "white gloves, and brown shoes; expression and arm pose may change, but never redesign or restyle the mascot. "
+                "eye shape, iris treatment, rim thickness, and dark outline weight. "
+                "Goldie (the gold coin mascot) MUST ALWAYS wear scene-appropriate full clothing (e.g. business suit, vest, jacket, coat, safety vest) and headwear/hat (e.g. fedora hat, safety helmet, reporter hat, cap). "
+                "NEVER depict Goldie bare without clothing or headwear. Goldie MUST stand prominent in the foreground taking up 50% to 65% of total frame height; "
+                "expression, hat/outfit style, and arm pose may vary by scene archetype, but never redesign or restyle the core mascot face identity. "
             )
         elif len(reference_names) == 1 and not style_indices:
             # 기존 단일 캐릭터 참조 호출과의 호환성이다. 파일명이 명확한 스타일
@@ -122,8 +124,8 @@ class GeminiProvider:
             reference_contract = (
                 "Reference image 1 is the authoritative channel mascot identity model sheet. "
                 "Preserve the mascot identity from image 1 exactly: one round gold-coin silhouette, the same face proportions, "
-                "eye shape, iris treatment, rim thickness, and dark outline weight. Keep exactly one brown fedora hat, navy suit, "
-                "white gloves, and brown shoes. "
+                "eye shape, iris treatment, rim thickness, and dark outline weight. "
+                "Goldie MUST ALWAYS wear full scene-appropriate clothing and headwear/hat, standing prominent taking up 50% to 65% of frame height. "
             )
         else:
             reference_contract = (

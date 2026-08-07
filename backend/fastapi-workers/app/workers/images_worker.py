@@ -422,7 +422,8 @@ class ImagesWorker:
                 "Output only the prompt text, no explanation, no markdown."
             )
             char_rules = (
-                "- You MUST depict the 2D gold coin mascot character (Goldie) standing in the scene.\n"
+                "- You MUST depict Goldie (the 2D gold coin mascot character) standing prominent in the foreground, taking up 50% to 65% of total frame height.\n"
+                "- Goldie MUST ALWAYS wear full scene-appropriate outfit/clothing (e.g. business suit, vest, jacket, coat, safety vest) and scene-appropriate headwear/hat (e.g. fedora hat, safety helmet, reporter hat, cap, graduation cap). NEVER depict the coin character bare without clothes or headwear.\n"
                 "- Exactly ONE 2D gold coin mascot character is present. NO extra people, NO secondary mascot characters, NO cyan/green creatures.\n"
                 "- The background is tailored to the scene archetype (e.g. standing reporter board, data lab display, or presentation screen)."
             )
@@ -434,7 +435,8 @@ class ImagesWorker:
                 "Output only the prompt text, no explanation, no markdown."
             )
             char_rules = (
-                "- You MUST depict the 2D gold coin mascot character (Goldie) standing in the scene.\n"
+                "- You MUST depict Goldie (the 2D gold coin mascot character) standing prominent in the foreground, taking up 50% to 65% of total frame height.\n"
+                "- Goldie MUST ALWAYS wear full scene-appropriate outfit/clothing (e.g. business suit, vest, jacket, coat, safety vest) and scene-appropriate headwear/hat (e.g. fedora hat, safety helmet, reporter hat, cap, graduation cap). NEVER depict the coin character bare without clothes or headwear.\n"
                 "- Exactly ONE 2D gold coin mascot character is present in the scene. NO extra people, NO secondary characters, NO green/mint creatures.\n"
                 "- The character stands actively reacting to or presenting the economic situation in the scene."
             )
@@ -449,22 +451,20 @@ class ImagesWorker:
 
         entity_instructions = ""
         if core_entities or core_figures:
-            labels_str = ", ".join(
-                f"{k} -> {v}" for k, v in (fictionalized_labels or {}).items()
-            )
-            figures_str = ", ".join(
-                f"{f.get('raw')} ({f.get('kind')})" for f in (core_figures or [])
-            )
+            entities_str = ", ".join(core_entities or [])
             entity_instructions = (
                 f"\nCRITICAL ENTITY GROUNDING INSTRUCTIONS:\n"
-                f"- Core Entities: {core_entities or []}\n"
-                f"- Core Figures/Metrics: {figures_str}\n"
-                f"- Fictionalized Brand Labels (use these instead of real names): {labels_str}\n"
+                f"- Core Entities (use these REAL company/index names as-is, e.g. on signage, "
+                f"screens, or documents — do NOT substitute with fictional names): {entities_str}\n"
                 f"- You MUST incorporate at least one visible signage, ticker board, wall screen, "
-                f"or labeled physical prop representing these entities and figures in the scene.\n"
+                f"or labeled physical prop referencing these entities.\n"
+                f"- Do NOT render any specific numeric values (index points, percentages, currency "
+                f"amounts, contract counts) as text in the image — leave clean blank space/screen "
+                f"area on the prop surface for these; exact figures are composited separately.\n"
                 f"- Abstract metaphor alone is insufficient; combine metaphor with concrete labeled props.\n"
-                f"- Do NOT literally translate the Korean narration sentence into English and place it as a large text block on a blackboard. "
-                f"Instead, use concrete physical objects and environmental signage (e.g. warning signs, shipping containers, weather maps, receipt screens) matching the reference image style pattern.\n"
+                f"- Do NOT literally translate the Korean narration sentence into English and place it "
+                f"as a large text block on a blackboard. Instead, use concrete physical objects and "
+                f"environmental signage matching the reference image style pattern.\n"
             )
 
         user_content = f"""Korean narration: "{narration}"
