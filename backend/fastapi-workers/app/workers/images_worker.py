@@ -68,8 +68,7 @@ ARCHETYPE_COMPOSITION = {
 
 STYLE_SUFFIX = (
     "original 2D Korean finance comic, bold ink outlines, cel shading, "
-    "single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people, "
-    "no readable text, no letters, no words, no UI elements"
+    "single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people"
 )
 
 
