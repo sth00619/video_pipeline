@@ -11,6 +11,36 @@
       "role": "style",
       "path": "out/references/style_reference_v4_medium_clean.png",
       "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+    },
+    {
+      "role": "scene_style_example",
+      "path": "out/references/style_scene_ref_01_port.png",
+      "sha256": "a0cba032a496dd1c5fe8c30580902c442c814df7614fa87488be9c024ce728cb",
+      "description": "우리 채널 확립된 씬 스타일 예시. 금화 캐릭터 의상·표정·배경 텍스트 사인보드 문법을 그대로 복제할 것."
+    },
+    {
+      "role": "scene_style_example",
+      "path": "out/references/style_scene_ref_02_split.png",
+      "sha256": "1d8d05b0c67b74c5ff894ff40fc5354217b11630caed01e435c49d92b1e08c8c",
+      "description": "우리 채널 확립된 씬 스타일 예시. 금화 캐릭터 의상·표정·배경 텍스트 사인보드 문법을 그대로 복제할 것."
+    },
+    {
+      "role": "scene_style_example",
+      "path": "out/references/style_scene_ref_03_retail.png",
+      "sha256": "5194428ebec806cb2e2bfcefc2d2a0ca9ca761a07e36c5dd95ef2eab384e4cd3",
+      "description": "우리 채널 확립된 씬 스타일 예시. 금화 캐릭터 의상·표정·배경 텍스트 사인보드 문법을 그대로 복제할 것."
+    },
+    {
+      "role": "scene_style_example",
+      "path": "out/references/style_scene_ref_04_weather.png",
+      "sha256": "03847238fb11e39a152f809cf203da73ff32d1b2054640f9f5ac3b253d90b4bc",
+      "description": "우리 채널 확립된 씬 스타일 예시. 금화 캐릭터 의상·표정·배경 텍스트 사인보드 문법을 그대로 복제할 것."
+    },
+    {
+      "role": "scene_style_example",
+      "path": "out/references/style_scene_ref_05_weather_v2.png",
+      "sha256": "fe4800d338df53194686eb9b1d5fdc0732f928c73fe1ffa19c79bece53c5f14f",
+      "description": "우리 채널 확립된 씬 스타일 예시. 금화 캐릭터 의상·표정·배경 텍스트 사인보드 문법을 그대로 복제할 것."
     }
   ]
 }

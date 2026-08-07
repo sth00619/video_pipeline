@@ -27,6 +27,7 @@ from app.utils.process_manager import is_job_stopped
 from app import runtime_config
 from app.utils.quality_gate import enrich_scene_plan, assess_images, persist_quality_report
 from app.utils.art_direction import direct_scenes, plan_image_quality_tiers, compile_editorial_prompt, assess_art_diversity, flag_archetype_content_mismatch
+from app.utils.scene_entity_binder import bind_scene_entities, compute_grounding_score
 from app.utils.visual_qa import assess_visual_alignment
 from app.utils import gemini_batch
 from app.pipeline.scene_director import SceneDirector, SceneSpec
@@ -67,6 +68,7 @@ ARCHETYPE_COMPOSITION = {
 
 STYLE_SUFFIX = (
     "original 2D Korean finance comic, bold ink outlines, cel shading, "
+    "single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people, "
     "no readable text, no letters, no words, no UI elements"
 )
 
@@ -394,42 +396,94 @@ class ImagesWorker:
         narration: str,
         scene_type: str,
         title: str,
+        *,
+        core_entities: list[str] | None = None,
+        core_figures: list[dict] | None = None,
+        fictionalized_labels: dict[str, str] | None = None,
+        visual_mode: str | None = None,
+        character_required: bool = True,
     ) -> str:
         """
-        대사(narration)를 읽고 그 내용에 맞는 시각 은유 배경 프롬프트를 LLM으로 생성한다.
-        - 씬 유형(scene_type)으로 구도 힌트만 제공, 은유 내용은 LLM이 결정
-        - 캐릭터 묘사 없음
+        대사(narration)와 바인딩된 엔티티/수치를 읽고 내용에 맞는 시각 은유 배경/캐릭터 프롬프트를 LLM으로 생성한다.
+        - core_entities / core_figures가 존재하면 물리적 전광판, 표지판, 소품 표면에 해당 정보가 명시적으로 반영되도록 시스템 프롬프트에 지시한다.
+        - character_required=True일 경우 Goldie(금화 마스코트) 캐릭터가 전경의 1/3 크기로 명시 배치된다.
         - 매 씬마다 대사가 다르면 반드시 다른 프롬프트가 나와야 함
         """
         composition = ARCHETYPE_COMPOSITION.get(scene_type, ARCHETYPE_COMPOSITION["general"])
+        is_news_mode = (visual_mode == "article_evidence") or (scene_type in ("news_context", "reporter_worried", "news_anchor"))
 
-        system = (
-            "You are a visual director for a Korean 2D financial animation channel. "
-            "Convert Korean financial narration into a vivid English background scene description. "
-            "Never describe characters. Only describe the background environment and symbolic objects. "
-            "Output only the prompt text, no explanation, no markdown."
-        )
+        if is_news_mode:
+            system = (
+                "You are a visual director for a Korean 2D financial animation channel. "
+                "Convert Korean financial narration into a vivid 2D scene featuring the channel's Goldie (2D gold coin mascot) news reporter. "
+                "The scene MUST depict the 2D gold coin mascot character standing as a financial reporter or presenter. "
+                "The background features an appropriate display surface (such as a standing presentation screen, wall display board, or weather map) "
+                "showing the economic figures, charts, and entity labels mentioned in the narration. "
+                "Output only the prompt text, no explanation, no markdown."
+            )
+            char_rules = (
+                "- You MUST depict the 2D gold coin mascot character (Goldie) standing in the scene.\n"
+                "- Exactly ONE 2D gold coin mascot character is present. NO extra people, NO secondary mascot characters, NO cyan/green creatures.\n"
+                "- The background is tailored to the scene archetype (e.g. standing reporter board, data lab display, or presentation screen)."
+            )
+        elif character_required and visual_mode != "background_only":
+            system = (
+                "You are a visual director for a Korean 2D financial animation channel. "
+                "Convert Korean financial narration into a vivid English scene description featuring the channel's Goldie (2D gold coin mascot) character. "
+                "The 2D gold coin mascot character stands in the foreground observing or presenting the economic situation. "
+                "Output only the prompt text, no explanation, no markdown."
+            )
+            char_rules = (
+                "- You MUST depict the 2D gold coin mascot character (Goldie) standing in the scene.\n"
+                "- Exactly ONE 2D gold coin mascot character is present in the scene. NO extra people, NO secondary characters, NO green/mint creatures.\n"
+                "- The character stands actively reacting to or presenting the economic situation in the scene."
+            )
+        else:
+            system = (
+                "You are a visual director for a Korean 2D financial animation channel. "
+                "Convert Korean financial narration into a vivid English background scene description. "
+                "Never describe characters. Only describe the background environment and symbolic objects. "
+                "Output only the prompt text, no explanation, no markdown."
+            )
+            char_rules = "- No characters, no people, no coin character, background environment only."
+
+        entity_instructions = ""
+        if core_entities or core_figures:
+            labels_str = ", ".join(
+                f"{k} -> {v}" for k, v in (fictionalized_labels or {}).items()
+            )
+            figures_str = ", ".join(
+                f"{f.get('raw')} ({f.get('kind')})" for f in (core_figures or [])
+            )
+            entity_instructions = (
+                f"\nCRITICAL ENTITY GROUNDING INSTRUCTIONS:\n"
+                f"- Core Entities: {core_entities or []}\n"
+                f"- Core Figures/Metrics: {figures_str}\n"
+                f"- Fictionalized Brand Labels (use these instead of real names): {labels_str}\n"
+                f"- You MUST incorporate at least one visible signage, ticker board, wall screen, "
+                f"or labeled physical prop representing these entities and figures in the scene.\n"
+                f"- Abstract metaphor alone is insufficient; combine metaphor with concrete labeled props.\n"
+            )
 
         user_content = f"""Korean narration: "{narration}"
 Scene type: {scene_type}
 Composition hint: {composition}
-
-Convert the narration's core economic situation into a physical visual metaphor for the background.
+Visual mode: {visual_mode or "general"}
+{entity_instructions}
+Convert the narration's core economic situation into a physical visual scene.
 Rules:
-- Abstract concepts must become concrete physical objects/environments
-  Examples: market crash → dark stormy trading floor with red emergency sirens
-            interest rate hold → giant frozen clock in chains, vault door locked
-            stock rebound → golden arc rising from cliff edge, dawn light
-            semiconductor rally → glowing chip factory, circuit pathways lighting up
-            uncertainty → foggy crossroads with glowing signposts
+- Abstract concepts must become concrete physical objects/environments with clear entity labeling
 - Each scene must be visually distinct. Never repeat the same background.
-- No characters, no people, no coin character, no figure shapes.
-- Keep under 50 words.
+{char_rules}
+- NEVER introduce secondary lab technicians, secondary mint characters, or secondary human figures. Depict Goldie (the 2D gold coin mascot) as the ONLY character in the scene.
+- Keep under 75 words.
 - End with exactly: {STYLE_SUFFIX}"""
 
         try:
-            raw = self._call_llm(system, [{"role": "user", "content": user_content}], max_tokens=200)
+            raw = self._call_llm(system, [{"role": "user", "content": user_content}], max_tokens=250)
             cleaned = raw.strip().strip('"').strip("'")
+            if (is_news_mode or character_required) and not cleaned.lower().startswith("the 2d gold coin") and not cleaned.lower().startswith("a 2d gold coin"):
+                cleaned = f"The 2D gold coin mascot character (Goldie), {cleaned}"
             if STYLE_SUFFIX not in cleaned:
                 cleaned = f"{cleaned}, {STYLE_SUFFIX}"
             logger.info("대사 기반 프롬프트 재생성 완료 (씬: %s): %s...", title, cleaned[:60])
@@ -610,6 +664,12 @@ Rules:
                 enrich_scene_plan(scene, i, len(scenes_meta))
                 for i, scene in enumerate(scenes_meta)
             ])
+        # Stage 1 + Stage 3: Bind entities & figures for all scenes
+        verified_facts = list(script_data.get("verified_facts") or [])
+        keyword_news = list(script_data.get("keyword_news") or script_data.get("articles") or [])
+        entity_bindings = bind_scene_entities(scenes_meta, verified_facts, keyword_news)
+        binding_map = {str(b.scene_id): b for b in entity_bindings}
+        binding_by_index = {b.scene_index: b for b in entity_bindings}
         # ScriptWorker가 이미 확정한 scene_type을 운영 이미지 경로까지
         # 보존한다. 이 단계는 순수 계획만 만들며 이미지 API를 호출하지 않는다.
         visual_mix_preflight = _visual_mix_audit(scenes_meta)
@@ -802,17 +862,16 @@ Rules:
         selected_character_exists = bool(character_image_path and Path(character_image_path).exists())
         character_reference_paths = []
         reference_candidates = (
-            _load_default_references()
-            if is_v5_final_batch
-            else [character_image_path] if selected_character_exists else [str(DEFAULT_CHARACTER_SHEET)]
+            [character_image_path] if selected_character_exists
+            else _load_default_references()
         )
         for path in reference_candidates:
             if path and Path(path).exists() and path not in character_reference_paths:
                 character_reference_paths.append(path)
-        if selected_character_exists or character_poses_dir or lora_model_id:
-            # When a real per-channel asset/pose/LoRA is supplied, do not let
+        if character_reference_paths or selected_character_exists or character_poses_dir or lora_model_id:
+            # When reference images/poses/LoRA are supplied, do not let
             # the provider inject its legacy generic mascot description.
-            character_style_prompt = character_style_prompt or "none"
+            character_style_prompt = "none"
 
         # V3 canonical scene layers.  A pose library is the character's
         # identity lock: clean plate -> verified physical surface -> alpha
@@ -923,6 +982,7 @@ Rules:
                 use_composite=use_composite,
                 character_poses_dir=character_poses_dir,
                 budget_preflight=budget_preflight,
+                entity_bindings=entity_bindings,
             )
 
         generated = []
@@ -959,6 +1019,18 @@ Rules:
             section = scene.get("section", f"scene_{i}")
             narration = scene.get("content") or scene.get("text") or ""
 
+            binding = binding_map.get(str(scene.get("scene_id"))) or binding_by_index.get(i)
+            core_entities = binding.core_entities if binding else []
+            core_figures = binding.core_figures if binding else []
+            fictionalized_labels = binding.fictionalized_labels if binding else {}
+            b_visual_mode = binding.suggested_visual_type if binding else (scene.get("visual_mode") or "general")
+
+            scene["core_entities"] = core_entities
+            scene["core_figures"] = core_figures
+            scene["fictionalized_labels"] = fictionalized_labels
+
+            art_direction = scene.get("art_direction") or {}
+            character_required = bool(art_direction.get("character_required", True))
             spec = directed_specs.get(i)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or ""
             mismatch = flag_archetype_content_mismatch(scene)
@@ -973,10 +1045,16 @@ Rules:
                     narration=narration,
                     scene_type=str(scene.get("archetype") or scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
                     title=str(scene.get("title") or f"scene_{i}"),
+                    core_entities=core_entities,
+                    core_figures=core_figures,
+                    fictionalized_labels=fictionalized_labels,
+                    visual_mode=b_visual_mode,
+                    character_required=character_required,
                 )
                 scene["prompt_en"] = prompt_en
                 scene["prompt"] = prompt_en
-                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨 (이유: %s)", scene.get("title"), "아키타입 미스매치 감지" if mismatch else "폴백/빈값 트리거")
+                scene["grounding_score_pre"] = compute_grounding_score(prompt_en, core_entities)
+                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨 (이유: %s, grounding_pre: %.2f)", scene.get("title"), "아키타입 미스매치 감지" if mismatch else "폴백/빈값 트리거", scene["grounding_score_pre"])
             else:
                 prompt_en = (
                     prompt_for_scene(scene)
@@ -1327,7 +1405,7 @@ Rules:
         character_reference_paths, character_style_prompt,
         lora_model_id, lora_trigger_word, lora_scale,
         ai_provider, job_dir, job_id, use_composite=False, character_poses_dir=None,
-        budget_preflight=None,
+        budget_preflight=None, entity_bindings=None,
     ) -> dict:
         """Render independent direct-AI scenes with bounded concurrency.
 
@@ -1353,13 +1431,28 @@ Rules:
                 return False
 
         def make_context(original: dict, index: int) -> dict:
+            binding_map = {str(b.scene_id): b for b in (entity_bindings or [])}
+            binding_by_index = {b.scene_index: b for b in (entity_bindings or [])}
+            binding = binding_map.get(str(original.get("scene_id"))) or binding_by_index.get(index)
+
+            core_entities = binding.core_entities if binding else []
+            core_figures = binding.core_figures if binding else []
+            fictionalized_labels = binding.fictionalized_labels if binding else {}
+            b_visual_mode = binding.suggested_visual_type if binding else (original.get("visual_mode") or "general")
+
             scene = enrich_scene_plan(original, index, len(scenes_meta))
+            scene["core_entities"] = core_entities
+            scene["core_figures"] = core_figures
+            scene["fictionalized_labels"] = fictionalized_labels
+
             scene, template = _apply_info_scene_template(scene)
             scene["_template_regeneration_enabled"] = (
                 bool((budget_preflight or {}).get("template_regeneration_enabled"))
                 and not is_v5_final_lane_scene(scene)
             )
             narration = scene.get("content") or scene.get("text") or ""
+            art_direction = scene.get("art_direction") or {}
+            character_required = bool(art_direction.get("character_required", True))
             spec = directed_specs.get(index)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or ""
             mismatch = flag_archetype_content_mismatch(scene)
@@ -1374,10 +1467,16 @@ Rules:
                     narration=narration,
                     scene_type=str(scene.get("archetype") or scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
                     title=str(scene.get("title") or f"scene_{index}"),
+                    core_entities=core_entities,
+                    core_figures=core_figures,
+                    fictionalized_labels=fictionalized_labels,
+                    visual_mode=b_visual_mode,
+                    character_required=character_required,
                 )
                 scene["prompt_en"] = prompt_en
                 scene["prompt"] = prompt_en
-                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨 (이유: %s)", scene.get("title"), "아키타입 미스매치 감지" if mismatch else "폴백/빈값 트리거")
+                scene["grounding_score_pre"] = compute_grounding_score(prompt_en, core_entities)
+                logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨 (이유: %s, grounding_pre: %.2f)", scene.get("title"), "아키타입 미스매치 감지" if mismatch else "폴백/빈값 트리거", scene["grounding_score_pre"])
             else:
                 prompt_en = (
                     prompt_for_scene(scene)

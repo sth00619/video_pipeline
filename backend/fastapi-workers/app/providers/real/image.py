@@ -48,8 +48,7 @@ class GeminiImageGenerationError(RuntimeError):
 # description.  Keeping it isolated prevents the old mint mascot from leaking
 # into selected-character scenes.
 CHARACTER_STYLE = (
-    "featuring one friendly teal rounded market-card mascot, with a small diagonal chart notch rather than a currency symbol, "
-    "expressive face, arms and legs, clean silhouette, wearing the scene-specific wardrobe, "
+    "featuring the 2D gold coin mascot character (Goldie), a round shiny gold coin body, pink cheeks, expressive eyes, white gloved hands, "
 )
 
 # 금융 테마 프롬프트 스타일 수식어
@@ -230,6 +229,12 @@ class NanaBananaProvider(ImageProvider):
                 character_image_paths = kwargs.get("character_image_paths") or []
                 if not character_image_paths and kwargs.get("character_image_path"):
                     character_image_paths = [kwargs.get("character_image_path")]
+                if not character_image_paths:
+                    try:
+                        from app.v5.providers.gemini_provider import _load_default_references
+                        character_image_paths = _load_default_references()
+                    except Exception as e:
+                        logger.warning(f"기본 참조 자산 로드 실패: {e}")
                 if self._generate_gemini_api(
                     base_prompt, output_path, gemini_key, character_image_paths,
                     model=gemini_model, image_size=gemini_image_size,

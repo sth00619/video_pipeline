@@ -540,6 +540,8 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "reference_composition": composition,
             # Data scenes are composed around a real in-world monitor.  The
             # generator only supplies the empty surface; deterministic code
+            # Data scenes are composed around a real in-world monitor.  The
+            # generator only supplies the empty surface; deterministic code
             # fills it with the factual chart after generation.
             "character_placement": character_placement,
             # This is an executable scene grammar, not merely a prompt hint.
@@ -563,7 +565,6 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "editorial_text_surface": {"x": .10, "y": .16, "width": .55, "height": .42} if family in {"history_classroom", "classroom_takeaway"} else None,
             "editorial_overlay_target": overlay_target,
             "negative_constraints": ["no readable text", "no watermark", "no generic gold pile", "no unrelated fire or space scene", "no photorealism", "no mixed art styles"],
-            # AI가 그려내는 장식용 표지/라벨은 선택적으로 허용하되, 사실값은 항상 별도 검증 오버레이로 렌더링한다.
             "decorative_text_allowed": bool(scene.get(
                 "decorative_text_allowed",
                 family in {"news_headline", "news_context", "comparison_board", "factory_dashboard", "data_lab"},
@@ -604,13 +605,12 @@ def plan_image_quality_tiers(scenes: list[dict[str, Any]], tier: str, pro_limit:
 
 def compile_editorial_prompt(scene: dict[str, Any], base_prompt: str) -> str:
     direction = scene.get("art_direction") or {}
-    palette = (direction.get("palette") or {}).get("colors", "editorial blue and teal")
+    palette = (direction.get("palette") or {}).get("colors", "vibrant financial studio color palette, warm gold and deep navy blue")
     props = ", ".join(direction.get("props") or [])
     character_clause = "no mascot character; focus on the real-world context and props"
     if direction.get("character_required"):
         character_clause = (
-            f"the fixed channel mascot on the {direction.get('character_placement', 'right third')}, "
-            f"wearing {direction.get('wardrobe', 'a professional analyst outfit')}, "
+            f"the 2D news reporter character on the {direction.get('character_placement', 'right third')}, "
             f"using the {direction.get('pose_asset', 'explaining')} pose"
         )
     # Even decorative model text becomes unstable pseudo-Korean at video

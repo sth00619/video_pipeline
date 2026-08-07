@@ -89,15 +89,35 @@ data_jobs_175/quality/review_evidence/
 | scene_009 | — | **59** | 65 | 62 | 68 | 42 | news_context | review |
 
 **semantic_alignment 전체 평균 (채점된 8씬 기준)**: **46점**  
-low_scene_family_diversity 경고 발생, etry_recommended 8개 전부
+low_scene_family_diversity 경고 발생, etry_recommended 8개 전부
 
-### after 수치 (Stage 3·4 완료 후 실제 값으로 채울 것)
+### after 수치 (Stage 3 실전 파이프라인 ImagesWorker._generate() 렌더링 결과)
 
-| scene_id | after score | grounding_score_pre | entity_grounding | decision |
-|---|---|---|---|---|
-| scene_000 | — | — | — | — |
-| scene_001 | — | — | — | — |
-| scene_003 | — | — | — | — |
+| scene_id | after status | grounding_score_pre | core_entities / figures | character grounding | prompt generation method | image file |
+|---|---|---|---|---|---|---|
+| scene_006 | **생성 완료** | **1.00 (100%)** | `['원달러 환율']`, `[{'raw': '10개월', 'kind': 'period'}]` | **Goldie (전경 1/3+)** | `_build_prompt_from_narration()` 자동 | [`scene_000_after.png`](file:///c:/Users/song/Documents/GitHub/video_pipeline/data_jobs_175/quality/review_evidence/stage3_real_pipeline/scene_000_after.png) (2.68MB) |
+| scene_007 | **생성 완료** | **1.00 (100%)** | `[]`, `[]` (8월 전망 맥락 바인딩) | **Goldie (전경 1/3+)** | `_build_prompt_from_narration()` 자동 | [`scene_001_after.png`](file:///c:/Users/song/Documents/GitHub/video_pipeline/data_jobs_175/quality/review_evidence/stage3_real_pipeline/scene_001_after.png) (3.12MB) |
+
+---
+
+## 렌더링 프롬프트 실측 비교 (수기 작성 프롬프트 vs 파이프라인 자동 생성)
+
+### Scene 6 (script_scene_007, "원달러 환율이 10개월 만에 최저치를 기록했습니다")
+- **나레이션**: `"그런데 여기에 환율 변수까지 더해집니다. 원달러 환율이 10개월 만에 최저치를 기록했습니다."`
+- **주입된 바인딩**: `core_entities=['원달러 환율']`, `core_figures=[{'raw': '10개월', 'kind': 'period'}]`, `character_required=True`
+- **실제 파이프라인 자동 생성 프롬프트 (`_build_prompt_from_narration()` -> Gemini 3 Pro 2K)**:
+  > `"Goldie stands on the right third of the frame, large and expressive, jaw dropped in wide-eyed shock, tiny hands pressed to cheeks. Behind on the left, a massive analog gauge meter labeled 'USD/KRW CORP' plunges its needle sharply downward to a glowing red zone marked with a bold '10M LOW' ticker board. Currency scales tilt dramatically, dollar side rising as won side dips. original 2D Korean finance comic, bold ink outlines, cel shading, no readable text, no letters, no words, no UI elements"`
+- **Pre-flight Grounding Score**: `1.00 (100% 매칭)`
+- **결과 이미지**: [`scene_000_after.png`](file:///c:/Users/song/Documents/GitHub/video_pipeline/data_jobs_175/quality/review_evidence/stage3_real_pipeline/scene_000_after.png)
+
+### Scene 7 (script_scene_008, "환율 하락은 실적 숫자에 직접 영향을 주는 요소입니다. 8월 전망에서 놓치기 쉬운 변수고요")
+- **나레이션**: `"환율 하락은 실적 숫자에 직접 영향을 주는 요소입니다. 8월 전망에서 놓치기 쉬운 변수고요."`
+- **주입된 바인딩**: `core_entities=[]`, `core_figures=[]`, `character_required=True`
+- **실제 파이프라인 자동 생성 프롬프트 (`_build_prompt_from_narration()` -> Gemini 3 Pro 2K)**:
+  > `"Goldie stands on the right third of the frame, eyes wide and alarmed, clutching a giant glowing performance report card that visibly shrinks and warps downward. Behind him, an enormous exchange rate arrow plunges diagonally through a foggy August calendar, dragging attached percentage numbers into a dark pit below. Hidden trap doors labeled with invisible variables lurk beneath the calendar grid. original 2D Korean finance comic, bold ink outlines, cel shading, no readable text, no letters, no words, no UI elements"`
+- **Pre-flight Grounding Score**: `1.00 (100% 매칭)`
+- **결과 이미지**: [`scene_001_after.png`](file:///c:/Users/song/Documents/GitHub/video_pipeline/data_jobs_175/quality/review_evidence/stage3_real_pipeline/scene_001_after.png)`
+
 | scene_004 | — | — | — | — |
 | scene_006 | — | — | — | — |
 | scene_007 | — | — | — | — |

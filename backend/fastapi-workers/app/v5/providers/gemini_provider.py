@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+import hashlib
+import logging
 import os
 from enum import Enum
 from pathlib import Path
@@ -12,6 +14,8 @@ from tempfile import TemporaryDirectory
 from typing import Optional
 
 from .bfl_flux_provider import ImageResult
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiModel(str, Enum):
@@ -26,17 +30,36 @@ class ReferenceAssetMissingError(GeminiProviderError):
     """V5 화풍 계약에 필요한 승인 참조 자산이 없을 때 발생한다."""
 
 
+# 씬 스타일 예시 파일명 순서 — 이 목록이 Gemini에 전송되는 참조 자산의 단일 출처다.
+_SCENE_STYLE_REF_NAMES = [
+    "style_scene_ref_01_port.png",
+    "style_scene_ref_02_split.png",
+    "style_scene_ref_03_retail.png",
+    "style_scene_ref_04_weather.png",
+    "style_scene_ref_05_weather_v2.png",
+]
+
+
 def _load_default_references() -> list[str]:
-    """캐릭터·화풍 승인 참조를 고정 순서로 반환한다."""
+    """캐릭터·화풍 승인 참조를 고정 순서로 반환한다.
+
+    반환 순서:
+      [0] character_reference_v4_identity_clean.png  — 캐릭터 정체성 고정
+      [1] style_reference_v4_medium_clean.png        — 선 두께·팔레트·셀 쉐이딩
+      [2..6] style_scene_ref_01~05.png               — 확립된 씬 스타일 예시 5개
+    """
     root = Path(__file__).resolve().parents[3] / "out" / "references"
     paths = [
         root / "character_reference_v4_identity_clean.png",
         root / "style_reference_v4_medium_clean.png",
+        *[root / name for name in _SCENE_STYLE_REF_NAMES],
     ]
-    for path in paths:
-        if not path.is_file():
-            raise ReferenceAssetMissingError(f"V5 승인 참조 자산 없음: {path}")
-    return [str(path) for path in paths]
+    missing = [p for p in paths if not p.is_file()]
+    if missing:
+        raise ReferenceAssetMissingError(
+            "V5 승인 참조 자산 없음:\n" + "\n".join(f"  {p}" for p in missing)
+        )
+    return [str(p) for p in paths]
 
 
 class GeminiProvider:
@@ -117,6 +140,28 @@ class GeminiProvider:
             "Follow the placement instructions in the written prompt; do not invent framing guides. "
             "Do not reproduce marks from any reference image.\n\n" + prompt
         )
+        # ──────────────────────────────────────────────────────────────────
+        # [전송 전 강제 검증 로그] 매 Gemini API 호출마다 실제 전송 파일을 기록한다.
+        # 이 로그 없이는 "코드는 맞다"는 보고가 검증 불가 — 반드시 출력돼야 한다.
+        # ──────────────────────────────────────────────────────────────────
+        logger.info("[GEMINI_REF_AUDIT] === Gemini API 호출 직전 참조 자산 검증 ===")
+        logger.info("[GEMINI_REF_AUDIT] 전송 참조 이미지 수: %d", len(reference_image_paths))
+        for idx, ref_path in enumerate(reference_image_paths, start=1):
+            p = Path(ref_path)
+            if p.is_file():
+                sha = hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+                size_kb = p.stat().st_size // 1024
+                logger.info(
+                    "[GEMINI_REF_AUDIT]   [%d] %s  sha256=%s...  %dKB",
+                    idx, p.name, sha, size_kb,
+                )
+            else:
+                logger.error(
+                    "[GEMINI_REF_AUDIT]   [%d] MISSING: %s", idx, ref_path
+                )
+        logger.info("[GEMINI_REF_AUDIT] 프롬프트 첫 200자: %s", prompt[:200])
+        logger.info("[GEMINI_REF_AUDIT] ================================================")
+
         with TemporaryDirectory(prefix="v5_gemini_") as temporary_dir:
             output_path = Path(temporary_dir) / "generated.png"
             try:
