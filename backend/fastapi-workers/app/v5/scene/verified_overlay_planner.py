@@ -78,16 +78,16 @@ def _select_verified_fact(scene: dict[str, Any]) -> tuple[int, str, str] | None:
 
 
 def _surface_anchor(region: tuple[float, float, float, float], kind: str) -> dict[str, Any]:
-    """primary 표면 하단 중앙의 작은 영역만 사실 문구에 내준다.
+    """primary 표면 하단 구석의 컴팩트한 영역만 사실 문구에 내준다.
 
-    표면 전체를 덮지 않아, 이미지 모델이 그린 다이어그램·계기판 디테일
-    위에 얹는 카드가 아니라 표면 안 한 귀퉁이에 적힌 글자처럼 보인다.
+    표면 중앙을 크게 덮지 않아, 이미지 모델이 그린 메인 그래프·하락 화살표 디테일을
+    가리지 않고 표면 한 귀퉁이에 적힌 깔끔한 문구처럼 보인다.
     """
     x, y, width, height = region
-    anchor_width = width * 0.62
-    anchor_height = height * 0.26
-    anchor_x = x + (width - anchor_width) / 2
-    anchor_y = y + height * 0.66
+    anchor_width = width * 0.35
+    anchor_height = height * 0.15
+    anchor_x = x + width * 0.06
+    anchor_y = y + height * 0.78
     return {
         "x": round(anchor_x, 4),
         "y": round(anchor_y, 4),

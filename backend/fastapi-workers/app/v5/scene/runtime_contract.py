@@ -252,14 +252,9 @@ def attach_v5_scene_contracts(scenes: list[dict[str, Any]]) -> list[dict[str, An
         # 별도 필드로도 남겨 후속 감사와 드라이런에서 확인할 수 있게 한다.
         scene["v5_scene_type_selection"] = contract["selection"]
         scene["v5_scene_spec"] = contract["scene_spec"]
-        # 2026-08-04 재검토: 정보형 장면에 정확 수치를 Pillow로 자동 합성하던
-        # 이전 배선을 되돌린다. 실제 생성 결과를 검토한 사용자 피드백 —
-        # "숫자에 집착할 필요 없다, 오히려 따로 붙인 것처럼 보인다" — 에 따라
-        # 정보형 장면은 아래 script_captioned 네이티브 프롬프트 경로(방향성
-        # 색상 그래프·장식 문구가 같은 생성 패스에서 원근·조명까지 자연스럽게
-        # 녹아든다)만 사용한다. v5_verified_overlays는 여전히 다른 경로(예:
-        # 향후 명시적 "핵심 수치 강조" 씬)가 직접 채우면 그대로 존중하되,
-        # 이 함수가 스스로 채우지는 않는다.
+        # 2026-08-08 방향 확정: 수치 전달은 하단 ASS 자막 및 TTS 내레이션이 100% 전담한다.
+        # 이미지 파이프라인은 배경·소품·캐릭터 연출과 브랜드/지수 라벨(KOSPI, SANDISK 등)에만
+        # 집중하고, 그림과 이질감이 발생하는 평면 텍스트 오버레이(v5_verified_overlays)는 주입하지 않는다.
         # V5 final lane은 hero/body 모두 Gemini Pro만 사용한다. 기존 품질
         # 분배기가 flash로 낮추거나 전역 IMAGE_PROVIDER가 fal이어도 이 계약을
         # 가진 씬의 모델 선택은 바뀌지 않는다.

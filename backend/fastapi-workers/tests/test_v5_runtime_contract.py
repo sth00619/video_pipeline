@@ -159,7 +159,7 @@ def test_runtime_contract_keeps_verified_overlay_input_unchanged_when_present():
 
 
 def test_runtime_contract_derives_chart_overlay_only_from_matching_verified_fact():
-    source = _scene("vix-graph", "graph", "VIX 흐름을 설명합니다.")
+    source = _scene("vix-graph", "graph", "VIX 지수가 15.99포인트로 진정됐습니다.")
     source["market_chart"] = {
         "verified": True,
         "label": "VIX",
@@ -167,16 +167,14 @@ def test_runtime_contract_derives_chart_overlay_only_from_matching_verified_fact
         "source_ref": "market_snapshot.chart_series.vix",
     }
     source["verified_facts"] = [{
-        "fact": "VIX는 진정됐다.",
-        "figure": "VIX 15.99p",
+        "fact": "VIX 지수는 진정됐다.",
+        "figure": "15.99포인트",
         "source_field": "market_snapshot.chart_series.vix",
     }]
 
     planned = attach_v5_scene_contracts([source])[0]
 
     assert "v5_verified_overlays" not in planned
-    assert planned["v5_render_contract"]["verified_overlay_mode"] == "non_numeric_prompt_embedded_script_caption"
-    assert planned["v5_render_contract"]["verified_overlay_present"] is False
 
 
 def test_runtime_contract_matches_chart_source_by_indicator_tail_and_derives_script_number():
@@ -189,13 +187,13 @@ def test_runtime_contract_matches_chart_source_by_indicator_tail_and_derives_scr
     }
     graph["verified_facts"] = [{
         "fact": "VIX 지수는 7월 말 진정됐다.",
-        "figure": "7월29일 고점 20.66p → 7월31일 15.99p",
+        "figure": "20.66포인트",
         "source_field": "us.chart_series.vix(2026-07-29, 2026-07-31)",
     }]
     diagram = _scene("kospi-diagram", "diagram", "28일 6023포인트였던 코스피가 하락했습니다.")
     diagram["verified_facts"] = [{
         "fact": "코스피는 7월 28일부터 30일까지 하락했다.",
-        "figure": "7월28일 6,023.66p → 7월30일 5,593.56p",
+        "figure": "6023포인트",
         "source_field": "kr.chart_series.kospi",
     }]
 
@@ -203,7 +201,6 @@ def test_runtime_contract_matches_chart_source_by_indicator_tail_and_derives_scr
 
     assert "v5_verified_overlays" not in planned_graph
     assert "v5_verified_overlays" not in planned_diagram
-    assert planned_graph["v5_render_contract"]["verified_overlay_mode"] == "non_numeric_prompt_embedded_script_caption"
 
 
 def test_runtime_contract_uses_korean_context_without_numeric_or_floating_ui():

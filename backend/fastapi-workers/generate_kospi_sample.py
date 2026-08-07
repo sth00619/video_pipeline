@@ -19,6 +19,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 sys.path.insert(0, str(Path(__file__).resolve().parents[0]))
 
 from app.utils.art_direction import direct_scenes
+from app.v5.scene.runtime_contract import attach_v5_scene_contracts
 from app.workers.images_worker import ImagesWorker
 from app.providers.real.image import NanaBananaProvider
 
@@ -27,29 +28,36 @@ os.environ["V5_GEMINI_PRO_IMAGE_2K_ESTIMATE_USD"] = "0.04"
 def generate_kospi_scene():
     narration = "코스피가 7,651.78포인트로, 3.17퍼센트 감소하여 마무리되었습니다."
     
-    scenes = [{"index": 0, "content": narration}]
+    scenes = [{
+        "index": 0,
+        "scene_type": "metric",
+        "content": narration,
+        "verified_facts": [{
+            "fact": "코스피 지수는 7,651.78포인트로 하락했다.",
+            "figure": "7,651.78포인트",
+            "source_field": "kr.chart_series.kospi"
+        }]
+    }]
+    
     directed = direct_scenes(scenes)[0]
+    planned = attach_v5_scene_contracts([directed])[0]
     
     print("\n" + "=" * 70)
     print(f"[INPUT NARRATION] \"{narration}\"")
     print("=" * 70)
-    print(f"1. 선택된 아키타입 (Archetype): {directed['archetype']}")
-    print(f"   선택 사유 (Reason): {directed['archetype_reason']}")
-    print(f"   추가 소품 (Props): {directed['specific_props']}")
+    print(f"1. 선택된 아키타입: {planned['archetype']}")
+    print(f"   v5_verified_overlays 평면 오버레이 미사용 확인 (None/[]): {planned.get('v5_verified_overlays')}")
     
     worker = ImagesWorker()
     
-    # KOSPI 7651.78pt, -3.17% core_entities / figures 바인딩
+    # 지수명/브랜드명 KOSPI는 실명으로 프롬프트 전달, 숫자는 ASS 자막이 전담
     prompt_en = worker._build_prompt_from_narration(
         narration=narration,
-        scene_type=directed['archetype'],
-        title=directed['specific_props'],
+        scene_type=planned['archetype'],
+        title=planned['specific_props'],
         visual_mode="archetype_explainer",
         core_entities=["KOSPI"],
-        core_figures=[
-            {"raw": "7,651.78포인트", "kind": "index"},
-            {"raw": "-3.17%", "kind": "percentage"}
-        ]
+        core_figures=[{"raw": "7,651.78포인트", "kind": "index"}]
     )
     
     safe_prompt = prompt_en[:300].encode('ascii', errors='ignore').decode('ascii')
@@ -57,9 +65,9 @@ def generate_kospi_scene():
     
     output_dir = Path(__file__).resolve().parents[0] / "out" / "pipeline_test_runs"
     output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / "kospi_drop_sample_scene.png"
+    out_path = output_dir / "kospi_clean_role_divided_scene.png"
     
-    print("3. Gemini 3 Pro 이미지 렌더링 중 (7개 참조 자산 + 의상/모자/50-65% 비율 규칙 포함)...")
+    print("3. 순수 씬 이미지 생성 (Pillow 평면 텍스트 오버레이 완전 제거)...")
     provider = NanaBananaProvider()
     provider.generate(
         prompt=prompt_en,
@@ -69,7 +77,7 @@ def generate_kospi_scene():
         gemini_image_size="2K"
     )
     
-    print(f"\n[SUCCESS] 이미지 생성 완료! 저장 위치: {out_path} ({out_path.stat().st_size:,} bytes)")
+    print(f"\n[SUCCESS] 클린 씬 이미지 생성 완료! 저장 위치: {out_path} ({out_path.stat().st_size:,} bytes)")
     return str(out_path)
 
 if __name__ == "__main__":

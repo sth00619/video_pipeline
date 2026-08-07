@@ -168,19 +168,29 @@ def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...]) ->
             _draw_upward_trend(draw, fact, left=left, top=top, right=right, bottom=bottom)
             continue
         text_fill, stroke_fill = _surface_text_style(anchor.kind)
-        border = max(2, round(min(width, height) * 0.0025))
-        padding = max(6, round((right - left) * 0.07))
-        label_font = _fit_font(fact.label, right - left - 2 * padding, max(14, round((bottom - top) * 0.23)))
-        value_font = _fit_font(fact.value, right - left - 2 * padding, max(16, round((bottom - top) * 0.35)))
-        draw.text((left + padding, top + round((bottom - top) * 0.14)), fact.label, font=label_font, fill=text_fill)
-        value_fill = (255, 214, 77, 255) if anchor.kind in {"monitor", "embedded_monitor"} else text_fill
+        stroke_width = max(2, round(min(width, height) * 0.003))
+        padding = max(4, round((right - left) * 0.05))
+        label_font = _fit_font(fact.label, max(20, right - left - 2 * padding), max(14, round((bottom - top) * 0.32)))
+        value_font = _fit_font(fact.value, max(20, right - left - 2 * padding), max(16, round((bottom - top) * 0.45)))
+        
+        # 2D 카툰 잉크 아웃라인 적용 (배경 그림과 자연스럽게 결합)
+        dark_ink_stroke = (12, 18, 28, 240)
         draw.text(
-            (left + padding, top + round((bottom - top) * 0.49)),
+            (left + padding, top + round((bottom - top) * 0.05)),
+            fact.label,
+            font=label_font,
+            fill=text_fill,
+            stroke_width=stroke_width,
+            stroke_fill=dark_ink_stroke,
+        )
+        value_fill = (255, 224, 102, 255) if anchor.kind in {"monitor", "embedded_monitor"} else text_fill
+        draw.text(
+            (left + padding, top + round((bottom - top) * 0.48)),
             fact.value,
             font=value_font,
             fill=value_fill,
-            stroke_width=max(1, border // 2),
-            stroke_fill=stroke_fill,
+            stroke_width=stroke_width + 1,
+            stroke_fill=dark_ink_stroke,
         )
 
     output = io.BytesIO()
