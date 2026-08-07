@@ -99,16 +99,7 @@ ARCHETYPE_EXCLUSIVE_KEYWORDS = {
     },
 }
 
-def select_archetype_for_scene(narration: str, previous_archetypes: list[str] | None = None, llm_call=None) -> dict:
-    """
-    대사(narration)를 읽고 11종 V5 아키타입 중 가장 적합한 무대를 선택한다.
-    라운드로빈 / 씬 인덱스 / 감정 기반 임의 순환 배정을 100% 금지함.
-    """
-    narration_txt = str(narration or "").strip()
-    if not narration_txt:
-        return {"archetype": "briefing_podium", "reason": "빈 대사이므로 기본 브리핑 무대 선택", "specific_props": "presentation wall"}
-
-def keyword_fallback(text: str, recent_prev: str = "") -> str:
+def keyword_fallback(text: str, recent_prev: str = "", previous_archetypes: list[str] | None = None, total_scene_count: int | None = None) -> str:
     """LLM API가 없거나 파싱 오류 발생 시 대사 내러티브 상황 기반 키워드 폴백."""
     # 하드 블랙리스트 2종 (대사 미포함 시 절대 선택 불가)
     if any(kw in text for kw in ["부동산", "아파트", "집값", "분양", "전세"]):
@@ -116,8 +107,14 @@ def keyword_fallback(text: str, recent_prev: str = "") -> str:
     if any(kw in text for kw in ["고용", "일자리", "취업", "채용", "실업"]):
         return "job_market_hall"
 
+    # classroom (칠판 구도) 빈도 상한선 체크 (전체 씬의 max 15%, 최소 1개)
+    prev_list = previous_archetypes or []
+    classroom_count = prev_list.count("classroom")
+    classroom_cap = max(1, round((total_scene_count or 10) * 0.15))
+    allow_classroom = classroom_count < classroom_cap
+
     candidates = []
-    if any(kw in text for kw in ["개념", "용어", "의미", "정의", "뜻", "설명", "원리"]):
+    if allow_classroom and any(kw in text for kw in ["개념", "용어", "의미", "정의", "뜻", "설명", "원리"]):
         candidates.append("classroom")
     if any(kw in text for kw in ["전망", "방향", "예측", "지역", "글로벌", "대외"]):
         candidates.append("weather_map")
@@ -142,7 +139,13 @@ def keyword_fallback(text: str, recent_prev: str = "") -> str:
     return candidates[0] if candidates else ("data_lab" if recent_prev == "briefing_podium" else "briefing_podium")
 
 
-def select_archetype_for_scene(narration: str, previous_archetypes: list[str] | None = None, llm_call=None) -> dict:
+def select_archetype_for_scene(
+    narration: str,
+    previous_archetypes: list[str] | None = None,
+    llm_call=None,
+    *,
+    total_scene_count: int | None = None,
+) -> dict:
     """
     대사(narration)를 읽고 11종 V5 아키타입 중 가장 적합한 무대를 선택한다.
     라운드로빈 / 씬 인덱스 / 감정 기반 임의 순환 배정을 100% 금지함.
@@ -155,7 +158,12 @@ def select_archetype_for_scene(narration: str, previous_archetypes: list[str] | 
     recent_prev = prev_list[-1] if prev_list else ""
     consecutive_prev = prev_list[-1] if len(prev_list) >= 2 and prev_list[-1] == prev_list[-2] else ""
 
+    classroom_count = prev_list.count("classroom")
+    classroom_cap = max(1, round((total_scene_count or 10) * 0.15))
+
     def is_valid_choice(arch: str, text: str) -> bool:
+        if arch == "classroom" and classroom_count >= classroom_cap:
+            return False
         rule = ARCHETYPE_EXCLUSIVE_KEYWORDS.get(arch)
         if not rule:
             return True
@@ -163,7 +171,7 @@ def select_archetype_for_scene(narration: str, previous_archetypes: list[str] | 
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        arch = keyword_fallback(narration_txt, recent_prev)
+        arch = keyword_fallback(narration_txt, recent_prev, previous_archetypes=prev_list, total_scene_count=total_scene_count)
         return {"archetype": arch, "reason": "내용 키워드 폴백 선택", "specific_props": "studio elements"}
 
     system = (
@@ -461,13 +469,18 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     directed: list[dict[str, Any]] = []
     previous_archetypes: list[str] = []
     previous_palettes: list[str] = []
+    total_count = len(scenes)
     for index, original in enumerate(scenes):
         scene = dict(original)
         text = str(scene.get("content") or scene.get("text") or "")
         section = str(scene.get("section") or "scenario").lower()
 
-        # WORKORDER v2/v3: 대사 내용 기반 아키타입 선택 (인덱스 라운드로빈 100% 제거, 3연속 중복 방지)
-        selected_info = select_archetype_for_scene(text, previous_archetypes=previous_archetypes)
+        # WORKORDER v2/v3: 대사 내용 기반 아키타입 선택 (인덱스 라운드로빈 100% 제거, 3연속 중복 방지, classroom 15% 캡 적용)
+        selected_info = select_archetype_for_scene(
+            text,
+            previous_archetypes=previous_archetypes,
+            total_scene_count=total_count,
+        )
         archetype = selected_info["archetype"]
         previous_archetypes.append(archetype)
         family = ARCHETYPE_TO_FAMILY.get(archetype, "topic_stage")

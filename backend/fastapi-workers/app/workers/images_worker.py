@@ -463,6 +463,8 @@ class ImagesWorker:
                 f"- You MUST incorporate at least one visible signage, ticker board, wall screen, "
                 f"or labeled physical prop representing these entities and figures in the scene.\n"
                 f"- Abstract metaphor alone is insufficient; combine metaphor with concrete labeled props.\n"
+                f"- Do NOT literally translate the Korean narration sentence into English and place it as a large text block on a blackboard. "
+                f"Instead, use concrete physical objects and environmental signage (e.g. warning signs, shipping containers, weather maps, receipt screens) matching the reference image style pattern.\n"
             )
 
         user_content = f"""Korean narration: "{narration}"
@@ -474,6 +476,7 @@ Convert the narration's core economic situation into a physical visual scene.
 Rules:
 - Abstract concepts must become concrete physical objects/environments with clear entity labeling
 - Each scene must be visually distinct. Never repeat the same background.
+- Do NOT translate narration sentences into large blackboard text. Use environmental props and scene-specific backgrounds.
 {char_rules}
 - NEVER introduce secondary lab technicians, secondary mint characters, or secondary human figures. Depict Goldie (the 2D gold coin mascot) as the ONLY character in the scene.
 - Keep under 75 words.

@@ -39,3 +39,20 @@ def test_pure_supply_chain_metaphor(monkeypatch):
     """4. 항구/부두 단어 없는 순수 공급망 위기 대사에서 port_emergency 시각적 은유 선택 검증."""
     res = select_archetype_for_scene("글로벌 원자재 및 핵심 부품 수급 차질로 대외 공급망 위기가 심화되고 있습니다.")
     assert res["archetype"] in ["port_emergency", "risk_control_room", "weather_map"]
+
+def test_classroom_cap_limit(monkeypatch):
+    """5. 10개 씬 대본 시뮬레이션 시 classroom 선택 비율이 15% 캡(최대 1~2개)을 초과하지 않는지 검증."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    from app.utils.art_direction import direct_scenes
+
+    # 10개 씬 모두 개념/설명 키워드가 들어간 대본 시뮬레이션
+    sample_scenes = [
+        {"content": f"개념과 용어 정의 설명 {i}"} for i in range(10)
+    ]
+    directed = direct_scenes(sample_scenes)
+    archetypes = [s["archetype"] for s in directed]
+    classroom_count = archetypes.count("classroom")
+
+    # 10개 씬 15% cap = round(1.5) = 2개 이하
+    assert classroom_count <= 2, f"classroom 갯수({classroom_count})가 캡(2)을 초과함: {archetypes}"
+
