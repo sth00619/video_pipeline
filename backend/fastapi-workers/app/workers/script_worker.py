@@ -279,7 +279,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
      - 씬마다 서로 다른 배경을 만들어야 한다. 이전 씬과 동일한 배경 묘사 반복 금지.
      - 캐릭터(사람, 코인, 지폐, 캐릭터 형상) 묘사 절대 금지. 배경과 상황만.
      - 반드시 이 스타일 태그로 끝낼 것:
-       original 2D Korean finance comic, bold ink outlines, cel shading, no readable text, no letters
+        original 2D Korean finance comic, bold ink outlines, cel shading
      - 50단어 이내.
   4. [감정] : 상황에 맞는 캐릭터 표정/포즈 (happy / worried / surprised / pointing / thinking / explaining / neutral 중 하나)
   5. [모션] : 인트로 구간(처음 약 13개 씬)인 경우에만 chart_shock, pointing_explain, thinking_desk, walking_intro, celebration 중 하나를 반드시 선택해 기술하세요. 본문 씬은 비워두거나 제외합니다.
@@ -298,7 +298,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
 '사상 최대 실적'이라 적힌 모니터 화면 밖으로 붉은색 하락 화살표가 모니터를 깨고 튀어나오는 상황. 
 
 [비주얼 프롬프트 (영어)]
-giant red downward arrow emerging from an unlabeled trading-room display, dramatic editorial composition, original 2D Korean finance comic, bold ink outlines, cel shading, no readable text
+giant red downward arrow emerging from an unlabeled trading-room display, dramatic editorial composition, original 2D Korean finance comic, bold ink outlines, cel shading
 
 [감정]
 surprised

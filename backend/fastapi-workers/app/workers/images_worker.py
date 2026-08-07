@@ -1574,8 +1574,7 @@ Rules:
                 elif any(k in narration_text for k in ["전망", "방향"]):
                     metaphors.append("foggy financial crossroads with glowing directional signs")
 
-                metaphor_str = ", ".join(metaphors) if metaphors else f"editorial financial visualization for {narration_text[:30]}"
-                prompt_en = f"{archetype_setting}, {metaphor_str}, dark navy tone, original 2D Korean comic, bold ink outlines, cel shading, no readable text, no letters"
+                prompt_en = f"{archetype_setting}, {metaphor_str}, dark navy tone, {STYLE_SUFFIX}"
                 ctx["prompt_en"] = prompt_en
 
             character_required = bool(ctx["art_direction"].get("character_required", True))
