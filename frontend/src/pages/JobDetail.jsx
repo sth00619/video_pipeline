@@ -28,23 +28,18 @@ const PIPELINE_STEPS = [
 
 const STEP_PROGRESS_INFO = {
   keyword: {
-    est: '약 20초 ~ 30초 소요',
     desc: '실시간 국내/해외 주요 지수 및 환율 정보를 조회하고 당일 뉴스 RSS 피드를 수집하여 팩트를 분석하고 트렌디한 영상 키워드 후보를 도출합니다.',
   },
   script: {
-    est: '약 1분 ~ 1분 30초 소요',
     desc: '수집한 주식 및 경제 수치들에 대해 3단계 교차 검증(3-Round Fact Checker)을 거쳐 정확한 사실만 확정합니다. 확정된 수치만을 사용하여 영상 길이에 맞춘 스토리보드 대본을 생성합니다. (분량에 비례하여 글자 수가 타겟팅됩니다.)',
   },
   tts: {
-    est: '약 20초 ~ 30초 소요',
     desc: '작성된 영상 대본의 톤앤매너에 맞게 고음질 인공지능 성우의 음성 오디오 데이터로 합성하는 과정을 진행합니다.',
   },
   images: {
-    est: '약 40초 ~ 50초 소요',
     desc: '각 시나리오 씬별 주식/경제 분석 흐름에 맞춰, 일관성 있는 금색 코인 마스코트 캐릭터와 직관적인 설명적 배경이 어우러진 고품질 AI 일러스트 이미지를 Google Gemini API를 통해 생성합니다.',
   },
   longform: {
-    est: '약 1분 ~ 2분 소요',
     desc: '최종 생성된 스크립트 대본, TTS 오디오 타임라인, 생성된 AI 일러스트와 씬 전환 영상을 시간 동기화하여 자막과 함께 고화질 MP4 동영상 파일로 합치고 인코딩합니다.',
   },
 }
@@ -1152,19 +1147,14 @@ export default function JobDetail() {
 
                 {ss === 'active' && (
                   <div className="mx-5 mb-4 p-4 bg-navy-900/50 rounded-lg border border-navy-700/60 text-sm space-y-2.5">
-                    <div className="flex items-center justify-between text-gray-200 font-semibold">
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={14} className="text-accent-cyan"/>
-                        <span>예상 대기 시간:</span>
-                        <span className="text-accent-cyan">{STEP_PROGRESS_INFO[step.key]?.est}</span>
-                      </div>
-                      {step.key === 'script' && (
-                        <div className="text-navy-400">
-                          목표 분량: <span className="text-accent-cyan">{job.longformTargetMinutes || 20}분</span>
-                          (약 <span className="text-accent-cyan">{(job.longformTargetMinutes || 20) * 300}자</span> 생성)
+                    {step.key === 'script' && (
+                      <div className="flex items-center justify-end text-gray-200 font-semibold">
+                        <div className="text-navy-400 text-xs">
+                          목표 분량: <span className="text-accent-cyan">{job.longformTargetMinutes || 1}분</span>
+                          (약 <span className="text-accent-cyan">{(job.longformTargetMinutes || 1) * 650}자</span> 생성)
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <div className="text-navy-400 leading-relaxed text-sm">
                       {STEP_PROGRESS_INFO[step.key]?.desc}
                     </div>

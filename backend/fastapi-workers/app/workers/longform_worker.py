@@ -1092,17 +1092,26 @@ def _select_intro_kling_scenes(
 
 
 def _cap_intro_motion_for_short_video(total_duration: float, max_clips_cap: int) -> int:
-    """Keep a one-minute proof visibly animated without spending on 40 seconds."""
+    """Cap Fal/Kling intro motion duration according to requested video runtime:
+    - 1분 영상 (<=90s): 최대 3클립 (~15초 제한)
+    - 10분 미만 (90s..600s): 최대 9클립 (~45초 제한)
+    - 20분 내외 (>600s): 최대 12클립 (~60초 / 1분 제한)
+    """
     cap = max(0, int(max_clips_cap))
-    if 0 < float(total_duration) <= 90:
-        capped = min(cap, 4)
-        if capped != cap:
-            logger.info(
-                "Short-video Fal policy: duration=%.1fs, clip cap reduced %s -> %s",
-                total_duration, cap, capped,
-            )
-        return capped
-    return cap
+    duration = float(total_duration or 0)
+    if duration <= 90:
+        capped = min(cap, 3)
+    elif duration <= 600:
+        capped = min(cap, 9)
+    else:
+        capped = min(cap, 12)
+
+    if capped != cap:
+        logger.info(
+            "Fal motion duration cap applied: duration=%.1fs, clip cap reduced %s -> %s",
+            duration, cap, capped,
+        )
+    return capped
 
 
 def _get_max_workers(scene_count: int) -> int:

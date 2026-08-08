@@ -121,7 +121,8 @@ public class JobService {
 
         boolean hasScript = !assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCRIPT).isEmpty();
         boolean hasTts = !assetRepository.findByJobIdAndAssetType(jobId, AssetType.TTS_AUDIO).isEmpty();
-        boolean hasImages = !assetRepository.findByJobIdAndAssetType(jobId, AssetType.IMAGE_BATCH).isEmpty();
+        boolean hasImages = !assetRepository.findByJobIdAndAssetType(jobId, AssetType.IMAGE_BATCH).isEmpty()
+                || !assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE).isEmpty();
 
         // 1. 대본, TTS, 이미지까지 모두 정상 생성된 경우 -> 롱폼 조립(ASSEMBLING) 단계부터 재개
         if (hasScript && hasTts && hasImages) {

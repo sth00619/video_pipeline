@@ -76,10 +76,8 @@ KEYWORD_EXCLUDE_LIVE = os.getenv("KEYWORD_EXCLUDE_LIVE", "true").lower() in {"1"
 # requested video duration instead of compressing the actor's performance.
 TTS_SPEED = float(os.getenv("TTS_SPEED", "0.9"))
 # Measured Korean long-form narration pace for the configured channel voice.
-# This is deliberately much higher than the old generic estimate because the
-# contract counts only visible Hangul characters, while finance scripts carry
-# dates, prices and ticker-like terms that are expanded before synthesis.
-CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "400"))
+# 1분(60초) TTS 음성 분량을 충족하기 위해 분당 650자 기준을 적용한다. (650자 / 60초 ≈ 11자/초)
+CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "650"))
 SCENE_DURATION_SEC = float(os.getenv("SCENE_DURATION_SEC", "5.5"))
 # 한국어 한 줄 자막은 의미 단위를 해치지 않는 15~20자 범위를 목표로 한다.
 SUBTITLE_MAX_CHARS = int(os.getenv("SUBTITLE_MAX_CHARS", "18"))

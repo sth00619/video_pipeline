@@ -76,7 +76,9 @@ public class GateService {
         JobStatus expected = EXPECTED_STATUS.get(gate);
         boolean keywordResearchRecovery = gate == GateName.KEYWORD
                 && job.getStatus() == JobStatus.TOPIC_EVIDENCE_REQUIRED;
-        if (expected == null || (job.getStatus() != expected && !keywordResearchRecovery)) {
+        boolean imagesRetryRecovery = gate == GateName.IMAGES
+                && job.getStatus() == JobStatus.IMAGES_RETRY_REQUIRED;
+        if (expected == null || (job.getStatus() != expected && !keywordResearchRecovery && !imagesRetryRecovery)) {
             throw new IllegalStateException(String.format(
                     "Gate %s는 상태 %s에서만 승인 가능. 현재 상태: %s",
                     gate, expected, job.getStatus()));

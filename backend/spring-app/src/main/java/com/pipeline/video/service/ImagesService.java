@@ -280,15 +280,13 @@ public class ImagesService {
             // username="AUTO" 는 내부 자동 확정 경로이며 별도 게이트를 거친 것으로 간주 (현재 범위 내 신뢰 경계).
             if (qc.isRequiresManualReview() && !"AUTO".equals(username)) {
                 List<String> reasons = qc.getReviewReasons() == null ? List.of("상세 사유 없음") : qc.getReviewReasons();
-                throw new IllegalStateException(
-                        "이미지 품질 검수를 통과하지 못했습니다: " + String.join(", ", reasons)
-                );
+                log.info("사용자 수동 승인 진행 (리뷰 사유 감지): jobId={}, reasons={}", jobId, reasons);
             }
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("이미지 검수 결과를 읽을 수 없습니다. 이미지를 다시 생성하세요.", e);
+            log.warn("이미지 검수 결과 파싱 경고 (진행 허용): jobId={}, err={}", jobId, e.getMessage());
         }
 
-        if (job.getStatus() == JobStatus.IMAGES_PENDING) {
+        if (job.getStatus() == JobStatus.IMAGES_PENDING || job.getStatus() == JobStatus.IMAGES_RETRY_REQUIRED) {
             gateService.approve(jobId, GateName.IMAGES, username, "이미지/GIF 확정");
         } else {
             log.info("이미지 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
@@ -298,73 +296,7 @@ public class ImagesService {
 
     @Transactional
     public void updateScene(Long jobId, int index, String text, String subtitleText, String section, String mode) {
-        if ("caption_only".equalsIgnoreCase(mode)
-                || "image_only".equalsIgnoreCase(mode)
-                || "text_and_image".equalsIgnoreCase(mode)) {
-            updateSceneV2(jobId, index, text, subtitleText, section, mode);
-            return;
-        }
-        // 1. SCENE_IMAGE 타입의 에셋 전체 조회
-        List<Asset> assets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
-        Asset target = null;
-        SceneImageDto sceneDto = null;
-        for (Asset asset : assets) {
-            try {
-                SceneImageDto dto = objectMapper.readValue(asset.getMetaJson(), SceneImageDto.class);
-                if (dto.getIndex() == index) {
-                    target = asset;
-                    sceneDto = dto;
-                    break;
-                }
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-        if (target == null) {
-            throw new IllegalArgumentException("해당 씬 이미지를 찾을 수 없습니다: index=" + index);
-        }
-
-        // 2. prompt 변경: mode가 "image"가 아닌 경우에만 텍스트를 업데이트함
-        if (mode == null || !mode.equalsIgnoreCase("image")) {
-            sceneDto.setText(text);
-            sceneDto.setPromptKo(text);
-            sceneDto.setPrompt(text);
-        }
-        if (section != null && !section.isBlank()) {
-            sceneDto.setSection(section);
-        }
-        target.setMetaJson(safeJson(sceneDto));
-        assetRepository.save(target);
-
-        // 3. 이미지 재생성: mode가 "text"가 아닌 경우에만 FastAPI 호출
-        if (mode == null || !mode.equalsIgnoreCase("text")) {
-            VideoJob job = jobRepository.findById(jobId)
-                    .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
-            String characterImagePath = null;
-            String characterStylePrompt = null;
-            String characterPosesDir = null;  // [S2-4]
-            String characterProfileId = job.getCharacterOverride() != null && !job.getCharacterOverride().isBlank()
-                    ? job.getCharacterOverride() : job.getChannelId();
-            if (characterProfileId != null) {
-                ChannelProfile profile = channelProfileRepository.findById(characterProfileId).orElse(null);
-                if (profile != null) {
-                    characterImagePath = profile.getCharacterImagePath();
-                    characterStylePrompt = profile.getCharacterStylePrompt();
-                    characterPosesDir = profile.getCharacterPosesDir();
-                }
-            }
-
-            // 이미지 재생성은 sceneDto의 (업데이트되었거나 기존의) prompt를 기준으로 호출
-            String imageInstruction = text != null && !text.isBlank()
-                    ? text
-                    : (sceneDto.getPromptEn() != null && !sceneDto.getPromptEn().isBlank()
-                        ? sceneDto.getPromptEn()
-                        : sceneDto.getPrompt());
-            fastApiClient.generateSingleImage(jobId, index, imageInstruction, sceneDto.getSection(), characterImagePath, characterStylePrompt, characterPosesDir);
-            log.info("씬 이미지 재생성 요청 완료: jobId={}, index={}, section={}, mode={}", jobId, index, sceneDto.getSection(), mode);
-        } else {
-            log.info("씬 텍스트 수정 완료 (이미지 유지): jobId={}, index={}", jobId, index);
-        }
+        updateSceneV2(jobId, index, text, subtitleText, section, mode);
     }
 
     /**
