@@ -74,7 +74,8 @@ KEYWORD_EXCLUDE_LIVE = os.getenv("KEYWORD_EXCLUDE_LIVE", "true").lower() in {"1"
 # Fast post-generation speed-up flattens pauses and emphasis.  Keep narration
 # close to natural speed; reduce the script target accordingly to preserve the
 # requested video duration instead of compressing the actor's performance.
-TTS_SPEED = float(os.getenv("TTS_SPEED", "0.9"))
+# 음성 속도를 0.82로 낮춤 (기존 0.9 대비 약 -10%). ElevenLabs 네이티브 범위(0.7~1.2) 내 조정.
+TTS_SPEED = float(os.getenv("TTS_SPEED", "0.82"))
 # Measured Korean long-form narration pace for the configured channel voice.
 # 1분(60초) TTS 음성 분량을 충족하기 위해 분당 650자 기준을 적용한다. (650자 / 60초 ≈ 11자/초)
 CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "650"))
@@ -163,7 +164,8 @@ TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "false").lower() 
 TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "200"))
 TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "0"))
 # ElevenLabs의 원래 억양은 보존하되, 문장 경계가 자연스럽게 연결되도록 70ms 미세 호흡을 더한다.
-TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "70"))
+# 문장 그룹 간 미세 호흡 70ms → 110ms 상향. 자막 싱크는 강제 정렬로 유지.
+TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "110"))
 TTS_DURATION_TOLERANCE = float(os.getenv("TTS_DURATION_TOLERANCE", "0.25"))
 
 BGM_VOLUME = float(os.getenv("BGM_VOLUME", "0.12"))

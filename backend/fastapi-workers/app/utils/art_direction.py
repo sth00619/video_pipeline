@@ -447,23 +447,41 @@ def _mood(text: str) -> str:
     return "neutral"
 
 
+# 감정별 캐릭터 표정·포즈·배경 분위기 프롬프트 (Gemini 이미지 생성에 직접 주입)
+MOOD_EXPRESSION_PROMPT: dict[str, str] = {
+    "risk": (
+        "The gold coin character shows a STRONG NEGATIVE EMOTION: wide eyes filled with dread or shock, "
+        "eyebrows sharply furrowed inward, mouth wide open in alarm OR tightly clenched with worry, "
+        "body posture hunched, recoiling backward, or sprinting away from danger. "
+        "Scene atmosphere: stormy dark sky, cracked or collapsing ground, "
+        "red siren lights, forked lightning bolts, falling debris or rising flood water. "
+        "Dominant color palette: deep crimson reds, dark charcoal grays, bruised purple shadows, "
+        "and high-contrast orange-red emergency lighting. The overall feeling must be urgent and alarming."
+    ),
+    "positive": (
+        "The gold coin character shows a CONFIDENT POSITIVE EMOTION: broad bright smile, "
+        "raised eyebrows of excitement or pride, body leaning forward with energy and momentum, "
+        "one fist raised in triumph OR one open hand presenting forward proudly. "
+        "Scene atmosphere: dynamic warm golden lighting, upward-pointing arrows or rising bars, "
+        "celebratory energy lines, and a clean organized professional environment. "
+        "Dominant color palette: warm gold and amber, deep navy blue, bright sky blue, "
+        "and crisp white highlights. The overall feeling must be optimistic and energetic."
+    ),
+    "neutral": (
+        "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, "
+        "a slight knowing smile or a neutral analytical expression, upright confident posture "
+        "with one hand gesturing toward an information surface or prop. "
+        "Scene atmosphere: clean editorial studio lighting, organized and orderly environment. "
+        "Color palette balanced between deep navy and warm gold with white accents."
+    ),
+}
 
-
-def _topic(text: str) -> tuple[str, str, list[str]]:
-    for name, keywords, setting, props in TOPICS:
-        if any(keyword.lower() in text.lower() for keyword in keywords):
-            return name, setting, props
-    return "finance", "premium Korean finance editorial studio", ["financial chart silhouette", "briefing screen", "document folder"]
-
-
-def _mood(text: str) -> str:
-    risk = ("하락", "급락", "위험", "우려", "부족", "경고", "악화", "매도", "둔화")
-    positive = ("상승", "성장", "증가", "호재", "개선", "돌파", "수주", "회복")
-    if any(word in text for word in risk):
-        return "risk"
-    if any(word in text for word in positive):
-        return "positive"
-    return "neutral"
+# 감정 기반 카메라 앵글 선택 (기존 순환 배정 보완)
+MOOD_CAMERA: dict[str, str] = {
+    "risk":     "low-angle dramatic shot",           # 위기감·압박감 강조
+    "positive": "over-the-shoulder confident shot",  # 성취감·전진 느낌
+    "neutral":  "medium editorial shot",             # 중립 보도 스타일
+}
 
 
 def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -507,9 +525,23 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         else:
             character_required = True
         pose = scene.get("pose") or wardrobe_key
-        camera = CAMERAS[index % len(CAMERAS)]
+        # 감정 기반 카메라 앵글 선택. 동일 mood가 연속될 때는 CAMERAS 순환으로 보완.
+        camera = MOOD_CAMERA.get(mood, CAMERAS[index % len(CAMERAS)])
         composition = dict(REFERENCE_COMPOSITION_BY_FAMILY[family])
         character_placement = composition["character_placement"] if character_required else "none"
+        # right third 연속 2회 이상 방지: 직전 2씨 모두 right third면 left third로 전환
+        if (
+            character_required
+            and character_placement == "right third"
+            and len(previous_archetypes) >= 2
+            and REFERENCE_COMPOSITION_BY_FAMILY.get(
+                ARCHETYPE_TO_FAMILY.get(previous_archetypes[-2], ""), {}
+            ).get("character_placement") == "right third"
+            and REFERENCE_COMPOSITION_BY_FAMILY.get(
+                ARCHETYPE_TO_FAMILY.get(previous_archetypes[-1], ""), {}
+            ).get("character_placement") == "right third"
+        ):
+            character_placement = "left third"
         # The opposite side of the mascot remains visually quiet so a cloud or
         # target-bound label can be added without covering either narration or
         # the character. Coordinates are normalized for the final compositor.
@@ -555,8 +587,6 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "reference_composition": composition,
             # Data scenes are composed around a real in-world monitor.  The
             # generator only supplies the empty surface; deterministic code
-            # Data scenes are composed around a real in-world monitor.  The
-            # generator only supplies the empty surface; deterministic code
             # fills it with the factual chart after generation.
             "character_placement": character_placement,
             # This is an executable scene grammar, not merely a prompt hint.
@@ -584,12 +614,13 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "decorative_text_allowed",
                 family in {"news_headline", "news_context", "comparison_board", "factory_dashboard", "data_lab"},
             )),
+            # 감정별 캐릭터 표정·포즈·배경 분위기 프롬프트 — images_worker.py에서 Gemini 요청 시 주입한다
+            "mood_expression": MOOD_EXPRESSION_PROMPT.get(mood, MOOD_EXPRESSION_PROMPT["neutral"]),
         }
         scene["pose"] = pose
         scene["visual_mode"] = visual_mode or (
             "archetype_explainer" if character_required else "semantic_illustration"
         )
-        scene["art_direction"] = direction
         scene["art_direction"] = direction
         scene["style_profile"] = "editorial_comic_2d"
         scene["visual_type"] = scene.get("visual_type") or family
@@ -694,6 +725,7 @@ def compile_editorial_prompt(scene: dict[str, Any], base_prompt: str) -> str:
         "action": " Keep the mascot hand or pointer and its target prop unobstructed for a later decision chip.",
         "conclusion": " Keep one strong focal stage or spotlight with open upper space for a small takeaway overlay.",
     }.get(section, "")
+    mood_expression_clause = direction.get("mood_expression", "")
     return (
         f"{base_prompt}. Editorial scene family: {direction.get('family', 'character_role')}. "
         f"Setting: {direction.get('setting', 'finance studio')}. Key props: {props}. "
@@ -705,7 +737,17 @@ def compile_editorial_prompt(scene: dict[str, Any], base_prompt: str) -> str:
         f"{text_clause}"
         f"{data_surface_clause}"
         f"{affordance_clause}"
-        "Reserve the lower 22 percent of the frame for separately rendered Korean subtitles."
+        # 감정 표현 — 캐릭터가 있는 씬에서만 주입
+        + (f" EMOTION AND ATMOSPHERE DIRECTIVE: {mood_expression_clause}" if mood_expression_clause and direction.get("character_required") else "")
+        # 포즈 다양화 — 팔 벌리기 반복 방지
+        + (
+            " POSE RESTRICTION: The character must NOT use a wide arms-spread pose or both-arms-extended gesture. "
+            "Instead choose ONE specific pose from: pointing at a nearby prop, walking briskly, "
+            "arms crossed in analysis, one hand raised with index finger up, leaning forward with intensity, "
+            "or a side-angle stance presenting toward the information surface."
+            if direction.get("character_required") else ""
+        )
+        + " Reserve the lower 22 percent of the frame for separately rendered Korean subtitles."
     )
 
 

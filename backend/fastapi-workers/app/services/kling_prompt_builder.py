@@ -9,7 +9,12 @@ KLING_MOTION_TEMPLATES = {
         "2D cel-shaded cartoon animation. Preserve the exact source image composition, "
         "character identity, line weight, palette, and all existing scene objects. "
         "Camera is locked: no pan, zoom, dolly, roll, shake, reframing, or crop change. "
-        "Animate only the mascot, one existing reactive prop, and one light or particle effect. "
+        "Animate ONLY the mascot character body (a walking step, head nod, or single arm gesture) "
+        "OR one non-text physical prop (a lamp flicker, flag sway, steam drift, or coin sparkle). "
+        "STRICTLY FORBIDDEN — DO NOT animate, vibrate, wave, distort, morph, or alter: "
+        "any number, any digit, any percentage sign, any price figure, any index value, "
+        "any chart line, any Korean or English text, any data board, any information panel, "
+        "or any data surface. "
         "Preserve every existing written mark, number, chart shape, and factual overlay exactly; "
         "do not create, erase, translate, redraw, morph, or animate any text or number. "
     ),
@@ -35,10 +40,14 @@ KLING_MOTION_TEMPLATES = {
         "Do not animate, redraw, or change any chart, text, number, label, or overlay. Camera remains locked."
     ),
     "thinking_desk": (
-        "0–2s: the mascot rests its chin on one hand and glances once toward an existing desk prop. "
-        "2–4s: one blink and a small eyebrow raise; keep the body otherwise still. "
-        "4–5s: an existing desk lamp reflection or ambient rim light softly pulses once while a few dust motes fade through the air. "
-        "Do not animate, redraw, or change any screen contents, chart, text, number, label, or overlay. Camera remains locked."
+        "0-2s: animate ONLY the mascot's arm raising to rest its chin on one hand, and a slow head tilt; "
+        "keep the body otherwise still. "
+        "2-4s: one slow blink on the mascot's coin face; "
+        "one existing desk lamp reflection softly pulses OR steam drifts from an existing cup OR a paper page lightly rustles. "
+        "4-5s: a few ambient dust motes drift and fade through the air. "
+        "NEVER animate, move, vibrate, or distort: any number, any price, any chart, any data board, "
+        "any screen content, any Korean or English text, or any information panel. "
+        "Camera remains completely locked."
     ),
     "walking_intro": (  # 오프닝 등장
         "0–3s: the mascot makes exactly two small in-place walking steps within its original footprint; "
@@ -63,9 +72,16 @@ def build_kling_motion_prompt(scene_or_motion_type) -> dict:
     """장면 메타데이터를 반영한 고정 카메라 프롬프트와 네거티브를 반환한다."""
     scene = scene_or_motion_type if isinstance(scene_or_motion_type, dict) else {}
     motion_type = str(scene.get("motion_type") if scene else scene_or_motion_type or "walking_intro")
-    if scene and not bool(scene.get("character_required", True)) and not scene.get("motion_type"):
+
+    # 핵심 수치 데이터(core_figures/market_chart)가 있는 씬은
+    # ambient_context(최소 정적 모션)로 강제 — 숫자 왜곡 방지
+    # v5_verified_overlays 기반 use_kling=False 마킹(images_worker.py:869-873)과
+    # 독립적인 별도 방어층. 둘 다 적용될 때는 use_kling=False가 우선(Fal 자체 미사용).
+    if scene and (scene.get("core_figures") or scene.get("market_chart")):
         motion_type = "ambient_context"
-    if motion_type not in KLING_MOTION_TEMPLATES:
+    elif scene and not bool(scene.get("character_required", True)) and not scene.get("motion_type"):
+        motion_type = "ambient_context"
+    elif motion_type not in KLING_MOTION_TEMPLATES:
         logger.warning("Unknown motion type: %s. Defaulting to walking_intro.", motion_type)
         motion_type = "walking_intro"
 
@@ -85,8 +101,10 @@ def build_kling_motion_prompt(scene_or_motion_type) -> dict:
     style_prefix = KLING_MOTION_TEMPLATES["_style_prefix"]
     if scene and not bool(scene.get("character_required", True)):
         style_prefix = style_prefix.replace(
-            "Animate only the mascot, one existing reactive prop, and one light or particle effect. ",
-            "Animate only one existing reactive prop and one light or particle effect; do not introduce a mascot or person. ",
+            "Animate ONLY the mascot character body (a walking step, head nod, or single arm gesture) "
+            "OR one non-text physical prop (a lamp flicker, flag sway, steam drift, or coin sparkle). ",
+            "Animate only one existing non-text physical prop (a lamp flicker, flag sway, steam drift); "
+            "do not introduce a mascot or person. ",
         )
 
     return {
