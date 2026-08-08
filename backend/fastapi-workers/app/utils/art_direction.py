@@ -618,7 +618,7 @@ def plan_image_quality_tiers(scenes: list[dict[str, Any]], tier: str, pro_limit:
 
 def compile_editorial_prompt(scene: dict[str, Any], base_prompt: str) -> str:
     direction = scene.get("art_direction") or {}
-    palette = (direction.get("palette") or {}).get("colors", "vibrant financial studio color palette, warm gold and deep navy blue")
+    palette = (direction.get("palette") or {}).get("colors", "high-contrast financial studio color palette, saturated rich tones with dramatic lighting contrast, deep navy blue")
     props = ", ".join(direction.get("props") or [])
     character_clause = "no mascot character; focus on the real-world context and props"
     if direction.get("character_required"):
