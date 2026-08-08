@@ -472,7 +472,7 @@ class ImagesWorker:
 
             entity_instructions = (
                 f"\nCRITICAL ENTITY GROUNDING INSTRUCTIONS:\n"
-                f"- Core Verified Entities (render on physical signage or monitors using these official English brand/index names): {entities_str}\n"
+                f"- Core Verified Entities (render as explicit readable block text on physical signage, monitors, or barrels): {entities_str}\n"
                 f"{uncertain_clause}"
                 f"- Incorporate at least one labeled prop or screen referencing these entities alongside rich environmental storytelling props.\n"
                 f"- Do NOT render specific numeric values as text on props; leave blank clean space for compositing.\n"
