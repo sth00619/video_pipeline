@@ -157,12 +157,12 @@ class NanaBananaProvider(ImageProvider):
             # SceneSpec owns the mascot and medium. Never prepend the legacy
             # teal-card mascot to a locked Goldie scene: it creates the exact
             # mixed-character, pasted-together look this pipeline replaces.
-            is_directed_editorial_prompt = bool(kwargs.get("style_locked")) or "Editorial scene family:" in prompt
+            is_directed_editorial_prompt = bool(kwargs.get("style_locked")) or "Editorial scene family:" in prompt or "original 2D Korean finance comic" in prompt
             is_english = all(ord(c) < 128 for c in prompt.replace(" ", "").replace(",", "").replace(".", ""))
             if is_directed_editorial_prompt:
                 # The scene director already specified the visual language. Do
                 # not overwrite it with the old generic dark-blue 3D template.
-                base_prompt = (char_prompt + prompt) if char_prompt else prompt
+                base_prompt = (char_prompt + prompt) if char_prompt and char_prompt not in prompt else prompt
             elif not is_english or len(prompt) < 30:
                 section = kwargs.get("section", "default")
                 keyword = kwargs.get("keyword", "stock market KOSPI")

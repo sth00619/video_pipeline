@@ -470,12 +470,22 @@ class ImagesWorker:
                     f"otherwise render WITHOUT any text label — generic signage/screen prop with no readable company name rather than guessing.\n"
                 )
 
+            figures_clause = ""
+            if core_figures:
+                fig_list = [f.get("raw") for f in core_figures if isinstance(f, dict) and f.get("raw")]
+                if fig_list:
+                    fig_str = ", ".join(fig_list)
+                    figures_clause = (
+                        f"- Core Verified Numerical Figures: Render these exact verified numeric values ({fig_str}) clearly as readable text on the main monitor or display screen.\n"
+                        f"- Do NOT invent or guess unverified secondary arbitrary numbers, random dates, or fake tick marks.\n"
+                    )
+
             entity_instructions = (
-                f"\nCRITICAL ENTITY GROUNDING INSTRUCTIONS:\n"
+                f"\nCRITICAL ENTITY & FIGURE GROUNDING INSTRUCTIONS:\n"
                 f"- Core Verified Entities (render as explicit readable block text on physical signage, monitors, or barrels): {entities_str}\n"
+                f"{figures_clause}"
                 f"{uncertain_clause}"
                 f"- Incorporate at least one labeled prop or screen referencing these entities alongside rich environmental storytelling props.\n"
-                f"- Do NOT render specific numeric values as text on props; leave blank clean space for compositing.\n"
                 f"- Do NOT translate Korean narration sentences into large text blocks on blackboards.\n"
             )
 
@@ -504,7 +514,7 @@ Rules:
 - End with exactly: {STYLE_SUFFIX}"""
 
         try:
-            raw = self._call_llm(system, [{"role": "user", "content": user_content}], max_tokens=250)
+            raw = self._call_llm(system, [{"role": "user", "content": user_content}], max_tokens=600)
             cleaned = raw.strip().strip('"').strip("'")
             if (is_news_mode or character_required) and not cleaned.lower().startswith("the 2d gold coin") and not cleaned.lower().startswith("a 2d gold coin"):
                 cleaned = f"The 2D gold coin mascot character (Goldie), {cleaned}"
@@ -514,14 +524,17 @@ Rules:
             return cleaned
         except Exception as exc:
             logger.warning("대사 기반 프롬프트 재생성 실패 (씬: %s): %s", title, exc)
-            mapped_entities = [REAL_ENTITY_ENGLISH_MAP.get(e, e) for e in (core_entities or []) if e.isascii() or e in REAL_ENTITY_ENGLISH_MAP]
+            mapped_entities = [get_entity_english_name(e)[0] for e in (core_entities or []) if get_entity_english_name(e)[1] != "uncertain"]
+            fig_list = [f.get("raw") for f in (core_figures or []) if isinstance(f, dict) and f.get("raw")]
             ent_clause = f" with labeled display for {', '.join(mapped_entities)}" if mapped_entities else ""
+            if fig_list:
+                ent_clause += f" showing '{', '.join(fig_list)}'"
             if strategy.content_type == "concept_explainer" or scene_type == "classroom":
                 setting = "A cozy 2D classroom with green blackboard displaying the core concept name, open textbooks and academic balance scale"
             elif strategy.content_type == "comparison" or scene_type == "split_stage":
                 setting = "A split-stage 2D financial environment comparing two contrasting sides with distinct company logos"
-            elif strategy.content_type == "macro_geopolitical":
-                setting = "A 2D industrial commodity setting with oil barrels, refinery equipment or mining tools"
+            elif strategy.content_type == "macro_geopolitical" or scene_type == "risk_control_room":
+                setting = "A 2D geopolitical risk control room with oil barrels, red alert monitors displaying core commodity names and price figures"
             elif strategy.content_type == "entity_news" or scene_type == "briefing_podium":
                 setting = "A sleek 2D press briefing stage with curved LED display screen"
             elif scene_type == "real_estate_office":

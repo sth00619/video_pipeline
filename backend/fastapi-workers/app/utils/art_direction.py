@@ -218,20 +218,22 @@ def select_archetype_for_scene(
 
     try:
         if callable(llm_call):
-            raw = llm_call(system, [{"role": "user", "content": prompt}], 300)
+            raw = llm_call(system, [{"role": "user", "content": prompt}], 800)
         else:
             from anthropic import Anthropic
             client = Anthropic(api_key=api_key)
             resp = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=300,
+                max_tokens=800,
                 system=system,
                 messages=[{"role": "user", "content": prompt}],
             )
             raw = resp.content[0].text
 
         cleaned = re.sub(r"```json|```", "", raw).strip()
-        data = json.loads(cleaned)
+        match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        json_str = match.group(0) if match else cleaned
+        data = json.loads(json_str)
         chosen = str(data.get("archetype") or "").strip()
         if chosen in V5_ARCHETYPES and is_valid_choice(chosen, narration_txt):
             if len(prev_list) >= 2 and prev_list[-1] == prev_list[-2] == chosen:
