@@ -66,38 +66,7 @@ ARCHETYPE_COMPOSITION = {
     "conclusion":          "closing summary stage, warm resolution lighting",
 }
 
-REAL_ENTITY_ENGLISH_MAP: dict[str, str] = {
-    "LG에너지솔루션": "LG Energy Solution",
-    "삼성SDI": "Samsung SDI",
-    "SK하이닉스": "SK Hynix",
-    "삼성전자": "Samsung Electronics",
-    "테슬라": "Tesla",
-    "애플": "Apple",
-    "엔비디아": "Nvidia",
-    "마이크로소프트": "Microsoft",
-    "구글": "Google",
-    "아마존": "Amazon",
-    "카카오": "Kakao",
-    "네이버": "Naver",
-    "현대차": "Hyundai Motor",
-    "기아": "Kia",
-    "포스코": "POSCO",
-    "셀트리온": "Celltrion",
-    "한화솔루션": "Hanwha Solutions",
-    "샌디스크": "SanDisk",
-    "마이크론": "Micron",
-    "인텔": "Intel",
-    "AMD": "AMD",
-    "TSMC": "TSMC",
-    "코스피": "KOSPI",
-    "코스닥": "KOSDAQ",
-    "나스닥": "NASDAQ",
-    "다우": "DOW",
-    "S&P500": "S&P 500",
-    "국제유가": "WTI Crude Oil",
-    "원달러 환율": "USD/KRW Rate",
-    "미국 연준": "US FED",
-}
+from app.utils.entity_english_map import REAL_ENTITY_ENGLISH_MAP, get_entity_english_name
 
 STYLE_SUFFIX = (
     "original 2D Korean finance comic, bold ink outlines, cel shading, "
@@ -484,14 +453,27 @@ class ImagesWorker:
         entity_instructions = ""
         if core_entities or core_figures:
             mapped_entities = []
+            uncertain_entities = []
             for ent in (core_entities or []):
-                mapped = REAL_ENTITY_ENGLISH_MAP.get(ent, ent)
-                if mapped not in mapped_entities:
+                mapped, confidence = get_entity_english_name(ent)
+                if confidence == "uncertain":
+                    uncertain_entities.append(ent)
+                elif mapped not in mapped_entities:
                     mapped_entities.append(mapped)
+
             entities_str = ", ".join(mapped_entities)
+            uncertain_clause = ""
+            if uncertain_entities:
+                uncertain_clause = (
+                    f"- UNCERTAIN UNMAPPED ENTITIES ({', '.join(uncertain_entities)}): "
+                    f"If marked 'uncertain', render official English name ONLY if confident of exact spelling; "
+                    f"otherwise render WITHOUT any text label — generic signage/screen prop with no readable company name rather than guessing.\n"
+                )
+
             entity_instructions = (
                 f"\nCRITICAL ENTITY GROUNDING INSTRUCTIONS:\n"
-                f"- Core Entities (render on physical signage or monitors using these official English brand/index names): {entities_str}\n"
+                f"- Core Verified Entities (render on physical signage or monitors using these official English brand/index names): {entities_str}\n"
+                f"{uncertain_clause}"
                 f"- Incorporate at least one labeled prop or screen referencing these entities alongside rich environmental storytelling props.\n"
                 f"- Do NOT render specific numeric values as text on props; leave blank clean space for compositing.\n"
                 f"- Do NOT translate Korean narration sentences into large text blocks on blackboards.\n"

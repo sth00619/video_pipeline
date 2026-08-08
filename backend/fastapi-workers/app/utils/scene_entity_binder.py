@@ -1,4 +1,4 @@
-﻿"""씬별 개체·수치·근거 바인딩 유틸리티.
+"""씬별 개체·수치·근거 바인딩 유틸리티.
 
 파이프라인 읽기 전용 모듈. narration_contract SHA-256 불변 원칙 준수.
 LLM 호출 없음 — 결정론적 정규식 매칭과 사전 룩업만 사용.
@@ -11,41 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-# ---------------------------------------------------------------------------
-# 가상 라벨 시드 리스트 (AI 이미지에 실로고·실명 재현 금지)
-# 이 딕셔너리는 확장 가능. 없는 기업명은 _fictionalize() 폴백이 처리한다.
-# ---------------------------------------------------------------------------
-FICTIONALIZED_LABEL_MAP: dict[str, str] = {
-    "SK하이닉스": "SEMI CORP K",
-    "삼성전자": "SCREEN CORP K",
-    "엔비디아": "AI CHIP CORP",
-    "샌디스크": "FLASH STORAGE CO",
-    "LG에너지솔루션": "BATTERY CORP K",
-    "현대차": "EV AUTOMAKER K",
-    "기아": "EV AUTOMAKER K2",
-    "카카오": "PLATFORM CORP K",
-    "네이버": "SEARCH CORP K",
-    "테슬라": "EV AUTOMAKER US",
-    "애플": "DEVICE CORP US",
-    "마이크로소프트": "CLOUD CORP US",
-    "구글": "SEARCH CORP US",
-    "아마존": "CLOUD CORP US2",
-    "메타": "SOCIAL CORP US",
-    "인텔": "CPU CORP US",
-    "AMD": "CPU CORP US2",
-    "TSMC": "FOUNDRY CORP TW",
-    "마이크론": "DRAM CORP US",
-    "SK텔레콤": "TELECOM CORP K",
-    "KT": "TELECOM CORP K2",
-    "셀트리온": "BIO PHARMA CORP K",
-    "삼성바이오로직스": "BIO PHARMA CORP K2",
-    "포스코": "STEEL CORP K",
-    "현대제철": "STEEL CORP K2",
-    "KB금융": "FIN CORP K",
-    "신한금융": "FIN CORP K2",
-    "하나금융": "FIN CORP K3",
-    "우리금융": "FIN CORP K4",
-}
+from app.utils.entity_english_map import FICTIONALIZED_LABEL_MAP
 
 # 업종 키워드 → 가상 라벨 자동 폴백 (시드에 없는 기업명 처리)
 _SECTOR_LABEL_RULES: list[tuple[re.Pattern, str]] = [
