@@ -650,7 +650,6 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             is_same_concept = (
                 (prev_arch and curr_arch and prev_arch == curr_arch)
                 or (prev_fam and curr_fam and prev_fam == curr_fam)
-                or (prev_sec in ("scenario", "data") and prev_sec == curr_sec and i % 3 == 0)
             )
             if is_same_concept and consecutive_reuse < 1:
                 curr_scene["reuse_previous_image"] = True
