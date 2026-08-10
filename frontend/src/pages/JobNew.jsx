@@ -154,7 +154,7 @@ export default function JobNew() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto pb-16 pt-2">
+      <div className="w-full max-w-none space-y-6">
         {/* 상단 타이틀 헤더 */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
           <div className="flex items-center gap-3">

@@ -260,7 +260,7 @@ export default function Admin() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto pb-16 pt-2">
+      <div className="w-full max-w-none space-y-6">
         {/* 상단 타이틀 헤더 */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
@@ -431,7 +431,7 @@ export default function Admin() {
 
         {/* TAB 2: 영상 길이별 예산 정책 설정 */}
         {activeTab === 'policy' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-8 max-w-3xl space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-8 space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-slate-200">
               <div className="p-2.5 rounded-xl bg-cyan-600 text-white">
                 <Settings size={20} />
