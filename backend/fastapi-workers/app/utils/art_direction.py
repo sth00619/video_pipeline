@@ -625,10 +625,43 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         scene["style_profile"] = "editorial_comic_2d"
         scene["visual_type"] = scene.get("visual_type") or family
         plan = dict(scene.get("visual_plan") or {})
-        plan.update({"family": family, "character_required": character_required, "art_direction": direction})
-        scene["visual_plan"] = plan
         directed.append(scene)
         previous_palettes.append(palette_key)
+
+    # Plan B: 연속 동일 아키타입/문맥 씬에서 Ken Burns 재활용 트리거 세팅 (최대 연속 2씬 제한)
+    consecutive_reuse = 0
+    for i in range(1, len(directed)):
+        prev_scene = directed[i - 1]
+        curr_scene = directed[i]
+
+        prev_mode = str(prev_scene.get("visual_mode") or "")
+        curr_mode = str(curr_scene.get("visual_mode") or "")
+        has_kling = bool(curr_scene.get("use_kling"))
+        has_v5_overlay = bool(curr_scene.get("v5_verified_overlays"))
+
+        if prev_mode != "article_evidence" and curr_mode != "article_evidence" and not has_kling and not has_v5_overlay:
+            prev_arch = prev_scene.get("archetype")
+            curr_arch = curr_scene.get("archetype")
+            prev_fam = prev_scene.get("family") or prev_scene.get("art_direction", {}).get("family")
+            curr_fam = curr_scene.get("family") or curr_scene.get("art_direction", {}).get("family")
+            prev_sec = prev_scene.get("section", "default")
+            curr_sec = curr_scene.get("section", "default")
+
+            is_same_concept = (
+                (prev_arch and curr_arch and prev_arch == curr_arch)
+                or (prev_fam and curr_fam and prev_fam == curr_fam)
+                or (prev_sec in ("scenario", "data") and prev_sec == curr_sec and i % 3 == 0)
+            )
+            if is_same_concept and consecutive_reuse < 1:
+                curr_scene["reuse_previous_image"] = True
+                curr_scene["ken_burns_effect"] = True
+                curr_scene["reuse_image_from_scene"] = i - 1
+                consecutive_reuse += 1
+            else:
+                consecutive_reuse = 0
+        else:
+            consecutive_reuse = 0
+
     return directed
 
 

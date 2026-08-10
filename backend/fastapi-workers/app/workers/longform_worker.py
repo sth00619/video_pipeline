@@ -770,10 +770,10 @@ class LongformWorker:
             return i, clip_path, expected_source_type, None
         section = scene.get("section", "default")
         bg_color = {
-            "intro": "1a1a2e", "background": "16213e",
-            "data": "0f3460", "scenario": "1b1464",
-            "action": "0d3b2e", "conclusion": "1a1a2e",
-        }.get(section, "0d1b2a")
+            "intro": "0x1a1a2e", "background": "0x16213e",
+            "data": "0x0f3460", "scenario": "0x1b1464",
+            "action": "0x0d3b2e", "conclusion": "0x1a1a2e",
+        }.get(section, "0x0d1b2a")
 
         try:
             # Only planned opening scenes use Fal image-to-video.  Every other
@@ -1431,7 +1431,7 @@ def _write_kling_audit(job_id: int, scene_idx: int, params: dict):
         logger.warning(f"Failed to write Kling audit log: {ex}")
 
 
-def _ffmpeg_static_image_with_fade(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
+def _ffmpeg_static_image_with_fade(img_path: str, clip_path: str, duration: float, bg_color: str = "0x0d1b2a", job_id: int = 0):
     """
     정적 이미지를 페이드 인/아웃(0.5초) 효과를 추가하여 FFmpeg로 고화질 비디오 클립으로 인코딩합니다.
     """
@@ -1450,7 +1450,7 @@ def _ffmpeg_static_image_with_fade(img_path: str, clip_path: str, duration: floa
         raise RuntimeError(f"static image clip with fade render failed: {img_path}")
 
 
-def _ffmpeg_ken_burns_image(img_path: str, clip_path: str, duration: float, zoom_type: str = "in", bg_color: str = "0d1b2a", job_id: int = 0):
+def _ffmpeg_ken_burns_image(img_path: str, clip_path: str, duration: float, zoom_type: str = "in", bg_color: str = "0x0d1b2a", job_id: int = 0):
     """
     Plan B: 동일 맥락 씬에서 이전 정적 이미지를 재활용할 때 켄번스(Slow Zoom/Pan) 연출 효과를 추가하여
     FFmpeg로 동적 비디오 클립으로 인코딩합니다. (Gemini API 추가 호출 0원)
@@ -1473,7 +1473,7 @@ def _ffmpeg_ken_burns_image(img_path: str, clip_path: str, duration: float, zoom
 
 
 
-def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
+def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_color: str = "0x0d1b2a", job_id: int = 0):
     """
     정적 이미지를 FFmpeg로 흔들림 없이(static) 고화질 비디오 클립으로 인코딩합니다.
     """
