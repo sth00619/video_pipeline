@@ -35,7 +35,7 @@ export const CATEGORY_COLOR = {
   ASSOCIATED_STOCKS: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
   GLOBAL_MACRO: 'text-accent-violet bg-accent-violet/10 border-accent-violet/20',
   CRYPTO: 'text-accent-gold bg-accent-gold/10 border-accent-gold/20',
-  CUSTOM: 'text-navy-400 bg-navy-700/40 border-navy-600',
+  CUSTOM: 'text-navy-400 bg-slate-50 border-navy-600',
 }
 
 export const MODE_LIST = ['ALL', 'AUTO', 'GUIDED']

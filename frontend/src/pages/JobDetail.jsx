@@ -743,7 +743,7 @@ export default function JobDetail() {
                     </span>
                   )}
                   {thumbnailPersonMatches.length === 0 && (
-                    <span className="rounded-full border border-slate-300 bg-slate-100/70 px-2 py-0.5 text-[10px] text-gray-400">
+                    <span className="rounded-full border border-slate-300 bg-slate-100/70 px-2 py-0.5 text-[10px] text-slate-500">
                       승인 인물 사진 없음
                     </span>
                   )}
@@ -786,7 +786,7 @@ export default function JobDetail() {
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 text-[11px] text-gray-500">
+                <p className="mt-1.5 text-[11px] text-slate-500">
                   영상 장면과 사용 가능한 승인 에셋으로 만든 후보입니다. 실사 인물과 캐릭터는 서로 섞지 않고 별도 안으로 제안합니다.
                 </p>
                 <section className="mt-2 rounded-xl border border-accent-gold/30 bg-accent-gold/5 p-2" aria-label="노란 마스코트 스타일 추천안">
@@ -798,7 +798,7 @@ export default function JobDetail() {
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-accent-gold">노란 마스코트 스타일 추천안</p>
-                      <p className="mt-0.5 text-[10px] leading-relaxed text-gray-400">
+                      <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
                         예시는 스타일 기준입니다. 선택하면 현재 영상 장면과 승인 에셋을 사용해 실제 후보로 재생성합니다.
                       </p>
                       <button
@@ -1615,7 +1615,7 @@ export default function JobDetail() {
                             {scriptData.sections && scriptData.sections.length > 0 ? (
                               <div className="space-y-2">
                                 {scriptData.sections.map((sec, i) => (
-                                  <div key={i} className="bg-navy-700/40 rounded-xl p-3.5">
+                                  <div key={i} className="bg-slate-50 rounded-xl p-3.5">
                                     <div className="text-sm font-semibold text-accent-gold mb-1">{sec.title}</div>
                                     <p className="text-sm text-gray-200 leading-relaxed">
                                       {expandedScript ? sec.content : (sec.content?.slice(0, 80) + (sec.content?.length > 80 ? '...' : ''))}
@@ -1624,7 +1624,7 @@ export default function JobDetail() {
                                 ))}
                               </div>
                             ) : scriptData.script ? (
-                              <div className="bg-navy-700/40 rounded-xl p-3.5">
+                              <div className="bg-slate-50 rounded-xl p-3.5">
                                 <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
                                   {expandedScript ? scriptData.script : (scriptData.script.slice(0, 300) + (scriptData.script.length > 300 ? '...' : ''))}
                                 </p>
@@ -1758,7 +1758,7 @@ export default function JobDetail() {
                                 <div className="mt-2.5">
                                   {isEditingThis ? (
                                     <div className="space-y-2">
-                                      <label className="block text-[11px] text-gray-400">원본 한국어 문장 · 텍스트 반영 이미지 재생성에 사용</label>
+                                      <label className="block text-[11px] text-slate-500">원본 한국어 문장 · 텍스트 반영 이미지 재생성에 사용</label>
                                       <textarea
                                         id={`scene-edit-${img.index}`}
                                         value={editingSceneText}

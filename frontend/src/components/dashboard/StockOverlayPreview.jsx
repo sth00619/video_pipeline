@@ -109,11 +109,11 @@ export default function StockOverlayPreview() {
   }
 
   return (
-    <section className="bg-navy-800 rounded-xl border border-navy-700 p-5">
+    <section className="bg-navy-800 rounded-xl border border-slate-200 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="font-semibold">수치 오버레이 미리보기</h2>
-          <p className="text-xs text-gray-400 mt-1">AI 이미지에는 숫자를 그리지 않고, 검증된 카드 PNG를 별도 레이어로 합성합니다.</p>
+          <p className="text-xs text-slate-500 mt-1">AI 이미지에는 숫자를 그리지 않고, 검증된 카드 PNG를 별도 레이어로 합성합니다.</p>
         </div>
         <label className="text-xs text-accent-cyan hover:underline cursor-pointer">
           배경 이미지 선택
@@ -122,7 +122,7 @@ export default function StockOverlayPreview() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_260px] gap-4">
-        <div className="rounded-lg overflow-hidden border border-navy-700 bg-black">
+        <div className="rounded-lg overflow-hidden border border-slate-200 bg-black">
           <canvas ref={canvasRef} className="w-full h-auto block" />
         </div>
         <div className="space-y-3 text-xs">
@@ -134,7 +134,7 @@ export default function StockOverlayPreview() {
             <label>변화율(%)<input value={changePct} onChange={e => setChangePct(e.target.value)} className="field" /></label>
           </div>
 
-          <div className="border-t border-navy-700 pt-3">
+          <div className="border-t border-slate-200 pt-3">
             <div className="font-semibold text-gray-200 mb-2">배치 방식</div>
             <div className="flex gap-3 mb-2">
               <label className="flex items-center gap-1"><input type="radio" checked={placementMode === 'anchor'} onChange={() => setPlacementMode('anchor')} /> 앵커</label>

@@ -39,7 +39,7 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="bg-navy-800 rounded-xl p-8 shadow-xl">
           <h2 className="text-lg font-semibold mb-2">회원가입</h2>
-          <p className="text-sm text-gray-400 mb-6">영상 작업자 계정을 생성합니다.</p>
+          <p className="text-sm text-slate-500 mb-6">영상 작업자 계정을 생성합니다.</p>
 
           {error && (
             <div className="bg-accent-red/20 border border-accent-red text-accent-red text-sm rounded-lg px-4 py-2 mb-4">
@@ -53,38 +53,38 @@ export default function Register() {
           )}
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-400 mb-1">아이디</label>
+            <label className="block text-sm text-slate-500 mb-1">아이디</label>
             <input
               name="username"
               type="text"
               value={form.username}
               onChange={handleChange}
-              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+              className="w-full bg-navy-700 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
               required
               autoFocus
             />
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm text-gray-400 mb-1">이메일</label>
+            <label className="block text-sm text-slate-500 mb-1">이메일</label>
             <input
               name="email"
               type="email"
               value={form.email}
               onChange={handleChange}
-              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+              className="w-full bg-navy-700 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
               required
             />
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm text-gray-400 mb-1">비밀번호</label>
+            <label className="block text-sm text-slate-500 mb-1">비밀번호</label>
             <input
               name="password"
               type="password"
               value={form.password}
               onChange={handleChange}
-              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+              className="w-full bg-navy-700 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
               required
               minLength={6}
             />
@@ -98,7 +98,7 @@ export default function Register() {
             {loading ? '가입 중...' : '회원가입'}
           </button>
 
-          <p className="text-center text-sm text-gray-400 mt-4">
+          <p className="text-center text-sm text-slate-500 mt-4">
             이미 계정이 있으신가요?{' '}
             <Link to="/login" className="text-accent-cyan hover:underline">
               로그인
