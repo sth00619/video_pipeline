@@ -32,6 +32,16 @@ const CATEGORY_OPTIONS = [
   { value: 'CUSTOM', label: '직접 입력', desc: '위 카테고리에 안 맞는 주제' },
 ]
 
+// 백엔드 macro_topic_detector.py의 MACRO_SIGNAL_TERMS와 동일 목록을 유지할 것.
+// 이 목록이 바뀌면 두 곳 모두 업데이트해야 한다 (추후 공유 JSON화 권장).
+const MACRO_SIGNAL_TERMS = [
+  '연준', 'FOMC', 'fomc', '금리인하', '금리인상', '기준금리',
+  '환율', '달러인덱스', 'DXY', '국채', '국채금리', '10년물',
+  'CPI', 'PCE', '물가지수', '소비자물가', '고용지표', '실업률',
+  '비농업고용', 'PMI', 'GDP', '양적긴축', '양적완화', '테이퍼링',
+  '파월', '옐런', '잭슨홀',
+]
+
 const AUTONOMY_OPTIONS = [
   {
     value: 'AUTO', label: '자동 (AUTO)', icon: Zap,
@@ -52,8 +62,8 @@ const DURATION_OPTIONS = [
   { value: 5, label: '5분', hint: '정책 상한 ₩40,000. 인트로 45초 움짤' },
   { value: 10, label: '10분', hint: '정책 상한 ₩40,000. 표준 길이' },
   { value: 15, label: '15분', hint: '정책 상한 ₩40,000. 심층 분석' },
-  { value: 20, label: '20분', hint: '정책 상한 ₩70,000. 풀 리포트' },
-  { value: 30, label: '30분', hint: '정책 상한 ₩70,000. 장문 분석' },
+  { value: 20, label: '20분', hint: '정책 상한 ₩80,000. 풀 리포트' },
+  { value: 30, label: '30분', hint: '정책 상한 ₩80,000. 장문 분석' },
 ]
 const RESEARCH_PAGE_SIZE = 10
 
@@ -88,6 +98,18 @@ export default function JobNew() {
     shortsCount: 3,
     dataVisualsEnabled: false,
   })
+
+  // 매크로 주제 감지: 사용자가 카테고리를 명시적으로 GLOBAL_MACRO/CUSTOM/CRYPTO로
+  // 바꾸지 않은 상태에서 제목에 매크로 신호 키워드가 있으면 배너를 띄운다.
+  // KOSPI/KOSDAQ/INDIVIDUAL_STOCK/ASSOCIATED_STOCKS 카테고리는
+  // market_data_collector.py의 collect_for_category()에서 미국 지표(us.*)를
+  // 전혀 수집하지 않으므로, 이 상태로 매크로 주제를 진행하면 팩트체크 근거가
+  // 부족해질 수 있다.
+  const macroSkipCategories = ['GLOBAL_MACRO', 'CUSTOM', 'CRYPTO']
+  const detectedMacroTerms = macroSkipCategories.includes(form.category)
+    ? []
+    : MACRO_SIGNAL_TERMS.filter(term => form.title.toLowerCase().includes(term.toLowerCase()))
+  const showMacroCategoryBanner = detectedMacroTerms.length > 0
 
   useEffect(() => {
     const topic = searchParams.get('topic')
@@ -308,6 +330,25 @@ export default function JobNew() {
 
               <div>
                 <label className="block text-sm text-gray-300 mb-2">카테고리</label>
+                {showMacroCategoryBanner && (
+                  <div className="mb-2 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                    <span className="text-amber-400 text-sm mt-0.5">⚠</span>
+                    <div className="flex-1">
+                      <p className="text-xs text-amber-200">
+                        입력한 주제에 매크로 지표 키워드({detectedMacroTerms.slice(0, 3).join(', ')})가 감지되었습니다.
+                        현재 선택된 카테고리는 미국 시장 지표(연준 금리, CPI 등)를 수집하지 않아
+                        팩트체크 근거가 부족해질 수 있습니다.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, category: 'GLOBAL_MACRO' })}
+                        className="mt-2 text-xs font-semibold text-amber-300 underline hover:text-amber-200"
+                      >
+                        글로벌 매크로 카테고리로 전환
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {CATEGORY_OPTIONS.map(opt => (
                     <button

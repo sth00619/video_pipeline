@@ -46,4 +46,10 @@ public class KeywordSearchResponse {
 
     @JsonProperty("auto_confirmable")
     private Boolean autoConfirmable;
+
+    @JsonProperty("macro_signal_terms")
+    private java.util.List<String> macroSignalTerms;
+
+    @JsonProperty("macro_category_suggested")
+    private Boolean macroCategorySuggested;
 }

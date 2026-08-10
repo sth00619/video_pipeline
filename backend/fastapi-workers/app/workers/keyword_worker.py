@@ -43,6 +43,7 @@ from app.utils.keyword_time_context import resolve_keyword_time_context
 from app.utils.keyword_aliases import seed_match, seed_overlap
 from app.utils.candidate_scoring import score_candidates
 from app.utils.topic_evidence import specific_terms
+from app.utils.macro_topic_detector import detect_macro_signal, should_suggest_global_macro
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +206,8 @@ class KeywordWorker:
             auto_confirmable = True
             topic_evidence_required = False
 
+        macro_signal_terms = detect_macro_signal(seed)
+        macro_category_suggested = should_suggest_global_macro(seed, category)
 
         return {
             "job_id": job_id,
@@ -218,6 +221,8 @@ class KeywordWorker:
             "top_candidate_keyword": candidates[0].get("keyword") if candidates else None,
             "auto_confirmable": auto_confirmable,
             "topic_evidence_required": topic_evidence_required,
+            "macro_signal_terms": macro_signal_terms,
+            "macro_category_suggested": macro_category_suggested,
         }
 
     # ──────────────────────────────────────────────────────────

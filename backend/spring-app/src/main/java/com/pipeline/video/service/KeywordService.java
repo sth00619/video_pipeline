@@ -61,6 +61,10 @@ public class KeywordService {
         // FastAPI 호출
         KeywordSearchResponse result = fastApiClient.searchKeywords(
                 seedKeyword, limit, effectiveCategory.name(), outperformerCount, jobId, job.getAutonomy().name());
+        if (Boolean.TRUE.equals(result.getMacroCategorySuggested())) {
+            log.warn("매크로 주제 감지: jobId={}, category={}, 감지된 키워드={} — GLOBAL_MACRO 전환 권장",
+                    jobId, effectiveCategory, result.getMacroSignalTerms());
+        }
 
         // 비용 기록 (Mock $0)
         costService.record(jobId, "YOUTUBE_API", BigDecimal.ZERO, "USD", "키워드 트렌드 분석");
