@@ -60,7 +60,7 @@ export default function TrendingSidebar({ keyword }) {
             <button
               key={tab.id}
               onClick={() => setActiveTabId(tab.id)}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${activeTabId === tab.id ? 'border-red-500 bg-red-500 text-white' : 'border-navy-600 bg-navy-900 text-gray-400 hover:border-red-500/60 hover:text-white'}`}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${activeTabId === tab.id ? 'border-red-500 bg-red-500 text-white' : 'border-navy-600 bg-navy-900 text-gray-400 hover:border-red-500/60 hover:text-slate-900'}`}
             >
               {tab.id === 'outperformer' && <TrendingUp size={12} className="inline mr-1 -mt-0.5" />}{tab.label}
             </button>

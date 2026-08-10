@@ -666,7 +666,7 @@ export default function Shorts() {
                       onClick={() => seek(scene.start)}
                       className={`p-3 rounded-lg border text-left cursor-pointer transition select-none ${
                         isHighlighted 
-                          ? 'border-accent-cyan bg-accent-cyan/10 shadow-lg shadow-accent-cyan/5' 
+                          ? 'border-accent-cyan bg-accent-cyan/10 shadow-card-lg shadow-accent-cyan/5' 
                           : 'border-navy-700 bg-navy-900/50 hover:border-navy-600'
                       }`}
                     >
@@ -697,11 +697,11 @@ export default function Shorts() {
                     onLoadedMetadata={handleMeta} onTimeUpdate={handleTimeUpdate}
                     onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
                   <div className="flex items-center gap-3 px-4 py-3 border-t border-navy-700">
-                    <button onClick={() => seek(curTime - 10)} className="text-gray-400 hover:text-white"><SkipBack size={16} /></button>
+                    <button onClick={() => seek(curTime - 10)} className="text-gray-400 hover:text-slate-900"><SkipBack size={16} /></button>
                     <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center bg-accent-cyan text-navy-950 rounded-full hover:opacity-90">
                       {playing ? <Pause size={14} /> : <Play size={14} />}
                     </button>
-                    <button onClick={() => seek(curTime + 10)} className="text-gray-400 hover:text-white"><SkipForward size={16} /></button>
+                    <button onClick={() => seek(curTime + 10)} className="text-gray-400 hover:text-slate-900"><SkipForward size={16} /></button>
                     <span className="text-xs text-gray-400 tabular-nums">{fmt(curTime)} / {fmt(totalDur)}</span>
                     
                     {activeSeg !== null && segments[activeSeg] && (
@@ -734,7 +734,7 @@ export default function Shorts() {
 
             {/* 업로드 모드 분석 컨트롤 (비디오 하단에 바로 배치하여 가시성 확보) */}
             {!id && fileUrl && !job && (
-              <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 shadow-lg shadow-accent-cyan/10 ring-1 ring-accent-cyan/20">
+              <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 shadow-card-lg shadow-accent-cyan/10 ring-1 ring-accent-cyan/20">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5">
@@ -792,10 +792,10 @@ export default function Shorts() {
                 {aiScenarios && !extractingAi && (
                   <div className="space-y-4">
                     <div className="flex gap-6 border-b border-navy-700">
-                      <button onClick={() => setAiActiveTab('scenario')} className={`text-sm font-bold pb-2 border-b-2 transition ${aiActiveTab === 'scenario' ? 'text-accent-gold border-accent-gold' : 'text-gray-400 border-transparent hover:text-white'}`}>
+                      <button onClick={() => setAiActiveTab('scenario')} className={`text-sm font-bold pb-2 border-b-2 transition ${aiActiveTab === 'scenario' ? 'text-accent-gold border-accent-gold' : 'text-gray-400 border-transparent hover:text-slate-900'}`}>
                         🎬 기승전결 시나리오 추천
                       </button>
-                      <button onClick={() => setAiActiveTab('keyword')} className={`text-sm font-bold pb-2 border-b-2 transition ${aiActiveTab === 'keyword' ? 'text-accent-gold border-accent-gold' : 'text-gray-400 border-transparent hover:text-white'}`}>
+                      <button onClick={() => setAiActiveTab('keyword')} className={`text-sm font-bold pb-2 border-b-2 transition ${aiActiveTab === 'keyword' ? 'text-accent-gold border-accent-gold' : 'text-gray-400 border-transparent hover:text-slate-900'}`}>
                         🏷️ 연관 키워드 추천
                       </button>
                     </div>
@@ -850,7 +850,7 @@ export default function Shorts() {
                               </div>
                               <button
                                 onClick={() => handleApplyScenario(sc)}
-                                className="w-full bg-navy-800 border border-navy-700 text-gray-300 text-xs py-2.5 rounded font-medium hover:text-slate-900 hover:bg-navy-700 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
+                                className="w-full bg-navy-800 border border-navy-700 text-gray-300 text-xs py-2.5 rounded font-medium hover:text-white hover:bg-navy-700 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
                               >
                                 이 시나리오 즉시 제작하기 <ArrowRight size={12} />
                               </button>
@@ -975,7 +975,7 @@ export default function Shorts() {
                         <button
                           onClick={() => handleCutShorts(false)}
                           disabled={cutting}
-                          className="flex-1 flex items-center justify-center gap-2 bg-navy-700 text-slate-900 border border-navy-600 font-bold rounded-lg py-2.5 text-xs hover:bg-navy-600 disabled:opacity-50 transition"
+                          className="flex-1 flex items-center justify-center gap-2 bg-navy-700 text-white border border-navy-600 font-bold rounded-lg py-2.5 text-xs hover:bg-navy-600 disabled:opacity-50 transition"
                         >
                           각 구간별 개별 쇼츠 클립으로 생성
                         </button>

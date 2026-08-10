@@ -544,7 +544,7 @@ export default function JobDetail() {
       {/* 헤더 */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/longform')} className="text-navy-400 hover:text-white transition"><ChevronLeft size={24}/></button>
+          <button onClick={() => navigate('/longform')} className="text-navy-400 hover:text-slate-900 transition"><ChevronLeft size={24}/></button>
           <div>
             <h1 className="text-2xl font-bold">{job.title}</h1>
             <div className="text-sm text-navy-400 mt-1 flex items-center gap-2 flex-wrap">
@@ -1371,13 +1371,13 @@ export default function JobDetail() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <div className="flex bg-navy-700 rounded p-1 text-xs">
                           <button onClick={() => setScriptViewMode('paragraphs')}
-                            className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'paragraphs' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-white'}`}>단락 가독성</button>
+                            className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'paragraphs' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-slate-900'}`}>단락 가독성</button>
                           {sortedImageList.length > 0 && (
                             <button onClick={() => setScriptViewMode('mixed')}
-                              className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'mixed' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-white'}`}>대본 + 이미지</button>
+                              className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'mixed' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-slate-900'}`}>대본 + 이미지</button>
                           )}
                           <button onClick={() => setScriptViewMode('raw')}
-                            className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'raw' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-white'}`}>기본 텍스트</button>
+                            className={`px-2.5 py-1 rounded transition ${scriptViewMode === 'raw' ? 'bg-accent-cyan text-navy-950 font-bold' : 'text-navy-400 hover:text-slate-900'}`}>기본 텍스트</button>
                         </div>
 
                         <div className="flex gap-1">
@@ -1923,7 +1923,7 @@ export default function JobDetail() {
                           .map((page, index, pages) => (
                             <span key={page} className="flex items-center gap-1">
                               {index > 0 && page - pages[index - 1] > 1 && <span className="px-1">…</span>}
-                              <button onClick={() => setCurPage(page)} className={`min-w-7 px-2 py-1 rounded border ${page === curPage ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold' : 'border-navy-600 hover:text-white'}`}>{page}</button>
+                              <button onClick={() => setCurPage(page)} className={`min-w-7 px-2 py-1 rounded border ${page === curPage ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold' : 'border-navy-600 hover:text-slate-900'}`}>{page}</button>
                             </span>
                           ))}
                         <button onClick={() => setCurPage(p => Math.min(pageCount, p + 1))} disabled={curPage === pageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">›</button>
@@ -1951,7 +1951,7 @@ export default function JobDetail() {
           </div>
 
           {costs && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
               <h3 className="text-base font-bold text-slate-900 mb-3">비용 상세</h3>
               
               {/* provider별 그룹 합산 표시 */}
