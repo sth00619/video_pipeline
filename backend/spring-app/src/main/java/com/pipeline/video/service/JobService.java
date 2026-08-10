@@ -34,8 +34,8 @@ public class JobService {
     private final FastApiClient fastApiClient;
     private final CharacterAssetResolver characterAssetResolver;
     private final ThumbnailPersonResolver thumbnailPersonResolver;
-    // [긴급 추가] 정지 버튼이 Temporal Workflow도 취소하도록 연결하기 위해 주입
     private final WorkflowOrchestrator workflowOrchestrator;
+    private final CostService costService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
@@ -83,7 +83,10 @@ public class JobService {
 
     public List<JobResponse> getMyJobs(String username) {
         return jobRepository.findByCreatedByOrderByCreatedAtDesc(username)
-                .stream().map(JobResponse::from).collect(Collectors.toList());
+                .stream()
+                .peek(this::syncJobCost)
+                .map(JobResponse::from)
+                .collect(Collectors.toList());
     }
 
     /** Resume a job that failed before any script asset was produced.
@@ -191,13 +194,31 @@ public class JobService {
 
     public JobResponse getJob(Long id) {
         return jobRepository.findById(id)
-                .map(JobResponse::from)
+                .map(job -> {
+                    syncJobCost(job);
+                    return JobResponse.from(job);
+                })
                 .orElseThrow(() -> new RuntimeException("Job not found: " + id));
     }
 
     public List<JobResponse> getAllJobs() {
         return jobRepository.findAll()
-                .stream().map(JobResponse::from).collect(Collectors.toList());
+                .stream()
+                .peek(this::syncJobCost)
+                .map(JobResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    private void syncJobCost(VideoJob job) {
+        try {
+            BigDecimal actualTotal = costService.calculateTotalCostKrw(job.getId());
+            if (actualTotal != null && (job.getCostAccumulated() == null || job.getCostAccumulated().compareTo(actualTotal) != 0)) {
+                job.setCostAccumulated(actualTotal);
+                jobRepository.save(job);
+            }
+        } catch (Exception e) {
+            log.warn("Job cost sync failed for jobId={}: {}", job.getId(), e.getMessage());
+        }
     }
 
     @Transactional

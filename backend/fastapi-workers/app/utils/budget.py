@@ -158,7 +158,7 @@ class ProviderRequestAudit:
         request_id: str | None = None,
         outcome: str,
     ) -> None:
-        """응답 결과를 기록한다. 예약 비용은 실비 대조 전까지 유지한다."""
+        """응답 결과를 기록한다. 실패한 시도는 비용을 0원으로 감액하고 총액을 재계산한다."""
         with _LOCK:
             ledger = _load_ledger(self._path)
             for item in reversed(ledger["items"]):
@@ -170,7 +170,23 @@ class ProviderRequestAudit:
                     item["status_code"] = int(status_code)
                 if request_id:
                     item["request_id"] = str(request_id)[:256]
+
+                # 실패한 시도(network_error, http_500, failed 등)는 과금액을 0원으로 처리하여 이중 청구 방지
+                is_success = outcome in ("http_200", "succeeded", "http_201") or (status_code is not None and 200 <= status_code < 300)
+                if not is_success:
+                    item["amount_krw"] = 0
+                    item["cost_status"] = "cancelled_due_to_failure"
                 break
+
+            # 성공(http_200) 또는 아직 진행 중(reserved)인 요청의 amount_krw만 합산하여 total_krw 재계산
+            recalculated_total = sum(
+                int(i.get("amount_krw", 0))
+                for i in ledger.get("items", [])
+                if isinstance(i, dict) and i.get("status") in ("reserved", "http_200", "succeeded", "http_201")
+            )
+            ledger["total_krw"] = recalculated_total
+            limit = self._budget_limit_krw
+            ledger["budget_overrun_krw"] = max(0, recalculated_total - limit)
             _write_ledger(self._path, ledger)
 
     def summary(self) -> dict[str, Any]:
@@ -283,15 +299,20 @@ def load_cost_ledger_summary(job_id: int) -> dict[str, Any]:
     """Spring/UI가 읽을 수 있는 작업별 비용 원장 스냅샷을 반환한다.
 
     이미지·Kling처럼 FastAPI가 실제 provider 요청을 보낸 비용의 기준값은 이
-    파일이다. 예약 상태도 합계에 포함해, 응답 대기 중인 요청으로 예산을
-    초과하는 일이 없도록 한다.
+    파일이다. 성공했거나 진행 중인 예약 상태만 합계에 포함한다.
     """
     cfg = runtime_config.get()
     path = _job_path(job_id, "cost_ledger.json")
     with _LOCK:
         ledger = _load_ledger(path)
         items = [dict(item) for item in ledger["items"] if isinstance(item, dict)]
-    total = int(ledger.get("total_krw", 0))
+    
+    # 실패/취소된 시도를 제외하고 실제 유효한 과금액만 합산
+    total = sum(
+        int(item.get("amount_krw", 0))
+        for item in items
+        if item.get("status") in ("reserved", "http_200", "succeeded", "http_201")
+    )
     limit = int(cfg["max_budget_per_video_krw"])
     return {
         "job_id": int(job_id),

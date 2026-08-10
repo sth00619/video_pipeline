@@ -886,8 +886,12 @@ class LongformWorker:
                         except Exception as fallback_err:
                             logger.error(f"씬 {i} 페이드 폴백 실패, 일반 정적 복구 시도: {fallback_err}")
 
-            # 나머지 씬(또는 Kling 실패 시): 정적 이미지 효과 (흔들림 방지 및 화질 극대화)
-            if os.path.exists(img_path):
+            # Plan B Ken Burns asset reuse check: 동일 문맥 씬 이미지 재활용 및 Ken Burns FX 연출
+            is_ken_burns_reuse = bool(scene.get("reuse_previous_image")) or bool(scene.get("ken_burns_effect"))
+            if is_ken_burns_reuse and os.path.exists(img_path):
+                logger.info(f"[KEN_BURNS_REUSE] Scene {i} reused image with Ken Burns zoompan effect: job_id={job_id}")
+                _ffmpeg_ken_burns_image(img_path, clip_path, duration, zoom_type="in", bg_color=bg_color, job_id=job_id)
+            elif os.path.exists(img_path):
                 reveal = scene.get("reveal_assets") if isinstance(scene.get("reveal_assets"), dict) else {}
                 if bool(runtime_config.value("scene_reveal_enabled")) and reveal.get("plain_path") and reveal.get("emphasized_path"):
                     _ffmpeg_reveal_images(str(reveal["plain_path"]), str(reveal["emphasized_path"]), clip_path, duration, job_id)
@@ -1444,6 +1448,29 @@ def _ffmpeg_static_image_with_fade(img_path: str, clip_path: str, duration: floa
     ret = _run_subprocess(cmd, job_id)
     if ret != 0 or not _verify_video(clip_path):
         raise RuntimeError(f"static image clip with fade render failed: {img_path}")
+
+
+def _ffmpeg_ken_burns_image(img_path: str, clip_path: str, duration: float, zoom_type: str = "in", bg_color: str = "0d1b2a", job_id: int = 0):
+    """
+    Plan B: 동일 맥락 씬에서 이전 정적 이미지를 재활용할 때 켄번스(Slow Zoom/Pan) 연출 효과를 추가하여
+    FFmpeg로 동적 비디오 클립으로 인코딩합니다. (Gemini API 추가 호출 0원)
+    """
+    total_frames = int(duration * 30)
+    # Slow zoom-in from 1.0 to 1.15 over the clip duration
+    zoom_expr = f"min(zoom+0.0012,1.15)" if zoom_type == "in" else f"max(1.15-0.0012*on,1.0)"
+    cmd = (
+        f'ffmpeg -loop 1 -i "{img_path}" '
+        f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
+        f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,'
+        f'zoompan=z=\'{zoom_expr}\':x=\'iw/2-(iw/zoom/2)\':y=\'ih/2-(ih/zoom/2)\':d={total_frames}:s=1920x1080,fps=30" '
+        f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-y "{clip_path}" -loglevel error'
+    )
+    ret = _run_subprocess(cmd, job_id)
+    if ret != 0 or not _verify_video(clip_path):
+        logger.warning(f"Ken Burns zoompan fallback to static image for {img_path}")
+        _ffmpeg_static_image_with_fade(img_path, clip_path, duration, bg_color, job_id)
+
 
 
 def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_color: str = "0d1b2a", job_id: int = 0):
