@@ -18,7 +18,12 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    const status = error.response?.status
+    const url = error.config?.url || ''
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register')
+
+    // 401 Unauthorized: 로그인 토큰이 만료되었거나 유효하지 않은 경우에만 토큰을 삭제하고 로그인으로 리다이렉트
+    if (status === 401 && !isAuthEndpoint) {
       authStore.clearToken()
       if (window.location.pathname !== '/login') {
         const next = window.location.pathname + window.location.search

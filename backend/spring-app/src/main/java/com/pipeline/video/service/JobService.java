@@ -51,9 +51,9 @@ public class JobService {
         Autonomy requestedAutonomy = request.getAutonomy() == Autonomy.AUTO
                 ? Autonomy.AUTO : Autonomy.GUIDED;
 
-        BigDecimal effectiveVideoBudget = request.getBudgetCap() == null
-                ? policyBudgetCap
-                : request.getBudgetCap().min(policyBudgetCap);
+        BigDecimal effectiveVideoBudget = (request.getBudgetCap() != null && request.getBudgetCap().compareTo(BigDecimal.ZERO) > 0)
+                ? request.getBudgetCap()
+                : policyBudgetCap;
 
         VideoJob job = VideoJob.builder()
                 .title(request.getTitle())
