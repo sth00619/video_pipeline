@@ -59,7 +59,7 @@ export default function Register() {
               type="text"
               value={form.username}
               onChange={handleChange}
-              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
               required
               autoFocus
             />
@@ -72,7 +72,7 @@ export default function Register() {
               type="email"
               value={form.email}
               onChange={handleChange}
-              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
               required
             />
           </div>
@@ -84,7 +84,7 @@ export default function Register() {
               type="password"
               value={form.password}
               onChange={handleChange}
-              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan"
+              className="w-full bg-navy-700 border border-navy-700 rounded-lg px-4 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan"
               required
               minLength={6}
             />

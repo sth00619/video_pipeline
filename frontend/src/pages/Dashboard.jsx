@@ -142,7 +142,7 @@ export default function Dashboard() {
           <div className="p-5 border-b border-navy-700">
             <div className="flex items-center gap-2 text-white font-semibold"><ListFilter size={18} className="text-accent-cyan"/>검색 및 필터</div>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mt-4">
-              <label className="relative xl:col-span-1"><Search size={16} className="absolute left-3 top-3 text-gray-500"/><input value={search} onChange={e => update(setSearch)(e.target.value)} placeholder="제목 또는 키워드" className="w-full rounded-lg bg-navy-900 border border-navy-600 pl-9 pr-3 py-2.5 text-sm text-white" /></label>
+              <label className="relative xl:col-span-1"><Search size={16} className="absolute left-3 top-3 text-gray-500"/><input value={search} onChange={e => update(setSearch)(e.target.value)} placeholder="제목 또는 키워드" className="w-full rounded-lg bg-navy-900 border border-navy-600 pl-9 pr-3 py-2.5 text-sm text-slate-900" /></label>
               <Select value={type} onChange={update(setType)} options={[["ALL","형식: 전체"],["LONGFORM","롱폼"],["SHORTS","쇼츠"]]} />
               <Select value={length} onChange={update(setLength)} options={[["ALL","길이: 전체"],["SHORTS","쇼츠"],["1_5","롱폼 1~5분"],["6_15","롱폼 6~15분"],["16_PLUS","롱폼 16분+"]]} />
               <Select value={category} onChange={update(setCategory)} options={[["ALL","주제: 전체"], ...Object.entries(CATEGORY_LABEL)]} />
@@ -180,7 +180,7 @@ export default function Dashboard() {
 }
 
 function Select({ value, onChange, options }) {
-  return <select value={value} onChange={e => onChange(e.target.value)} className="w-full rounded-lg bg-navy-900 border border-navy-600 px-3 py-2.5 text-sm text-white">{options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+  return <select value={value} onChange={e => onChange(e.target.value)} className="w-full rounded-lg bg-navy-900 border border-navy-600 px-3 py-2.5 text-sm text-slate-900">{options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
 }
 
 function SummaryCard({ icon, label, value, onClick }) {

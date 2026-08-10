@@ -1058,7 +1058,7 @@ export default function JobDetail() {
                             <select
                               value={selectedVoiceId}
                               onChange={(e) => setSelectedVoiceId(e.target.value)}
-                              className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan"
+                              className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan"
                             >
                               <option value="default_ko">기본 한국어 목소리 (gTTS)</option>
                               {voices.map((v) => (
@@ -1074,7 +1074,7 @@ export default function JobDetail() {
                                     value={previewText}
                                     maxLength={100}
                                     onChange={(e) => setPreviewText(e.target.value)}
-                                    className="w-64 bg-navy-800 border border-navy-600 rounded px-2 py-1 text-xs text-white"
+                                    className="w-64 bg-navy-800 border border-navy-600 rounded px-2 py-1 text-xs text-slate-900"
                                     aria-label="미리듣기 문장"
                                   />
                                   <button
@@ -1390,7 +1390,7 @@ export default function JobDetail() {
                             a.download = `script_${id}.txt`;
                             a.click();
                             URL.revokeObjectURL(url);
-                          }} className="bg-navy-700 text-gray-200 hover:text-white text-xs px-2.5 py-1.5 rounded border border-navy-600 transition">TXT</button>
+                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-navy-600 transition">TXT</button>
 
                           <button onClick={() => {
                             const txt = scriptData.script || '';
@@ -1452,7 +1452,7 @@ export default function JobDetail() {
                             a.download = `script_${id}.doc`;
                             a.click();
                             URL.revokeObjectURL(url);
-                          }} className="bg-navy-700 text-gray-200 hover:text-white text-xs px-2.5 py-1.5 rounded border border-navy-600 transition">Word</button>
+                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-navy-600 transition">Word</button>
 
                           <button onClick={() => {
                             const txt = scriptData.script || '';
@@ -1509,7 +1509,7 @@ export default function JobDetail() {
                             `;
                             printWindow.document.write(htmlContent);
                             printWindow.document.close();
-                          }} className="bg-navy-700 text-gray-200 hover:text-white text-xs px-2.5 py-1.5 rounded border border-navy-600 transition flex items-center gap-1">
+                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-navy-600 transition flex items-center gap-1">
                             <Printer size={12}/>PDF 인쇄
                           </button>
                         </div>
@@ -1540,13 +1540,13 @@ export default function JobDetail() {
                         <textarea
                           value={editedScriptText}
                           onChange={e => setEditedScriptText(e.target.value)}
-                          className="w-full bg-navy-700 border border-navy-600 rounded-lg p-3.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan font-mono resize-y"
+                          className="w-full bg-navy-700 border border-navy-600 rounded-lg p-3.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan font-mono resize-y"
                           rows={12}
                         />
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => setIsEditingScript(false)}
-                            className="bg-navy-700 text-navy-400 hover:text-white text-sm px-4 py-2 rounded transition"
+                            className="bg-navy-700 text-navy-400 hover:text-slate-900 text-sm px-4 py-2 rounded transition"
                           >
                             취소
                           </button>
@@ -1763,7 +1763,7 @@ export default function JobDetail() {
                                         id={`scene-edit-${img.index}`}
                                         value={editingSceneText}
                                         onChange={e => setEditingSceneText(e.target.value)}
-                                        className="w-full bg-navy-700 border border-navy-600 rounded p-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
+                                        className="w-full bg-navy-700 border border-navy-600 rounded p-2.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
                                         rows={2}
                                       />
                                       <div>
@@ -1805,7 +1805,7 @@ export default function JobDetail() {
                                   <button
                                     onClick={() => sceneKlingMut.mutate({ index: img.index, enabled: !useKling })}
                                     disabled={sceneKlingMut.isPending}
-                                    className={`flex items-center gap-1 text-xs border px-2.5 py-1.5 rounded transition disabled:opacity-50 ${useKling ? 'bg-purple-500/20 text-purple-200 border-purple-400/60' : 'bg-navy-700 text-gray-200 hover:text-white border-navy-600'}`}
+                                    className={`flex items-center gap-1 text-xs border px-2.5 py-1.5 rounded transition disabled:opacity-50 ${useKling ? 'bg-purple-500/20 text-purple-200 border-purple-400/60' : 'bg-navy-700 text-gray-200 hover:text-slate-900 border-navy-600'}`}
                                     title={`직접 선택하면 초반 ${klingMotionWindowEnd}초 구간 안에서 선택한 씬만 Kling 영상화합니다.`}
                                   >
                                     <Zap size={12}/>
@@ -1844,7 +1844,7 @@ export default function JobDetail() {
                                     <button
                                       onClick={() => setEditingSceneIndex(null)}
                                       disabled={isRegeneratingThis || splitSceneMut.isPending}
-                                      className="bg-navy-700 text-navy-400 hover:text-white text-xs px-3 py-1.5 rounded transition"
+                                      className="bg-navy-700 text-navy-400 hover:text-slate-900 text-xs px-3 py-1.5 rounded transition"
                                     >
                                       취소
                                     </button>
@@ -1899,7 +1899,7 @@ export default function JobDetail() {
                                           setEditingSceneIndex(img.index);
                                           setEditingSceneText(img.text || img.prompt_ko || img.prompt || '');
                                         }}
-                                        className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-white border border-navy-600 px-2.5 py-1.5 rounded transition"
+                                        className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-slate-900 border border-navy-600 px-2.5 py-1.5 rounded transition"
                                       >
                                         <Edit size={12}/>
                                         원문 편집
@@ -2086,7 +2086,7 @@ function GateModal({gate,step,onApprove,onReject,onClose,loading}) {
         <h3 className="font-bold text-base mb-2">{step.label} 검토</h3>
         <p className="text-sm text-navy-400 mb-4">결과를 확인하고 승인 또는 거부하세요.</p>
         <textarea value={comment} onChange={e=>setComment(e.target.value)} placeholder="코멘트 (선택사항)" rows={3}
-          className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3.5 py-2.5 text-sm text-white mb-4 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"/>
+          className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 mb-4 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"/>
         <div className="flex gap-3">
           <button onClick={()=>onReject(comment)} disabled={loading}
             className="flex-1 flex items-center justify-center gap-2 bg-accent-red/20 text-accent-red border border-accent-red/30 rounded-lg py-2.5 text-sm hover:bg-accent-red/30 disabled:opacity-50 transition">

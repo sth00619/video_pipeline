@@ -620,7 +620,7 @@ export default function Shorts() {
           </p>
         </div>
         {id && (
-          <button onClick={() => navigate(`/longform/${id}`)} className="text-xs border border-navy-600 bg-navy-800 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition">
+          <button onClick={() => navigate(`/longform/${id}`)} className="text-xs border border-navy-600 bg-navy-800 text-gray-400 hover:text-slate-900 px-3 py-1.5 rounded-lg transition">
             ← 롱폼 상세로 돌아가기
           </button>
         )}
@@ -748,12 +748,12 @@ export default function Shorts() {
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-400">쇼츠 갯수:</label>
                       <input type="number" value={shortsCount} onChange={e => setShortsCount(Number(e.target.value))}
-                        className="w-16 bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-white text-center" />
+                        className="w-16 bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-slate-900 text-center" />
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-400">쇼츠 분량(초):</label>
                       <input type="number" value={clipDur} onChange={e => setClipDur(Number(e.target.value))}
-                        className="w-16 bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-white text-center" />
+                        className="w-16 bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-slate-900 text-center" />
                     </div>
                   </div>
                 </div>
@@ -850,7 +850,7 @@ export default function Shorts() {
                               </div>
                               <button
                                 onClick={() => handleApplyScenario(sc)}
-                                className="w-full bg-navy-800 border border-navy-700 text-gray-300 text-xs py-2.5 rounded font-medium hover:text-white hover:bg-navy-700 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
+                                className="w-full bg-navy-800 border border-navy-700 text-gray-300 text-xs py-2.5 rounded font-medium hover:text-slate-900 hover:bg-navy-700 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
                               >
                                 이 시나리오 즉시 제작하기 <ArrowRight size={12} />
                               </button>
@@ -975,7 +975,7 @@ export default function Shorts() {
                         <button
                           onClick={() => handleCutShorts(false)}
                           disabled={cutting}
-                          className="flex-1 flex items-center justify-center gap-2 bg-navy-700 text-white border border-navy-600 font-bold rounded-lg py-2.5 text-xs hover:bg-navy-600 disabled:opacity-50 transition"
+                          className="flex-1 flex items-center justify-center gap-2 bg-navy-700 text-slate-900 border border-navy-600 font-bold rounded-lg py-2.5 text-xs hover:bg-navy-600 disabled:opacity-50 transition"
                         >
                           각 구간별 개별 쇼츠 클립으로 생성
                         </button>
