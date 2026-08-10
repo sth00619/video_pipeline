@@ -20,10 +20,10 @@ export default function JobFilterBar({
 }) {
   const hasAnyFilter = searchQuery || category !== 'ALL' || mode !== 'ALL' || status !== 'ALL'
 
-  const selectClass = "w-full bg-navy-700 border border-navy-600 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan/60 focus:border-accent-cyan cursor-pointer hover:border-navy-500 transition"
+  const selectClass = "w-full bg-navy-700 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent-cyan/60 focus:border-accent-cyan cursor-pointer hover:border-navy-500 transition"
 
   return (
-    <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
+    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-card">
       <div className="flex items-center gap-2 mb-4">
         <Filter size={18} className="text-accent-cyan" />
         <span className="text-base font-semibold">정밀 검색 및 필터</span>
@@ -39,7 +39,7 @@ export default function JobFilterBar({
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
             placeholder={showAuthorSearch ? '제목, 작성자 검색...' : '작업 제목 검색...'}
-            className="w-full bg-navy-700 border border-navy-600 rounded-lg pl-10 pr-3 py-2.5 text-sm text-slate-900 placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-accent-cyan/60 focus:border-accent-cyan hover:border-navy-500 transition"
+            className="w-full bg-navy-700 border border-slate-300 rounded-xl pl-10 pr-3 py-2.5 text-sm text-slate-900 placeholder-navy-400 focus:outline-none focus:ring-2 focus:ring-accent-cyan/60 focus:border-accent-cyan hover:border-navy-500 transition"
           />
         </div>
 

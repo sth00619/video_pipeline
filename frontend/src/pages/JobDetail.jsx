@@ -77,7 +77,7 @@ const hasYoutubeMetrics = (candidate) => Array.isArray(candidate?.source_videos)
 const metricNumber = (value, digits = 0) => Number.isFinite(Number(value)) ? Number(value).toLocaleString('ko-KR', { maximumFractionDigits: digits }) : '—'
 
 function KeywordMetricGuide() {
-  return <details className="mt-3 rounded-lg border border-navy-700 bg-navy-900/40 px-3 py-2 text-xs text-navy-400">
+  return <details className="mt-3 rounded-xl border border-slate-200 bg-slate-100/40 px-3 py-2 text-xs text-navy-400">
     <summary className="flex cursor-pointer items-center gap-1.5 font-semibold text-gray-200"><Info size={14} className="text-accent-cyan" />후보 지표 안내</summary>
     <div className="mt-2 grid gap-1.5 leading-relaxed md:grid-cols-2">
       <p><b className="text-gray-200">구독자 대비 조회</b> = 조회수 ÷ 구독자 수입니다. 채널 규모 대비 반응을 봅니다.</p>
@@ -572,7 +572,7 @@ export default function JobDetail() {
                 }
               }}
               disabled={runningStep !== null}
-              className="text-sm bg-accent-green text-navy-950 hover:bg-opacity-90 disabled:opacity-50 px-4 py-2 rounded-lg transition font-semibold flex items-center gap-1.5"
+              className="text-sm bg-accent-green text-navy-950 hover:bg-opacity-90 disabled:opacity-50 px-4 py-2 rounded-xl transition font-semibold flex items-center gap-1.5"
             >
               {runningStep === 'keyword' ? <Loader className="animate-spin" size={14}/> : <Zap size={14}/>}
               작업 시작
@@ -582,7 +582,7 @@ export default function JobDetail() {
             <button
               onClick={handleStop}
               disabled={stopMutation.isPending}
-              className="text-sm bg-red-950/40 text-red-400 border border-red-900/60 hover:bg-red-900/50 disabled:opacity-50 px-4 py-2 rounded-lg transition font-semibold"
+              className="text-sm bg-red-950/40 text-red-400 border border-red-900/60 hover:bg-red-900/50 disabled:opacity-50 px-4 py-2 rounded-xl transition font-semibold"
             >
               작업 중지
             </button>
@@ -591,7 +591,7 @@ export default function JobDetail() {
             <button
               onClick={() => retryScriptMut.mutate()}
               disabled={retryScriptMut.isPending}
-              className="text-sm bg-accent-cyan text-navy-950 hover:opacity-90 disabled:opacity-50 px-4 py-2 rounded-lg transition font-semibold flex items-center gap-1.5"
+              className="text-sm bg-accent-cyan text-navy-950 hover:opacity-90 disabled:opacity-50 px-4 py-2 rounded-xl transition font-semibold flex items-center gap-1.5"
             >
               {retryScriptMut.isPending ? <Loader className="animate-spin" size={14}/> : <RotateCcw size={14}/>}
               재시도
@@ -601,7 +601,7 @@ export default function JobDetail() {
             <button
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
-              className="text-sm bg-navy-700/60 text-navy-400 border border-navy-600 hover:bg-navy-600/50 disabled:opacity-50 px-4 py-2 rounded-lg transition"
+              className="text-sm bg-navy-700/60 text-navy-400 border border-slate-300 hover:bg-navy-600/50 disabled:opacity-50 px-4 py-2 rounded-xl transition"
             >
               작업 삭제
             </button>
@@ -653,7 +653,7 @@ export default function JobDetail() {
           <button
             onClick={() => retryScriptMut.mutate()}
             disabled={retryScriptMut.isPending}
-            className="shrink-0 flex items-center gap-1.5 bg-accent-gold text-navy-950 text-sm font-semibold px-4 py-2.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition shadow-sm"
+            className="shrink-0 flex items-center gap-1.5 bg-accent-gold text-navy-950 text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 disabled:opacity-50 transition shadow-sm"
           >
             {retryScriptMut.isPending ? <Loader size={15} className="animate-spin"/> : <RotateCcw size={15}/>}
             {imageList.length > 0
@@ -668,7 +668,7 @@ export default function JobDetail() {
       )}
 
       {job.outputPath && (
-        <div className="bg-navy-800 rounded-xl border border-accent-green p-5 space-y-4 mb-6 shadow-card">
+        <div className="bg-white rounded-xl border border-accent-green p-5 space-y-4 mb-6 shadow-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <CheckCircle className="text-accent-green" size={22}/>
@@ -684,7 +684,7 @@ export default function JobDetail() {
                 <button
                   onClick={() => rebuildLongformMut.mutate()}
                   disabled={rebuildLongformMut.isPending}
-                  className="flex items-center gap-1.5 bg-accent-gold text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
+                  className="flex items-center gap-1.5 bg-accent-gold text-navy-950 font-semibold text-sm px-4 py-2 rounded-xl hover:opacity-90 disabled:opacity-50 transition"
                 >
                   {rebuildLongformMut.isPending ? <Loader size={14} className="animate-spin"/> : <Zap size={14}/>}
                   동영상 재조립
@@ -692,19 +692,19 @@ export default function JobDetail() {
               )}
               {['PREVIEW_PENDING', 'READY'].includes(job.status) && (
                 <a href={`/longform/${id}/shorts`}
-                  className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 transition"
+                  className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 font-semibold text-sm px-4 py-2 rounded-xl hover:opacity-90 transition"
                 >
                   쇼츠 제작하기
                 </a>
               )}
               <a href={`/api/files/download?path=${encodeURIComponent(job.outputPath)}&token=${token}`}
-                className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-sm px-4 py-2 rounded-lg hover:opacity-90 transition" download>
+                className="flex items-center gap-2 bg-accent-green text-navy-950 font-semibold text-sm px-4 py-2 rounded-xl hover:opacity-90 transition" download>
                 <Download size={14}/>MP4 다운로드
               </a>
             </div>
           </div>
 
-          <div className="aspect-video bg-navy-950 rounded-lg overflow-hidden border border-navy-700">
+          <div className="aspect-video bg-slate-50 rounded-xl overflow-hidden border border-slate-200">
             <video
               key={imageSalt}
               controls
@@ -716,8 +716,8 @@ export default function JobDetail() {
       )}
 
       {['PREVIEW_PENDING', 'READY', 'PUBLISH_PENDING', 'PUBLISHED'].includes(job.status) && (
-        <div className="bg-navy-800 rounded-xl border border-accent-cyan p-5 space-y-4 mb-6 shadow-card">
-          <div className="flex items-center justify-between border-b border-navy-700 pb-3">
+        <div className="bg-white rounded-xl border border-accent-cyan p-5 space-y-4 mb-6 shadow-card">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <h3 className="text-base font-bold text-accent-cyan flex items-center gap-1.5">
               <Youtube size={18}/> YouTube 업로드 및 수동 발행 지원 킷
             </h3>
@@ -733,7 +733,7 @@ export default function JobDetail() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-navy-900/60 p-3 rounded-lg border border-navy-700 flex flex-col justify-between">
+            <div className="bg-slate-100/60 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <h4 className="text-sm font-semibold text-gray-200">자동 썸네일 추천</h4>
@@ -743,12 +743,12 @@ export default function JobDetail() {
                     </span>
                   )}
                   {thumbnailPersonMatches.length === 0 && (
-                    <span className="rounded-full border border-navy-600 bg-navy-900/70 px-2 py-0.5 text-[10px] text-gray-400">
+                    <span className="rounded-full border border-slate-300 bg-slate-100/70 px-2 py-0.5 text-[10px] text-gray-400">
                       승인 인물 사진 없음
                     </span>
                   )}
                 </div>
-                <div className="aspect-video bg-navy-950 rounded border border-navy-700 overflow-hidden relative">
+                <div className="aspect-video bg-slate-50 rounded border border-slate-200 overflow-hidden relative">
                   <img
                     src={`/api/jobs/${id}/thumbnail/longform?t=${imageSalt}`}
                     alt="YouTube Thumbnail"
@@ -766,7 +766,7 @@ export default function JobDetail() {
                       type="button"
                       disabled={selectThumbnailMut.isPending}
                       onClick={() => selectThumbnailMut.mutate(variant)}
-                      className={`relative aspect-video overflow-hidden rounded border transition ${selectedThumbnailVariant === variant ? 'border-accent-cyan ring-1 ring-accent-cyan' : 'border-navy-700 hover:border-navy-500'}`}
+                      className={`relative aspect-video overflow-hidden rounded border transition ${selectedThumbnailVariant === variant ? 'border-accent-cyan ring-1 ring-accent-cyan' : 'border-slate-200 hover:border-navy-500'}`}
                       title={`후보 ${variant} 선택`}
                     >
                       <img
@@ -789,7 +789,7 @@ export default function JobDetail() {
                 <p className="mt-1.5 text-[11px] text-gray-500">
                   영상 장면과 사용 가능한 승인 에셋으로 만든 후보입니다. 실사 인물과 캐릭터는 서로 섞지 않고 별도 안으로 제안합니다.
                 </p>
-                <section className="mt-2 rounded-lg border border-accent-gold/30 bg-accent-gold/5 p-2" aria-label="노란 마스코트 스타일 추천안">
+                <section className="mt-2 rounded-xl border border-accent-gold/30 bg-accent-gold/5 p-2" aria-label="노란 마스코트 스타일 추천안">
                   <div className="flex gap-2">
                     <img
                       src="/thumbnail-examples/yellow-mascot-style-reference-v1.png"
@@ -819,7 +819,7 @@ export default function JobDetail() {
                   <select
                     value={thumbnailPreset}
                     onChange={(event) => setThumbnailPreset(event.target.value)}
-                    className="min-w-0 flex-1 rounded border border-navy-600 bg-navy-950 px-2 py-1.5 text-xs text-gray-200"
+                    className="min-w-0 flex-1 rounded border border-slate-300 bg-slate-50 px-2 py-1.5 text-xs text-gray-200"
                     aria-label="썸네일 재생성 프리셋"
                   >
                     <option value="">자동 추천</option>
@@ -842,7 +842,7 @@ export default function JobDetail() {
                 target="_blank"
                 rel="noreferrer"
                 download
-                className="mt-3 w-full bg-navy-700 border border-navy-600 text-center text-sm text-accent-cyan py-2 rounded hover:bg-navy-600 transition flex items-center justify-center gap-1"
+                className="mt-3 w-full bg-navy-700 border border-slate-300 text-center text-sm text-accent-cyan py-2 rounded hover:bg-navy-600 transition flex items-center justify-center gap-1"
               >
                 <Download size={14}/> 썸네일 다운로드
               </a>
@@ -864,7 +864,7 @@ export default function JobDetail() {
                         <Copy size={12}/> 전체 복사
                       </button>
                     </div>
-                    <div className="bg-navy-950 p-3 rounded border border-navy-700 space-y-2 mt-1.5">
+                    <div className="bg-slate-50 p-3 rounded border border-slate-200 space-y-2 mt-1.5">
                       {youtubePackage.longform.titles?.map((t, idx) => (
                         <div key={idx} className="flex items-start gap-1.5 text-sm text-gray-200">
                           <span className="text-accent-cyan font-bold">안{idx+1}.</span>
@@ -890,7 +890,7 @@ export default function JobDetail() {
                     <textarea
                       readOnly
                       value={youtubePackage.longform.description || ''}
-                      className="w-full bg-navy-950 border border-navy-700 rounded p-3 text-sm text-gray-200 mt-1.5 h-20 focus:outline-none resize-none font-mono"
+                      className="w-full bg-slate-50 border border-slate-200 rounded p-3 text-sm text-gray-200 mt-1.5 h-20 focus:outline-none resize-none font-mono"
                     />
                   </div>
 
@@ -907,9 +907,9 @@ export default function JobDetail() {
                         <Copy size={12}/> 복사
                       </button>
                     </div>
-                    <div className="bg-navy-950 p-3 rounded border border-navy-700 mt-1.5 text-sm text-accent-cyan flex flex-wrap gap-1.5">
+                    <div className="bg-slate-50 p-3 rounded border border-slate-200 mt-1.5 text-sm text-accent-cyan flex flex-wrap gap-1.5">
                       {youtubePackage.longform.tags?.map((tag, idx) => (
-                        <span key={idx} className="bg-navy-800 px-2 py-1 rounded border border-navy-700">#{tag}</span>
+                        <span key={idx} className="bg-white px-2 py-1 rounded border border-slate-200">#{tag}</span>
                       ))}
                     </div>
                   </div>
@@ -922,7 +922,7 @@ export default function JobDetail() {
             </div>
           </div>
 
-          <div className="border-t border-navy-700 pt-3 flex items-center justify-between">
+          <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
             <div>
               {job.youtubeUrl && (
                 <a
@@ -949,7 +949,7 @@ export default function JobDetail() {
                     }
                   }}
                   disabled={publishMut.isPending}
-                  className="flex items-center gap-1.5 bg-red-600 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-red-500 disabled:opacity-50 transition"
+                  className="flex items-center gap-1.5 bg-red-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-red-500 disabled:opacity-50 transition"
                 >
                   {publishMut.isPending ? <Loader size={14} className="animate-spin"/> : <Youtube size={14}/>}
                   {job.autonomy === 'GUIDED' ? '업로드 검토 및 발행' : '즉시 YouTube 업로드'}
@@ -962,7 +962,7 @@ export default function JobDetail() {
 
       {isGuidedConfirmOpen && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="bg-navy-900 border border-navy-700 rounded-xl p-6 max-w-xl w-full space-y-4">
+          <div className="bg-slate-100 border border-slate-200 rounded-xl p-6 max-w-xl w-full space-y-4">
             <h3 className="text-base font-bold text-accent-cyan flex items-center gap-1.5 border-b border-navy-800 pb-3">
               <Youtube size={18}/> YouTube 업로드 검토 (GUIDED 게이트)
             </h3>
@@ -972,7 +972,7 @@ export default function JobDetail() {
                 <label className="text-sm text-navy-400">제목 선택</label>
                 <div className="space-y-1.5 mt-1.5">
                   {youtubePackage?.longform?.titles?.map((t, idx) => (
-                    <label key={idx} className="flex items-start gap-2 bg-navy-950 p-2.5 rounded border border-navy-800 hover:border-navy-700 cursor-pointer text-sm text-gray-200">
+                    <label key={idx} className="flex items-start gap-2 bg-slate-50 p-2.5 rounded border border-navy-800 hover:border-slate-200 cursor-pointer text-sm text-gray-200">
                       <input
                         type="radio"
                         name="selected_title"
@@ -990,15 +990,15 @@ export default function JobDetail() {
                 <textarea
                   readOnly
                   value={youtubePackage?.longform?.description || ''}
-                  className="w-full bg-navy-950 border border-navy-800 rounded p-2.5 text-sm text-gray-200 mt-1.5 h-24 focus:outline-none resize-none font-mono"
+                  className="w-full bg-slate-50 border border-navy-800 rounded p-2.5 text-sm text-gray-200 mt-1.5 h-24 focus:outline-none resize-none font-mono"
                 />
               </div>
 
               <div>
                 <label className="text-sm text-navy-400">추천 해시태그</label>
-                <div className="bg-navy-950 p-2.5 rounded border border-navy-800 mt-1.5 text-sm text-accent-cyan flex flex-wrap gap-1.5">
+                <div className="bg-slate-50 p-2.5 rounded border border-navy-800 mt-1.5 text-sm text-accent-cyan flex flex-wrap gap-1.5">
                   {youtubePackage?.longform?.tags?.map((tag, idx) => (
-                    <span key={idx} className="bg-navy-900 px-2 py-1 rounded border border-navy-800">#{tag}</span>
+                    <span key={idx} className="bg-slate-100 px-2 py-1 rounded border border-navy-800">#{tag}</span>
                   ))}
                 </div>
               </div>
@@ -1039,7 +1039,7 @@ export default function JobDetail() {
             const showManualApprove = isManual && ss === 'active' && runningStep !== step.key
 
             return (
-              <div key={step.key} className={`bg-navy-800 rounded-xl border transition shadow-card ${ss === 'active' ? 'border-accent-cyan' : 'border-navy-700'}`}>
+              <div key={step.key} className={`bg-white rounded-xl border transition shadow-card ${ss === 'active' ? 'border-accent-cyan' : 'border-slate-200'}`}>
                 <div className="flex items-center justify-between px-5 py-4">
                   <div className="flex items-center gap-3">
                     <StepIcon status={ss} idx={idx+1}/>
@@ -1058,7 +1058,7 @@ export default function JobDetail() {
                             <select
                               value={selectedVoiceId}
                               onChange={(e) => setSelectedVoiceId(e.target.value)}
-                              className="bg-navy-700 border border-navy-600 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan"
+                              className="bg-navy-700 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan"
                             >
                               <option value="default_ko">기본 한국어 목소리 (gTTS)</option>
                               {voices.map((v) => (
@@ -1074,7 +1074,7 @@ export default function JobDetail() {
                                     value={previewText}
                                     maxLength={100}
                                     onChange={(e) => setPreviewText(e.target.value)}
-                                    className="w-64 bg-navy-800 border border-navy-600 rounded px-2 py-1 text-xs text-slate-900"
+                                    className="w-64 bg-white border border-slate-300 rounded px-2 py-1 text-xs text-slate-900"
                                     aria-label="미리듣기 문장"
                                   />
                                   <button
@@ -1117,7 +1117,7 @@ export default function JobDetail() {
                           </div>
                         )}
                         <button onClick={() => handleRun(step)} disabled={!!runningStep}
-                          className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition">
+                          className="flex items-center gap-1.5 bg-accent-cyan text-navy-950 text-sm font-semibold px-4 py-2 rounded-xl hover:opacity-90 disabled:opacity-50 transition">
                           {runningStep === step.key ? <Loader size={14} className="animate-spin"/> : <Zap size={14}/>}실행
                         </button>
                       </div>
@@ -1127,7 +1127,7 @@ export default function JobDetail() {
                         <button
                           type="button"
                           onClick={() => setGateModal({ gate: step.gate, step })}
-                          className="text-xs bg-navy-700 text-gray-200 border border-navy-600 px-3 py-2 rounded-lg hover:bg-navy-600 transition font-medium flex items-center gap-1"
+                          className="text-xs bg-navy-700 text-gray-200 border border-slate-300 px-3 py-2 rounded-xl hover:bg-navy-600 transition font-medium flex items-center gap-1"
                         >
                           🔍 상세보기/검토
                         </button>
@@ -1135,7 +1135,7 @@ export default function JobDetail() {
                           type="button"
                           onClick={() => handleGuidedGateApprove(step)}
                           disabled={runningStep === `${step.key}-approve` || (step.gate === 'TTS' && selectedVoiceId === 'default_ko')}
-                          className="text-xs bg-accent-gold text-navy-950 font-bold px-3.5 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1 shadow-sm"
+                          className="text-xs bg-accent-gold text-navy-950 font-bold px-3.5 py-2 rounded-xl hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1 shadow-sm"
                         >
                           {runningStep === `${step.key}-approve` ? <Loader size={12} className="animate-spin"/> : '✓'} 승인
                         </button>
@@ -1146,7 +1146,7 @@ export default function JobDetail() {
                 </div>
 
                 {ss === 'active' && (
-                  <div className="mx-5 mb-4 p-4 bg-navy-900/50 rounded-lg border border-navy-700/60 text-sm space-y-2.5">
+                  <div className="mx-5 mb-4 p-4 bg-slate-100/50 rounded-xl border border-slate-200/60 text-sm space-y-2.5">
                     {step.key === 'script' && (
                       <div className="flex items-center justify-end text-gray-200 font-semibold">
                         <div className="text-navy-400 text-xs">
@@ -1159,7 +1159,7 @@ export default function JobDetail() {
                       {STEP_PROGRESS_INFO[step.key]?.desc}
                     </div>
                     {isAuto && (
-                      <div className="pt-2.5 border-t border-navy-700/40 flex items-center gap-2 text-accent-cyan text-sm">
+                      <div className="pt-2.5 border-t border-slate-200/40 flex items-center gap-2 text-accent-cyan text-sm">
                         <Loader size={12} className="animate-spin"/>
                         <span>자동 모드가 실행 중입니다. 완료되면 다음 단계와 생성 결과가 자동으로 갱신되며, 이전 단계 결과도 계속 확인할 수 있습니다.</span>
                       </div>
@@ -1168,7 +1168,7 @@ export default function JobDetail() {
                 )}
 
                 {step.key === 'keyword' && kwCandidates.length > 0 && (
-                  <div className="px-5 pb-4 border-t border-navy-700">
+                  <div className="px-5 pb-4 border-t border-slate-200">
                     <div className="flex items-center justify-between mt-3 mb-3">
                       <p className="text-sm font-semibold text-navy-300">후보 키워드 {kwCandidates.length}개</p>
                       <span className="text-xs text-navy-500">점수 100점 만점 (뉴스+수치+카테고리 합산 후 YouTube 데이터 없을 시 100점 기준 환산)</span>
@@ -1187,7 +1187,7 @@ export default function JobDetail() {
                         const newsCount = c.evidence?.news_count ?? 0
                         const numericVerified = c.evidence?.numeric_claims_verified
                         return (
-                        <div key={i} className={`rounded-xl border transition ${isTop ? 'bg-accent-gold/8 border-accent-gold/30' : 'bg-navy-800/60 border-navy-700/60'}`}>
+                        <div key={i} className={`rounded-xl border transition ${isTop ? 'bg-accent-gold/8 border-accent-gold/30' : 'bg-white/60 border-slate-200/60'}`}>
                           {/* 헤더 영역 */}
                           <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-3.5 pb-2">
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -1196,7 +1196,7 @@ export default function JobDetail() {
                               {isTop && <span className="flex-shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 border border-amber-200">1위</span>}
                               {wasAutoSelected && <span className="flex-shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200">✓ 자동 선택됨</span>}
                               {newsCount === 0 && (
-                                <span className="flex-shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-300">
+                                <span className="flex-shrink-0 rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-300">
                                   ⚠️ 뉴스 근거 없음 — 시장 데이터 기반 추정
                                 </span>
                               )}
@@ -1212,7 +1212,7 @@ export default function JobDetail() {
                                   type="button"
                                   onClick={() => confirmKeywordMut.mutate(c.keyword)}
                                   disabled={confirmKeywordMut.isPending}
-                                  className="text-xs bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 px-3 py-1 rounded-lg font-semibold transition shadow-xs"
+                                  className="text-xs bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 px-3 py-1 rounded-xl font-semibold transition shadow-xs"
                                 >선택</button>
                               )}
                             </div>
@@ -1287,7 +1287,7 @@ export default function JobDetail() {
 
                           {/* YouTube 세부 지표 */}
                           {hasPublicMetrics && (
-                            <div className="mx-4 mb-3 rounded-lg bg-navy-900/40 border border-navy-700/40 px-3 py-2 grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-navy-400">
+                            <div className="mx-4 mb-3 rounded-xl bg-slate-100/40 border border-slate-200/40 px-3 py-2 grid grid-cols-3 gap-x-4 gap-y-1 text-xs text-navy-400">
                               <span>조회수 <span className="text-navy-200">{metricNumber(c.views)}</span></span>
                               <span>구독자 <span className="text-navy-200">{metricNumber(c.subscribers)}</span></span>
                               <span>좋아요 <span className="text-navy-200">{c.likes_available === false ? '비공개' : metricNumber(c.likes)}</span></span>
@@ -1299,7 +1299,7 @@ export default function JobDetail() {
 
                           {/* 근거 텍스트 */}
                           {(wasAutoSelected || c.reason) && (
-                            <div className={`mx-4 mb-3 rounded-lg border px-3 py-2 text-xs leading-relaxed ${wasAutoSelected ? 'border-accent-green/30 bg-accent-green/8 text-accent-green' : 'border-navy-700/50 bg-navy-900/20 text-navy-400'}`}>
+                            <div className={`mx-4 mb-3 rounded-xl border px-3 py-2 text-xs leading-relaxed ${wasAutoSelected ? 'border-accent-green/30 bg-accent-green/8 text-accent-green' : 'border-slate-200/50 bg-slate-100/20 text-navy-400'}`}>
                               <span className="font-semibold">{wasAutoSelected ? '자동 선택 이유' : '선정 근거'}: </span>
                               {wasAutoSelected
                                 ? <>자동 모드는 작업 요청에 전달된 키워드가 있으면 그 키워드를 우선 확정하고, 없으면 후보 우선순위 1위를 선택합니다. {hasPublicMetrics ? '후보 우선순위는 채널 평균 대비 40% · 구독자 대비 조회 30% · 시간당 조회 30%를 반영합니다.' : '공개 YouTube 지표가 없을 때에는 수집된 뉴스·후보 근거 순위를 반영합니다.'} {c.reason || ''}</>
@@ -1309,7 +1309,7 @@ export default function JobDetail() {
 
                           {/* 소스 영상 */}
                           {c.source_videos?.length > 0 && (
-                            <div className="mx-4 mb-3 pl-3 border-l-2 border-navy-700 text-[11px] text-navy-400 space-y-0.5">
+                            <div className="mx-4 mb-3 pl-3 border-l-2 border-slate-200 text-[11px] text-navy-400 space-y-0.5">
                               {c.source_videos.slice(0, 2).map((video, vi) => (
                                 <a
                                   key={video.video_id || vi}
@@ -1333,8 +1333,8 @@ export default function JobDetail() {
 
 
                 {step.key === 'script' && scriptData && (
-                  <div className="px-5 pb-4 border-t border-navy-700">
-                    <div className="flex flex-wrap items-center justify-between gap-3 mt-3 mb-3 border-b border-navy-700/50 pb-3">
+                  <div className="px-5 pb-4 border-t border-slate-200">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mt-3 mb-3 border-b border-slate-200/50 pb-3">
                       <div className="flex items-center gap-2">
                         <FileText size={15} className="text-accent-cyan"/>
                         <span className="text-sm text-navy-400">
@@ -1359,7 +1359,7 @@ export default function JobDetail() {
                       </div>
 
                       {scriptData.quality_report?.storytelling && (
-                        <div className="rounded-lg border border-accent-cyan/25 bg-accent-cyan/5 px-3 py-1.5 text-xs text-navy-300">
+                        <div className="rounded-xl border border-accent-cyan/25 bg-accent-cyan/5 px-3 py-1.5 text-xs text-navy-300">
                           <span className="font-semibold text-accent-cyan">오리지널 금융 스토리텔링</span>
                           <span className="ml-2">편집 리듬 {scriptData.quality_report.storytelling.score}점</span>
                           {scriptData.quality_report.storytelling.suggestions?.length > 0 && (
@@ -1390,7 +1390,7 @@ export default function JobDetail() {
                             a.download = `script_${id}.txt`;
                             a.click();
                             URL.revokeObjectURL(url);
-                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-navy-600 transition">TXT</button>
+                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-slate-300 transition">TXT</button>
 
                           <button onClick={() => {
                             const txt = scriptData.script || '';
@@ -1452,7 +1452,7 @@ export default function JobDetail() {
                             a.download = `script_${id}.doc`;
                             a.click();
                             URL.revokeObjectURL(url);
-                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-navy-600 transition">Word</button>
+                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-slate-300 transition">Word</button>
 
                           <button onClick={() => {
                             const txt = scriptData.script || '';
@@ -1509,7 +1509,7 @@ export default function JobDetail() {
                             `;
                             printWindow.document.write(htmlContent);
                             printWindow.document.close();
-                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-navy-600 transition flex items-center gap-1">
+                          }} className="bg-navy-700 text-gray-200 hover:text-slate-900 text-xs px-2.5 py-1.5 rounded border border-slate-300 transition flex items-center gap-1">
                             <Printer size={12}/>PDF 인쇄
                           </button>
                         </div>
@@ -1540,7 +1540,7 @@ export default function JobDetail() {
                         <textarea
                           value={editedScriptText}
                           onChange={e => setEditedScriptText(e.target.value)}
-                          className="w-full bg-navy-700 border border-navy-600 rounded-lg p-3.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan font-mono resize-y"
+                          className="w-full bg-navy-700 border border-slate-300 rounded-xl p-3.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan font-mono resize-y"
                           rows={12}
                         />
                         <div className="flex justify-end gap-2">
@@ -1563,7 +1563,7 @@ export default function JobDetail() {
                     ) : (
                       <div>
                         {scriptViewMode === 'paragraphs' ? (
-                          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-4 border border-navy-700/50">
+                          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 bg-slate-100/30 rounded-xl p-4 border border-slate-200/50">
                             {(() => {
                               const sections = scriptData.sections || [];
                               if (sections.length > 0) {
@@ -1585,10 +1585,10 @@ export default function JobDetail() {
                             })()}
                           </div>
                         ) : scriptViewMode === 'mixed' && sortedImageList.length > 0 ? (
-                          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-4 border border-navy-700/50">
+                          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 bg-slate-100/30 rounded-xl p-4 border border-slate-200/50">
                             {sortedImageList.map((img, idx) => (
                               <div key={img.index || idx} className="flex gap-4 border-b border-navy-800 pb-3 last:border-0 last:pb-0">
-                                <div className="w-28 aspect-video bg-navy-700 rounded overflow-hidden border border-navy-600 flex-shrink-0">
+                                <div className="w-28 aspect-video bg-navy-700 rounded overflow-hidden border border-slate-300 flex-shrink-0">
                                   <img
                                     src={`/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}&salt=${imageSalt}`}
                                     alt={`씬 ${img.index}`}
@@ -1615,7 +1615,7 @@ export default function JobDetail() {
                             {scriptData.sections && scriptData.sections.length > 0 ? (
                               <div className="space-y-2">
                                 {scriptData.sections.map((sec, i) => (
-                                  <div key={i} className="bg-navy-700/40 rounded-lg p-3.5">
+                                  <div key={i} className="bg-navy-700/40 rounded-xl p-3.5">
                                     <div className="text-sm font-semibold text-accent-gold mb-1">{sec.title}</div>
                                     <p className="text-sm text-gray-200 leading-relaxed">
                                       {expandedScript ? sec.content : (sec.content?.slice(0, 80) + (sec.content?.length > 80 ? '...' : ''))}
@@ -1624,7 +1624,7 @@ export default function JobDetail() {
                                 ))}
                               </div>
                             ) : scriptData.script ? (
-                              <div className="bg-navy-700/40 rounded-lg p-3.5">
+                              <div className="bg-navy-700/40 rounded-xl p-3.5">
                                 <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
                                   {expandedScript ? scriptData.script : (scriptData.script.slice(0, 300) + (scriptData.script.length > 300 ? '...' : ''))}
                                 </p>
@@ -1638,7 +1638,7 @@ export default function JobDetail() {
                 )}
 
                 {step.key === 'tts' && ttsInfo && (
-                  <div className="px-5 pb-4 border-t border-navy-700">
+                  <div className="px-5 pb-4 border-t border-slate-200">
                     <div className="flex items-center gap-2 mt-3 mb-2.5">
                       <Music size={15} className="text-accent-cyan"/>
                       <span className="text-sm text-navy-400">
@@ -1656,8 +1656,8 @@ export default function JobDetail() {
                 )}
 
                 {step.key === 'longform' && outputQc && (
-                  <div className="px-5 pb-4 border-t border-navy-700">
-                    <div className="mt-3 rounded-lg border border-navy-700 bg-navy-900/40 p-3.5">
+                  <div className="px-5 pb-4 border-t border-slate-200">
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-100/40 p-3.5">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-white">최종 출력 QC</span>
                         <span className={`text-xs px-2.5 py-1 rounded-full ${outputQc.passed ? 'bg-accent-green/10 text-accent-green' : 'bg-red-500/10 text-red-300'}`}>
@@ -1666,7 +1666,7 @@ export default function JobDetail() {
                       </div>
                       <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-navy-400">
                         {Object.entries(outputQc.checks || {}).map(([name, check]) => (
-                          <div key={name} className="rounded bg-navy-800/70 px-2.5 py-2">
+                          <div key={name} className="rounded bg-white/70 px-2.5 py-2">
                             <span className={check.passed ? 'text-accent-green' : 'text-red-300'}>{check.passed ? '✓' : '✕'}</span>
                             <span className="ml-1.5">{name.replaceAll('_', ' ')}</span>
                           </div>
@@ -1683,7 +1683,7 @@ export default function JobDetail() {
                   const pageCount = isLongform ? longformScenePageCount : scenePageCount
                   const displayList = isLongform ? pagedLongformImageList : pagedImageList
                   return (
-                  <div className="px-5 pb-4 border-t border-navy-700">
+                  <div className="px-5 pb-4 border-t border-slate-200">
                     <div className="flex items-center justify-between mt-3 mb-3">
                       <div className="flex items-center gap-2">
                         <ImageIcon size={15} className="text-accent-cyan"/>
@@ -1698,7 +1698,7 @@ export default function JobDetail() {
                       )}
                     </div>
 
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 bg-navy-900/30 rounded-lg p-3 border border-navy-700/50">
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 bg-slate-100/30 rounded-xl p-3 border border-slate-200/50">
                       {displayList.map((img, i) => {
                         const isEditingThis = editingSceneIndex === img.index;
                         const isRegeneratingThis = regenImageMut.isPending;
@@ -1715,8 +1715,8 @@ export default function JobDetail() {
                           && !hasVerifiedFactOverlay
 
                         return (
-                          <div key={img.index || i} className="flex gap-4 bg-navy-800/40 border border-navy-700/60 rounded-lg p-3.5 hover:border-navy-600 transition">
-                            <div className="w-40 aspect-video bg-navy-700 rounded overflow-hidden border border-navy-600 flex-shrink-0 relative">
+                          <div key={img.index || i} className="flex gap-4 bg-white/40 border border-slate-200/60 rounded-xl p-3.5 hover:border-slate-300 transition">
+                            <div className="w-40 aspect-video bg-navy-700 rounded overflow-hidden border border-slate-300 flex-shrink-0 relative">
                               <img
                                 src={`/api/files/download?path=${encodeURIComponent(img.image_path)}&token=${token}&salt=${imageSalt}`}
                                 alt={`씬 ${img.index}`}
@@ -1737,7 +1737,7 @@ export default function JobDetail() {
                                   </div>
                                   <div className="flex items-center gap-1.5">
                                     {imageProfile?.tier && (
-                                      <span className={`text-xs px-2 py-0.5 rounded border ${imageProfile.tier === 'pro' ? 'bg-accent-gold/10 text-accent-gold border-accent-gold/30' : 'bg-navy-700 text-navy-400 border-navy-600'}`}>
+                                      <span className={`text-xs px-2 py-0.5 rounded border ${imageProfile.tier === 'pro' ? 'bg-accent-gold/10 text-accent-gold border-accent-gold/30' : 'bg-navy-700 text-navy-400 border-slate-300'}`}>
                                         {imageProfile.tier === 'pro' ? 'Gemini Pro 2K' : '프로필 오류'}
                                       </span>
                                     )}
@@ -1749,7 +1749,7 @@ export default function JobDetail() {
                                         {retryRecommended ? '검토 권장' : '품질 확인'} {qualityScore}점
                                       </span>
                                     )}
-                                    <span className="text-xs bg-navy-700 text-navy-400 px-2 py-0.5 rounded border border-navy-600">
+                                    <span className="text-xs bg-navy-700 text-navy-400 px-2 py-0.5 rounded border border-slate-300">
                                       구분: {img.section}
                                     </span>
                                   </div>
@@ -1763,12 +1763,12 @@ export default function JobDetail() {
                                         id={`scene-edit-${img.index}`}
                                         value={editingSceneText}
                                         onChange={e => setEditingSceneText(e.target.value)}
-                                        className="w-full bg-navy-700 border border-navy-600 rounded p-2.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
+                                        className="w-full bg-navy-700 border border-slate-300 rounded p-2.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"
                                         rows={2}
                                       />
                                       <div>
                                         <div className="text-[11px] font-semibold text-navy-400 mb-1">현재 생성된 영어 이미지 프롬프트</div>
-                                        <p className="max-h-24 overflow-y-auto rounded border border-navy-700 bg-navy-950/40 p-2 text-xs leading-relaxed text-navy-300 font-mono">
+                                        <p className="max-h-24 overflow-y-auto rounded border border-slate-200 bg-slate-50/40 p-2 text-xs leading-relaxed text-navy-300 font-mono">
                                           {img.prompt_en || img.prompt || '아직 생성된 영어 프롬프트가 없습니다.'}
                                         </p>
                                       </div>
@@ -1789,7 +1789,7 @@ export default function JobDetail() {
                                             {showEngPrompt[img.index] ? '영문 AI 프롬프트 접기' : '영문 AI 프롬프트 보기'}
                                           </button>
                                           {showEngPrompt[img.index] && (
-                                            <p className="text-xs text-navy-400 bg-navy-900/40 p-2 rounded border border-navy-700 font-mono mt-1 leading-relaxed">
+                                            <p className="text-xs text-navy-400 bg-slate-100/40 p-2 rounded border border-slate-200 font-mono mt-1 leading-relaxed">
                                               {img.prompt_en}
                                             </p>
                                           )}
@@ -1805,7 +1805,7 @@ export default function JobDetail() {
                                   <button
                                     onClick={() => sceneKlingMut.mutate({ index: img.index, enabled: !useKling })}
                                     disabled={sceneKlingMut.isPending}
-                                    className={`flex items-center gap-1 text-xs border px-2.5 py-1.5 rounded transition disabled:opacity-50 ${useKling ? 'bg-purple-500/20 text-purple-200 border-purple-400/60' : 'bg-navy-700 text-gray-200 hover:text-slate-900 border-navy-600'}`}
+                                    className={`flex items-center gap-1 text-xs border px-2.5 py-1.5 rounded transition disabled:opacity-50 ${useKling ? 'bg-purple-500/20 text-purple-200 border-purple-400/60' : 'bg-navy-700 text-gray-200 hover:text-slate-900 border-slate-300'}`}
                                     title={`직접 선택하면 초반 ${klingMotionWindowEnd}초 구간 안에서 선택한 씬만 Kling 영상화합니다.`}
                                   >
                                     <Zap size={12}/>
@@ -1899,7 +1899,7 @@ export default function JobDetail() {
                                           setEditingSceneIndex(img.index);
                                           setEditingSceneText(img.text || img.prompt_ko || img.prompt || '');
                                         }}
-                                        className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-slate-900 border border-navy-600 px-2.5 py-1.5 rounded transition"
+                                        className="flex items-center gap-1 text-xs bg-navy-700 text-gray-200 hover:text-slate-900 border border-slate-300 px-2.5 py-1.5 rounded transition"
                                       >
                                         <Edit size={12}/>
                                         원문 편집
@@ -1916,18 +1916,18 @@ export default function JobDetail() {
                     <div className="mt-3 flex items-center justify-between gap-3 text-xs text-navy-400">
                       <span>씬 {((curPage - 1) * 10) + 1}–{Math.min(curPage * 10, sortedImageList.length)} / {sortedImageList.length}</span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setCurPage(1)} disabled={curPage === 1} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">«</button>
-                        <button onClick={() => setCurPage(p => Math.max(1, p - 1))} disabled={curPage === 1} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">‹</button>
+                        <button onClick={() => setCurPage(1)} disabled={curPage === 1} className="px-2 py-1 border border-slate-300 rounded disabled:opacity-40">«</button>
+                        <button onClick={() => setCurPage(p => Math.max(1, p - 1))} disabled={curPage === 1} className="px-2 py-1 border border-slate-300 rounded disabled:opacity-40">‹</button>
                         {Array.from({ length: pageCount }, (_, i) => i + 1)
                           .filter(page => page === 1 || page === pageCount || Math.abs(page - curPage) <= 1)
                           .map((page, index, pages) => (
                             <span key={page} className="flex items-center gap-1">
                               {index > 0 && page - pages[index - 1] > 1 && <span className="px-1">…</span>}
-                              <button onClick={() => setCurPage(page)} className={`min-w-7 px-2 py-1 rounded border ${page === curPage ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold' : 'border-navy-600 hover:text-slate-900'}`}>{page}</button>
+                              <button onClick={() => setCurPage(page)} className={`min-w-7 px-2 py-1 rounded border ${page === curPage ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold' : 'border-slate-300 hover:text-slate-900'}`}>{page}</button>
                             </span>
                           ))}
-                        <button onClick={() => setCurPage(p => Math.min(pageCount, p + 1))} disabled={curPage === pageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">›</button>
-                        <button onClick={() => setCurPage(pageCount)} disabled={curPage === pageCount} className="px-2 py-1 border border-navy-600 rounded disabled:opacity-40">»</button>
+                        <button onClick={() => setCurPage(p => Math.min(pageCount, p + 1))} disabled={curPage === pageCount} className="px-2 py-1 border border-slate-300 rounded disabled:opacity-40">›</button>
+                        <button onClick={() => setCurPage(pageCount)} disabled={curPage === pageCount} className="px-2 py-1 border border-slate-300 rounded disabled:opacity-40">»</button>
                       </div>
                     </div>
                   </div>
@@ -1939,7 +1939,7 @@ export default function JobDetail() {
         </div>
 
         <div className="space-y-4">
-          <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
+          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-card">
             <h3 className="text-base font-semibold mb-3">작업 정보</h3>
             <div className="space-y-3 text-sm">
               <InfoRow label="상태" value={<StatusBadge status={job.status} small/>}/>
@@ -1951,7 +1951,7 @@ export default function JobDetail() {
           </div>
 
           {costs && (
-            <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-card">
               <h3 className="text-base font-bold text-slate-900 mb-3">비용 상세</h3>
               
               {/* provider별 그룹 합산 표시 */}
@@ -2022,7 +2022,7 @@ export default function JobDetail() {
           )}
 
           {approvals.length > 0 && (
-            <div className="bg-navy-800 rounded-xl border border-navy-700 p-5 shadow-card">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-card">
               <h3 className="text-base font-semibold mb-3">게이트 이력</h3>
               <div className="space-y-2.5">
                 {approvals.map((a,i) => (
@@ -2053,7 +2053,7 @@ export default function JobDetail() {
 function StepIcon({status,idx}) {
   if (status==='done') return <CheckCircle className="text-accent-green flex-shrink-0" size={22}/>
   if (status==='active') return <Loader className="text-accent-cyan animate-spin flex-shrink-0" size={22}/>
-  return <div className="w-6 h-6 rounded-full border border-navy-600 flex items-center justify-center text-sm text-navy-400 flex-shrink-0">{idx}</div>
+  return <div className="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center text-sm text-navy-400 flex-shrink-0">{idx}</div>
 }
 
 function StatusBadge({status,small}) {
@@ -2082,18 +2082,18 @@ function GateModal({gate,step,onApprove,onReject,onClose,loading}) {
   const [comment,setComment]=useState('')
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-navy-800 rounded-xl p-6 w-full max-w-sm border border-navy-700 shadow-2xl">
+      <div className="bg-white rounded-xl p-6 w-full max-w-sm border border-slate-200 shadow-2xl">
         <h3 className="font-bold text-base mb-2">{step.label} 검토</h3>
         <p className="text-sm text-navy-400 mb-4">결과를 확인하고 승인 또는 거부하세요.</p>
         <textarea value={comment} onChange={e=>setComment(e.target.value)} placeholder="코멘트 (선택사항)" rows={3}
-          className="w-full bg-navy-700 border border-navy-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-900 mb-4 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"/>
+          className="w-full bg-navy-700 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 mb-4 focus:outline-none focus:ring-1 focus:ring-accent-cyan resize-none"/>
         <div className="flex gap-3">
           <button onClick={()=>onReject(comment)} disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 bg-accent-red/20 text-accent-red border border-accent-red/30 rounded-lg py-2.5 text-sm hover:bg-accent-red/30 disabled:opacity-50 transition">
+            className="flex-1 flex items-center justify-center gap-2 bg-accent-red/20 text-accent-red border border-accent-red/30 rounded-xl py-2.5 text-sm hover:bg-accent-red/30 disabled:opacity-50 transition">
             <ThumbsDown size={15}/>거부
           </button>
           <button onClick={()=>onApprove(comment)} disabled={loading}
-            className="flex-1 flex items-center justify-center gap-2 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-lg py-2.5 text-sm hover:bg-accent-green/30 disabled:opacity-50 transition">
+            className="flex-1 flex items-center justify-center gap-2 bg-accent-green/20 text-accent-green border border-accent-green/30 rounded-xl py-2.5 text-sm hover:bg-accent-green/30 disabled:opacity-50 transition">
             <ThumbsUp size={15}/>승인
           </button>
         </div>

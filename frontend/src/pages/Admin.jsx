@@ -268,7 +268,7 @@ export default function Admin() {
               <Shield size={22} />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">시스템 관리자 콘솔</h1>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">시스템 관리자 콘솔</h1>
               <p className="text-xs font-semibold text-slate-600 mt-0.5">통합 작업 모니터링, 동적 예산 정책, 채널 프로필 및 실사 에셋을 총괄 관리합니다.</p>
             </div>
           </div>
@@ -283,10 +283,10 @@ export default function Admin() {
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-slate-500 uppercase tracking-wider">전체 영상 작업</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">전체 영상 작업</span>
               <Video className="text-cyan-600" size={20} />
             </div>
-            <div className="text-2xl font-black text-slate-900 mt-2">{jobs.length}건</div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">{jobs.length}건</div>
           </button>
 
           <button
@@ -296,18 +296,18 @@ export default function Admin() {
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-slate-500 uppercase tracking-wider">완료된 영상</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">완료된 영상</span>
               <CheckCircle2 className="text-emerald-600" size={20} />
             </div>
-            <div className="text-2xl font-black text-emerald-800 mt-2">{completedJobs.length}건</div>
+            <div className="text-2xl font-bold text-emerald-800 mt-2">{completedJobs.length}건</div>
           </button>
 
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-slate-500 uppercase tracking-wider">누적 총 소요 비용</span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">누적 총 소요 비용</span>
               <DollarSign className="text-amber-600" size={20} />
             </div>
-            <div className="text-2xl font-black text-slate-900 mt-2">
+            <div className="text-2xl font-bold text-slate-900 mt-2">
               ₩{totalCost.toLocaleString('ko-KR', { maximumFractionDigits: 0 })}
             </div>
           </div>
@@ -317,7 +317,7 @@ export default function Admin() {
         <div className="mb-8 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-xs font-black text-slate-900 uppercase tracking-wider">외부 API 서비스 연동 상태</h2>
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">외부 API 서비스 연동 상태</h2>
               <p className="text-[11px] font-semibold text-slate-500 mt-0.5">서버 환경 변수(`.env`)의 API 키 설정 상태를 실시간 점검합니다.</p>
             </div>
             <span className="text-[11px] font-bold text-slate-400">서버 헬스 상태 기준</span>
@@ -358,7 +358,7 @@ export default function Admin() {
 
         {/* TAB 1: 전체 작업 모니터링 */}
         {activeTab === 'jobs' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-md p-6">
             <JobFilterBar
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -380,7 +380,7 @@ export default function Admin() {
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b-2 border-slate-200 bg-slate-50 text-slate-700 font-extrabold uppercase">
+                  <tr className="border-b-2 border-slate-200 bg-slate-50 text-slate-700 font-bold uppercase">
                     <th className="py-3 px-4">Job ID</th>
                     <th className="py-3 px-4">영상 대표 주제</th>
                     <th className="py-3 px-4">카테고리</th>
@@ -395,17 +395,17 @@ export default function Admin() {
                   {pageItems.length > 0 ? (
                     pageItems.map(job => (
                       <tr key={job.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-3.5 px-4 font-black text-cyan-800">#{job.id}</td>
+                        <td className="py-3.5 px-4 font-bold text-cyan-800">#{job.id}</td>
                         <td className="py-3.5 px-4 font-bold text-slate-900 max-w-xs truncate">{job.title || '(무제)'}</td>
                         <td className="py-3.5 px-4 text-slate-700">{formatCategory(job.category)}</td>
                         <td className="py-3.5 px-4 text-slate-700">{formatAutonomy(job.autonomy)}</td>
                         <td className="py-3.5 px-4 text-slate-800">{job.longformTargetMinutes || 20}분</td>
                         <td className="py-3.5 px-4"><StatusBadge status={job.status} /></td>
-                        <td className="py-3.5 px-4 font-black text-slate-900">₩{(job.costAccumulated || 0).toLocaleString()}</td>
+                        <td className="py-3.5 px-4 font-bold text-slate-900">₩{(job.costAccumulated || 0).toLocaleString()}</td>
                         <td className="py-3.5 px-4 text-right">
                           <button
                             onClick={() => navigate(`/longform/${job.id}`)}
-                            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold border border-slate-300"
+                            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold border border-slate-300"
                           >
                             보기
                           </button>
@@ -437,7 +437,7 @@ export default function Admin() {
                 <Settings size={20} />
               </div>
               <div>
-                <h2 className="text-lg font-black text-slate-900">영상 길이별 기본 예산 상한 정책</h2>
+                <h2 className="text-lg font-bold text-slate-900">영상 길이별 기본 예산 상한 정책</h2>
                 <p className="text-xs font-semibold text-slate-600 mt-0.5">관리자가 설정한 예산 정책 수치는 파이프라인 전체에 실시간 반영됩니다.</p>
               </div>
             </div>
@@ -450,36 +450,36 @@ export default function Admin() {
 
             <div className="space-y-6">
               <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
-                <label className="block text-sm font-extrabold text-slate-900">
+                <label className="block text-sm font-bold text-slate-900">
                   20분 미만 (표준 숏/중형 롱폼) 기본 예산 상한
                 </label>
                 <div className="flex items-center gap-3">
-                  <span className="text-xl font-black text-slate-800">₩</span>
+                  <span className="text-xl font-bold text-slate-800">₩</span>
                   <input
                     type="number"
                     step="5000"
                     min="5000"
                     value={policyForm.shortformBudgetCap}
                     onChange={e => setPolicyForm({ ...policyForm, shortformBudgetCap: Number(e.target.value) })}
-                    className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 text-lg font-black text-slate-900 focus:outline-none focus:border-cyan-600"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 text-lg font-bold text-slate-900 focus:outline-none focus:border-cyan-600"
                   />
                 </div>
                 <p className="text-xs font-semibold text-slate-500">1분 ~ 15분 영상 생성 시 적용되는 기본 정책 예산 수치입니다 (기본 추천: ₩40,000).</p>
               </div>
 
               <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
-                <label className="block text-sm font-extrabold text-slate-900">
+                <label className="block text-sm font-bold text-slate-900">
                   20분 이상 (마스터클래스 / 다큐멘터리) 기본 예산 상한
                 </label>
                 <div className="flex items-center gap-3">
-                  <span className="text-xl font-black text-slate-800">₩</span>
+                  <span className="text-xl font-bold text-slate-800">₩</span>
                   <input
                     type="number"
                     step="5000"
                     min="10000"
                     value={policyForm.longformBudgetCap}
                     onChange={e => setPolicyForm({ ...policyForm, longformBudgetCap: Number(e.target.value) })}
-                    className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 text-lg font-black text-slate-900 focus:outline-none focus:border-cyan-600"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 text-lg font-bold text-slate-900 focus:outline-none focus:border-cyan-600"
                   />
                 </div>
                 <p className="text-xs font-semibold text-slate-500">20분 이상 장문 영상 생성 시 적용되는 기본 정책 예산 수치입니다 (기본 추천: ₩80,000).</p>
@@ -490,7 +490,7 @@ export default function Admin() {
                   type="button"
                   onClick={handlePolicySave}
                   disabled={policySaving}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs shadow-md transition disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md transition disabled:opacity-50"
                 >
                   {policySaving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
                   {policySaving ? '정책 저장 중...' : '예산 정책 저장 및 즉시 반영'}
@@ -505,13 +505,13 @@ export default function Admin() {
           <div className="space-y-6">
             {/* 신규 채널 추가 카드 */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-3">신규 채널 프로필 생성</h2>
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">신규 채널 프로필 생성</h2>
               <div className="grid grid-cols-3 gap-3 mb-3">
-                <input value={newChannel.channelId} onChange={e => setNewChannel({ ...newChannel, channelId: e.target.value })} placeholder="채널 ID (예: ch_invest)" className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900" />
-                <input value={newChannel.channelName} onChange={e => setNewChannel({ ...newChannel, channelName: e.target.value })} placeholder="채널 이름" className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900" />
-                <input value={newChannel.voiceId} onChange={e => setNewChannel({ ...newChannel, voiceId: e.target.value })} placeholder="ElevenLabs Voice ID" className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900" />
+                <input value={newChannel.channelId} onChange={e => setNewChannel({ ...newChannel, channelId: e.target.value })} placeholder="채널 ID (예: ch_invest)" className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900" />
+                <input value={newChannel.channelName} onChange={e => setNewChannel({ ...newChannel, channelName: e.target.value })} placeholder="채널 이름" className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900" />
+                <input value={newChannel.voiceId} onChange={e => setNewChannel({ ...newChannel, voiceId: e.target.value })} placeholder="ElevenLabs Voice ID" className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900" />
               </div>
-              <button onClick={() => createChannelMutation.mutate()} disabled={!newChannel.channelId || !newChannel.channelName || createChannelMutation.isPending} className="px-4 py-2 rounded-lg bg-cyan-600 text-white font-black text-xs shadow-sm hover:bg-cyan-700 disabled:opacity-50">
+              <button onClick={() => createChannelMutation.mutate()} disabled={!newChannel.channelId || !newChannel.channelName || createChannelMutation.isPending} className="px-4 py-2 rounded-xl bg-cyan-600 text-white font-bold text-xs shadow-sm hover:bg-cyan-700 disabled:opacity-50">
                 {createChannelMutation.isPending ? '생성 중...' : '신규 채널 등록'}
               </button>
             </div>
@@ -527,7 +527,7 @@ export default function Admin() {
                   <div key={channel.channelId} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-md space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                       <div>
-                        <h3 className="text-base font-black text-slate-900">{channel.channelName}</h3>
+                        <h3 className="text-base font-bold text-slate-900">{channel.channelName}</h3>
                         <span className="text-xs font-semibold text-slate-500">ID: {channel.channelId}</span>
                       </div>
                       <span className="text-xs font-bold px-3 py-1 rounded-full bg-cyan-50 border border-cyan-300 text-cyan-900">
@@ -554,7 +554,7 @@ export default function Admin() {
                         />
                         <button
                           onClick={() => saveChannelMutation.mutate({ ...channel, characterStylePrompt: characterDescription, voiceId: editedVoices[channel.channelId] ?? channel.voiceId })}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-sm hover:bg-emerald-700"
+                          className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs shadow-sm hover:bg-emerald-700"
                         >
                           설정 저장
                         </button>
@@ -566,14 +566,14 @@ export default function Admin() {
                       <button
                         onClick={() => characterLibraryMutation.mutate({ channelId: channel.channelId, characterDescription, regenerate: false, includeRoleCostumes: false })}
                         disabled={!characterDescription.trim() || isGeneratingLibrary}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyan-50 border border-cyan-300 text-cyan-900 font-bold text-xs hover:bg-cyan-100 disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-50 border border-cyan-300 text-cyan-900 font-bold text-xs hover:bg-cyan-100 disabled:opacity-50"
                       >
                         <Sparkles size={14} /> 기본 포즈 15종 생성
                       </button>
                       <button
                         onClick={() => characterLibraryMutation.mutate({ channelId: channel.channelId, characterDescription, regenerate: false, includeRoleCostumes: true })}
                         disabled={!characterDescription.trim() || isGeneratingLibrary}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 font-bold text-xs hover:bg-amber-100 disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 font-bold text-xs hover:bg-amber-100 disabled:opacity-50"
                       >
                         <ImagePlus size={14} /> 역할 의상 15종 생성
                       </button>
@@ -591,19 +591,19 @@ export default function Admin() {
             <div className="grid grid-cols-2 gap-6">
               {/* 1. 인물 신규 등록 */}
               <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">1. 실사 인물 등록</h3>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">1. 실사 인물 등록</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  <input value={personForm.personId} onChange={e => setPersonForm({ ...personForm, personId: e.target.value })} placeholder="ID: sundar_pichai" className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900" />
-                  <input value={personForm.nameKo} onChange={e => setPersonForm({ ...personForm, nameKo: e.target.value })} placeholder="한글 이름 (예: 순다르 피차이)" className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900" />
-                  <input value={personForm.nameEn} onChange={e => setPersonForm({ ...personForm, nameEn: e.target.value })} placeholder="영문 이름" className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900" />
-                  <input value={personForm.aliasesJson} onChange={e => setPersonForm({ ...personForm, aliasesJson: e.target.value })} placeholder='["구글 CEO"]' className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900" />
+                  <input value={personForm.personId} onChange={e => setPersonForm({ ...personForm, personId: e.target.value })} placeholder="ID: sundar_pichai" className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900" />
+                  <input value={personForm.nameKo} onChange={e => setPersonForm({ ...personForm, nameKo: e.target.value })} placeholder="한글 이름 (예: 순다르 피차이)" className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900" />
+                  <input value={personForm.nameEn} onChange={e => setPersonForm({ ...personForm, nameEn: e.target.value })} placeholder="영문 이름" className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900" />
+                  <input value={personForm.aliasesJson} onChange={e => setPersonForm({ ...personForm, aliasesJson: e.target.value })} placeholder='["구글 CEO"]' className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900" />
                 </div>
-                <button onClick={() => createPerson.mutate()} disabled={!personForm.personId || !personForm.nameKo || createPerson.isPending} className="px-4 py-2 rounded-lg bg-cyan-600 text-white font-black text-xs shadow-sm hover:bg-cyan-700 disabled:opacity-50">
+                <button onClick={() => createPerson.mutate()} disabled={!personForm.personId || !personForm.nameKo || createPerson.isPending} className="px-4 py-2 rounded-xl bg-cyan-600 text-white font-bold text-xs shadow-sm hover:bg-cyan-700 disabled:opacity-50">
                   {createPerson.isPending ? '등록 중...' : '인물 신규 등록'}
                 </button>
                 <div className="pt-2">
                   <label className="block text-xs font-bold text-slate-700 mb-1">관리할 인물 선택</label>
-                  <select value={selectedPersonId} onChange={e => setSelectedPersonId(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900">
+                  <select value={selectedPersonId} onChange={e => setSelectedPersonId(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900">
                     <option value="">인물을 선택하세요</option>
                     {people.map(person => <option key={person.personId} value={person.personId}>{person.nameKo} ({person.personId})</option>)}
                   </select>
@@ -612,15 +612,15 @@ export default function Admin() {
 
               {/* 2. 권리확인 사진 업로드 */}
               <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-3">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">2. 권리확인 사진 업로드</h3>
-                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setPhotoForm({ ...photoForm, file: e.target.files?.[0] || null })} className="block w-full text-xs font-bold text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-3 file:py-2 file:text-xs file:font-black file:text-white" />
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">2. 권리확인 사진 업로드</h3>
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setPhotoForm({ ...photoForm, file: e.target.files?.[0] || null })} className="block w-full text-xs font-bold text-slate-700 file:mr-3 file:rounded-xl file:border-0 file:bg-cyan-600 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" />
                 <div className="grid grid-cols-2 gap-2">
-                  <select value={photoForm.licenseType} onChange={e => setPhotoForm({ ...photoForm, licenseType: e.target.value })} className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900">
+                  <select value={photoForm.licenseType} onChange={e => setPhotoForm({ ...photoForm, licenseType: e.target.value })} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900">
                     {PERSON_LICENSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
-                  <input value={photoForm.licenseRef} onChange={e => setPhotoForm({ ...photoForm, licenseRef: e.target.value })} placeholder={licenseNeedsRef ? '출처 URL·계약 번호 (필수)' : '출처 메모 (선택)'} className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900" />
+                  <input value={photoForm.licenseRef} onChange={e => setPhotoForm({ ...photoForm, licenseRef: e.target.value })} placeholder={licenseNeedsRef ? '출처 URL·계약 번호 (필수)' : '출처 메모 (선택)'} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-900" />
                 </div>
-                <button onClick={() => uploadPhoto.mutate()} disabled={!selectedPersonId || !photoForm.file || uploadPhoto.isPending} className="px-4 py-2 rounded-lg bg-amber-600 text-white font-black text-xs shadow-sm hover:bg-amber-700 disabled:opacity-50">
+                <button onClick={() => uploadPhoto.mutate()} disabled={!selectedPersonId || !photoForm.file || uploadPhoto.isPending} className="px-4 py-2 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-sm hover:bg-amber-700 disabled:opacity-50">
                   {uploadPhoto.isPending ? '업로드 중...' : '검토 대기 사진 등록'}
                 </button>
               </div>
@@ -629,7 +629,7 @@ export default function Admin() {
             {/* 3. 사진 검토 및 승인 목록 */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">3. 사진 검토 및 승인 현황</h3>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">3. 사진 검토 및 승인 현황</h3>
                 <span className="text-xs font-bold text-slate-500">{photos.length}장</span>
               </div>
               {photos.length === 0 ? (
@@ -668,7 +668,7 @@ function ProviderBadge({ label, configured }) {
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between shadow-2xs">
       <span className="text-slate-800 font-bold">{label}</span>
-      <span className={`text-xs font-black px-2.5 py-1 rounded-md ${unavailable ? 'bg-rose-100 text-rose-800' : configured ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+      <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${unavailable ? 'bg-rose-100 text-rose-800' : configured ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
         {unavailable ? '확인 실패' : configured ? '연결됨' : '키 미설정'}
       </span>
     </div>

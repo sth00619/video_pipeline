@@ -620,7 +620,7 @@ export default function Shorts() {
           </p>
         </div>
         {id && (
-          <button onClick={() => navigate(`/longform/${id}`)} className="text-xs border border-navy-600 bg-navy-800 text-gray-400 hover:text-slate-900 px-3 py-1.5 rounded-lg transition">
+          <button onClick={() => navigate(`/longform/${id}`)} className="text-xs border border-slate-300 bg-white text-gray-400 hover:text-slate-900 px-3 py-1.5 rounded-xl transition">
             ← 롱폼 상세로 돌아가기
           </button>
         )}
@@ -635,8 +635,8 @@ export default function Shorts() {
         <div className="grid grid-cols-5 gap-6">
           
           {/* ==================== 좌측 패널 (대본 씬 리스트) ==================== */}
-          <div className="col-span-2 bg-navy-800 rounded-xl border border-navy-700 p-4 flex flex-col max-h-[680px]">
-              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-navy-700">
+          <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-4 flex flex-col max-h-[680px]">
+              <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-200">
                 <FileText size={16} className="text-accent-cyan" />
                 <h3 className="font-semibold text-sm text-white">{id ? '롱폼 전체 대본' : '추출된 영상 대본'} (드래그 가능)</h3>
               </div>
@@ -645,7 +645,7 @@ export default function Shorts() {
                 * 카드를 클릭하면 해당 구간으로 비디오 재생이 이동합니다.
               </p>
               {!id && transcript && (
-                <details className="mb-3 rounded border border-navy-700 bg-navy-950/60 p-2">
+                <details className="mb-3 rounded border border-slate-200 bg-slate-50/60 p-2">
                   <summary className="cursor-pointer text-xs font-medium text-accent-cyan">추출된 전체 대본 보기</summary>
                   <p className="mt-2 max-h-36 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-gray-300">{transcript}</p>
                 </details>
@@ -664,10 +664,10 @@ export default function Shorts() {
                       draggable
                       onDragStart={(e) => handleDragStart(e, scene)}
                       onClick={() => seek(scene.start)}
-                      className={`p-3 rounded-lg border text-left cursor-pointer transition select-none ${
+                      className={`p-3 rounded-xl border text-left cursor-pointer transition select-none ${
                         isHighlighted 
                           ? 'border-accent-cyan bg-accent-cyan/10 shadow-card-lg shadow-accent-cyan/5' 
-                          : 'border-navy-700 bg-navy-900/50 hover:border-navy-600'
+                          : 'border-slate-200 bg-slate-100/50 hover:border-slate-300'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
@@ -690,13 +690,13 @@ export default function Shorts() {
           <div className="col-span-3 space-y-4">
             
             {/* 비디오 플레이어 */}
-            <div className="bg-navy-800 rounded-xl border border-navy-700 overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
               {fileUrl ? (
                 <>
                   <video ref={videoRef} src={fileUrl} className="w-full aspect-video bg-black"
                     onLoadedMetadata={handleMeta} onTimeUpdate={handleTimeUpdate}
                     onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
-                  <div className="flex items-center gap-3 px-4 py-3 border-t border-navy-700">
+                  <div className="flex items-center gap-3 px-4 py-3 border-t border-slate-200">
                     <button onClick={() => seek(curTime - 10)} className="text-gray-400 hover:text-slate-900"><SkipBack size={16} /></button>
                     <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center bg-accent-cyan text-navy-950 rounded-full hover:opacity-90">
                       {playing ? <Pause size={14} /> : <Play size={14} />}
@@ -734,7 +734,7 @@ export default function Shorts() {
 
             {/* 업로드 모드 분석 컨트롤 (비디오 하단에 바로 배치하여 가시성 확보) */}
             {!id && fileUrl && !job && (
-              <div className="bg-navy-800 rounded-xl border border-navy-700 p-4 shadow-card-lg shadow-accent-cyan/10 ring-1 ring-accent-cyan/20">
+              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-card-lg shadow-accent-cyan/10 ring-1 ring-accent-cyan/20">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5">
@@ -748,17 +748,17 @@ export default function Shorts() {
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-400">쇼츠 갯수:</label>
                       <input type="number" value={shortsCount} onChange={e => setShortsCount(Number(e.target.value))}
-                        className="w-16 bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-slate-900 text-center" />
+                        className="w-16 bg-navy-700 border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 text-center" />
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-400">쇼츠 분량(초):</label>
                       <input type="number" value={clipDur} onChange={e => setClipDur(Number(e.target.value))}
-                        className="w-16 bg-navy-700 border border-navy-600 rounded px-2 py-1 text-xs text-slate-900 text-center" />
+                        className="w-16 bg-navy-700 border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 text-center" />
                     </div>
                   </div>
                 </div>
                 <button onClick={handleLocalAnalyze} disabled={analyzing || !file}
-                  className="w-full flex items-center justify-center gap-2 bg-accent-cyan text-navy-950 font-bold py-2.5 rounded-lg hover:opacity-90 transition shadow-md shadow-accent-cyan/20">
+                  className="w-full flex items-center justify-center gap-2 bg-accent-cyan text-navy-950 font-bold py-2.5 rounded-xl hover:opacity-90 transition shadow-md shadow-accent-cyan/20">
                   {analyzing ? <Loader size={16} className="animate-spin" /> : <Scissors size={16} />}
                   {analyzing ? '비디오를 클라우드에 업로드하고 분석하는 중입니다 (1~2분 소요)...' : '업로드 영상 자동 분석 시작'}
                 </button>
@@ -766,7 +766,7 @@ export default function Shorts() {
             )}
 
             {/* AI 기승전결 추천 & 키워드 보드 */}
-            <div className="bg-navy-800 rounded-xl border border-navy-700 p-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
                     <Sparkles size={14} className="text-accent-gold" />
@@ -775,7 +775,7 @@ export default function Shorts() {
                   <button
                     onClick={handleExtractAiScenarios}
                     disabled={extractingAi || scenes.length === 0}
-                    className="flex items-center gap-1 bg-accent-gold text-navy-950 text-xs font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition"
+                    className="flex items-center gap-1 bg-accent-gold text-navy-950 text-xs font-semibold px-3 py-1.5 rounded-xl hover:opacity-90 disabled:opacity-50 transition"
                   >
                     {extractingAi ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                     {aiScenarios ? '시나리오 재추천' : '스토리 분석하기'}
@@ -791,7 +791,7 @@ export default function Shorts() {
 
                 {aiScenarios && !extractingAi && (
                   <div className="space-y-4">
-                    <div className="flex gap-6 border-b border-navy-700">
+                    <div className="flex gap-6 border-b border-slate-200">
                       <button onClick={() => setAiActiveTab('scenario')} className={`text-sm font-bold pb-2 border-b-2 transition ${aiActiveTab === 'scenario' ? 'text-accent-gold border-accent-gold' : 'text-gray-400 border-transparent hover:text-slate-900'}`}>
                         🎬 기승전결 시나리오 추천
                       </button>
@@ -813,7 +813,7 @@ export default function Shorts() {
                               className={`text-xs px-3 py-1.5 rounded-full border transition ${
                                 selectedKeywords.some(k => k.word === kw.word)
                                   ? 'bg-accent-cyan text-navy-950 border-accent-cyan font-bold shadow-md'
-                                  : 'bg-navy-900 border-navy-700 text-gray-300 hover:border-accent-cyan hover:text-accent-cyan'
+                                  : 'bg-slate-100 border-slate-200 text-gray-300 hover:border-accent-cyan hover:text-accent-cyan'
                               }`}
                               title={kw.description}
                             >
@@ -822,7 +822,7 @@ export default function Shorts() {
                           ))}
                         </div>
                         {selectedKeywords.length > 0 && (
-                          <div className="mt-4 flex flex-col items-start justify-between bg-accent-cyan/10 border border-accent-cyan/20 p-3 rounded-lg">
+                          <div className="mt-4 flex flex-col items-start justify-between bg-accent-cyan/10 border border-accent-cyan/20 p-3 rounded-xl">
                             <span className="text-xs text-accent-cyan font-medium mb-3">
                               ✓ 다중 선택된 <strong>{selectedKeywords.map(k => '#' + k.word).join(', ')}</strong>에 매칭되는 <strong>{segments.length}</strong>개 구간이 타임라인에 구성되었습니다.
                             </span>
@@ -843,14 +843,14 @@ export default function Shorts() {
                         {Object.entries(aiScenarios.scenarios || {}).map(([key, sc]) => {
                           if (key === 'keywords') return null;
                           return (
-                            <div key={key} className="bg-navy-900 border border-navy-600 rounded-lg p-4 flex flex-col justify-between hover:border-accent-gold transition shadow-sm hover:shadow-md">
+                            <div key={key} className="bg-slate-100 border border-slate-300 rounded-xl p-4 flex flex-col justify-between hover:border-accent-gold transition shadow-sm hover:shadow-md">
                               <div>
                                 <h5 className="font-bold text-white text-sm mb-2">{sc.title}</h5>
                                 <p className="text-[11px] text-gray-400 leading-relaxed mb-4">{sc.description}</p>
                               </div>
                               <button
                                 onClick={() => handleApplyScenario(sc)}
-                                className="w-full bg-navy-800 border border-navy-700 text-gray-300 text-xs py-2.5 rounded font-medium hover:text-white hover:bg-navy-700 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
+                                className="w-full bg-white border border-slate-200 text-gray-300 text-xs py-2.5 rounded font-medium hover:text-white hover:bg-navy-700 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
                               >
                                 이 시나리오 즉시 제작하기 <ArrowRight size={12} />
                               </button>
@@ -865,7 +865,7 @@ export default function Shorts() {
 
             {/* 타임라인 드롭존 및 편집 */}
             {totalDur > 0 && (
-              <div className="bg-navy-800 rounded-xl border border-navy-700 p-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xs font-semibold text-gray-400">쇼츠 타임라인 구간 편집</h3>
                   <div className="flex gap-2">
@@ -885,7 +885,7 @@ export default function Shorts() {
                   ref={tlRef}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={handleDropOnTimeline}
-                  className="relative h-14 bg-navy-900 border-2 border-dashed border-navy-700 rounded-lg select-none cursor-pointer flex items-center justify-center mb-4"
+                  className="relative h-14 bg-slate-100 border-2 border-dashed border-slate-200 rounded-xl select-none cursor-pointer flex items-center justify-center mb-4"
                   onClick={e => { if (!dragging) seek(getT(e.clientX)) }}
                 >
                   {segments.length === 0 && (
@@ -897,7 +897,7 @@ export default function Shorts() {
                     const t = i * 30
                     return (
                       <div key={i} className="absolute top-0 h-full pointer-events-none" style={{ left: pct(t) }}>
-                        <div className="w-px h-2 bg-navy-800" />
+                        <div className="w-px h-2 bg-white" />
                         <span style={{ fontSize: 8, marginLeft: 2 }} className="text-gray-700">{fmt(t)}</span>
                       </div>
                     )
@@ -930,8 +930,8 @@ export default function Shorts() {
                       <div
                         key={i}
                         onClick={() => { setActiveSeg(i); seek(seg.start) }}
-                        className={`p-2.5 rounded-lg border cursor-pointer transition flex items-center justify-between ${
-                          activeSeg === i ? 'border-accent-cyan bg-accent-cyan/5' : 'border-navy-700 bg-navy-900/30'
+                        className={`p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between ${
+                          activeSeg === i ? 'border-accent-cyan bg-accent-cyan/5' : 'border-slate-200 bg-slate-100/30'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -967,7 +967,7 @@ export default function Shorts() {
                         <button
                           onClick={() => handleCutShorts(true)}
                           disabled={cutting}
-                          className="flex-1 flex items-center justify-center gap-2 bg-accent-green text-navy-950 font-bold rounded-lg py-2.5 text-xs hover:opacity-90 disabled:opacity-50 transition"
+                          className="flex-1 flex items-center justify-center gap-2 bg-accent-green text-navy-950 font-bold rounded-xl py-2.5 text-xs hover:opacity-90 disabled:opacity-50 transition"
                         >
                           {cutting ? <Loader size={14} className="animate-spin" /> : <Scissors size={14} />}
                           선택된 구간 전부 합쳐서 단일 쇼츠 비디오 생성
@@ -975,7 +975,7 @@ export default function Shorts() {
                         <button
                           onClick={() => handleCutShorts(false)}
                           disabled={cutting}
-                          className="flex-1 flex items-center justify-center gap-2 bg-navy-700 text-white border border-navy-600 font-bold rounded-lg py-2.5 text-xs hover:bg-navy-600 disabled:opacity-50 transition"
+                          className="flex-1 flex items-center justify-center gap-2 bg-navy-700 text-white border border-slate-300 font-bold rounded-xl py-2.5 text-xs hover:bg-navy-600 disabled:opacity-50 transition"
                         >
                           각 구간별 개별 쇼츠 클립으로 생성
                         </button>
@@ -984,7 +984,7 @@ export default function Shorts() {
                       <button
                         onClick={handleLocalCut}
                         disabled={cutting}
-                        className="w-full flex items-center justify-center gap-2 bg-accent-green text-navy-950 font-bold rounded-lg py-2.5 text-xs hover:opacity-90 disabled:opacity-50 transition"
+                        className="w-full flex items-center justify-center gap-2 bg-accent-green text-navy-950 font-bold rounded-xl py-2.5 text-xs hover:opacity-90 disabled:opacity-50 transition"
                       >
                         {cutting ? <Loader size={14} className="animate-spin" /> : <Scissors size={14} />}
                         로컬 컷팅 시작
@@ -997,13 +997,13 @@ export default function Shorts() {
 
             {/* 쇼츠 산출물 표시 및 다운로드 */}
             {clips.length > 0 && (
-              <div className="bg-navy-800 rounded-xl border border-accent-green p-5">
+              <div className="bg-white rounded-xl border border-accent-green p-5">
                 <h3 className="font-semibold text-sm text-accent-green mb-3 flex items-center gap-2">
                   <CheckCircle size={16} /> 쇼츠 비디오 렌더링 완료 (9:16 포맷)
                 </h3>
                 <div className="space-y-2">
                   {clips.map((clip, i) => (
-                    <div key={i} className="flex items-center justify-between bg-navy-700/50 rounded-lg px-4 py-3 border border-navy-600">
+                    <div key={i} className="flex items-center justify-between bg-navy-700/50 rounded-xl px-4 py-3 border border-slate-300">
                       <div>
                         <div className="text-sm font-semibold text-white truncate max-w-xs">
                           #{clip.index} {clip.text || '합성 쇼츠'}
@@ -1022,7 +1022,7 @@ export default function Shorts() {
                           setDownloadingIdx(null)
                         }}
                         disabled={downloadingIdx === i || clip.download_ready === false}
-                        className="flex items-center gap-1.5 bg-accent-green text-navy-950 text-xs font-semibold py-1.5 px-3 rounded-lg hover:opacity-90 transition disabled:opacity-50"
+                        className="flex items-center gap-1.5 bg-accent-green text-navy-950 text-xs font-semibold py-1.5 px-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
                       >
                         {downloadingIdx === i ? <Loader size={12} className="animate-spin" /> : <Download size={12} />}
                         다운로드
@@ -1035,8 +1035,8 @@ export default function Shorts() {
 
             {/* YouTube 메타데이터 및 업로드 게이트 패키지 (쇼츠용) */}
             {clips.length > 0 && job && (
-              <div className="bg-navy-800 rounded-xl border border-accent-cyan p-5 space-y-4 mt-6">
-                <div className="flex items-center justify-between border-b border-navy-700 pb-3">
+              <div className="bg-white rounded-xl border border-accent-cyan p-5 space-y-4 mt-6">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                   <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5">
                     <Youtube size={16}/> YouTube Shorts 업로드 및 수동 발행 지원 킷
                   </h3>
@@ -1053,10 +1053,10 @@ export default function Shorts() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* 썸네일 다운로드 */}
-                  <div className="bg-navy-900/60 p-3 rounded-lg border border-navy-700 flex flex-col justify-between">
+                  <div className="bg-slate-100/60 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
                     <div>
                       <h4 className="text-xs font-semibold text-gray-300 mb-2">AI 자동 생성 썸네일 (9:16)</h4>
-                      <div className="aspect-[9/16] w-24 mx-auto bg-navy-950 rounded border border-navy-700 overflow-hidden relative">
+                      <div className="aspect-[9/16] w-24 mx-auto bg-slate-50 rounded border border-slate-200 overflow-hidden relative">
                         <img
                           src={`/api/jobs/${targetJobId}/thumbnail/shorts?t=${imageSalt}`}
                           alt="YouTube Shorts Thumbnail"
@@ -1073,7 +1073,7 @@ export default function Shorts() {
                       target="_blank"
                       rel="noreferrer"
                       download
-                      className="mt-3 w-full bg-navy-700 border border-navy-600 text-center text-xs text-accent-cyan py-1.5 rounded hover:bg-navy-600 transition flex items-center justify-center gap-1"
+                      className="mt-3 w-full bg-navy-700 border border-slate-300 text-center text-xs text-accent-cyan py-1.5 rounded hover:bg-navy-600 transition flex items-center justify-center gap-1"
                     >
                       <Download size={12}/> 썸네일 다운로드
                     </a>
@@ -1096,7 +1096,7 @@ export default function Shorts() {
                               <Copy size={10}/> 전체 복사
                             </button>
                           </div>
-                          <div className="bg-navy-950 p-2 rounded border border-navy-700 space-y-1.5 mt-1">
+                          <div className="bg-slate-50 p-2 rounded border border-slate-200 space-y-1.5 mt-1">
                             {youtubePackage.shorts.titles?.map((t, idx) => (
                               <div key={idx} className="flex items-start gap-1.5 text-xs text-gray-300">
                                 <span className="text-accent-cyan font-bold">안{idx+1}.</span>
@@ -1122,7 +1122,7 @@ export default function Shorts() {
                           <textarea
                             readOnly
                             value={youtubePackage.shorts.description || ''}
-                            className="w-full bg-navy-950 border border-navy-700 rounded p-2 text-xs text-gray-300 mt-1 h-20 focus:outline-none resize-none font-mono"
+                            className="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs text-gray-300 mt-1 h-20 focus:outline-none resize-none font-mono"
                           />
                         </div>
 
@@ -1139,9 +1139,9 @@ export default function Shorts() {
                               <Copy size={10}/> 복사
                             </button>
                           </div>
-                          <div className="bg-navy-950 p-2 rounded border border-navy-700 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
+                          <div className="bg-slate-50 p-2 rounded border border-slate-200 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
                             {youtubePackage.shorts.tags?.map((tag, idx) => (
-                              <span key={idx} className="bg-navy-800 px-1.5 py-0.5 rounded border border-navy-700">#{tag}</span>
+                              <span key={idx} className="bg-white px-1.5 py-0.5 rounded border border-slate-200">#{tag}</span>
                             ))}
                           </div>
                         </div>
@@ -1155,7 +1155,7 @@ export default function Shorts() {
                 </div>
 
                 {/* 게이트 및 업로드 버튼 */}
-                <div className="border-t border-navy-700 pt-3 flex items-center justify-between">
+                <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
                   <div>
                     {job.youtubeUrl && (
                       <a
@@ -1182,7 +1182,7 @@ export default function Shorts() {
                           }
                         }}
                         disabled={publishing}
-                        className="flex items-center gap-1.5 bg-red-600 text-white font-semibold text-xs px-4 py-2 rounded-lg hover:bg-red-500 disabled:opacity-50 transition"
+                        className="flex items-center gap-1.5 bg-red-600 text-white font-semibold text-xs px-4 py-2 rounded-xl hover:bg-red-500 disabled:opacity-50 transition"
                       >
                         {publishing ? <Loader size={12} className="animate-spin"/> : <Youtube size={12}/>}
                         {job.autonomy === 'GUIDED' ? '쇼츠 업로드 검토 및 발행' : '즉시 Shorts 업로드'}
@@ -1196,7 +1196,7 @@ export default function Shorts() {
             {/* GUIDED 모드 유튜브 Shorts 업로드 검토 팝업 */}
             {isGuidedConfirmOpen && (
               <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-                <div className="bg-navy-900 border border-navy-700 rounded-xl p-5 max-w-xl w-full space-y-4">
+                <div className="bg-slate-100 border border-slate-200 rounded-xl p-5 max-w-xl w-full space-y-4">
                   <h3 className="text-sm font-bold text-accent-cyan flex items-center gap-1.5 border-b border-navy-800 pb-2">
                     <Youtube size={16}/> YouTube Shorts 업로드 검토 (GUIDED 게이트)
                   </h3>
@@ -1206,7 +1206,7 @@ export default function Shorts() {
                       <label className="text-xs text-gray-400">쇼츠 제목 선택</label>
                       <div className="space-y-1.5 mt-1">
                         {youtubePackage?.shorts?.titles?.map((t, idx) => (
-                          <label key={idx} className="flex items-start gap-2 bg-navy-950 p-2 rounded border border-navy-800 hover:border-navy-700 cursor-pointer text-xs text-gray-300">
+                          <label key={idx} className="flex items-start gap-2 bg-slate-50 p-2 rounded border border-navy-800 hover:border-slate-200 cursor-pointer text-xs text-gray-300">
                             <input
                               type="radio"
                               name="selected_shorts_title"
@@ -1224,15 +1224,15 @@ export default function Shorts() {
                       <textarea
                         readOnly
                         value={youtubePackage?.shorts?.description || ''}
-                        className="w-full bg-navy-950 border border-navy-800 rounded p-2 text-xs text-gray-300 mt-1 h-24 focus:outline-none resize-none font-mono"
+                        className="w-full bg-slate-50 border border-navy-800 rounded p-2 text-xs text-gray-300 mt-1 h-24 focus:outline-none resize-none font-mono"
                       />
                     </div>
 
                     <div>
                       <label className="text-xs text-gray-400">추천 해시태그</label>
-                      <div className="bg-navy-950 p-2 rounded border border-navy-800 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
+                      <div className="bg-slate-50 p-2 rounded border border-navy-800 mt-1 text-xs text-accent-cyan flex flex-wrap gap-1">
                         {youtubePackage?.shorts?.tags?.map((tag, idx) => (
-                          <span key={idx} className="bg-navy-900 px-1.5 py-0.5 rounded border border-navy-800">#{tag}</span>
+                          <span key={idx} className="bg-slate-100 px-1.5 py-0.5 rounded border border-navy-800">#{tag}</span>
                         ))}
                       </div>
                     </div>

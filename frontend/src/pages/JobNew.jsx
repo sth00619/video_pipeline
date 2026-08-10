@@ -166,7 +166,7 @@ export default function JobNew() {
               <ChevronLeft size={20} />
             </button>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                 새 영상 콘텐츠 생성
               </h1>
               <p className="text-xs font-medium text-slate-600 mt-0.5">
@@ -203,7 +203,7 @@ export default function JobNew() {
                       : 'bg-transparent text-slate-400 cursor-not-allowed font-medium'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold ${
                     isCurrent
                       ? 'bg-white text-cyan-700'
                       : isPast
@@ -232,7 +232,7 @@ export default function JobNew() {
             <div className="space-y-7">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-extrabold text-slate-900">
+                  <label className="block text-sm font-bold text-slate-900">
                     영상 주제 입력 <span className="text-cyan-600">*</span>
                   </label>
                   <span className="text-xs font-semibold text-slate-500">구체적 명사·소재 작성 권장</span>
@@ -253,18 +253,18 @@ export default function JobNew() {
               {showMacroCategoryBanner && (
                 <div className="p-4 rounded-xl border border-amber-300 bg-amber-50 shadow-sm animate-fadeIn">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-amber-500 text-white mt-0.5 shadow-sm">
+                    <div className="p-2 rounded-xl bg-amber-500 text-white mt-0.5 shadow-sm">
                       <AlertTriangle size={18} />
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider">글로벌 매크로 카테고리 전환 추천</h4>
+                      <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">글로벌 매크로 카테고리 전환 추천</h4>
                       <p className="text-xs font-semibold text-amber-800 mt-1 leading-relaxed">
-                        입력한 주제에 글로벌 매크로 키워드(<span className="font-extrabold underline decoration-amber-500">{detectedMacroTerms.slice(0, 3).join(', ')}</span>)가 포함되어 있습니다. 현재 선택된 <span className="font-extrabold">{form.category}</span> 카테고리는 미국 지표(연준 금리, CPI 등)를 수집하지 않으므로, 정확한 팩트체크를 위해 전환을 추천합니다.
+                        입력한 주제에 글로벌 매크로 키워드(<span className="font-bold underline decoration-amber-500">{detectedMacroTerms.slice(0, 3).join(', ')}</span>)가 포함되어 있습니다. 현재 선택된 <span className="font-bold">{form.category}</span> 카테고리는 미국 지표(연준 금리, CPI 등)를 수집하지 않으므로, 정확한 팩트체크를 위해 전환을 추천합니다.
                       </p>
                       <button
                         type="button"
                         onClick={() => setForm({ ...form, category: 'GLOBAL_MACRO' })}
-                        className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-sm"
+                        className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-sm"
                       >
                         <Sparkles size={14} /> 글로벌 매크로 카테고리로 즉시 전환
                       </button>
@@ -297,9 +297,9 @@ export default function JobNew() {
                         onChange={e => setResearchKeyword(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') searchTopicResearch() }}
                         placeholder="예: 반도체 수출, 금리 인하, 삼성전자"
-                        className="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-cyan-600"
+                        className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-cyan-600"
                       />
-                      <button type="button" onClick={() => searchTopicResearch()} disabled={!researchKeyword.trim() || researchLoading} className="flex items-center gap-1 rounded-lg bg-cyan-700 hover:bg-cyan-800 px-4 py-2 text-xs font-bold text-white transition disabled:opacity-50 shadow-sm">
+                      <button type="button" onClick={() => searchTopicResearch()} disabled={!researchKeyword.trim() || researchLoading} className="flex items-center gap-1 rounded-xl bg-cyan-700 hover:bg-cyan-800 px-4 py-2 text-xs font-bold text-white transition disabled:opacity-50 shadow-sm">
                         {researchLoading ? <Loader size={13} className="animate-spin" /> : <Search size={13} />} 검색
                       </button>
                     </div>
@@ -313,7 +313,7 @@ export default function JobNew() {
                           const title = video.title || '제목 없음'
                           const videoId = video.video_id || video.videoId || ''
                           return (
-                            <div key={videoId || index} className="rounded-lg border border-slate-200 bg-slate-50 p-3 flex items-center justify-between gap-3 hover:bg-white transition shadow-2xs">
+                            <div key={videoId || index} className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex items-center justify-between gap-3 hover:bg-white transition shadow-2xs">
                               <div className="min-w-0 flex-1">
                                 <div className="text-xs font-bold text-slate-900 truncate">{title}</div>
                                 <div className="text-[11px] font-semibold text-slate-500 mt-1 flex gap-3">
@@ -321,7 +321,7 @@ export default function JobNew() {
                                   <span>구독자 대비 {ratio}x</span>
                                 </div>
                               </div>
-                              <button type="button" onClick={() => setForm({ ...form, title })} className="shrink-0 px-3 py-1.5 rounded-lg bg-cyan-50 border border-cyan-300 text-xs font-bold text-cyan-800 hover:bg-cyan-100">
+                              <button type="button" onClick={() => setForm({ ...form, title })} className="shrink-0 px-3 py-1.5 rounded-xl bg-cyan-50 border border-cyan-300 text-xs font-bold text-cyan-800 hover:bg-cyan-100">
                                 주제로 가져오기
                               </button>
                             </div>
@@ -335,7 +335,7 @@ export default function JobNew() {
 
               {/* 카테고리 선택 그리드 */}
               <div>
-                <label className="block text-sm font-extrabold text-slate-900 mb-3">
+                <label className="block text-sm font-bold text-slate-900 mb-3">
                   분석 카테고리 선택 <span className="text-cyan-600">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -355,7 +355,7 @@ export default function JobNew() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5">
                             <span className="text-lg">{opt.icon}</span>
-                            <span className={`text-xs font-black ${isSelected ? 'text-cyan-900' : 'text-slate-900'}`}>
+                            <span className={`text-xs font-bold ${isSelected ? 'text-cyan-900' : 'text-slate-900'}`}>
                               {opt.label}
                             </span>
                           </div>
@@ -380,7 +380,7 @@ export default function JobNew() {
           {step === 2 && (
             <div className="space-y-7">
               <div>
-                <label className="block text-sm font-extrabold text-slate-900 mb-3">파이프라인 자율성 모드 선택</label>
+                <label className="block text-sm font-bold text-slate-900 mb-3">파이프라인 자율성 모드 선택</label>
                 <div className="grid grid-cols-2 gap-4">
                   {AUTONOMY_OPTIONS.map(opt => {
                     const Icon = opt.icon
@@ -401,11 +401,11 @@ export default function JobNew() {
                             <div className={`p-2.5 rounded-xl shadow-xs ${selected ? 'bg-cyan-600 text-white' : 'bg-slate-200 text-slate-700'}`}>
                               <Icon size={20} />
                             </div>
-                            <span className={`text-[10px] px-2.5 py-1 rounded-md font-extrabold ${opt.tagColor}`}>
+                            <span className={`text-[10px] px-2.5 py-1 rounded-lg font-bold ${opt.tagColor}`}>
                               {opt.tag}
                             </span>
                           </div>
-                          <h3 className={`text-sm font-black ${selected ? 'text-cyan-900' : 'text-slate-900'}`}>{opt.label}</h3>
+                          <h3 className={`text-sm font-bold ${selected ? 'text-cyan-900' : 'text-slate-900'}`}>{opt.label}</h3>
                           <p className="text-xs font-semibold text-slate-600 mt-2 leading-relaxed">{opt.desc}</p>
                         </div>
                       </button>
@@ -415,7 +415,7 @@ export default function JobNew() {
               </div>
 
               <div>
-                <label className="block text-sm font-extrabold text-slate-900 mb-3">목표 비디오 길이 설정</label>
+                <label className="block text-sm font-bold text-slate-900 mb-3">목표 비디오 길이 설정</label>
                 <div className="grid grid-cols-3 gap-3">
                   {DURATION_OPTIONS.map(opt => {
                     const isSelected = form.longformTargetMinutes === opt.value
@@ -426,11 +426,11 @@ export default function JobNew() {
                         onClick={() => setForm({ ...form, longformTargetMinutes: opt.value })}
                         className={`p-4 rounded-xl border-2 text-center transition-all ${
                           isSelected
-                            ? 'border-cyan-600 bg-cyan-50/80 text-cyan-950 font-black shadow-md'
+                            ? 'border-cyan-600 bg-cyan-50/80 text-cyan-950 font-bold shadow-md'
                             : 'border-slate-200 bg-slate-50/60 text-slate-800 hover:border-slate-300 hover:bg-white font-bold'
                         }`}
                       >
-                        <div className="text-sm font-black">{opt.label}</div>
+                        <div className="text-sm font-bold">{opt.label}</div>
                         <div className="text-[11px] font-semibold text-slate-500 mt-1">{opt.hint.split('.')[0]}</div>
                       </button>
                     )
@@ -445,19 +445,19 @@ export default function JobNew() {
             <div className="space-y-6">
               <div className="p-6 rounded-xl border-2 border-cyan-300 bg-cyan-50/90 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black text-cyan-900 uppercase tracking-wider">영상 제작 예산 상한 설정</span>
+                  <span className="text-xs font-bold text-cyan-900 uppercase tracking-wider">영상 제작 예산 상한 설정</span>
                   <span className="text-[11px] font-bold text-cyan-700">기본 정책: {form.longformTargetMinutes >= 20 ? '₩80,000' : '₩40,000'}</span>
                 </div>
                 
                 <div className="mt-2 flex items-center gap-3">
-                  <span className="text-2xl font-black text-cyan-900">₩</span>
+                  <span className="text-2xl font-bold text-cyan-900">₩</span>
                   <input
                     type="number"
                     step="5000"
                     min="10000"
                     value={form.budgetCap || (form.longformTargetMinutes >= 20 ? 80000 : 40000)}
                     onChange={e => setForm({ ...form, budgetCap: Number(e.target.value) })}
-                    className="flex-1 bg-white border-2 border-cyan-400 rounded-xl px-4 py-2.5 text-2xl font-black text-cyan-950 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 shadow-inner"
+                    className="flex-1 bg-white border-2 border-cyan-400 rounded-xl px-4 py-2.5 text-2xl font-bold text-cyan-950 focus:outline-none focus:ring-4 focus:ring-cyan-500/20 shadow-inner"
                   />
                 </div>
                 <p className="text-xs font-semibold text-slate-600 mt-2 leading-relaxed">
@@ -466,7 +466,7 @@ export default function JobNew() {
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 space-y-3 shadow-inner">
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-3">최종 구성 요약</h3>
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">최종 구성 요약</h3>
                 <Row label="영상 대표 주제" value={form.title} highlight />
                 <Row label="선택 카테고리" value={CATEGORY_OPTIONS.find(o => o.value === form.category)?.label} />
                 <Row label="자율성 모드" value={AUTONOMY_OPTIONS.find(o => o.value === form.autonomy)?.label} />
@@ -489,7 +489,7 @@ export default function JobNew() {
             <button
               onClick={() => setStep(step - 1)}
               disabled={creating}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-extrabold text-sm transition shadow-sm disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-slate-300 bg-white hover:bg-slate-100 text-slate-800 font-bold text-sm transition shadow-sm disabled:opacity-50"
             >
               <ChevronLeft size={18} strokeWidth={2.5} /> 이전 단계
             </button>
@@ -499,7 +499,7 @@ export default function JobNew() {
             <button
               onClick={() => setStep(step + 1)}
               disabled={!canProceed()}
-              className="flex items-center gap-2 px-7 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-black text-sm shadow-md shadow-cyan-600/30 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-7 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm shadow-md shadow-cyan-600/30 transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
               다음 단계 <ChevronRight size={18} strokeWidth={2.5} />
             </button>
@@ -507,7 +507,7 @@ export default function JobNew() {
             <button
               onClick={handleSubmit}
               disabled={!canProceed() || creating}
-              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-lg shadow-emerald-600/30 transition disabled:opacity-50"
+              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/30 transition disabled:opacity-50"
             >
               {creating ? <Loader size={18} className="animate-spin" /> : <Sparkles size={18} />}
               {creating ? '영상 생성 진행 중...' : '영상 시작'}
@@ -523,7 +523,7 @@ function Row({ label, value, highlight }) {
   return (
     <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-200 last:border-0">
       <span className="font-semibold text-slate-500">{label}</span>
-      <span className={`font-black ${highlight ? 'text-cyan-700 text-sm' : 'text-slate-900'}`}>{value}</span>
+      <span className={`font-bold ${highlight ? 'text-cyan-700 text-sm' : 'text-slate-900'}`}>{value}</span>
     </div>
   )
 }
