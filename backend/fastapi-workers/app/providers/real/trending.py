@@ -580,6 +580,148 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             except Exception as exc:
                 logger.warning("S-grade public comment sample failed for video=%s: %s", video.video_id, exc)
 
+    BENCHMARK_CHANNELS = {
+        "경제사냥꾼": "",
+        "삼프로TV": "",
+        "주식하는형": "",
+    }
+
+    def get_channel_benchmarks(self, channel_ids: list[str] | None = None) -> list[dict]:
+        """
+        지정 채널들의 공개 지표를 channels.list + playlistItems.list + videos.list로 조회.
+        - 총 유닛 비용: 채널당 ~3 유닛
+        - Redis TTL: 6시간 (21,600초)
+        - 구독자 수: Google API가 1,000 단위 근사값만 반환 → UI에서 ~ 표기 필요
+        """
+        targets = channel_ids or list(self.BENCHMARK_CHANNELS.values())
+        targets = [cid for cid in targets if cid]
+
+        if not targets:
+            return []
+
+        cache_key = f"youtube:benchmark:{'_'.join(sorted(targets))}"
+
+        if self._redis:
+            try:
+                cached = self._redis.get(cache_key)
+                if cached:
+                    logger.info(f"Redis 캐시 히트 (benchmark): {cache_key}")
+                    return json.loads(cached)
+            except Exception as e:
+                logger.warning(f"Redis 캐시 조회 실패 (benchmark): {e}")
+
+        if not self.api_key:
+            logger.warning("YOUTUBE_API_KEY 미설정 → 채널 벤치마크 수집 건너뜁니다")
+            return []
+
+        results = []
+        for channel_id in targets:
+            try:
+                if not _consume_quota(self._redis, 1, "channels.list"):
+                    logger.warning("YouTube quota limit reached for channels.list")
+                    break
+
+                ch_resp = requests.get(
+                    f"{self.base_url}/channels",
+                    params={
+                        "part": "snippet,statistics,contentDetails",
+                        "id": channel_id,
+                        "key": self.api_key,
+                    },
+                    timeout=15,
+                )
+                if ch_resp.status_code != 200:
+                    continue
+                ch_json = ch_resp.json()
+                if not ch_json.get("items"):
+                    continue
+
+                ch = ch_json["items"][0]
+                snippet = ch["snippet"]
+                stats = ch["statistics"]
+                uploads_id = ch.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
+
+                recent_videos: list[dict] = []
+                if uploads_id:
+                    if _consume_quota(self._redis, 1, "playlistItems.list"):
+                        pl_resp = requests.get(
+                            f"{self.base_url}/playlistItems",
+                            params={
+                                "part": "contentDetails",
+                                "playlistId": uploads_id,
+                                "maxResults": 10,
+                                "key": self.api_key,
+                            },
+                            timeout=15,
+                        )
+                        if pl_resp.status_code == 200:
+                            pl_json = pl_resp.json()
+                            video_ids = [
+                                item["contentDetails"]["videoId"]
+                                for item in pl_json.get("items", [])
+                                if "contentDetails" in item and "videoId" in item["contentDetails"]
+                            ]
+
+                            if video_ids and _consume_quota(self._redis, 1, "videos.list"):
+                                v_resp = requests.get(
+                                    f"{self.base_url}/videos",
+                                    params={
+                                        "part": "snippet,statistics,contentDetails",
+                                        "id": ",".join(video_ids),
+                                        "key": self.api_key,
+                                    },
+                                    timeout=15,
+                                )
+                                if v_resp.status_code == 200:
+                                    v_json = v_resp.json()
+                                    for v in v_json.get("items", []):
+                                        recent_videos.append({
+                                            "title": v["snippet"].get("title", ""),
+                                            "published_at": v["snippet"].get("publishedAt", ""),
+                                            "duration": v["contentDetails"].get("duration", ""),
+                                            "view_count": int(v["statistics"].get("viewCount", 0)),
+                                            "like_count": int(v["statistics"].get("likeCount", 0)),
+                                        })
+
+                upload_gap_days: float | None = None
+                if len(recent_videos) >= 2:
+                    from datetime import datetime
+                    dates = sorted(
+                        [datetime.fromisoformat(v["published_at"].replace("Z", "+00:00"))
+                         for v in recent_videos if v["published_at"]],
+                        reverse=True,
+                    )
+                    if len(dates) >= 2:
+                        gaps = [(dates[i] - dates[i + 1]).days for i in range(len(dates) - 1)]
+                        upload_gap_days = round(sum(gaps) / len(gaps), 1)
+
+                avg_views = (
+                    round(sum(v["view_count"] for v in recent_videos) / len(recent_videos))
+                    if recent_videos else 0
+                )
+
+                results.append({
+                    "channel_id": channel_id,
+                    "title": snippet.get("title", ""),
+                    "subscriber_count": int(stats.get("subscriberCount", 0)),
+                    "total_view_count": int(stats.get("viewCount", 0)),
+                    "video_count": int(stats.get("videoCount", 0)),
+                    "avg_views_recent_10": avg_views,
+                    "upload_gap_days": upload_gap_days,
+                    "recent_videos": recent_videos,
+                })
+            except Exception as exc:
+                logger.warning("[BenchmarkError] channel_id=%s: %s", channel_id, exc)
+                continue
+
+        if self._redis and results:
+            try:
+                self._redis.setex(cache_key, 21600, json.dumps(results, ensure_ascii=False))
+            except Exception as exc:
+                logger.warning("Redis 캐시 저장 실패 (benchmark): %s", exc)
+
+        return results
+
 
 def _parse_iso8601_duration(value: str) -> float:
     match = re.fullmatch(r"P(?:\d+D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?", value or "")
