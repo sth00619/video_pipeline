@@ -234,6 +234,6 @@ def script_visual_direction(scene: dict) -> str:
     source = _scene_source(scene)
     if any(token in source for token in ("하락", "폭락", "약세", "위험", "압박", "감소", "식었", "진정", "완화")):
         return "down"
-    if any(token in source for token in ("반등", "상승", "회복", "개선", "증가")):
+    if any(token in source for token in ("반등", "상승", "회복", "개선", "증가", "급등")):
         return "up"
     return "neutral"
