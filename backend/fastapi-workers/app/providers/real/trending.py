@@ -581,9 +581,9 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
                 logger.warning("S-grade public comment sample failed for video=%s: %s", video.video_id, exc)
 
     BENCHMARK_CHANNELS = {
-        "경제사냥꾼": "",
-        "삼프로TV": "",
-        "주식하는형": "",
+        "경제사냥꾼": "UC7usMJDHmtbs_oegmzQKKMA",
+        "삼프로TV": "UC86s17Zc-V7vP7zL6Z-Yd4g",
+        "주식하는형": "UCpAyogfL8-YzmKf3-wTfEBg",
     }
 
     def get_channel_benchmarks(self, channel_ids: list[str] | None = None) -> list[dict]:
