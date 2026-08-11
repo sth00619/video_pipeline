@@ -1989,80 +1989,106 @@ def _apply_channel_watermark(video_path: str, temp_dir: Path, job_id: int) -> bo
         return False
 
 
+def _get_scene_text(scene: dict) -> str:
+    """씬에서 내레이션 텍스트를 읽는 키 우선순위: narration > script > text_for_tts > content > text."""
+    return str(
+        scene.get("narration")
+        or scene.get("script")
+        or scene.get("narration_text")
+        or scene.get("text_for_tts")
+        or scene.get("content")
+        or scene.get("text")
+        or ""
+    )
+
+
 def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_duration: float):
     """
-    [S4] TTS-씬 정밀 타임라인 싱크:
-    TTS 추출 타임스탬프 청크(chunks)와 씬 텍스트(content)를 매핑하여
-    각 씬의 start_time, end_time, duration을 0.001초 단위로 정밀 산출.
-    청크가 없거나 매핑 실패 시 문자 수 비례 분배 폴백.
+    [S4] TTS-씬 정밀 타임라인 싱크 (Chunk Boundary Snap 버전):
+
+    변경 이력 (P0 recovery):
+    - scene 텍스트 키를 narration/script/text_for_tts/content/text 순으로 확장
+    - get_time_at_ratio() 내부 선형 보간 제거 →
+      씬 경계를 자막 청크의 end 타임스탬프에 정확히 스냅
+    - 이미지 전환이 자막 행 전환 순간과 100% 일치하도록 보장
     """
     if not scenes or total_duration <= 0:
         return
 
-    # 1. 청크가 없거나 유효하지 않으면 기존 비례 분배
+    # ── 폴백: 청크 없음 ──────────────────────────────────────────
     if not chunks or not isinstance(chunks, list):
-        total_chars = sum(len(scene.get("content", "") or scene.get("text", "") or "") for scene in scenes)
+        total_chars = sum(len(_get_scene_text(s)) for s in scenes)
         for scene in scenes:
-            char_len = len(scene.get("content", "") or scene.get("text", "") or "")
-            if total_chars > 0:
-                scene["duration"] = round((char_len / total_chars) * total_duration, 3)
-            else:
-                scene["duration"] = round(total_duration / len(scenes), 3)
+            char_len = len(_get_scene_text(scene))
+            scene["duration"] = round(
+                (char_len / total_chars) * total_duration if total_chars > 0
+                else total_duration / len(scenes),
+                3,
+            )
         return
 
-    # 2. 청크 타임스탬프 기반 정밀 누적 매핑
-    total_chars = sum(len(scene.get("content", "") or scene.get("text", "") or "") for scene in scenes)
+    # ── 청크 경계 사전 빌드 ──────────────────────────────────────
+    # chunk_boundaries[i] = (cum_start_char, cum_end_char, t_start, t_end)
+    chunk_boundaries: list[tuple[int, int, float, float]] = []
+    acc_chunk = 0
+    for c in chunks:
+        c_text = str(c.get("text") or "")
+        c_len = len(c_text)
+        t_start = float(c.get("start") or 0.0)
+        t_end = float(c.get("end") or t_start + float(c.get("duration") or 0.0))
+        chunk_boundaries.append((acc_chunk, acc_chunk + c_len, t_start, t_end))
+        acc_chunk += c_len
+    total_chunk_chars = acc_chunk
+
+    # ── 씬 텍스트 합산 ───────────────────────────────────────────
+    scene_texts = [_get_scene_text(s) for s in scenes]
+    total_chars = sum(len(t) for t in scene_texts)
     if total_chars <= 0:
         for scene in scenes:
             scene["duration"] = round(total_duration / len(scenes), 3)
         return
 
-    chunk_lengths = [len(c.get("text", "")) for c in chunks]
-    total_chunk_chars = sum(chunk_lengths)
+    # ── 청크 경계 스냅 함수 ──────────────────────────────────────
+    def snap_to_chunk_end(scene_char_end: int) -> float:
+        """scene_char_end 이전까지를 커버하는 마지막 청크의 end 타임스탬프 반환.
 
-    accumulated_chars = 0
-    for scene in scenes:
-        scene_char_len = len(scene.get("content", "") or scene.get("text", "") or "")
-        start_char_idx = accumulated_chars
-        end_char_idx = accumulated_chars + scene_char_len
-        accumulated_chars = end_char_idx
+        - 비율 보간을 완전히 제거하고 실제 청크 end 값에만 스냅.
+        - 씬 경계가 자막 행 전환 순간과 일치하게 된다.
+        """
+        if total_chunk_chars <= 0:
+            return total_duration
+        # scene 문자 위치 → chunk 문자 위치로 비율 변환
+        target_chunk_char = round((scene_char_end / total_chars) * total_chunk_chars)
+        # target_chunk_char 이전까지 포함하는 청크 중 마지막을 찾음
+        snapped_t_end = total_duration
+        for (bc_start, bc_end, bt_start, bt_end) in chunk_boundaries:
+            if bc_start < target_chunk_char:
+                snapped_t_end = bt_end          # 계속 갱신 → 마지막 적합 청크
+            else:
+                break                           # 청크는 순서대로 정렬되어 있음
+        return round(snapped_t_end, 3)
 
-        start_ratio = start_char_idx / total_chars if total_chars > 0 else 0
-        end_ratio = end_char_idx / total_chars if total_chars > 0 else 1
-
-        def get_time_at_ratio(r: float) -> float:
-            target_idx = r * total_chunk_chars
-            curr = 0
-            for c in chunks:
-                c_len = len(c.get("text", ""))
-                c_start = float(c.get("start", 0))
-                c_end = float(c.get("end", c_start + c.get("duration", 0.0)))
-                if curr + c_len >= target_idx:
-                    if c_len > 0:
-                        sub_r = (target_idx - curr) / c_len
-                        return round(c_start + (c_end - c_start) * sub_r, 3)
-                    return round(c_start, 3)
-                curr += c_len
-            return round(total_duration, 3)
-
-        if chunks and total_chunk_chars > 0:
-            s_time = get_time_at_ratio(start_ratio)
-            e_time = get_time_at_ratio(end_ratio)
-        else:
-            s_time = round(start_ratio * total_duration, 3)
-            e_time = round(end_ratio * total_duration, 3)
-
+    # ── 씬별 start_time / end_time 할당 ─────────────────────────
+    # 첫 씬 start = 0, 이후 씬 start = 이전 씬 end (체인 방식)
+    acc_scene = 0
+    prev_end = 0.0
+    for scene, scene_text in zip(scenes, scene_texts):
+        acc_scene += len(scene_text)
+        e_time = snap_to_chunk_end(acc_scene)
+        s_time = prev_end
         dur = round(max(0.05, e_time - s_time), 3)
-        scene["start_time"] = s_time
-        scene["end_time"] = e_time
+        scene["start_time"] = round(s_time, 3)
+        scene["end_time"] = round(e_time, 3)
         scene["duration"] = dur
+        prev_end = e_time
 
-    # 오차 보정 (마지막 씬 duration을 total_duration에 정확히 일치시킴)
-    sum_dur = sum(s["duration"] for s in scenes)
-    diff = round(total_duration - sum_dur, 3)
-    if scenes and abs(diff) > 0.001:
-        scenes[-1]["duration"] = round(max(0.05, scenes[-1]["duration"] + diff), 3)
-        scenes[-1]["end_time"] = round(scenes[-1]["start_time"] + scenes[-1]["duration"], 3)
+    # ── 마지막 씬 보정 (total_duration 오차 정렬) ─────────────────
+    if scenes:
+        sum_dur = sum(s["duration"] for s in scenes)
+        diff = round(total_duration - sum_dur, 3)
+        if abs(diff) > 0.001:
+            scenes[-1]["duration"] = round(max(0.05, scenes[-1]["duration"] + diff), 3)
+            scenes[-1]["end_time"] = round(scenes[-1]["start_time"] + scenes[-1]["duration"], 3)
 
 
 def _assign_editorial_overlay_timing(scenes: list[dict]) -> None:

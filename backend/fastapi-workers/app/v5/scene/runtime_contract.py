@@ -111,7 +111,13 @@ def _motion_contract(visual_mode: str, visual_text_policy: str, character_requir
 
 def _korean_context_visual_brief(scene: dict[str, Any]) -> str:
     """대본의 한국 맥락을 로고 없이 현지 공간·소품으로 전달한다."""
-    source = " ".join(str(scene.get(key) or "") for key in ("title", "content", "text", "visual_intent", "topic")).lower()
+    source = " ".join(
+        str(scene.get(key) or "")
+        for key in (
+            "narration", "script", "narration_text", "text_for_tts",
+            "title", "content", "text", "visual_intent", "topic",
+        )
+    ).lower()
     if any(token in source for token in ("홈플러스", "하림", "마트", "슈퍼", "유통", "소비")):
         return (
             "When this scene is Korean retail, use a recognizably Korean hypermarket exterior or interior: Korean-style storefront proportions, "

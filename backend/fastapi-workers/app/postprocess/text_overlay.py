@@ -56,7 +56,15 @@ def add_headline(image_path: str, output_path: str, headline: str, mood: str = "
 def script_caption(scene: dict) -> str:
     """대본의 핵심 문장을 숫자 없이 짧은 표면 문구로 정리한다."""
     candidate = str(
-        scene.get("title") or scene.get("bubble_text") or scene.get("content") or scene.get("text") or ""
+        scene.get("title")
+        or scene.get("bubble_text")
+        or scene.get("narration")
+        or scene.get("script")
+        or scene.get("narration_text")
+        or scene.get("text_for_tts")
+        or scene.get("content")
+        or scene.get("text")
+        or ""
     ).strip()
     candidate = re.sub(r"^씬\s*\d+\s*:\s*", "", candidate)
     candidate = re.sub(r"\s*[·|]\s*\d+\s*$", "", candidate)
@@ -66,35 +74,89 @@ def script_caption(scene: dict) -> str:
 
 
 def _scene_source(scene: dict) -> str:
-    """대본과 Claude가 지정한 시각 의도를 함께 의미형 장면 계획에 반영한다."""
+    """대본과 Claude가 지정한 시각 의도를 함께 의미형 장면 계획에 반영한다.
+
+    NOTE: 키 우선순위는 변경하지 않는다.
+    narration/script/text_for_tts 키를 앞에 추가해 ScriptWorker가
+    해당 키에 내레이션을 저장한 씬도 정상 인식하게 한다.
+    """
     return " ".join(
         str(scene.get(key) or "")
-        for key in ("title", "bubble_text", "content", "text", "visual_intent")
+        for key in (
+            "narration", "script", "narration_text", "text_for_tts",
+            "title", "bubble_text", "content", "text", "visual_intent",
+        )
     )
 
 
 def script_visual_phrase(scene: dict) -> str:
-    """대본의 의미를 실제 수치 없는 영어 시각 문구로 바꾼다."""
+    """대본의 의미를 실제 수치 없는 영어 시각 문구로 바꾼다.
+
+    CHANGELOG (P0 recovery):
+    - _scene_source()가 narration/script 키를 포함하므로 source 연산 자동 개선됨
+    - 금리·물가·부동산·한국증시·미국증시·채권·유가·고용·연준 등 키워드 확장
+    - 마지막 return을 "MARKET OUTLOOK" 고정에서 방향성 기반 동적 문구로 교체
+    """
     source = _scene_source(scene)
+    source_upper = source.upper()
+
+    # ── 기존 분기 (변경 없음) ──────────────────────────────────────
     if "반도체" in source:
-        return "SEMICONDUCTOR GOES DOWN" if any(token in source for token in ("하락", "폭락", "약세")) else "SEMICONDUCTOR OUTLOOK"
+        return "SEMICONDUCTOR GOES DOWN" if any(t in source for t in ("하락", "폭락", "약세")) else "SEMICONDUCTOR OUTLOOK"
     if "공급망" in source or "수출" in source:
         return "SUPPLY CHAIN AT RISK"
-    if "공포" in source or "VIX" in source.upper():
-        return "FEAR IS COOLING" if any(token in source for token in ("식었", "진정", "완화")) else "MARKET FEAR"
+    if "공포" in source or "VIX" in source_upper:
+        return "FEAR IS COOLING" if any(t in source for t in ("식었", "진정", "완화")) else "MARKET FEAR"
     if "달러" in source or "환율" in source:
         return "DOLLAR UNDER PRESSURE"
-    if any(token in source for token in ("국내만", "글로벌", "세계")):
+    if any(t in source for t in ("국내만", "글로벌", "세계")):
         return "GLOBAL MARKETS TOGETHER"
-    if any(token in source for token in ("마트", "장바구니", "소비자물가", "생필품")):
-        return "GROCERY BILL SPIKES" if any(token in source for token in ("상승", "급등", "비싸", "부담")) else "PRICES AT THE COUNTER"
-    if any(token in source for token in ("점유율", "지분", "시장점유율")):
+    if any(t in source for t in ("마트", "장바구니", "소비자물가", "생필품")):
+        return "GROCERY BILL SPIKES" if any(t in source for t in ("상승", "급등", "비싸", "부담")) else "PRICES AT THE COUNTER"
+    if any(t in source for t in ("점유율", "지분", "시장점유율")):
         return "MARKET SHARE SPLIT"
-    if any(token in source for token in ("하락", "폭락", "약세", "급락")):
+    if any(t in source for t in ("하락", "폭락", "약세", "급락")):
         return "MARKET GOES DOWN"
-    if any(token in source for token in ("반등", "상승", "회복", "급등")):
+    if any(t in source for t in ("반등", "상승", "회복", "급등")):
         return "MARKET BOUNCES BACK"
-    return "MARKET OUTLOOK"
+
+    # ── 신규 확장: 주식/금융 핵심 키워드 ─────────────────────────────
+    if any(t in source for t in ("연준", "FOMC", "파월", "Fed")):
+        return "FED WATCH"
+    if any(t in source for t in ("금리", "기준금리", "금리인상", "금리인하")):
+        return "RATE CUT SIGNAL" if any(t in source for t in ("인하", "완화", "피벗")) else "RATE HIKE PRESSURE"
+    if any(t in source for t in ("인플레이션", "물가", "CPI", "PPI")):
+        return "INFLATION COOLING" if any(t in source for t in ("완화", "하락", "안정")) else "INFLATION RISING"
+    if any(t in source for t in ("부동산", "주택", "아파트", "전셋값")):
+        return "REAL ESTATE TREND"
+    if any(t in source for t in ("코스피", "코스닥", "국내증시", "국내주식")):
+        return "KOREAN MARKET UPDATE"
+    if any(t in source for t in ("나스닥", "S&P", "뉴욕증시", "미국주식", "다우")):
+        return "US MARKET WATCH"
+    if any(t in source for t in ("국채", "채권", "장단기", "스프레드")):
+        return "BOND YIELD WATCH"
+    if any(t in source for t in ("유가", "원유", "WTI", "브렌트", "에너지")):
+        return "OIL PRICE WATCH"
+    if any(t in source for t in ("고용", "실업", "일자리", "비농업")):
+        return "JOBS REPORT WATCH"
+    if any(t in source for t in ("무역", "무역적자", "무역흑자")):
+        return "TRADE BALANCE SIGNAL"
+    if any(t in source for t in ("기업실적", "실적", "영업이익", "EPS")):
+        return "EARNINGS SPOTLIGHT"
+    if any(t in source for t in ("경기", "GDP", "성장률", "경기침체", "리세션")):
+        return "GROWTH OUTLOOK"
+    if any(t in source for t in ("소비", "소비자심리", "소매판매")):
+        return "CONSUMER SPENDING"
+    if any(t in source for t in ("투자", "외국인", "기관", "개인")):
+        return "CAPITAL FLOW"
+
+    # ── 최후 폴백: 방향성 기반 동적 문구 ("MARKET OUTLOOK" 고정 완전 제거) ──
+    direction = script_visual_direction(scene)
+    if direction == "up":
+        return "TREND REVERSAL UP"
+    if direction == "down":
+        return "TREND REVERSAL DOWN"
+    return "ECONOMIC ANALYSIS"
 
 
 def script_visual_plan(scene: dict) -> dict[str, str]:
