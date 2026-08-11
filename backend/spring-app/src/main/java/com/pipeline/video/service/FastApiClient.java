@@ -504,7 +504,22 @@ public class FastApiClient {
             }
             return videos;
         } catch (Exception e) {
-            throw new RuntimeException("트렌딩 비디오 검색 오류: " + e.getMessage(), e);
+            log.error("트렌딩 비디오 조회 오류: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    public Map<String, Object> getChannelBenchmarks(String channelIds) {
+        try {
+            String url = fastApiUrl + "/workers/youtube/channels/benchmark";
+            if (channelIds != null && !channelIds.isBlank()) {
+                url += "?channel_ids=" + channelIds;
+            }
+            String responseBody = restTemplate.getForObject(url, String.class);
+            return objectMapper.readValue(responseBody, Map.class);
+        } catch (Exception e) {
+            log.error("채널 벤치마크 조회 오류: {}", e.getMessage());
+            return Map.of("status", "error", "channels", List.of());
         }
     }
 
