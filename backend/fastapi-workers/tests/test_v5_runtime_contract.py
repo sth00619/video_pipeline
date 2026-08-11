@@ -216,9 +216,31 @@ def test_runtime_contract_uses_korean_context_without_numeric_or_floating_ui():
     assert "numeric_visual_policy" in contract["visual_mode_contract"]
 
 
-def test_earnings_stage_is_not_an_automatic_candidate_and_remains_blocked():
+def test_earnings_stage_is_fully_implemented_and_routes_correctly():
+    """earnings_stage Phase 3-A 완전 구현 검증 테스트."""
+    # 1. RENDER_BLOCKED_ARCHETYPES에 없어야 함 (차단 해제 유지)
     assert "earnings_stage" not in RENDER_BLOCKED_ARCHETYPES
-    assert all("earnings_stage" not in candidates for candidates in TYPE_CANDIDATES.values())
+
+    # 2. TYPE_CANDIDATES["general"]에 포함되어야 함
+    assert "earnings_stage" in TYPE_CANDIDATES.get("general", ())
+
+    # 3. 기업실적 내레이션 씬이 earnings_stage로 라우팅되는지 확인
+    from app.v5.scene.scene_type_archetypes import recommend_v5_archetype
+    sel = recommend_v5_archetype({
+        "scene_type": "general",
+        "narration": "삼성전자 분기실적에서 영업이익이 어닝서프라이즈를 기록했습니다.",
+    })
+    assert sel.archetype == "earnings_stage", f"기업실적 씬 라우팅 실패: {sel.archetype}"
+
+    # 4. plan_v5_scene_contract가 earnings_stage 씬을 정상 처리하는지 확인
+    contract = plan_v5_scene_contract({
+        "scene_type": "general",
+        "narration": "삼성전자 분기실적에서 영업이익이 어닝서프라이즈를 기록했습니다.",
+        "visual_archetype": "earnings_stage",
+    }, 0)
+    assert contract["selection"]["archetype"] == "earnings_stage"
+    assert contract["scene_spec"]["character_position"] == "center"
+    assert contract["scene_spec"]["emotion"] in ("confidence", "happy")
 
 
 def test_runtime_contract_rejects_missing_scene_type():

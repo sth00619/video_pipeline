@@ -182,6 +182,14 @@ ARCHETYPES = {
         "bright civic interior lighting with a calm welcoming glow and restrained accent colors",
         "non-writing career icons, queue-machine shapes, folder materials, divider lines, and color-only employment silhouettes",
     ),
+    # earnings_stage: 기업실적·분기발표·EPS·배당 서사 전용 무대
+    # briefing_podium과 달리 금융 실적 발표에 특화된 기업용 연단 + 무대 조명을 사용한다.
+    "earnings_stage": Archetype(
+        "a formal corporate quarterly earnings announcement stage with one broad results-presentation mural embedded flush into the center back wall behind an executive podium and desk",
+        "an executive desk, a central branded podium without real logos, broadcast cameras on tripods, overhead stage spotlights, investor-seating rows, floor microphone stands, and cable bundles",
+        "bright professional stage lighting with focused warm key spotlights, cool-blue fill on the results-mural surface, and subtle directional financial-indicator glow from floor-mounted strips",
+        "non-writing financial chart silhouettes, color-coded bar-outline shapes, rising-or-falling directional arrows without numbers, podium trim details, and floor cable lines",
+    ),
 }
 
 

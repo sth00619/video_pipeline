@@ -75,6 +75,12 @@ ARCHETYPE_SURFACES: dict[str, tuple[str, ...]] = {
         "queue-ticket displays",
         "job-posting sheets",
     ),
+    # earnings_stage: 실적 발표 무대 — 기업실적·EPS·배당 서사 전용
+    "earnings_stage": (
+        "the single broad corporate results-presentation mural embedded flush into the center back wall directly behind the executive podium",
+        "earnings podium nameplates",
+        "floor teleprompter stands",
+    ),
 }
 
 
@@ -93,6 +99,8 @@ PRIMARY_SURFACE_REGIONS: dict[str, tuple[float, float, float, float]] = {
     "briefing_podium": (0.23, 0.16, 0.56, 0.46),
     "real_estate_office": (0.03, 0.10, 0.46, 0.48),
     "job_market_hall": (0.27, 0.03, 0.48, 0.56),
+    # earnings_stage: briefing_podium과 유사한 넓은 센터-백 표면 (살짝 더 넓고 낮음)
+    "earnings_stage": (0.15, 0.08, 0.68, 0.54),
 }
 
 
@@ -124,6 +132,7 @@ TYPE_CANDIDATES: dict[str, tuple[str, ...]] = {
         "weather_map",
         "data_lab",
         "trade_calculator",
+        "earnings_stage",    # 기업실적·EPS·배당 전용 — Phase 3-A에서 완전 구현
     ),
 }
 
@@ -250,11 +259,11 @@ def recommend_v5_archetype(scene: dict) -> ArchetypeSelection:
             "general", "briefing_podium",
             "주가지수·증시 시황 서사이므로 방송 발표 연단인 briefing_podium을 추천",
         )
-    # 기업실적·EPS·배당 → briefing_podium (earnings_stage는 Phase 3에서 완전 구현)
+    # 기업실적·EPS·배당 → earnings_stage (Phase 3-A 완전 구현)
     if _has_any(text, _STOCK_EARNINGS_HINTS):
         return _selection(
-            "general", "briefing_podium",
-            "기업실적·EPS·배당 서사이므로 공식 발표 무대인 briefing_podium을 추천",
+            "general", "earnings_stage",
+            "기업실적·EPS·배당 서사이므로 실적 발표 무대인 earnings_stage를 추천",
         )
     # 포트폴리오·매매전략·ETF → trade_calculator
     if _has_any(text, _STOCK_CALCULATOR_HINTS):

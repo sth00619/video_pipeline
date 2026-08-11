@@ -45,6 +45,8 @@ PRESENTATION_BY_ARCHETYPE: dict[str, tuple[str, str, str, str]] = {
     "briefing_podium":   ("confidence", "tuxedo_host",       "present",         "right"),
     "real_estate_office":("explain",    "architect_planner", "calculator_hold", "left"),
     "job_market_hall":   ("explain",    "reporter",          "present",         "left"),
+    # earnings_stage: 기업실적·EPS·배당 — 중앙 연단에서 자신감 있는 발표 포즈
+    "earnings_stage":    ("confidence", "tuxedo_host",       "present",         "center"),
 }
 
 
