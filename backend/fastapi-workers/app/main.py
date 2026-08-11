@@ -538,6 +538,27 @@ def trending_youtube(request: TrendingRequest):
         raise HTTPException(500, f"트렌딩 비디오 검색 실패: {str(e)}")
 
 
+@app.get("/workers/youtube/channels/benchmark")
+async def youtube_channel_benchmark(
+    channel_ids: str | None = None,
+):
+    """
+    경쟁 채널 공개 지표 벤치마크.
+    - channel_ids: 쉼표로 구분된 YouTube channel_id 목록 (선택)
+    - 응답: 채널별 구독자수(근사), 평균조회수, 업로드 간격
+    - 쿼터 비용: 채널당 ~3 유닛 (Redis 캐시 6hr)
+    """
+    try:
+        from app.providers.real.trending import YouTubeTrendingAnalyzer
+        analyzer = YouTubeTrendingAnalyzer()
+
+        ids = [c.strip() for c in channel_ids.split(",")] if channel_ids else None
+        data = analyzer.get_channel_benchmarks(channel_ids=ids)
+        return {"status": "ok", "channels": data}
+    except Exception as e:
+        raise HTTPException(500, f"채널 벤치마크 조회 실패: {str(e)}")
+
+
 class ManualKeywordContextRequest(BaseModel):
     keyword: str
     recent_hours: int = 2
