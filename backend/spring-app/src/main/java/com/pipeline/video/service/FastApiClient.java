@@ -368,7 +368,7 @@ public class FastApiClient {
                 bodyMap.put("autonomy_mode", autonomyMode);
             }
             if (budgetLimitKrw != null) {
-                bodyMap.put("budget_limit_krw", budgetLimitKrw.intValueExact());
+                bodyMap.put("budget_limit_krw", budgetLimitKrw.intValue());
                 bodyMap.put("budget_policy_version", budgetPolicyVersion);
             }
             return objectMapper.readValue(
