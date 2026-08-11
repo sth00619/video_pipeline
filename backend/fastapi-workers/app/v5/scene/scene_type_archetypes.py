@@ -141,9 +141,35 @@ _DIAGRAM_DATA_LAB_HINTS = (
 _GENERAL_CLASSROOM_HINTS = ("설명", "원리", "배경", "explain", "principle", "background")
 _TEXT_PORT_HINTS = ("항만", "물류", "컨테이너", "수출", "port", "logistics", "container", "shipping")
 
+# ── 주식·금융 특화 힌트 (KOSPI/KOSDAQ/미국증시/기업실적) ─────────────────────
+_STOCK_MARKET_BRIEFING_HINTS: tuple[str, ...] = (
+    "코스피", "kospi", "코스닥", "kosdaq", "나스닥", "nasdaq",
+    "s&p", "sp500", "다우", "dow", "뉴욕증시", "미국증시",
+    "증시", "주가지수", "시장지수", "종합주가지수",
+)
+_STOCK_EARNINGS_HINTS: tuple[str, ...] = (
+    "기업실적", "실적발표", "영업이익", "순이익", "eps", "roe",
+    "어닝", "earning", "분기실적", "어닝서프라이즈",
+    "배당", "주주환원", "자사주", "buyback",
+)
+_STOCK_RISK_HINTS: tuple[str, ...] = (
+    "폭락", "급락", "패닉", "셀오프", "sell-off", "충격",
+    "공매도", "위험자산", "리스크", "변동성", "vix",
+    "서킷브레이커", "circuit breaker", "하한가",
+)
+_STOCK_CALCULATOR_HINTS: tuple[str, ...] = (
+    "포트폴리오", "portfolio", "매수전략", "매도전략", "비중", "리밸런싱",
+    "rebalancing", "수익률", "roi", "투자전략", "자산배분",
+    "etf", "종목선정", "스크리닝",
+)
+
 
 def _scene_text(scene: dict) -> str:
-    fields = ("title", "content", "text", "prompt_ko", "prompt_en", "visual_intent")
+    # narration/script/text_for_tts 키를 앞에 추가한다 (WO-1과 동일 우선순위 정책).
+    fields = (
+        "narration", "script", "narration_text", "text_for_tts",
+        "title", "content", "text", "prompt_ko", "prompt_en", "visual_intent",
+    )
     return "\n".join(str(scene.get(field) or "") for field in fields).lower()
 
 
@@ -158,15 +184,13 @@ def _selection(scene_type: str, archetype: str, reason: str) -> ArchetypeSelecti
     if archetype not in ARCHETYPES or archetype not in ARCHETYPE_SURFACES:
         raise ValueError(f"물리 정보 표면이 정의되지 않은 archetype: {archetype}")
     surfaces = ARCHETYPE_SURFACES[archetype]
-    alternatives = tuple(candidate for candidate in candidates if candidate != archetype)
     return ArchetypeSelection(
         scene_type=scene_type,
         archetype=archetype,
-        alternatives=alternatives,
         selection_reason=reason,
-        physical_surfaces=surfaces,
-        # 첫 표면을 primary로 고정해 장면마다 같은 입력은 같은 결과 계약을 갖게 한다.
         primary_physical_surface=surfaces[0],
+        physical_surfaces=surfaces,
+        alternatives=tuple(candidate for candidate in candidates if candidate != archetype),
     )
 
 
@@ -212,6 +236,33 @@ def recommend_v5_archetype(scene: dict) -> ArchetypeSelection:
     # classroom으로 잘못 매핑될 수 있다.
     if _has_any(text, _TEXT_PORT_HINTS):
         return _selection("general", "port_emergency", "항만·물류 장소 단서가 있어 캐릭터 중심의 port_emergency를 추천")
+
+    # ── 주식·금융 특화 라우팅 ────────────────────────────────────────────
+    # 폭락·패닉·리스크 → risk_control_room (시황 단서보다 위험 경보 서사를 우선)
+    if _has_any(text, _STOCK_RISK_HINTS):
+        return _selection(
+            "general", "risk_control_room",
+            "폭락·패닉·변동성 서사이므로 경보 계기판이 있는 risk_control_room을 추천",
+        )
+    # 대형 증시 지수 / 시황 → 방송 발표 무대 (공신력 있는 뉴스 브리핑 분위기)
+    if _has_any(text, _STOCK_MARKET_BRIEFING_HINTS):
+        return _selection(
+            "general", "briefing_podium",
+            "주가지수·증시 시황 서사이므로 방송 발표 연단인 briefing_podium을 추천",
+        )
+    # 기업실적·EPS·배당 → briefing_podium (earnings_stage는 Phase 3에서 완전 구현)
+    if _has_any(text, _STOCK_EARNINGS_HINTS):
+        return _selection(
+            "general", "briefing_podium",
+            "기업실적·EPS·배당 서사이므로 공식 발표 무대인 briefing_podium을 추천",
+        )
+    # 포트폴리오·매매전략·ETF → trade_calculator
+    if _has_any(text, _STOCK_CALCULATOR_HINTS):
+        return _selection(
+            "general", "trade_calculator",
+            "매매전략·포트폴리오·ETF 서사이므로 계산기·저울 소품이 있는 trade_calculator를 추천",
+        )
+
     if _has_any(text, _GENERAL_CLASSROOM_HINTS):
         return _selection("general", "classroom", "일반 설명·배경 장면이므로 캐릭터 설명 연출이 자연스러운 classroom을 추천")
     return _selection("general", "briefing_podium", "수치 표면이 필요 없는 일반 서사 장면이므로 방송 발표 무대인 briefing_podium을 추천")

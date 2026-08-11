@@ -28,17 +28,23 @@ from app.v5.scene.scene_type_archetypes import (
 
 # 검증을 거친 11개 archetype의 캐릭터 연출 기본값이다. 대본 수치나 사실을
 # 여기서 만들지 않으며, 씬 내용은 archetype 추천에만 사용한다.
+# 포지션 다양화 (BENCHMARK_SCENES 관찰 기반 — prompt_builder.py 참조):
+#   bench_02_retail  → left   bench_06_risk  → center   bench_07_trade → left
+#   bench_08_datalab → center (이하 나머지 → right)
+# layout_instruction이 <layout_contract>로 마지막에 주입되므로
+# 여기서의 position 값이 Gemini 프롬프트 final position을 결정한다.
 PRESENTATION_BY_ARCHETYPE: dict[str, tuple[str, str, str, str]] = {
-    "port_emergency": ("alarm", "safety_vest", "alarmed_run", "right"),
-    "retail_shock": ("surprise", "analyst", "calculator_hold", "right"),
-    "classroom": ("explain", "professor", "point_left", "right"),
-    "weather_map": ("explain", "reporter", "present", "right"),
-    "risk_control_room": ("concern", "reporter", "present", "right"),
-    "trade_calculator": ("confidence", "vest", "think", "right"),
-    "data_lab": ("explain", "reporter", "present", "right"),
-    "briefing_podium": ("confidence", "tuxedo_host", "present", "right"),
-    "real_estate_office": ("explain", "architect_planner", "calculator_hold", "right"),
-    "job_market_hall": ("explain", "reporter", "present", "right"),
+    # (emotion, costume, pose, character_position)
+    "port_emergency":    ("alarm",      "safety_vest",       "alarmed_run",     "right"),
+    "retail_shock":      ("surprise",   "analyst",           "calculator_hold", "left"),
+    "classroom":         ("explain",    "professor",         "point_left",      "right"),
+    "weather_map":       ("explain",    "reporter",          "present",         "right"),
+    "risk_control_room": ("concern",    "reporter",          "present",         "center"),
+    "trade_calculator":  ("confidence", "vest",              "think",           "left"),
+    "data_lab":          ("explain",    "reporter",          "present",         "center"),
+    "briefing_podium":   ("confidence", "tuxedo_host",       "present",         "right"),
+    "real_estate_office":("explain",    "architect_planner", "calculator_hold", "left"),
+    "job_market_hall":   ("explain",    "reporter",          "present",         "left"),
 }
 
 
@@ -169,6 +175,20 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         raise ValueError(f"V5 운영용 캐릭터 연출이 없는 archetype: {selection.archetype}")
 
     emotion, costume, pose, character_position = presentation
+
+    # 씬 방향성 기반 감정 오버라이드 (archetype 기본값보다 우선).
+    # alarm / surprise 는 archetype 서사 강도가 높으므로 방향성으로 덮지 않는다.
+    _DIRECTION_EMOTION_OVERRIDE: dict[str, dict[str, str]] = {
+        "up":      {"explain": "happy",   "confidence": "happy",  "concern": "explain"},
+        "down":    {"explain": "concern", "confidence": "concern", "happy": "concern"},
+        "neutral": {},
+    }
+    _LOCKED_EMOTIONS = {"alarm", "surprise"}
+    if emotion not in _LOCKED_EMOTIONS:
+        from app.postprocess.text_overlay import script_visual_direction
+        _direction = script_visual_direction(scene)
+        emotion = _DIRECTION_EMOTION_OVERRIDE.get(_direction, {}).get(emotion, emotion)
+
     spec = SceneSpec(
         scene_id=_scene_identifier(scene, index),
         archetype=selection.archetype,
