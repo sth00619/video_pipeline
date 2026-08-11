@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Flame, MessageCircle, Sparkles, ThumbsUp, Eye } from 'lucide-react'
-
-const FILTERS = [
-  { id: 'all', label: '전체', threshold: 0 },
-  { id: 'one', label: '조회율 100%+', threshold: 1 },
-  { id: 'three', label: '조회율 300%+', threshold: 3 },
-]
+import { CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, ThumbsUp, Eye } from 'lucide-react'
+import * as d3 from 'd3'
 
 const multipleOf = node => Number(node?.bestMultiple || 0)
 
@@ -41,28 +36,21 @@ function getNodeStyle(node, idx) {
 }
 
 export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), onToggle, evidenceVideos = [] }) {
-  const [filter, setFilter] = useState('all')
-  const [mindmapPage, setMindmapPage] = useState(1)
   const [videoPage, setVideoPage] = useState(1)
   const [hoveredNode, setHoveredNode] = useState(null)
 
-  const threshold = FILTERS.find(f => f.id === filter)?.threshold || 0
+  const svgRef = useRef(null)
+  const gRef = useRef(null)
 
-  // Filter primary nodes
+  // Primary nodes without page-slicing
   const filteredPrimary = useMemo(() => {
-    return (mindmap?.primary || []).filter(item => multipleOf(item) >= threshold)
-  }, [mindmap, threshold])
-
-  const MINDMAP_PAGE_SIZE = 6
-  const mindmapTotalPages = Math.max(1, Math.ceil(filteredPrimary.length / MINDMAP_PAGE_SIZE))
-  const pagedPrimary = useMemo(() => {
-    return filteredPrimary.slice((mindmapPage - 1) * MINDMAP_PAGE_SIZE, mindmapPage * MINDMAP_PAGE_SIZE)
-  }, [filteredPrimary, mindmapPage])
+    return mindmap?.primary || []
+  }, [mindmap])
 
   // Bidirectional Radial Layout Calculations
   const layout = useMemo(() => {
     const centerTitle = mindmap?.center || '오늘의 주식 기회 지도'
-    const items = pagedPrimary
+    const items = filteredPrimary
 
     const expansionsMap = new Map()
     ;(mindmap?.expansions || []).forEach(exp => {
@@ -123,7 +111,38 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
       center: { title: centerTitle, x: 0, y: 0 },
       nodes: [...leftNodes, ...rightNodes],
     }
-  }, [mindmap, pagedPrimary])
+  }, [mindmap, filteredPrimary])
+
+  // D3 Zoom behavior and auto-fit to view
+  useEffect(() => {
+    if (!svgRef.current || !gRef.current) return
+    const svg = d3.select(svgRef.current)
+    const g = d3.select(gRef.current)
+
+    const zoom = d3.zoom()
+      .scaleExtent([0.4, 2.5])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform)
+      })
+
+    svg.call(zoom)
+
+    const fitToView = () => {
+      const bounds = g.node()?.getBBox()
+      if (!bounds || !bounds.width || !bounds.height) return
+      const fullWidth = svgRef.current.clientWidth || 900
+      const fullHeight = svgRef.current.clientHeight || 460
+      const scale = Math.min(
+        0.9 * fullWidth / bounds.width,
+        0.9 * fullHeight / bounds.height,
+        1.5
+      )
+      const tx = fullWidth / 2 - scale * (bounds.x + bounds.width / 2)
+      const ty = fullHeight / 2 - scale * (bounds.y + bounds.height / 2)
+      svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
+    }
+    fitToView()
+  }, [layout])
 
   // Pagination for videos
   const VIDEO_PAGE_SIZE = 5
@@ -134,32 +153,19 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
     <div className="w-full">
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         
-        {/* Left Card: D3 Interactive Mindmap */}
-        <div className="flex-1 w-full bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between min-h-[540px]">
+        {/* Left Card: D3 Interactive Mindmap (70% width) */}
+        <div className="w-full lg:w-[70%] min-h-[520px] overflow-hidden bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-900">오늘의 주식 기회 지도</h3>
                 <p className="text-xs text-slate-400 mt-0.5">Interactive D3 mindmap chart</p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5">
-                  {FILTERS.map(f => (
-                    <button
-                      key={f.id}
-                      onClick={() => setFilter(f.id)}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${filter === f.id ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Mindmap SVG Container */}
-            <div className="relative w-full h-[420px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
-              <svg viewBox="-450 -230 900 460" className="w-full h-full select-none">
+            <div className="relative w-full h-[450px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
+              <svg ref={svgRef} viewBox="-450 -230 900 460" className="w-full h-full select-none">
                 <defs>
                   <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#4338ca" />
@@ -167,192 +173,167 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                   </linearGradient>
                 </defs>
 
-                {/* Connection Lines */}
-                {layout.nodes.map(node => (
-                  <g key={node.keyword}>
-                    <path
-                      d={`M 0,0 C ${node.x * 0.5},0 ${node.x * 0.5},${node.y} ${node.x},${node.y}`}
-                      fill="none"
-                      stroke={selectedKeywords.has(node.keyword) ? '#4f46e5' : '#cbd5e1'}
-                      strokeWidth={selectedKeywords.has(node.keyword) ? '2.5' : '1.8'}
-                      className="transition-all duration-300"
-                    />
-
-                    {node.children.map(child => (
+                <g ref={gRef}>
+                  {/* Connection Lines */}
+                  {layout.nodes.map(node => (
+                    <g key={node.keyword}>
                       <path
-                        key={child.keyword}
-                        d={`M ${node.x},${node.y} C ${node.x + child.direction * 60},${node.y} ${node.x + child.direction * 60},${child.y} ${child.x},${child.y}`}
+                        d={`M 0,0 C ${node.x * 0.5},0 ${node.x * 0.5},${node.y} ${node.x},${node.y}`}
                         fill="none"
-                        stroke="#cbd5e1"
-                        strokeWidth="1.2"
-                        strokeDasharray="4 4"
+                        stroke={selectedKeywords.has(node.keyword) ? '#4f46e5' : '#cbd5e1'}
+                        strokeWidth={selectedKeywords.has(node.keyword) ? '2.5' : '1.8'}
+                        className="transition-all duration-300"
                       />
-                    ))}
-                  </g>
-                ))}
 
-                {/* Sub-children Nodes */}
-                {layout.nodes.flatMap(node => node.children).map((child, idx) => {
-                  const isSelected = selectedKeywords.has(child.keyword)
-                  const style = getNodeStyle(child, idx + 2)
-                  const boxWidth = 115
-                  const boxHeight = 30
-                  const rectX = child.direction === 1 ? child.x : child.x - boxWidth
-
-                  return (
-                    <g
-                      key={child.keyword}
-                      onClick={() => onToggle?.(child.keyword, child)}
-                      className="cursor-pointer group"
-                    >
-                      <rect
-                        x={rectX}
-                        y={child.y - boxHeight / 2}
-                        width={boxWidth}
-                        height={boxHeight}
-                        rx="15"
-                        fill={isSelected ? '#4f46e5' : '#ffffff'}
-                        stroke={isSelected ? '#4f46e5' : style.stroke}
-                        strokeWidth="1.5"
-                        className="transition-all duration-200 shadow-xs group-hover:scale-105"
-                      />
-                      <text
-                        x={rectX + boxWidth / 2}
-                        y={child.y + 4}
-                        textAnchor="middle"
-                        fill={isSelected ? '#ffffff' : style.text}
-                        fontSize="11"
-                        fontWeight="700"
-                      >
-                        {child.keyword.length > 9 ? `${child.keyword.slice(0, 9)}…` : child.keyword}
-                      </text>
+                      {node.children.map(child => (
+                        <path
+                          key={child.keyword}
+                          d={`M ${node.x},${node.y} C ${node.x + child.direction * 60},${node.y} ${node.x + child.direction * 60},${child.y} ${child.x},${child.y}`}
+                          fill="none"
+                          stroke="#cbd5e1"
+                          strokeWidth="1.2"
+                          strokeDasharray="4 4"
+                        />
+                      ))}
                     </g>
-                  )
-                })}
+                  ))}
 
-                {/* Primary Nodes */}
-                {layout.nodes.map((node, idx) => {
-                  const isSelected = selectedKeywords.has(node.keyword)
-                  const style = getNodeStyle(node, idx)
-                  const boxWidth = 135
-                  const boxHeight = 38
-                  const rectX = node.x - boxWidth / 2
+                  {/* Sub-children Nodes */}
+                  {layout.nodes.flatMap(node => node.children).map((child, idx) => {
+                    const isSelected = selectedKeywords.has(child.keyword)
+                    const style = getNodeStyle(child, idx + 2)
+                    const boxWidth = 115
+                    const boxHeight = 30
+                    const rectX = child.direction === 1 ? child.x : child.x - boxWidth
 
-                  return (
-                    <g
-                      key={node.keyword}
-                      onClick={() => onToggle?.(node.keyword, node)}
-                      className="cursor-pointer group"
-                    >
-                      <rect
-                        x={rectX}
-                        y={node.y - boxHeight / 2}
-                        width={boxWidth}
-                        height={boxHeight}
-                        rx="19"
-                        fill={isSelected ? '#4f46e5' : style.bg}
-                        stroke={isSelected ? '#4f46e5' : style.stroke}
-                        strokeWidth={isSelected ? '2.5' : '1.8'}
-                        className="transition-all duration-200 shadow-sm group-hover:scale-105"
-                      />
-                      <text
-                        x={node.x}
-                        y={node.y + 4}
-                        textAnchor="middle"
-                        fill={isSelected ? '#ffffff' : style.text}
-                        fontSize="12.5"
-                        fontWeight="800"
+                    return (
+                      <g
+                        key={child.keyword}
+                        onClick={() => onToggle?.(child.keyword, child)}
+                        className="cursor-pointer group"
                       >
-                        {node.keyword.length > 10 ? `${node.keyword.slice(0, 10)}…` : node.keyword}
-                      </text>
+                        <rect
+                          x={rectX}
+                          y={child.y - boxHeight / 2}
+                          width={boxWidth}
+                          height={boxHeight}
+                          rx="15"
+                          fill={isSelected ? '#4f46e5' : '#ffffff'}
+                          stroke={isSelected ? '#4f46e5' : style.stroke}
+                          strokeWidth="1.5"
+                          className="transition-all duration-200 shadow-xs group-hover:scale-105"
+                        />
+                        <text
+                          x={rectX + boxWidth / 2}
+                          y={child.y + 4}
+                          textAnchor="middle"
+                          fill={isSelected ? '#ffffff' : style.text}
+                          fontSize="11"
+                          fontWeight="700"
+                        >
+                          {child.keyword.length > 9 ? `${child.keyword.slice(0, 9)}…` : child.keyword}
+                        </text>
+                      </g>
+                    )
+                  })}
 
-                      {/* Badge overlay */}
-                      {style.badgeText && (
-                        <g transform={`translate(${node.x - 34}, ${node.y - boxHeight / 2 - 10})`}>
-                          <rect x="0" y="0" width="68" height="18" rx="9" fill={style.badgeBg} />
-                          <text x="34" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
-                            {style.badgeText}
-                          </text>
-                        </g>
-                      )}
-                    </g>
-                  )
-                })}
+                  {/* Primary Nodes */}
+                  {layout.nodes.map((node, idx) => {
+                    const isSelected = selectedKeywords.has(node.keyword)
+                    const style = getNodeStyle(node, idx)
+                    const boxWidth = 135
+                    const boxHeight = 38
+                    const rectX = node.x - boxWidth / 2
 
-                {/* Center Node */}
-                <g className="cursor-default">
-                  <rect
-                    x="-95"
-                    y="-25"
-                    width="190"
-                    height="50"
-                    rx="25"
-                    fill="url(#centerGrad)"
-                    className="shadow-lg"
-                  />
-                  <text
-                    x="0"
-                    y="-2"
-                    textAnchor="middle"
-                    fill="#ffffff"
-                    fontSize="14"
-                    fontWeight="800"
-                  >
-                    {layout.center.title.length > 13 ? `${layout.center.title.slice(0, 13)}…` : layout.center.title}
-                  </text>
-                  <text
-                    x="0"
-                    y="14"
-                    textAnchor="middle"
-                    fill="#c7d2fe"
-                    fontSize="10"
-                    fontWeight="600"
-                  >
-                    주제 분석 중심
-                  </text>
+                    return (
+                      <g
+                        key={node.keyword}
+                        onClick={() => onToggle?.(node.keyword, node)}
+                        className="cursor-pointer group"
+                      >
+                        <rect
+                          x={rectX}
+                          y={node.y - boxHeight / 2}
+                          width={boxWidth}
+                          height={boxHeight}
+                          rx="19"
+                          fill={isSelected ? '#4f46e5' : style.bg}
+                          stroke={isSelected ? '#4f46e5' : style.stroke}
+                          strokeWidth={isSelected ? '2.5' : '1.8'}
+                          className="transition-all duration-200 shadow-sm group-hover:scale-105"
+                        />
+                        <text
+                          x={node.x}
+                          y={node.y + 4}
+                          textAnchor="middle"
+                          fill={isSelected ? '#ffffff' : style.text}
+                          fontSize="12.5"
+                          fontWeight="800"
+                        >
+                          {node.keyword.length > 10 ? `${node.keyword.slice(0, 10)}…` : node.keyword}
+                        </text>
 
-                  {/* Top Badge sitting on center node */}
-                  <g transform="translate(-45, -36)">
-                    <rect x="0" y="0" width="90" height="18" rx="9" fill="#ef4444" />
-                    <text x="45" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
-                      🔥 떡상 500%
+                        {/* Badge overlay */}
+                        {style.badgeText && (
+                          <g transform={`translate(${node.x - 34}, ${node.y - boxHeight / 2 - 10})`}>
+                            <rect x="0" y="0" width="68" height="18" rx="9" fill={style.badgeBg} />
+                            <text x="34" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
+                              {style.badgeText}
+                            </text>
+                          </g>
+                        )}
+                      </g>
+                    )
+                  })}
+
+                  {/* Center Node */}
+                  <g className="cursor-default">
+                    <rect
+                      x="-95"
+                      y="-25"
+                      width="190"
+                      height="50"
+                      rx="25"
+                      fill="url(#centerGrad)"
+                      className="shadow-lg"
+                    />
+                    <text
+                      x="0"
+                      y="-2"
+                      textAnchor="middle"
+                      fill="#ffffff"
+                      fontSize="14"
+                      fontWeight="800"
+                    >
+                      {layout.center.title.length > 13 ? `${layout.center.title.slice(0, 13)}…` : layout.center.title}
                     </text>
+                    <text
+                      x="0"
+                      y="14"
+                      textAnchor="middle"
+                      fill="#c7d2fe"
+                      fontSize="10"
+                      fontWeight="600"
+                    >
+                      주제 분석 중심
+                    </text>
+
+                    {/* Top Badge sitting on center node */}
+                    <g transform="translate(-45, -36)">
+                      <rect x="0" y="0" width="90" height="18" rx="9" fill="#ef4444" />
+                      <text x="45" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
+                        🔥 떡상 500%
+                      </text>
+                    </g>
                   </g>
                 </g>
               </svg>
             </div>
           </div>
-
-          {/* Left Mindmap Pagination */}
-          <div className="flex items-center justify-center gap-1.5 mt-3 pt-2">
-            <button
-              onClick={() => setMindmapPage(p => Math.max(1, p - 1))}
-              disabled={mindmapPage === 1}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            {Array.from({ length: mindmapTotalPages }, (_, i) => i + 1).map(p => (
-              <button
-                key={p}
-                onClick={() => setMindmapPage(p)}
-                className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${mindmapPage === p ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              onClick={() => setMindmapPage(p => Math.min(mindmapTotalPages, p + 1))}
-              disabled={mindmapPage >= mindmapTotalPages}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
-            >
-              <ChevronRight size={15} />
-            </button>
-          </div>
         </div>
 
-        {/* Right Card: YouTube 증권 영상 */}
-        <div className="w-full lg:w-[350px] bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between min-h-[540px] shrink-0">
+        {/* Right Card: YouTube 증권 영상 (30% width) */}
+        <div className="w-full lg:w-[30%] min-h-[520px] overflow-y-auto bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between shrink-0">
           <div>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
