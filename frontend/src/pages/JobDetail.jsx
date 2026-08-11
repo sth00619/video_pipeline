@@ -1046,8 +1046,12 @@ export default function JobDetail() {
                     <div>
                       <div className="font-semibold text-base">{step.label}</div>
                       {approval && <div className="text-sm text-navy-400 mt-0.5">{approval.result === 'AUTO_APPROVED' ? '⚡ 자동 승인' : `✓ ${approval.approvedBy}`}</div>}
-                      {ss === 'active' && isAuto && <div className="text-sm text-accent-cyan mt-0.5 flex items-center gap-1"><Loader size={12} className="animate-spin"/>자동 진행 중</div>}
-                      {ss === 'active' && !isAuto && <div className="text-sm text-accent-gold mt-0.5">승인 대기 중</div>}
+                      {ss === 'active' && isAuto && job.status !== 'IMAGES_RETRY_REQUIRED' && (
+                        <div className="text-sm text-accent-cyan mt-0.5 flex items-center gap-1"><Loader size={12} className="animate-spin"/>자동 진행 중</div>
+                      )}
+                      {ss === 'active' && (job.status === 'IMAGES_RETRY_REQUIRED' || !isAuto) && (
+                        <div className="text-sm text-amber-500 font-semibold mt-0.5">⚠️ 이미지 검수 및 승인 대기 중</div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
