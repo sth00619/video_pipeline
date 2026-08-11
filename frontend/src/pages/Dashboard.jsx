@@ -5,6 +5,7 @@ import { ArrowRight, DollarSign, Film, ListFilter, Plus, Search, Video } from 'l
 import Layout from '../components/Layout'
 import Pagination from '../components/Pagination'
 import TrendingSidebar from '../components/dashboard/TrendingSidebar'
+import ChannelBenchmark from '../components/dashboard/ChannelBenchmark'
 import { jobsApi } from '../api/jobs'
 import apiClient from '../api/client'
 import { formatAutonomy, formatCategory, formatStatus } from '../constants/jobStatus'
@@ -133,6 +134,8 @@ export default function Dashboard() {
           <SummaryCard icon={<Film size={19}/>} label="쇼츠 프로젝트" value={shortsCount} onClick={() => update(setType)('SHORTS')} />
           <SummaryCard icon={<DollarSign size={19}/>} label="누적 사용 비용" value={`₩${Math.round(totalCost).toLocaleString('ko-KR')}`} onClick={() => { setType('ALL'); setPage(1) }} />
         </div>
+
+        <ChannelBenchmark />
 
         <TrendingSidebar />
 
