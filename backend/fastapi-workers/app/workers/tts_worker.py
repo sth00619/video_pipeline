@@ -170,10 +170,13 @@ class TtsWorker:
                     tts_engine = "elevenlabs"
             
             if not used_tts:
-                # gTTS 폴백 시에는 clean_script 전처리 적용 (발음 사전 미지원)
-                used_tts = self._generate_gtts(preprocessed, mp3_path, job_id)
+                used_tts = self._generate_edge_tts(preprocessed, mp3_path, job_id)
                 if used_tts:
-                    tts_engine = "gtts"
+                    tts_engine = "edge-tts"
+                else:
+                    used_tts = self._generate_gtts(preprocessed, mp3_path, job_id)
+                    if used_tts:
+                        tts_engine = "gtts"
         except Exception as e:
             logger.error(f"TTS 생성 실패: {e}")
 
@@ -464,7 +467,7 @@ class TtsWorker:
     @staticmethod
     def _resolve_elevenlabs_voice_id(voice_id: str | None) -> str:
         """Resolve UI placeholder voices to the actual billed narrator."""
-        if not voice_id or voice_id in {"gtts_ko", "default", "default_ko", "silent", "gtts_whisper_ko"}:
+        if not voice_id or voice_id in {"gtts_ko", "default", "default_ko", "silent", "gtts_whisper_ko"} or voice_id.startswith("ko-KR-"):
             return os.getenv("ELEVENLABS_VOICE_ID") or "dlKJ5VptCbYxal4doUO5"
         return voice_id
 
@@ -496,6 +499,20 @@ class TtsWorker:
             if completed % group_size:
                 characters[index] = ","
         return "".join(characters)
+
+    def _generate_edge_tts(self, text: str, output_path: str, job_id: int = 0) -> bool:
+        """Microsoft Edge TTS (ko-KR-SunHiNeural)로 고음질 한국어 AI 음성 생성."""
+        import asyncio
+        import edge_tts
+        try:
+            async def _run():
+                communicate = edge_tts.Communicate(text, "ko-KR-SunHiNeural")
+                await communicate.save(output_path)
+            asyncio.run(_run())
+            return os.path.exists(output_path) and os.path.getsize(output_path) > 1000
+        except Exception as e:
+            logger.warning(f"edge-tts 생성 실패: {e}")
+            return False
 
     def _generate_gtts(self, text: str, output_path: str, job_id: int = 0) -> bool:
         """gTTS로 한국어 음성 생성. 5000자 초과 시 분할 생성 후 concat."""

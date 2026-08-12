@@ -80,8 +80,8 @@ def _run_subprocess(cmd: str, job_id: int) -> int:
     finally:
         unregister_process(job_id, p)
 
-NANUM_BOLD = "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
-NANUM_REGULAR = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+NANUM_BOLD = r"C:\Windows\Fonts\malgunbd.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
+NANUM_REGULAR = r"C:\Windows\Fonts\malgun.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
 
 
 def _probe_duration(media_path: str) -> float:
@@ -510,7 +510,8 @@ class LongformWorker:
         bgm_volume = runtime_config.value("bgm_volume")
 
         if audio_exists:
-            vf_filter = f'-vf "ass=\'{ass_path}\'" ' if (font_available and ass_exists) else ''
+            ass_path_escaped = str(ass_path).replace("\\", "/").replace(":", "\\:")
+            vf_filter = f'-vf "ass=\'{ass_path_escaped}\'" ' if (font_available and ass_exists) else ''
             vcodec = '-c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p' if vf_filter else '-c:v copy'
 
             if bgm_exists:

@@ -56,10 +56,12 @@ class ShortsWorker:
 
     @staticmethod
     def _vertical_fill_filter() -> str:
-        """Fill a 9:16 canvas without letterboxing, preserving the source centre."""
+        """Fill a 9:16 canvas without awkward cropping, maintaining full scene visibility with blurred background."""
         return (
-            "scale=1080:1920:force_original_aspect_ratio=increase,"
-            "crop=1080:1920:(in_w-out_w)/2:(in_h-out_h)/2,setsar=1"
+            "split[v1][v2];"
+            "[v1]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,gblur=sigma=30[bg];"
+            "[v2]scale=1080:1920:force_original_aspect_ratio=decrease[fg];"
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2"
         )
 
     def _cap_segments_to_short_limit(self, segments: list) -> list:
