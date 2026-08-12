@@ -850,7 +850,7 @@ export default function Shorts() {
                               </div>
                               <button
                                 onClick={() => handleApplyScenario(sc)}
-                                className="w-full bg-white border border-slate-200 text-slate-700 text-xs py-2.5 rounded font-medium hover:text-white hover:bg-slate-100 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
+                                className="w-full bg-white border border-slate-200 text-slate-700 text-xs py-2.5 rounded font-medium hover:text-slate-900 hover:bg-slate-100 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
                               >
                                 이 시나리오 즉시 제작하기 <ArrowRight size={12} />
                               </button>
