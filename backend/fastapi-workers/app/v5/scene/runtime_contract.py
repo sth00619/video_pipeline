@@ -108,7 +108,10 @@ def _motion_contract(visual_mode: str, visual_text_policy: str, character_requir
     eligible = visual_mode == "semantic_illustration" and visual_text_policy == "strict_textless"
     return {
         "eligible": eligible,
-        "requires_explicit_selection": True,
+        # eligible한 씬(텍스트/숫자 없는 순수 삽화)은 자동 선택을 허용한다.
+        # eligible=False인 씬(기사 캡처·정보 표면 포함)은 여전히 수동 선택만 허용해
+        # 숫자·텍스트 왜곡 위험을 완전히 차단한다.
+        "requires_explicit_selection": not eligible,
         "character_required": character_required,
         "default_motion_type": "pointing_explain" if character_required else "ambient_context",
         "blocked_reasons": [] if eligible else [

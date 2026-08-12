@@ -1374,7 +1374,7 @@ def _motion_contract_allows_scene(scene: dict) -> bool:
     if not isinstance(contract, dict):
         # 기존 작업물은 명시 계약이 없으므로 이전 호환 규칙을 유지한다.
         return True
-    return bool(contract.get("eligible")) and bool(contract.get("requires_explicit_selection"))
+    return bool(contract.get("eligible"))
 
 
 def _should_request_kling_for_scene(

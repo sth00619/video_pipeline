@@ -73,6 +73,23 @@ def build_kling_motion_prompt(scene_or_motion_type) -> dict:
     scene = scene_or_motion_type if isinstance(scene_or_motion_type, dict) else {}
     motion_type = str(scene.get("motion_type") if scene else scene_or_motion_type or "walking_intro")
 
+    # emotion → motion_type 자동 매핑 (스크립트가 명시적 motion_type을 지정하지 않은 경우만 적용)
+    # WO-2에서 도입한 감정 오버라이드(상승→happy, 하락→concern)와 연동해
+    # 캐릭터 동작이 대본 맥락과 일치하도록 한다.
+    _EMOTION_TO_MOTION: dict[str, str] = {
+        "happy": "celebration",
+        "confidence": "celebration",
+        "concern": "chart_shock",
+        "alarm": "chart_shock",
+        "explain": "pointing_explain",
+        "surprise": "chart_shock",
+    }
+    if scene and not scene.get("motion_type"):
+        emotion_value = str(scene.get("emotion_tag") or scene.get("emotion") or "").strip().lower()
+        mapped = _EMOTION_TO_MOTION.get(emotion_value)
+        if mapped:
+            motion_type = mapped
+
     # 핵심 수치 데이터(core_figures/market_chart)가 있는 씬은
     # ambient_context(최소 정적 모션)로 강제 — 숫자 왜곡 방지
     # v5_verified_overlays 기반 use_kling=False 마킹(images_worker.py:869-873)과
