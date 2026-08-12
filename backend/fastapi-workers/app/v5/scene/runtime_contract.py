@@ -10,6 +10,7 @@ from typing import Any
 import re
 
 from app.postprocess.text_overlay import script_caption, script_visual_plan
+from app.utils.entity_english_map import ENTITY_REGISTRY, get_entity_english_name
 
 from app.v5.providers.router import RENDER_BLOCKED_ARCHETYPES
 from app.v5.scene.layout_sketcher import LayoutSketcher
@@ -155,19 +156,39 @@ def _korean_context_visual_brief(scene: dict[str, Any]) -> str:
         )
     ).lower()
     if any(token in source for token in ("홈플러스", "하림", "마트", "슈퍼", "유통", "소비")):
-        return (
+        brief = (
             "When this scene is Korean retail, use a recognizably Korean hypermarket exterior or interior: Korean-style storefront proportions, "
             "produce crates, delivery carts, and local urban streets, but no real brand logo, readable Korean text, or price labels"
         )
-    if any(token in source for token in ("코스피", "코스닥", "삼성", "하이닉스", "국내", "한국", "원·달러", "원달러")):
-        return (
+    elif any(token in source for token in ("코스피", "코스닥", "삼성", "하이닉스", "국내", "한국", "원·달러", "원달러")):
+        brief = (
             "Use a recognizably Korean business setting: Seoul-like office towers, Korean brokerage dealing-room proportions, local street and harbor details, "
             "or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, readable Korean text, or numeric signage"
         )
-    return (
-        "Use a Korean editorial-economic visual sensibility with locally familiar urban, retail, office, port, or factory details whenever the script has a Korea connection; "
-        "do not use logos, readable Korean text, or numeric signage"
-    )
+    else:
+        brief = (
+            "Use a Korean editorial-economic visual sensibility with locally familiar urban, retail, office, port, or factory details whenever the script has a Korea connection; "
+            "do not use logos, readable Korean text, or numeric signage"
+        )
+
+    # 바인더 결과가 이미 있으면 재사용하고, V5 계약이 바인더보다 먼저 만들어지는
+    # 최초 계획 호출에서만 레지스트리를 순회한다. 검증된 영문명은 의미 grounding
+    # 전용이며 이미지 안에 회사명·로고·글자로 렌더링하지 않는다.
+    candidates = scene.get("core_entities")
+    if not isinstance(candidates, list) or not candidates:
+        candidates = [entity for entity in ENTITY_REGISTRY if entity.lower() in source]
+    entities_found: list[str] = []
+    for entity in candidates:
+        english_text, confidence = get_entity_english_name(str(entity))
+        if confidence == "verified" and english_text not in entities_found:
+            entities_found.append(english_text)
+    if entities_found:
+        brief = (
+            f"{brief} Featured entities for semantic grounding only; do not render their names or logos: "
+            f"{', '.join(entities_found[:3])}."
+        )
+
+    return brief
 
 
 def _distinct_archetype_input(scene: dict[str, Any], previous_archetype: str) -> dict[str, Any]:
