@@ -957,7 +957,15 @@ Rules:
         def build_batch_scene(original: dict, index: int) -> dict:
             scene = enrich_scene_plan(original, index, len(scenes_meta))
             scene, template = _apply_info_scene_template(scene)
-            narration = scene.get("content") or scene.get("text") or ""
+            narration = (
+                scene.get("narration")
+                or scene.get("script")
+                or scene.get("narration_text")
+                or scene.get("text_for_tts")
+                or scene.get("content")
+                or scene.get("text")
+                or ""
+            )
             spec = directed_specs.get(index)
             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
             prompt_en = (
@@ -1065,7 +1073,15 @@ Rules:
                 and not is_v5_final_lane_scene(scene)
             )
             section = scene.get("section", f"scene_{i}")
-            narration = scene.get("content") or scene.get("text") or ""
+            narration = (
+                scene.get("narration")
+                or scene.get("script")
+                or scene.get("narration_text")
+                or scene.get("text_for_tts")
+                or scene.get("content")
+                or scene.get("text")
+                or ""
+            )
 
             binding = binding_map.get(str(scene.get("scene_id"))) or binding_by_index.get(i)
             core_entities = binding.core_entities if binding else []
@@ -1498,7 +1514,15 @@ Rules:
                 bool((budget_preflight or {}).get("template_regeneration_enabled"))
                 and not is_v5_final_lane_scene(scene)
             )
-            narration = scene.get("content") or scene.get("text") or ""
+            narration = (
+                scene.get("narration")
+                or scene.get("script")
+                or scene.get("narration_text")
+                or scene.get("text_for_tts")
+                or scene.get("content")
+                or scene.get("text")
+                or ""
+            )
             art_direction = scene.get("art_direction") or {}
             character_required = bool(art_direction.get("character_required", True))
             spec = directed_specs.get(index)
