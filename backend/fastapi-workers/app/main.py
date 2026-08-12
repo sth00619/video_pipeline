@@ -4,6 +4,13 @@ import logging
 import hashlib
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
+from dotenv import load_dotenv
+
+_ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
+if not _ENV_PATH.exists():
+    _ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+if _ENV_PATH.exists():
+    load_dotenv(_ENV_PATH)
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import FileResponse, Response, JSONResponse

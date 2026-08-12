@@ -1,0 +1,41 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "classroom_primary_validation",
+      "attempt": 1,
+      "attempt_id": "fd9ffee5d9a04f9f98f123904094975a",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-12T08:21:21.211988+00:00",
+      "request_metadata": {
+        "reference_contract": "v3_textless_no_layout_raster",
+        "reference_artifacts": [
+          {
+            "role": "character",
+            "filename": "character_reference_v4_identity_clean.png",
+            "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+          },
+          {
+            "role": "style",
+            "filename": "style_reference_v4_medium_clean.png",
+            "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+          }
+        ],
+        "layout_contract": "LAYOUT CONTRACT: keep the mascot in the right-side foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display.",
+        "visual_text_policy": "diegetic_decorative",
+        "selected_archetype": "classroom",
+        "primary_physical_surface": "the broad central chalk-writing area of the large green teaching wall",
+        "automatic_retry": false
+      },
+      "completed_at": "2026-08-12T08:21:54.282001+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 254,
+  "budget_overrun_krw": 0
+}

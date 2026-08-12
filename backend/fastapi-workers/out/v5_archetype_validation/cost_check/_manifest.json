@@ -1,0 +1,24 @@
+{
+  "status": "preflight_passed",
+  "scene_id": "briefing_podium_primary_validation",
+  "archetype": "briefing_podium",
+  "scene_type": "text",
+  "primary_physical_surface": "the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium",
+  "estimated_cost_usd": 0.14,
+  "estimated_cost_krw": 254,
+  "automatic_retry": false,
+  "reference_artifacts": [
+    {
+      "role": "character",
+      "filename": "character_reference_v4_identity_clean.png",
+      "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+    },
+    {
+      "role": "style",
+      "filename": "style_reference_v4_medium_clean.png",
+      "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+    }
+  ],
+  "request_ledger_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_archetype_validation\\cost_check\\_request_ledger.json",
+  "prompt_path": "C:\\Users\\song\\Documents\\GitHub\\video_pipeline\\backend\\fastapi-workers\\out\\v5_archetype_validation\\cost_check\\prompt.txt"
+}

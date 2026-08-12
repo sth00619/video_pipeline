@@ -20,7 +20,8 @@ _LOCAL_ERRORS = (TypeError, KeyError, AttributeError, NameError, SyntaxError, Im
 _TRANSIENT_TEXT = re.compile(
     r"\b(?:429|500|501|502|503|504|505|506|507|508|509|rate[ -]?limit|"
     r"too many requests|temporar(?:y|ily)|unavailable|timeout|timed out|"
-    r"connection reset|connection aborted|connection refused|network)\b",
+    r"connection reset|connection aborted|connection refused|network|"
+    r"returned no image after retries|refusing lower-quality fallback)\b",
     re.IGNORECASE,
 )
 _PERMANENT_PROVIDER_TEXT = re.compile(

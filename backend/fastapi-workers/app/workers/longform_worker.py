@@ -1442,7 +1442,7 @@ def _ffmpeg_static_image_with_fade(img_path: str, clip_path: str, duration: floa
         f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
         f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,fps=30,'
         f'fade=in:0:15,fade=out:{fade_out_start}:15" '
-        f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-t {duration:.3f} -c:v libx264 -threads 2 -preset fast -crf 18 -pix_fmt yuv420p '
         f'-y "{clip_path}" -loglevel error'
     )
     ret = _run_subprocess(cmd, job_id)
@@ -1463,7 +1463,7 @@ def _ffmpeg_ken_burns_image(img_path: str, clip_path: str, duration: float, zoom
         f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
         f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,'
         f'zoompan=z=\'{zoom_expr}\':x=\'iw/2-(iw/zoom/2)\':y=\'ih/2-(ih/zoom/2)\':d={total_frames}:s=1920x1080,fps=30" '
-        f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-t {duration:.3f} -c:v libx264 -threads 2 -preset fast -crf 18 -pix_fmt yuv420p '
         f'-y "{clip_path}" -loglevel error'
     )
     ret = _run_subprocess(cmd, job_id)
@@ -1481,7 +1481,7 @@ def _ffmpeg_static_image(img_path: str, clip_path: str, duration: float, bg_colo
         f'ffmpeg -loop 1 -i "{img_path}" '
         f'-vf "scale=1920:1080:force_original_aspect_ratio=decrease,'
         f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:{bg_color},setsar=1,fps=30" '
-        f'-t {duration:.3f} -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p '
+        f'-t {duration:.3f} -c:v libx264 -threads 2 -preset fast -crf 18 -pix_fmt yuv420p '
         f'-y "{clip_path}" -loglevel error'
     )
     ret = _run_subprocess(cmd, job_id)
