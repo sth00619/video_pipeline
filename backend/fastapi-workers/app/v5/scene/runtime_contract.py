@@ -50,6 +50,31 @@ PRESENTATION_BY_ARCHETYPE: dict[str, tuple[str, str, str, str]] = {
 }
 
 
+# 기존 PRESENTATION_BY_ARCHETYPE 4요소 계약은 검수 도구와의 호환성을 위해
+# 유지하고, 포즈 후보만 별도 선택 계약으로 보강한다. 씬 인덱스 기반 순환은
+# 같은 입력에서 같은 결과를 내므로 재생성·감사 시에도 재현할 수 있다.
+POSES_BY_ARCHETYPE: dict[str, tuple[str, ...]] = {
+    "port_emergency": ("alarmed_run", "point_left"),
+    "retail_shock": ("calculator_hold", "think"),
+    "classroom": ("point_left", "present"),
+    "weather_map": ("present", "point_left"),
+    "risk_control_room": ("present", "think"),
+    "trade_calculator": ("think", "calculator_hold"),
+    "data_lab": ("present", "point_left"),
+    "briefing_podium": ("present", "point_left"),
+    "real_estate_office": ("calculator_hold", "present"),
+    "job_market_hall": ("present", "point_left"),
+    "earnings_stage": ("present", "point_left"),
+}
+
+
+def _select_pose(poses: tuple[str, ...], index: int) -> str:
+    """씬 인덱스 기반 결정론적 순환 선택으로 재현성을 유지한다."""
+    if not poses:
+        return "present"
+    return poses[index % len(poses)]
+
+
 # 생성·검수·산출물 원장에 공통으로 남기는 세 가지 장면 계약이다. 이 계약은
 # 이미지 API 제공자와 무관하며, V5 프롬프트와 후속 영상 조립이 같은 규칙을
 # 소비하게 하는 단일 기준점이다.
@@ -179,7 +204,8 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
     if presentation is None:
         raise ValueError(f"V5 운영용 캐릭터 연출이 없는 archetype: {selection.archetype}")
 
-    emotion, costume, pose, character_position = presentation
+    emotion, costume, default_pose, character_position = presentation
+    pose = _select_pose(POSES_BY_ARCHETYPE.get(selection.archetype, (default_pose,)), index)
 
     # 씬 방향성 기반 감정 오버라이드 (archetype 기본값보다 우선).
     # alarm / surprise 는 archetype 서사 강도가 높으므로 방향성으로 덮지 않는다.
