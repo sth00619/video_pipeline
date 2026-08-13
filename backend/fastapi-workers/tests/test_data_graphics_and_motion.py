@@ -232,10 +232,11 @@ class DataGraphicsAndMotionTests(unittest.TestCase):
             ))
         self.assertEqual(scene["overlay_provenance"][0]["skipped_reason"], "script_caption_only_policy")
 
-    def test_one_minute_fal_proof_is_capped_to_four_opening_scenes(self):
-        self.assertEqual(_cap_intro_motion_for_short_video(60, 12), 4)
-        self.assertEqual(_cap_intro_motion_for_short_video(90, 6), 4)
-        self.assertEqual(_cap_intro_motion_for_short_video(91, 6), 6)
+    def test_one_minute_fal_proof_is_capped_to_three_opening_scenes(self):
+        # 30376d70: ≤90s 영상의 최대 Fal 클립을 4 → 3으로 변경 (15초 제한)
+        self.assertEqual(_cap_intro_motion_for_short_video(60, 12), 3)
+        self.assertEqual(_cap_intro_motion_for_short_video(90, 6), 3)   # 경계값 포함
+        self.assertEqual(_cap_intro_motion_for_short_video(91, 6), 6)   # 90s 초과는 9클립 상한
 
     def test_successful_cleanup_preserves_billed_kling_clips(self):
         with tempfile.TemporaryDirectory() as directory:
