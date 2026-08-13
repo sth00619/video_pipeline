@@ -6,11 +6,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 from dotenv import load_dotenv
 
-_ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
-if not _ENV_PATH.exists():
-    _ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-if _ENV_PATH.exists():
-    load_dotenv(_ENV_PATH)
+_ENV_PATH = next(
+    (parent / ".env" for parent in Path(__file__).resolve().parents if (parent / ".env").is_file()),
+    None,
+)
+if _ENV_PATH is not None:
+    load_dotenv(_ENV_PATH, override=False)
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import FileResponse, Response, JSONResponse
