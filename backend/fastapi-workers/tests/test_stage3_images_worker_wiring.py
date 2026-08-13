@@ -17,8 +17,8 @@ class TestImagesWorkerStage3Wiring(unittest.TestCase):
             fictionalized_labels={"원달러 환율": "USD/KRW CORP"},
             visual_mode="article_evidence",
         )
-        self.assertIn("CRITICAL ENTITY GROUNDING INSTRUCTIONS", mock_llm.call_args[0][1][0]["content"])
-        self.assertIn("USD/KRW CORP", mock_llm.call_args[0][1][0]["content"])
+        self.assertIn("CRITICAL ENTITY & FIGURE GROUNDING INSTRUCTIONS", mock_llm.call_args[0][1][0]["content"])
+        self.assertIn("USD/KRW Exchange Rate", mock_llm.call_args[0][1][0]["content"])
         self.assertIn("10개월", mock_llm.call_args[0][1][0]["content"])
 
 
