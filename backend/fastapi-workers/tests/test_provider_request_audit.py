@@ -34,12 +34,22 @@ def test_each_http_attempt_is_reserved_and_persisted(tmp_path: Path):
     audit.after_attempt(second, status_code=200, request_id="req-200", outcome="http_200")
 
     ledger = json.loads(path.read_text(encoding="utf-8"))
-    assert ledger["total_krw"] == 200
+
+    # 503 실패는 과금되지 않으므로 합계는 성공한 1건(100원)만 포함한다.
+    assert ledger["total_krw"] == 100
+
     assert [(item["attempt"], item["status"], item["status_code"]) for item in ledger["items"]] == [
         (1, "http_503", 503),
         (2, "http_200", 200),
     ]
-    assert all(item["cost_status"] == "unverified_until_console_reconciliation" for item in ledger["items"])
+
+    # 503 항목: Google 과금 없음 → 0원 취소 처리
+    assert ledger["items"][0]["amount_krw"] == 0
+    assert ledger["items"][0]["cost_status"] == "cancelled_due_to_failure"
+
+    # 200 항목: 성공 → 과금 미확정 상태로 유지
+    assert ledger["items"][1]["cost_status"] == "unverified_until_console_reconciliation"
+
     assert ledger["items"][0]["request_metadata"]["reference_contract"] == "v2_textless"
 
 
@@ -138,12 +148,22 @@ def test_provider_records_each_retry_before_post(tmp_path: Path, monkeypatch):
         )
 
     ledger = json.loads(path.read_text(encoding="utf-8"))
+
+    # 핵심 검증: HTTP 시도가 2번 모두 원장에 기록됐는가
     assert len(calls) == 2
-    assert ledger["total_krw"] == 200
+    assert len(ledger["items"]) == 2, "재시도 포함 모든 attempt가 원장에 기록돼야 한다"
+
     assert [(item["status"], item["request_id"]) for item in ledger["items"]] == [
         ("http_503", "retry-1"),
         ("http_404", "final-2"),
     ]
+
+    # 503·404 둘 다 non-2xx → 과금 없음, 합계 0원
+    assert ledger["total_krw"] == 0
+
+    # 두 항목 모두 취소 처리됐는지 확인
+    assert all(item["cost_status"] == "cancelled_due_to_failure" for item in ledger["items"])
+    assert all(item["amount_krw"] == 0 for item in ledger["items"])
 
 
 def test_reference_payload_order_matches_the_v3_declared_contract(tmp_path: Path, monkeypatch):

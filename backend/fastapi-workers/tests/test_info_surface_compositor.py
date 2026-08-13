@@ -5,13 +5,14 @@ import numpy as np
 from PIL import Image
 import pytest
 
+from app.v5.scene.runtime_contract import attach_v5_scene_contracts, plan_v5_scene_contract
+
 cv2 = pytest.importorskip("cv2")
 
 from app.services.info_surface.contracts import InfoItem, InfoSurfacePlan, SurfaceContract
 from app.services.info_surface.detector import detect_surface_quad, detection_from_normalized_region
 from app.services.info_surface.warp_compositor import composite_planar, diegetic_supersample_factor, render_data_cutaway
 from app.workers.images_worker import ImagesWorker
-from app.workers.longform_worker import _ffmpeg_static_image
 
 
 def _input():
@@ -127,139 +128,145 @@ def test_data_cutaway_is_a_full_size_one_to_one_replacement():
     assert image.size == (1920, 1080)
 
 
-def test_images_worker_bakes_verified_chart_before_longform(tmp_path):
-    source, marker, border = _input()
-    source = cv2.resize(source, (1920, 1080))
-    path = tmp_path / "scene.png"
-    Image.fromarray(cv2.cvtColor(source, cv2.COLOR_BGR2RGB)).save(path)
-    scene = {
-        "index": 4,
-        "market_chart": {"verified": True, "source": "fixture", "source_ref": "fixture", "visual_kind": "indexed_comparison", "label": "비용", "comparison_baseline": 100, "comparison_basis": "2026-07-21 = 100", "comparison_values": [{"label": "기준", "value": 100}, {"label": "상한", "value": 110}]},
-        "art_direction": {"surface_contract": {"surface_kind": "hanging_tag", "geometry": "planar_quad", "marker_rgb": marker, "border_rgb": border, "area_ratio_min": .05, "area_ratio_max": .35, "preferred_region": {"x": .45, "y": .10, "width": .48, "height": .72}}},
-    }
-    direct = detect_surface_quad(cv2.cvtColor(np.asarray(Image.open(path).convert("RGB")), cv2.COLOR_RGB2BGR), SurfaceContract.model_validate(scene["art_direction"]["surface_contract"]))
-    assert direct is not None
-    ImagesWorker()._apply_image_overlays(scene, str(path))
-    assert scene["final_image_path"] == str(path)
-    assert scene["info_surface_plan"]["render_mode"] == "DIEGETIC_WARP"
-    assert scene["info_surface_plan"]["detection"]["confidence"] >= .55
+# ─────────────────────────────────────────────────────────────────────────────
+# V5 정책 계약 테스트 (WO-6A)
+# 배경: 563b6fb / fdc2da1 에서 확정된 정책 —
+#   "수치 전달은 ASS 자막·TTS가 100% 전담한다.
+#    이미지 파이프라인은 배경·소품·캐릭터·브랜드/지수 라벨에만 집중한다."
+# 이 6개 테스트는 그 정책이 코드에 올바르게 반영됐는지를 검증한다.
+# chart warp / DIEGETIC_WARP / DATA_CUTAWAY 경로의 기능 테스트는 별도 WO-6B에서 추가한다.
+# ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_resume_recomposes_from_preserved_source_when_chart_changes(tmp_path):
-    source, marker, border = _input()
-    source = cv2.resize(source, (1920, 1080))
+def test_v5_no_image_overlay_for_market_chart_without_explicit_contract(tmp_path):
+    """V5 정책 ①: v5_render_contract 없는 market_chart 씬은 이미지를 수정하지 않는다."""
     path = tmp_path / "scene.png"
-    Image.fromarray(cv2.cvtColor(source, cv2.COLOR_BGR2RGB)).save(path)
+    Image.new("RGB", (1920, 1080), "#2A3A4A").save(path)
+    original_bytes = path.read_bytes()
+
     scene = {
-        "index": 5,
+        "index": 1,
         "market_chart": {
-            "verified": True, "source": "fixture", "source_ref": "fixture",
-            "visual_kind": "indexed_comparison", "label": "cost",
-            "comparison_baseline": 100,
+            "verified": True,
+            "source_ref": "fixture",
+            "visual_kind": "indexed_comparison",
+            "label": "비용",
             "comparison_basis": "2026-07-21 = 100",
-            "comparison_values": [{"label": "base", "value": 100}, {"label": "after", "value": 110}],
+            "comparison_values": [{"label": "기준", "value": 100}, {"label": "상한", "value": 110}],
         },
-        "art_direction": {"surface_contract": {
-            "surface_kind": "hanging_tag", "geometry": "planar_quad", "marker_rgb": marker,
-            "border_rgb": border, "area_ratio_min": .05, "area_ratio_max": .35,
-            "preferred_region": {"x": .45, "y": .10, "width": .48, "height": .72},
-        }},
+        # v5_render_contract 없음 → 즉시 return 경로
     }
-    worker = ImagesWorker()
-    worker._apply_image_overlays(scene, str(path))
-    source_path = Path(scene["source_image_path"])
-    source_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
-    first_final_hash = scene["info_surface_final_sha256"]
 
-    # A changed verified payload must invalidate only the final render, never
-    # use the prior warped PNG as its new source.
-    scene["market_chart"]["comparison_values"][1]["value"] = 135
-    worker._apply_image_overlays(scene, str(path))
-    assert hashlib.sha256(source_path.read_bytes()).hexdigest() == source_hash
-    assert scene["info_surface_final_sha256"] != first_final_hash
-    assert scene["final_image_path"] == str(path)
-    assert len(scene["info_surface_plan"]["render_attempts"]) == 2
+    ImagesWorker()._apply_image_overlays(scene, str(path))
+
+    assert path.read_bytes() == original_bytes, "chart warp 경로가 실행됐으나 V5에서는 실행되지 않아야 함"
+    assert "info_surface_plan" not in scene
+    assert "final_image_path" not in scene
+    assert "source_image_path" not in scene
 
 
-def test_non_planar_chart_replaces_scene_with_one_to_one_cutaway(tmp_path):
+def test_v5_verified_overlay_present_is_always_false():
+    """V5 정책 ②: plan_v5_scene_contract는 verified_overlay_present를 항상 False로 설정한다."""
+    # general 씬 (market_chart 포함)
+    contract_general = plan_v5_scene_contract(
+        {
+            "scene_type": "general",
+            "narration": "코스피 지수가 2,650포인트를 기록했습니다.",
+            "market_chart": {
+                "verified": True,
+                "comparison_values": [{"label": "기준", "value": 100}],
+            },
+        },
+        index=0,
+    )
+    assert contract_general["verified_overlay_present"] is False
+    assert contract_general["verified_overlay_mode"] == "not_applicable"
+
+    # information 씬에 해당하는 유효 V5 타입
+    contract_info = plan_v5_scene_contract(
+        {"scene_type": "metric", "narration": "PER이란 주가수익비율입니다."},
+        index=1,
+    )
+    assert contract_info["verified_overlay_present"] is False
+    assert contract_info["verified_overlay_mode"] == "non_numeric_prompt_embedded_script_caption"
+
+
+def test_v5_attach_contracts_does_not_inject_verified_overlays():
+    """V5 정책 ③: attach_v5_scene_contracts는 v5_verified_overlays를 자동 주입하지 않는다."""
+    scenes = [
+        {
+            "scene_type": "general",
+            "narration": "삼성전자 반도체 실적이 개선됐습니다.",
+            "verified_facts": [{"indicator": "KOSPI", "value": "2,650", "unit": "pt"}],
+            "market_chart": {
+                "verified": True,
+                "comparison_values": [{"label": "기준", "value": 100}],
+            },
+        }
+    ]
+    result = attach_v5_scene_contracts(scenes)
+    attached = result[0]
+
+    assert "v5_verified_overlays" not in attached, (
+        "V5 정책에서 v5_verified_overlays는 자동 주입되지 않는다. "
+        "수치는 ASS 자막·TTS가 전담한다."
+    )
+
+
+def test_v5_market_chart_scene_image_is_not_modified_after_apply_overlays(tmp_path):
+    """V5 정책 ④: v5_verified_overlays 없는 V5 씬은 _apply_image_overlays 후 이미지가 원본과 동일하다."""
     path = tmp_path / "scene.png"
-    Image.new("RGB", (1920, 1080), "#123456").save(path)
+    Image.new("RGB", (1920, 1080), "#1E3A5F").save(path)
+    original_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+
     scene = {
-        "index": 6,
+        "index": 2,
+        "market_chart": {"verified": True, "source_ref": "fixture"},
+        "v5_render_contract": {"visual_mode": "semantic_illustration"},
+        # v5_verified_overlays 없음 — attach_v5_scene_contracts가 주입하지 않음
+    }
+
+    ImagesWorker()._apply_image_overlays(scene, str(path))
+
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == original_sha256, (
+        "v5_verified_overlays 없는 V5 씬은 이미지를 수정하지 않아야 함"
+    )
+
+
+def test_v5_verified_facts_route_to_subtitles_not_image_overlay():
+    """V5 정책 ⑤: verified_facts가 있어도 v5_verified_overlays는 생성되지 않는다."""
+    scenes = [
+        {
+            "scene_type": "general",
+            "narration": "코스피가 2,650pt를 기록했습니다.",
+            "verified_facts": [{"indicator": "KOSPI", "value": "2,650", "unit": "pt"}],
+        }
+    ]
+    result = attach_v5_scene_contracts(scenes)
+    attached = result[0]
+
+    assert "v5_verified_overlays" not in attached
+    assert attached.get("v5_render_contract", {}).get("verified_overlay_present") is False
+
+
+def test_v5_graph_archetype_also_skips_chart_bake(tmp_path):
+    """V5 정책 ⑥: graph 씬 타입의 market_chart 씬도 이미지 합성을 수행하지 않는다."""
+    path = tmp_path / "scene.png"
+    Image.new("RGB", (1920, 1080), "#0D1B2A").save(path)
+    original_bytes = path.read_bytes()
+
+    scene = {
+        "index": 3,
+        "scene_type": "graph",
+        "narration": "반도체 수출 지수가 이번 분기 상승했습니다.",
         "market_chart": {
-            "verified": True, "source": "fixture", "source_ref": "fixture",
-            "visual_kind": "indexed_comparison", "label": "cost",
-            "comparison_basis": "2026-07-21 = 100",
-            "comparison_values": [{"label": "base", "value": 100}, {"label": "after", "value": 110}],
+            "verified": True,
+            "comparison_values": [{"label": "A", "value": 100}, {"label": "B", "value": 130}],
         },
-        "art_direction": {"surface_contract": {
-            "surface_kind": "map_cloud", "geometry": "irregular_mask",
-        }},
+        # v5_render_contract 없음
     }
+
     ImagesWorker()._apply_image_overlays(scene, str(path))
-    plan = scene["info_surface_plan"]
-    assert plan["render_mode"] == "DATA_CUTAWAY"
-    assert plan["timeline_mode"] == "one_to_one_replace"
-    assert plan["replacement_of_scene_id"] == "6"
-    assert plan["render_attempts"][-1]["outcome"] == "DATA_CUTAWAY"
-    assert scene["source_image_path"] != scene["final_image_path"]
 
-
-def test_partial_legacy_surface_contract_still_uses_chart_fallback(tmp_path):
-    path = tmp_path / "scene.png"
-    Image.new("RGB", (1920, 1080), "#123456").save(path)
-    scene = {
-        "index": 7,
-        "market_chart": {
-            "verified": True, "source": "fixture", "source_ref": "fixture",
-            "visual_kind": "indexed_comparison", "label": "cost",
-            "comparison_basis": "2026-07-21 = 100",
-            "comparison_values": [{"label": "base", "value": 100}, {"label": "after", "value": 110}],
-        },
-        # An older job may have named a planar prop but omitted its marker.
-        "art_direction": {"surface_contract": {"surface_kind": "monitor", "geometry": "planar_quad"}},
-    }
-    ImagesWorker()._apply_image_overlays(scene, str(path))
-    assert scene["info_surface_plan"]["render_mode"] == "DATA_CUTAWAY"
-
-
-def test_small_detected_chart_surface_uses_1080p_readability_fallback(tmp_path):
-    marker = (224, 208, 174); border = (72, 48, 30)
-    image = np.full((1080, 1920, 3), (34, 48, 61), dtype=np.uint8)
-    cv2.rectangle(image, (1300, 130), (1600, 340), border[::-1], -1)
-    cv2.rectangle(image, (1308, 138), (1592, 332), marker[::-1], -1)
-    path = tmp_path / "scene.png"
-    Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB)).save(path)
-    scene = {
-        "index": 8,
-        "market_chart": {"verified": True, "source": "fixture", "source_ref": "fixture", "visual_kind": "indexed_comparison", "label": "cost", "comparison_basis": "2026-07-21 = 100", "comparison_values": [{"label": "base", "value": 100}, {"label": "after", "value": 110}]},
-        "art_direction": {"surface_contract": {"surface_kind": "tag", "geometry": "planar_quad", "marker_rgb": marker, "border_rgb": border, "area_ratio_min": .01, "area_ratio_max": .05, "preferred_region": {"x": .65, "y": .10, "width": .20, "height": .25}}},
-    }
-    ImagesWorker()._apply_image_overlays(scene, str(path))
-    plan = scene["info_surface_plan"]
-    assert plan["render_mode"] == "DATA_CUTAWAY"
-    assert "surface_too_small_for_1080p_type" in plan["fallback_chain"]
-
-
-def test_final_1080p_encoded_frame_retains_baked_chart_ink(tmp_path):
-    source, marker, border = _input()
-    source = cv2.resize(source, (1920, 1080))
-    path = tmp_path / "scene.png"
-    Image.fromarray(cv2.cvtColor(source, cv2.COLOR_BGR2RGB)).save(path)
-    scene = {
-        "index": 9,
-        "market_chart": {"verified": True, "source": "fixture", "source_ref": "fixture", "visual_kind": "indexed_comparison", "label": "cost", "comparison_baseline": 100, "comparison_basis": "2026-07-21 = 100", "comparison_values": [{"label": "base", "value": 100}, {"label": "after", "value": 110}]},
-        "art_direction": {"surface_contract": {"surface_kind": "hanging_tag", "geometry": "planar_quad", "marker_rgb": marker, "border_rgb": border, "area_ratio_min": .05, "area_ratio_max": .35, "preferred_region": {"x": .45, "y": .10, "width": .48, "height": .72}}},
-    }
-    ImagesWorker()._apply_image_overlays(scene, str(path))
-    assert scene["info_surface_plan"]["render_mode"] == "DIEGETIC_WARP"
-    clip = tmp_path / "clip.mp4"
-    _ffmpeg_static_image(str(path), str(clip), .35, job_id=0)
-    capture = cv2.VideoCapture(str(clip))
-    ok, frame = capture.read()
-    capture.release()
-    assert ok and frame.shape[:2] == (1080, 1920)
-    original = cv2.cvtColor(np.asarray(Image.open(scene["source_image_path"]).convert("RGB")), cv2.COLOR_RGB2BGR)
-    # The warped ink differs materially from the original physical prop even
-    # after yuv420p encoding; it is not a later fixed-coordinate overlay.
-    assert np.mean(np.abs(frame.astype(np.int16) - original.astype(np.int16))) > 1.0
+    assert path.read_bytes() == original_bytes
+    assert "info_surface_plan" not in scene
