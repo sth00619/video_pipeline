@@ -1,0 +1,95 @@
+...F.............................................F...................... [ 13%]
+..........................................................FFFFFF........ [ 27%]
+........................................................................ [ 41%]
+.............F...F...................................................... [ 55%]
+........................................................................ [ 68%]
+........................................................................ [ 82%]
+........................................................................ [ 96%]
+...................                                                      [100%]
+================================== FAILURES ===================================
+__________ test_discovery_requires_configured_public_search_provider __________
+tests\test_article_discovery.py:8: in test_discovery_requires_configured_public_search_provider
+    with pytest.raises(ArticleDiscoveryUnavailable):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ArticleDiscoveryUnavailable
+_ DataGraphicsAndMotionTests.test_one_minute_fal_proof_is_capped_to_four_opening_scenes _
+tests\test_data_graphics_and_motion.py:236: in test_one_minute_fal_proof_is_capped_to_four_opening_scenes
+    self.assertEqual(_cap_intro_motion_for_short_video(60, 12), 4)
+E   AssertionError: 3 != 4
+___________ test_images_worker_bakes_verified_chart_before_longform ___________
+tests\test_info_surface_compositor.py:143: in test_images_worker_bakes_verified_chart_before_longform
+    assert scene["final_image_path"] == str(path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'final_image_path'
+_______ test_resume_recomposes_from_preserved_source_when_chart_changes _______
+tests\test_info_surface_compositor.py:170: in test_resume_recomposes_from_preserved_source_when_chart_changes
+    source_path = Path(scene["source_image_path"])
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'source_image_path'
+________ test_non_planar_chart_replaces_scene_with_one_to_one_cutaway _________
+tests\test_info_surface_compositor.py:200: in test_non_planar_chart_replaces_scene_with_one_to_one_cutaway
+    plan = scene["info_surface_plan"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'info_surface_plan'
+_______ test_partial_legacy_surface_contract_still_uses_chart_fallback ________
+tests\test_info_surface_compositor.py:223: in test_partial_legacy_surface_contract_still_uses_chart_fallback
+    assert scene["info_surface_plan"]["render_mode"] == "DATA_CUTAWAY"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'info_surface_plan'
+______ test_small_detected_chart_surface_uses_1080p_readability_fallback ______
+tests\test_info_surface_compositor.py:239: in test_small_detected_chart_surface_uses_1080p_readability_fallback
+    plan = scene["info_surface_plan"]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'info_surface_plan'
+___________ test_final_1080p_encoded_frame_retains_baked_chart_ink ____________
+tests\test_info_surface_compositor.py:255: in test_final_1080p_encoded_frame_retains_baked_chart_ink
+    assert scene["info_surface_plan"]["render_mode"] == "DIEGETIC_WARP"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'info_surface_plan'
+______________ test_each_http_attempt_is_reserved_and_persisted _______________
+tests\test_provider_request_audit.py:37: in test_each_http_attempt_is_reserved_and_persisted
+    assert ledger["total_krw"] == 200
+E   assert 100 == 200
+________________ test_provider_records_each_retry_before_post _________________
+tests\test_provider_request_audit.py:142: in test_provider_records_each_retry_before_post
+    assert ledger["total_krw"] == 200
+E   assert 0 == 200
+------------------------------ Captured log call ------------------------------
+WARNING  app.providers.real.image:image.py:650 Gemini image transient HTTP error (model=gemini-3-pro-image, attempt=1/2, status=503): provider test response; retrying in 1.0s
+WARNING  app.providers.real.image:image.py:656 Gemini image HTTP error (model=gemini-3-pro-image): HTTP 404: provider test response
+============================== warnings summary ===============================
+tests/test_cartoon_ink_surface_snapshots.py::test_four_surface_material_snapshots_are_deterministic
+tests/test_cartoon_ink_surface_snapshots.py::test_four_surface_material_snapshots_are_deterministic
+tests/test_cartoon_ink_surface_snapshots.py::test_four_surface_material_snapshots_are_deterministic
+tests/test_cartoon_ink_surface_snapshots.py::test_four_surface_material_snapshots_are_deterministic
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+  C:\Users\song\Documents\GitHub\video_pipeline\backend\fastapi-workers\app\services\info_surface\material_fx.py:23: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+    image.putalpha(Image.fromarray(array.astype(np.uint8), "L"))
+
+tests/test_info_surface_compositor.py::test_compositor_keeps_larger_diagram_canvas_without_pre_shrink
+tests/test_info_surface_compositor.py::test_compositor_uses_narrative_override_without_hero_stat_values
+tests/test_info_surface_compositor.py::test_template_surface_does_not_mask_deterministic_ink_with_generated_texture
+tests/test_info_surface_compositor.py::test_warp_keeps_chain_above_verified_ink
+  C:\Users\song\Documents\GitHub\video_pipeline\backend\fastapi-workers\app\services\info_surface\warp_compositor.py:148: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+    result = Image.alpha_composite(base, Image.fromarray(warped, "RGBA"))
+
+tests/test_info_surface_compositor.py::test_compositor_keeps_larger_diagram_canvas_without_pre_shrink
+tests/test_info_surface_compositor.py::test_compositor_uses_narrative_override_without_hero_stat_values
+tests/test_info_surface_compositor.py::test_template_surface_does_not_mask_deterministic_ink_with_generated_texture
+tests/test_info_surface_compositor.py::test_warp_keeps_chain_above_verified_ink
+  C:\Users\song\Documents\GitHub\video_pipeline\backend\fastapi-workers\app\services\info_surface\warp_compositor.py:149: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+    return Image.alpha_composite(result, Image.fromarray(texture_rgba, "RGBA"))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_article_discovery.py::test_discovery_requires_configured_public_search_provider
+FAILED tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_one_minute_fal_proof_is_capped_to_four_opening_scenes
+FAILED tests/test_info_surface_compositor.py::test_images_worker_bakes_verified_chart_before_longform
+FAILED tests/test_info_surface_compositor.py::test_resume_recomposes_from_preserved_source_when_chart_changes
+FAILED tests/test_info_surface_compositor.py::test_non_planar_chart_replaces_scene_with_one_to_one_cutaway
+FAILED tests/test_info_surface_compositor.py::test_partial_legacy_surface_contract_still_uses_chart_fallback
+FAILED tests/test_info_surface_compositor.py::test_small_detected_chart_surface_uses_1080p_readability_fallback
+FAILED tests/test_info_surface_compositor.py::test_final_1080p_encoded_frame_retains_baked_chart_ink
+FAILED tests/test_provider_request_audit.py::test_each_http_attempt_is_reserved_and_persisted
+FAILED tests/test_provider_request_audit.py::test_provider_records_each_retry_before_post
+10 failed, 513 passed, 13 warnings in 121.37s (0:02:01)
