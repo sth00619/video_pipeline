@@ -1,0 +1,246 @@
+diff --git a/backend/fastapi-workers/app/config.py b/backend/fastapi-workers/app/config.py
+index 037cd734fd38567c006373181b87cd7fccfef231..244cb07cd808f237d0199e8cb5799cc129b6f424 100644
+--- a/backend/fastapi-workers/app/config.py
++++ b/backend/fastapi-workers/app/config.py
+@@ -75,7 +75,7 @@ KEYWORD_EXCLUDE_LIVE = os.getenv("KEYWORD_EXCLUDE_LIVE", "true").lower() in {"1"
+ # close to natural speed; reduce the script target accordingly to preserve the
+ # requested video duration instead of compressing the actor's performance.
+ # 음성 속도를 0.82로 낮춤 (기존 0.9 대비 약 -10%). ElevenLabs 네이티브 범위(0.7~1.2) 내 조정.
+-TTS_SPEED = float(os.getenv("TTS_SPEED", "0.82"))
++TTS_SPEED = float(os.getenv("TTS_SPEED", "0.9"))
+ # Measured Korean long-form narration pace for the configured channel voice.
+ # 1분(60초) TTS 음성 분량을 충족하기 위해 분당 650자 기준을 적용한다. (650자 / 60초 ≈ 11자/초)
+ CHARS_PER_MINUTE = int(os.getenv("CHARS_PER_MINUTE", "650"))
+@@ -161,8 +161,8 @@ TTS_MAX_RETRIES = int(os.getenv("TTS_MAX_RETRIES", "3"))
+ TTS_POSTPROCESS_ENABLED = os.getenv("TTS_POSTPROCESS_ENABLED", "false").lower() in {"1", "true", "yes"}
+ # ElevenLabs already supplies natural Korean sentence breaths.  Do not splice
+ # extra silence at every punctuation mark; it makes narration staccato.
+-TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "200"))
+-TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "0"))
++TTS_SENTENCE_PAUSE_MS = int(os.getenv("TTS_SENTENCE_PAUSE_MS", "350"))
++TTS_PARAGRAPH_PAUSE_MS = int(os.getenv("TTS_PARAGRAPH_PAUSE_MS", "400"))
+ # ElevenLabs의 원래 억양은 보존하되, 문장 경계가 자연스럽게 연결되도록 70ms 미세 호흡을 더한다.
+ # 문장 그룹 간 미세 호흡 70ms → 110ms 상향. 자막 싱크는 강제 정렬로 유지.
+ TTS_THOUGHT_GROUP_PAUSE_MS = int(os.getenv("TTS_THOUGHT_GROUP_PAUSE_MS", "110"))
+diff --git a/backend/fastapi-workers/app/services/kling_prompt_builder.py b/backend/fastapi-workers/app/services/kling_prompt_builder.py
+index 57cf7af0ab2b5b1c85c74fa9055d66714a86016f..2a9013edb5aae9e155339ee7dd1f6ffd11c9bb86 100644
+--- a/backend/fastapi-workers/app/services/kling_prompt_builder.py
++++ b/backend/fastapi-workers/app/services/kling_prompt_builder.py
+@@ -73,6 +73,23 @@ def build_kling_motion_prompt(scene_or_motion_type) -> dict:
+     scene = scene_or_motion_type if isinstance(scene_or_motion_type, dict) else {}
+     motion_type = str(scene.get("motion_type") if scene else scene_or_motion_type or "walking_intro")
+ 
++    # emotion → motion_type 자동 매핑 (스크립트가 명시적 motion_type을 지정하지 않은 경우만 적용)
++    # WO-2에서 도입한 감정 오버라이드(상승→happy, 하락→concern)와 연동해
++    # 캐릭터 동작이 대본 맥락과 일치하도록 한다.
++    _EMOTION_TO_MOTION: dict[str, str] = {
++        "happy": "celebration",
++        "confidence": "celebration",
++        "concern": "chart_shock",
++        "alarm": "chart_shock",
++        "explain": "pointing_explain",
++        "surprise": "chart_shock",
++    }
++    if scene and not scene.get("motion_type"):
++        emotion_value = str(scene.get("emotion_tag") or scene.get("emotion") or "").strip().lower()
++        mapped = _EMOTION_TO_MOTION.get(emotion_value)
++        if mapped:
++            motion_type = mapped
++
+     # 핵심 수치 데이터(core_figures/market_chart)가 있는 씬은
+     # ambient_context(최소 정적 모션)로 강제 — 숫자 왜곡 방지
+     # v5_verified_overlays 기반 use_kling=False 마킹(images_worker.py:869-873)과
+diff --git a/backend/fastapi-workers/app/v5/scene/runtime_contract.py b/backend/fastapi-workers/app/v5/scene/runtime_contract.py
+index a50cea78f7fe9426781eda614f540e42a2648222..7da1c2c6daf258af8aa143a0ca2cab63d8209de5 100644
+--- a/backend/fastapi-workers/app/v5/scene/runtime_contract.py
++++ b/backend/fastapi-workers/app/v5/scene/runtime_contract.py
+@@ -10,6 +10,7 @@ from typing import Any
+ import re
+ 
+ from app.postprocess.text_overlay import script_caption, script_visual_plan
++from app.utils.entity_english_map import ENTITY_REGISTRY, get_entity_english_name
+ 
+ from app.v5.providers.router import RENDER_BLOCKED_ARCHETYPES
+ from app.v5.scene.layout_sketcher import LayoutSketcher
+@@ -50,6 +51,31 @@ PRESENTATION_BY_ARCHETYPE: dict[str, tuple[str, str, str, str]] = {
+ }
+ 
+ 
++# 기존 PRESENTATION_BY_ARCHETYPE 4요소 계약은 검수 도구와의 호환성을 위해
++# 유지하고, 포즈 후보만 별도 선택 계약으로 보강한다. 씬 인덱스 기반 순환은
++# 같은 입력에서 같은 결과를 내므로 재생성·감사 시에도 재현할 수 있다.
++POSES_BY_ARCHETYPE: dict[str, tuple[str, ...]] = {
++    "port_emergency": ("alarmed_run", "point_left"),
++    "retail_shock": ("calculator_hold", "think"),
++    "classroom": ("point_left", "present"),
++    "weather_map": ("present", "point_left"),
++    "risk_control_room": ("present", "think"),
++    "trade_calculator": ("think", "calculator_hold"),
++    "data_lab": ("present", "point_left"),
++    "briefing_podium": ("present", "point_left"),
++    "real_estate_office": ("calculator_hold", "present"),
++    "job_market_hall": ("present", "point_left"),
++    "earnings_stage": ("present", "point_left"),
++}
++
++
++def _select_pose(poses: tuple[str, ...], index: int) -> str:
++    """씬 인덱스 기반 결정론적 순환 선택으로 재현성을 유지한다."""
++    if not poses:
++        return "present"
++    return poses[index % len(poses)]
++
++
+ # 생성·검수·산출물 원장에 공통으로 남기는 세 가지 장면 계약이다. 이 계약은
+ # 이미지 API 제공자와 무관하며, V5 프롬프트와 후속 영상 조립이 같은 규칙을
+ # 소비하게 하는 단일 기준점이다.
+@@ -108,7 +134,10 @@ def _motion_contract(visual_mode: str, visual_text_policy: str, character_requir
+     eligible = visual_mode == "semantic_illustration" and visual_text_policy == "strict_textless"
+     return {
+         "eligible": eligible,
+-        "requires_explicit_selection": True,
++        # eligible한 씬(텍스트/숫자 없는 순수 삽화)은 자동 선택을 허용한다.
++        # eligible=False인 씬(기사 캡처·정보 표면 포함)은 여전히 수동 선택만 허용해
++        # 숫자·텍스트 왜곡 위험을 완전히 차단한다.
++        "requires_explicit_selection": not eligible,
+         "character_required": character_required,
+         "default_motion_type": "pointing_explain" if character_required else "ambient_context",
+         "blocked_reasons": [] if eligible else [
+@@ -127,19 +156,39 @@ def _korean_context_visual_brief(scene: dict[str, Any]) -> str:
+         )
+     ).lower()
+     if any(token in source for token in ("홈플러스", "하림", "마트", "슈퍼", "유통", "소비")):
+-        return (
++        brief = (
+             "When this scene is Korean retail, use a recognizably Korean hypermarket exterior or interior: Korean-style storefront proportions, "
+             "produce crates, delivery carts, and local urban streets, but no real brand logo, readable Korean text, or price labels"
+         )
+-    if any(token in source for token in ("코스피", "코스닥", "삼성", "하이닉스", "국내", "한국", "원·달러", "원달러")):
+-        return (
++    elif any(token in source for token in ("코스피", "코스닥", "삼성", "하이닉스", "국내", "한국", "원·달러", "원달러")):
++        brief = (
+             "Use a recognizably Korean business setting: Seoul-like office towers, Korean brokerage dealing-room proportions, local street and harbor details, "
+             "or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, readable Korean text, or numeric signage"
+         )
+-    return (
+-        "Use a Korean editorial-economic visual sensibility with locally familiar urban, retail, office, port, or factory details whenever the script has a Korea connection; "
+-        "do not use logos, readable Korean text, or numeric signage"
+-    )
++    else:
++        brief = (
++            "Use a Korean editorial-economic visual sensibility with locally familiar urban, retail, office, port, or factory details whenever the script has a Korea connection; "
++            "do not use logos, readable Korean text, or numeric signage"
++        )
++
++    # 바인더 결과가 이미 있으면 재사용하고, V5 계약이 바인더보다 먼저 만들어지는
++    # 최초 계획 호출에서만 레지스트리를 순회한다. 검증된 영문명은 의미 grounding
++    # 전용이며 이미지 안에 회사명·로고·글자로 렌더링하지 않는다.
++    candidates = scene.get("core_entities")
++    if not isinstance(candidates, list) or not candidates:
++        candidates = [entity for entity in ENTITY_REGISTRY if entity.lower() in source]
++    entities_found: list[str] = []
++    for entity in candidates:
++        english_text, confidence = get_entity_english_name(str(entity))
++        if confidence == "verified" and english_text not in entities_found:
++            entities_found.append(english_text)
++    if entities_found:
++        brief = (
++            f"{brief} Featured entities for semantic grounding only; do not render their names or logos: "
++            f"{', '.join(entities_found[:3])}."
++        )
++
++    return brief
+ 
+ 
+ def _distinct_archetype_input(scene: dict[str, Any], previous_archetype: str) -> dict[str, Any]:
+@@ -176,7 +225,8 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
+     if presentation is None:
+         raise ValueError(f"V5 운영용 캐릭터 연출이 없는 archetype: {selection.archetype}")
+ 
+-    emotion, costume, pose, character_position = presentation
++    emotion, costume, default_pose, character_position = presentation
++    pose = _select_pose(POSES_BY_ARCHETYPE.get(selection.archetype, (default_pose,)), index)
+ 
+     # 씬 방향성 기반 감정 오버라이드 (archetype 기본값보다 우선).
+     # alarm / surprise 는 archetype 서사 강도가 높으므로 방향성으로 덮지 않는다.
+diff --git a/backend/fastapi-workers/app/workers/images_worker.py b/backend/fastapi-workers/app/workers/images_worker.py
+index 41e650fa5a5c792e990b6dd8a3707059d020a6dc..d8f2fc0a701dfb7c3475c94ba44ceebee28bf238 100644
+--- a/backend/fastapi-workers/app/workers/images_worker.py
++++ b/backend/fastapi-workers/app/workers/images_worker.py
+@@ -957,7 +957,15 @@ Rules:
+         def build_batch_scene(original: dict, index: int) -> dict:
+             scene = enrich_scene_plan(original, index, len(scenes_meta))
+             scene, template = _apply_info_scene_template(scene)
+-            narration = scene.get("content") or scene.get("text") or ""
++            narration = (
++                scene.get("narration")
++                or scene.get("script")
++                or scene.get("narration_text")
++                or scene.get("text_for_tts")
++                or scene.get("content")
++                or scene.get("text")
++                or ""
++            )
+             spec = directed_specs.get(index)
+             base_prompt = scene.get("prompt_en") or scene.get("prompt") or narration or scene.get("title") or ""
+             prompt_en = (
+@@ -1065,7 +1073,15 @@ Rules:
+                 and not is_v5_final_lane_scene(scene)
+             )
+             section = scene.get("section", f"scene_{i}")
+-            narration = scene.get("content") or scene.get("text") or ""
++            narration = (
++                scene.get("narration")
++                or scene.get("script")
++                or scene.get("narration_text")
++                or scene.get("text_for_tts")
++                or scene.get("content")
++                or scene.get("text")
++                or ""
++            )
+ 
+             binding = binding_map.get(str(scene.get("scene_id"))) or binding_by_index.get(i)
+             core_entities = binding.core_entities if binding else []
+@@ -1498,7 +1514,15 @@ Rules:
+                 bool((budget_preflight or {}).get("template_regeneration_enabled"))
+                 and not is_v5_final_lane_scene(scene)
+             )
+-            narration = scene.get("content") or scene.get("text") or ""
++            narration = (
++                scene.get("narration")
++                or scene.get("script")
++                or scene.get("narration_text")
++                or scene.get("text_for_tts")
++                or scene.get("content")
++                or scene.get("text")
++                or ""
++            )
+             art_direction = scene.get("art_direction") or {}
+             character_required = bool(art_direction.get("character_required", True))
+             spec = directed_specs.get(index)
+diff --git a/backend/fastapi-workers/app/workers/longform_worker.py b/backend/fastapi-workers/app/workers/longform_worker.py
+index 6ca8b18f659f96b13348d17e8f1e050a9043f499..4d52b05235c2b44a89b41b786916c546abcaba8f 100644
+--- a/backend/fastapi-workers/app/workers/longform_worker.py
++++ b/backend/fastapi-workers/app/workers/longform_worker.py
+@@ -1374,7 +1374,7 @@ def _motion_contract_allows_scene(scene: dict) -> bool:
+     if not isinstance(contract, dict):
+         # 기존 작업물은 명시 계약이 없으므로 이전 호환 규칙을 유지한다.
+         return True
+-    return bool(contract.get("eligible")) and bool(contract.get("requires_explicit_selection"))
++    return bool(contract.get("eligible"))
+ 
+ 
+ def _should_request_kling_for_scene(
+diff --git a/frontend/src/pages/Shorts.jsx b/frontend/src/pages/Shorts.jsx
+index 02c0ee691a5ed369b423453ea17c41b126937129..d24afa5615398bebfdae0f081b81c68cf08bed7e 100644
+--- a/frontend/src/pages/Shorts.jsx
++++ b/frontend/src/pages/Shorts.jsx
+@@ -850,7 +850,7 @@ export default function Shorts() {
+                               </div>
+                               <button
+                                 onClick={() => handleApplyScenario(sc)}
+-                                className="w-full bg-white border border-slate-200 text-slate-700 text-xs py-2.5 rounded font-medium hover:text-white hover:bg-slate-100 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
++                                className="w-full bg-white border border-slate-200 text-slate-700 text-xs py-2.5 rounded font-medium hover:text-slate-900 hover:bg-slate-100 hover:border-accent-gold transition flex items-center justify-center gap-1.5"
+                               >
+                                 이 시나리오 즉시 제작하기 <ArrowRight size={12} />
+                               </button>
