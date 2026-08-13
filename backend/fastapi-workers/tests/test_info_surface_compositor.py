@@ -270,3 +270,106 @@ def test_v5_graph_archetype_also_skips_chart_bake(tmp_path):
 
     assert path.read_bytes() == original_bytes
     assert "info_surface_plan" not in scene
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WO-6C: verified_facts → v5_verified_overlays 자동 주입 테스트
+# _build_v5_verified_overlays가 생성한 overlay가
+# (a) attach_v5_scene_contracts를 통해 씬에 주입되고
+# (b) downstream facts_from_verified_scene 검증을 통과하는지 확인한다.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_attach_contracts_injects_overlays_for_facts_with_evidence_fields():
+    """WO-6C ①: figure·fact 원문이 있는 verified_fact는 v5_verified_overlays로 자동 주입된다."""
+    scenes = [
+        {
+            "scene_type": "general",
+            "narration": "코스피가 2,650포인트를 기록했습니다.",
+            # figure·fact 원문이 있어야 downstream 검증을 통과한다
+            "verified_facts": [
+                {
+                    "indicator": "KOSPI",
+                    "value": "2,650",
+                    "unit": "pt",
+                    "figure": "2,650pt",
+                    "fact": "코스피 2,650 포인트 기록",
+                }
+            ],
+        }
+    ]
+    result = attach_v5_scene_contracts(scenes)
+    attached = result[0]
+
+    assert "v5_verified_overlays" in attached, (
+        "figure·fact 원문이 있는 verified_fact는 v5_verified_overlays로 주입돼야 한다"
+    )
+    overlays = attached["v5_verified_overlays"]
+    assert isinstance(overlays, list) and len(overlays) == 1
+    overlay = overlays[0]
+    assert overlay["source_ref"] == "facts[0]"
+    assert overlay["value"] == "2,650"
+    assert overlay["label"] == "KOSPI"
+    assert overlay["visualization"] == "text"
+    assert isinstance(overlay["anchor"], dict)
+    assert all(k in overlay["anchor"] for k in ("x", "y", "width", "height", "kind"))
+
+    # 계약에도 반영됐는지 확인
+    contract = attached.get("v5_render_contract", {})
+    assert contract.get("verified_overlay_present") is True
+    assert contract.get("verified_overlay_mode") == "diegetic_surface_fact"
+
+
+def test_attach_contracts_skips_injection_when_value_not_in_evidence():
+    """WO-6C ②: value가 figure·fact 원문에 없으면 주입하지 않는다 (WO-6A 기존 정책 유지 확인)."""
+    scenes = [
+        {
+            "scene_type": "general",
+            "narration": "코스피 상황을 살펴보겠습니다.",
+            # figure·fact 없음 → evidence = "" → value 검증 불통과
+            "verified_facts": [
+                {"indicator": "KOSPI", "value": "2,650", "unit": "pt"}
+            ],
+        }
+    ]
+    result = attach_v5_scene_contracts(scenes)
+    attached = result[0]
+
+    assert "v5_verified_overlays" not in attached
+    assert attached.get("v5_render_contract", {}).get("verified_overlay_present") is False
+
+
+def test_injected_overlays_pass_downstream_validation():
+    """WO-6C ③: 자동 생성된 v5_verified_overlays는 downstream 검증을 실제로 통과한다."""
+    from app.v5.overlay.diegetic_fact_overlay import facts_from_verified_scene
+
+    scene = {
+        "scene_type": "general",
+        "narration": "코스피가 2,650포인트를 기록했습니다.",
+        "verified_facts": [
+            {
+                "indicator": "KOSPI",
+                "value": "2,650",
+                "unit": "pt",
+                "figure": "2,650pt",
+                "fact": "코스피 2,650 포인트 기록",
+            }
+        ],
+    }
+    result = attach_v5_scene_contracts([scene])
+    attached = result[0]
+
+    # 자동 주입 확인
+    assert "v5_verified_overlays" in attached
+
+    # downstream 검증 (facts_from_verified_scene)이 예외 없이 통과하는지 확인
+    # 이 함수가 예외를 던지면 이미지 생성 실패로 이어지므로 반드시 통과해야 한다
+    try:
+        facts = facts_from_verified_scene(attached)
+        assert len(facts) == 1, f"facts 수 불일치: {len(facts)}"
+        assert facts[0].value == "2,650"
+        assert facts[0].label == "KOSPI"
+    except ValueError as exc:
+        raise AssertionError(
+            f"자동 주입된 overlay가 downstream 검증을 통과하지 못했다: {exc}"
+        ) from exc

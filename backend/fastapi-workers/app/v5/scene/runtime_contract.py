@@ -104,6 +104,64 @@ VISUAL_MODE_CONTRACTS: dict[str, dict[str, str]] = {
 }
 
 
+def _build_v5_verified_overlays(
+    verified_facts: list | None,
+    archetype: str,
+    primary_region: tuple[float, float, float, float],
+) -> list[dict[str, Any]] | None:
+    """verified_facts에서 diegetic_surface_fact overlay를 자동 생성한다.
+
+    생성 규칙:
+    - value가 fact["figure"] 또는 fact["fact"] 원문에 정확히 포함돼야 한다.
+      이는 downstream facts_from_verified_scene()와 동일한 조건이다.
+    - primary_surface_region 좌표를 anchor로 사용하므로 V5 표면 범위 검증을
+      자동으로 통과한다.
+    - primary 표면 하나에 사실 하나(첫 번째 통과 사실만 사용).
+    - 어느 사실도 조건을 만족하지 않으면 None을 반환한다.
+
+    이 함수는 숫자를 생성하거나 변형하지 않는다. verified_facts 원문 값만
+    그대로 사용한다.
+    """
+    if not isinstance(verified_facts, list) or not verified_facts:
+        return None
+    if not primary_region or not archetype:
+        return None
+
+    x, y, w, h = primary_region
+
+    # downstream facts_from_verified_scene()과 동일한 normalise 로직
+    def _norm(s: str) -> str:
+        return "".join(s.split()).casefold()
+
+    for i, fact in enumerate(verified_facts):
+        if not isinstance(fact, dict):
+            continue
+        value = str(fact.get("value") or "").strip()
+        if not value:
+            continue
+        # value가 figure·fact 원문에 그대로 있어야 downstream 검증을 통과한다
+        evidence = " ".join(str(fact.get(k) or "") for k in ("figure", "fact"))
+        if _norm(value) not in _norm(evidence):
+            continue
+        label = str(fact.get("indicator") or fact.get("label") or "").strip()
+        return [
+            {
+                "source_ref": f"facts[{i}]",
+                "value": value,
+                "label": label,
+                "visualization": "text",
+                "anchor": {
+                    "x": x,
+                    "y": y,
+                    "width": w,
+                    "height": h,
+                    "kind": "primary_surface",
+                },
+            }
+        ]
+    return None
+
+
 def _scene_identifier(scene: dict[str, Any], index: int) -> str:
     return str(scene.get("scene_id") or scene.get("id") or f"scene_{index:03d}")
 
@@ -330,12 +388,25 @@ def attach_v5_scene_contracts(scenes: list[dict[str, Any]]) -> list[dict[str, An
         # 별도 필드로도 남겨 후속 감사와 드라이런에서 확인할 수 있게 한다.
         scene["v5_scene_type_selection"] = contract["selection"]
         scene["v5_scene_spec"] = contract["scene_spec"]
-        # 2026-08-08 방향 확정: 수치 전달은 하단 ASS 자막 및 TTS 내레이션이 100% 전담한다.
-        # 이미지 파이프라인은 배경·소품·캐릭터 연출과 브랜드/지수 라벨(KOSPI, SANDISK 등)에만
-        # 집중하고, 그림과 이질감이 발생하는 평면 텍스트 오버레이(v5_verified_overlays)는 주입하지 않는다.
+        # 수치 전달의 기본 경로는 ASS 자막·TTS 내레이션이다.
+        # WO-6C 이후: verified_facts에 figure·fact 원문이 있는 씬은 v5_verified_overlays를
+        # 자동 생성해 archetype primary 표면에 수치를 Pillow로 추가 합성한다.
+        # 수동으로 v5_verified_overlays를 지정한 씬은 자동 생성을 건너뛴다.
         # V5 final lane은 hero/body 모두 Gemini Pro만 사용한다. 기존 품질
         # 분배기가 flash로 낮추거나 전역 IMAGE_PROVIDER가 fal이어도 이 계약을
         # 가진 씬의 모델 선택은 바뀌지 않는다.
+        if "v5_verified_overlays" not in scene:
+            _injected = _build_v5_verified_overlays(
+                scene.get("verified_facts"),
+                contract["selection"]["archetype"],
+                tuple(contract["primary_surface_region"]),
+            )
+            if _injected:
+                scene["v5_verified_overlays"] = _injected
+                contract["verified_overlay_present"] = True
+                contract["verified_overlay_mode"] = "diegetic_surface_fact"
+                scene["v5_render_contract"] = contract
+
         image_profile = dict(scene.get("image_profile") or {})
         image_profile.update({
             "tier": "pro",
