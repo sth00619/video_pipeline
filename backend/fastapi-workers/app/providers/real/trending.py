@@ -88,7 +88,7 @@ def _consume_search_quota(redis_client) -> bool:
             redis_client.decr(key)
             logger.error(
                 "YouTube search quota exhausted: %d/%d calls today — blocking.",
-                _SEARCH_QUOTA_DAILY_LIMIT,
+                used - 1,
                 _SEARCH_QUOTA_DAILY_LIMIT,
             )
             return False
@@ -402,6 +402,7 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             "regionCode": region_code,
             "relevanceLanguage": "en" if region_code == "US" else "ko",
             "publishedAfter": published_after,
+            "videoDuration": "long",  # 20분 초과 롱폼만 검색
             # search.list에는 "일반 업로드만"을 뜻하는 eventType이 없다.
             # (completed는 종료된 라이브만 뜻한다.) 따라서 여기서는 넓게
             # 수집한 뒤 videos.list의 liveStreamingDetails로 실제 라이브와
@@ -551,6 +552,7 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
                     )
                 except Exception as exc:
                     logger.warning("YouTube static metadata cache write failed: %s", exc)
+        output = [video for video in output if video.duration_seconds >= 240]
         # A wider discovery pool is collected for the automatic map.  Rank by
         # verified score first, then prefer longform when scores are similar.
         grade_rank = {"S": 3, "A": 2, "B": 1, "C": 0}
