@@ -27,10 +27,9 @@ logger = logging.getLogger(__name__)
 _US_CATEGORIES = {"US_STOCKS"}
 _CACHE_TTL_SECONDS = 3600  # 1시간 (마스터플랜 6.2절)
 _STATIC_METADATA_TTL_SECONDS = 24 * 60 * 60
-# 이 프로젝트의 Search Queries 일일 한도는 실측상 8천 단위다. 80%에서
-# 멈춰 수동 긴급 검색·오류 복구 여유를 남긴다. 자동 지도는 시드당 한 번만
-# 검색하므로, 다음 갱신일부터 300유닛으로 안정적으로 동작한다.
-_YOUTUBE_DAILY_SOFT_LIMIT = 6_400
+# Search Queries 전용 버킷은 공유 쿼터와 분리해 일일 호출 횟수로 관리한다.
+_SEARCH_QUOTA_DAILY_LIMIT = 100
+_SEARCH_QUOTA_WARNING_AT = 80  # 일일 한도의 80%부터 운영 경고
 _S_GRADE_COMMENT_DAILY_LIMIT = 30
 
 
@@ -57,21 +56,57 @@ def _normalize_recent_hours(recent_hours: int | None) -> int:
 
 
 def _consume_quota(redis_client, units: int, operation: str) -> bool:
-    """캐시 미스에서만 호출한다. 80% 도달 후 신규 search.list를 막는다."""
+    """search.list를 제외한 YouTube Data API 공유 쿼터를 기록한다."""
     if not redis_client:
         return True
     try:
         key = f"youtube:quota:{_quota_day_key()}"
         current = int(redis_client.get(key) or 0)
-        if operation == "search.list" and current + units > _YOUTUBE_DAILY_SOFT_LIMIT:
-            logger.warning("YouTube search.list soft limit reached: current=%s, limit=%s", current, _YOUTUBE_DAILY_SOFT_LIMIT)
-            return False
         redis_client.incrby(key, units)
         redis_client.expire(key, 48 * 60 * 60)
         logger.info("YouTube quota counter: operation=%s units=%s total=%s", operation, units, current + units)
         return True
     except Exception as exc:
         logger.warning("YouTube quota counter unavailable; allowing request: %s", exc)
+        return True
+
+
+def _consume_search_quota(redis_client) -> bool:
+    """search.list 전용 일일 호출 버킷을 원자적으로 차감한다.
+
+    Redis 키는 공유 풀과 별개인 ``youtube:quota:search:{YYYY-MM-DD}``이며,
+    100회까지 허용하고 101번째 시도는 차감을 취소한 뒤 차단한다.
+    """
+    if redis_client is None:
+        return True
+    try:
+        key = f"youtube:quota:search:{_quota_day_key()}"
+        used = int(redis_client.incr(key))
+        redis_client.expire(key, 24 * 60 * 60)
+
+        if used > _SEARCH_QUOTA_DAILY_LIMIT:
+            redis_client.decr(key)
+            logger.error(
+                "YouTube search quota exhausted: %d/%d calls today — blocking.",
+                _SEARCH_QUOTA_DAILY_LIMIT,
+                _SEARCH_QUOTA_DAILY_LIMIT,
+            )
+            return False
+
+        if used >= _SEARCH_QUOTA_WARNING_AT:
+            logger.warning(
+                "YouTube search quota warning: used=%d/%d calls today",
+                used,
+                _SEARCH_QUOTA_DAILY_LIMIT,
+            )
+        logger.info(
+            "YouTube search quota: used=%d/%d calls today (Search Queries bucket)",
+            used,
+            _SEARCH_QUOTA_DAILY_LIMIT,
+        )
+        return True
+    except Exception as exc:
+        logger.warning("YouTube search quota counter unavailable; allowing request: %s", exc)
         return True
 
 
@@ -374,7 +409,7 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             "maxResults": min(50, max(10, limit * 3)),
             "key": self.api_key,
         }
-        if not _consume_quota(self._redis, 100, "search.list"):
+        if not _consume_search_quota(self._redis):
             raise RuntimeError("오늘의 YouTube 검색 할당량 보호 한도에 도달했습니다. 캐시된 결과를 사용해 주세요.")
         search_response = requests.get(f"{self.base_url}/search", params=search_params, timeout=15)
         search_response.raise_for_status()
