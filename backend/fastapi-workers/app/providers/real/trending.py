@@ -49,6 +49,13 @@ def _quota_day_key() -> str:
     return pacific_now.strftime("%Y-%m-%d")
 
 
+def _normalize_recent_hours(recent_hours: int | None) -> int:
+    """기본 수집 기간은 7일이며 명시값은 1~168시간으로 제한한다."""
+    if recent_hours is None:
+        return 24 * 7
+    return max(1, min(int(recent_hours), 24 * 7))
+
+
 def _consume_quota(redis_client, units: int, operation: str) -> bool:
     """캐시 미스에서만 호출한다. 80% 도달 후 신규 search.list를 막는다."""
     if not redis_client:
@@ -173,7 +180,13 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             logger.warning("YOUTUBE_API_KEY 미설정 → 실제 YouTube 지표 수집을 건너뜁니다")
             return []
 
-        recent_hours = max(1, min(int(recent_hours or 0), 168)) or None
+        requested_recent_hours = recent_hours
+        recent_hours = _normalize_recent_hours(recent_hours)
+        logger.info(
+            "YouTube search window: requested=%s normalized=%s",
+            requested_recent_hours,
+            recent_hours,
+        )
         minimum_subscribers = int(runtime_config.value("keyword_min_source_subscribers"))
         minimum_views = int(runtime_config.value("keyword_min_source_views"))
         minimum_multiple = float(runtime_config.value("keyword_min_source_viewer_multiple"))
@@ -181,7 +194,7 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         # 재사용하지 않는다. 일반 업로드를 포함해 다시 수집한 결과만 쓴다.
         ranking = ranking if ranking in {"evidence", "outperformer", "large_channel"} else "evidence"
         requested_min_subscribers = max(0, int(min_subscribers or 0))
-        cache_key = f"trending:v6:7d:{ranking}:requested-minsubs={requested_min_subscribers}:nonlive:minsubs={minimum_subscribers}:minviews={minimum_views}:minmultiple={minimum_multiple}:{category}:{seed}:{limit}:recent={recent_hours or '7d'}"
+        cache_key = f"trending:v6:7d:{ranking}:requested-minsubs={requested_min_subscribers}:nonlive:minsubs={minimum_subscribers}:minviews={minimum_views}:minmultiple={minimum_multiple}:{category}:{seed}:{limit}:recent={recent_hours}"
         if self._redis:
             try:
                 cached = self._redis.get(cache_key)
