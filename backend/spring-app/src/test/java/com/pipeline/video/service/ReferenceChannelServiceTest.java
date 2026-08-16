@@ -21,6 +21,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -123,12 +124,59 @@ class ReferenceChannelServiceTest {
 
     @Test
     void bulkPreviewDoesNotWriteDatabaseRows() {
-        when(fastApiClient.resolveChannel("@preview")).thenReturn(Optional.of(candidate("UCpreview", 300_000L)));
+        Map<String, Object> candidate = Map.of(
+                "channel_id", "UCpreview",
+                "title", "슈카월드"
+        );
+        when(fastApiClient.searchChannelCandidates("슈카월드", 3)).thenReturn(List.of(candidate));
 
-        List<ReferenceChannelService.BulkPreviewItem> preview = service.preview(List.of("@preview"));
+        List<ReferenceChannelService.BulkPreviewItem> preview = service.preview(List.of("슈카월드"));
 
         assertThat(preview).hasSize(1);
-        assertThat(preview.get(0).candidate().channelId()).isEqualTo("UCpreview");
+        assertThat(preview.get(0).query()).isEqualTo("슈카월드");
+        assertThat(preview.get(0).candidates()).containsExactly(candidate);
+        assertThat(preview.get(0).errorMessage()).isNull();
+        verify(fastApiClient).searchChannelCandidates("슈카월드", 3);
+        verify(fastApiClient, never()).resolveChannel("슈카월드");
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void bulkPreviewKeepsDirectReferenceOnResolvePathWithoutSearchQuota() {
+        ChannelCandidate candidate = candidate("UCdirect", 300_000L);
+        when(fastApiClient.resolveChannel("https://www.youtube.com/@verified"))
+                .thenReturn(Optional.of(candidate));
+
+        List<ReferenceChannelService.BulkPreviewItem> preview = service.preview(
+                List.of("https://www.youtube.com/@verified")
+        );
+
+        assertThat(preview).hasSize(1);
+        assertThat(preview.get(0).candidates().get(0).get("channel_id")).isEqualTo("UCdirect");
+        verify(fastApiClient).resolveChannel("https://www.youtube.com/@verified");
+        verify(fastApiClient, never()).searchChannelCandidates(any(), anyInt());
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void bulkPreviewKeepsExplicitErrorForFailedNameAndContinues() {
+        Map<String, Object> candidate = Map.of(
+                "channel_id", "UCsecond",
+                "title", "두 번째 채널"
+        );
+        when(fastApiClient.searchChannelCandidates("실패 채널", 3))
+                .thenThrow(new IllegalStateException("worker unavailable"));
+        when(fastApiClient.searchChannelCandidates("정상 채널", 3)).thenReturn(List.of(candidate));
+
+        List<ReferenceChannelService.BulkPreviewItem> preview = service.preview(
+                List.of("실패 채널", "정상 채널")
+        );
+
+        assertThat(preview).hasSize(2);
+        assertThat(preview.get(0).query()).isEqualTo("실패 채널");
+        assertThat(preview.get(0).candidates()).isEmpty();
+        assertThat(preview.get(0).errorMessage()).isEqualTo("YouTube 채널 후보 검색에 실패했습니다.");
+        assertThat(preview.get(1).candidates()).containsExactly(candidate);
         verifyNoInteractions(repository);
     }
 

@@ -584,6 +584,30 @@ def resolve_youtube_channel(channel_ref: str):
     return {"status": "ok", "channel": candidate}
 
 
+class ChannelCandidateSearchRequest(BaseModel):
+    query: str
+    limit: int = 3
+
+
+@app.post("/workers/youtube/channels/search-candidates")
+def search_youtube_channel_candidates(request: ChannelCandidateSearchRequest):
+    """일반 채널명으로 사람이 확정할 후보를 최대 3개 조회한다."""
+    from app.providers.real.trending import YouTubeTrendingAnalyzer
+
+    try:
+        candidates = YouTubeTrendingAnalyzer().search_channel_candidates(
+            request.query,
+            limit=min(max(request.limit, 1), 3),
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    return {
+        "status": "ok",
+        "query": request.query,
+        "candidates": candidates,
+    }
+
+
 class ManualKeywordContextRequest(BaseModel):
     keyword: str
     recent_hours: int = 2

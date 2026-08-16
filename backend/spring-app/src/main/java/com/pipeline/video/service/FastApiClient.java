@@ -548,6 +548,26 @@ public class FastApiClient {
     }
 
     @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> searchChannelCandidates(String query, int limit) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(fastApiUrl + "/workers/youtube/channels/search-candidates")
+                .encode()
+                .toUriString();
+        Map<String, Object> body = Map.of(
+                "query", query,
+                "limit", Math.min(Math.max(limit, 1), 3)
+        );
+        try {
+            Map<String, Object> response = readMap(restTemplate.postForObject(url, body, String.class));
+            Object candidates = response.get("candidates");
+            return candidates instanceof List<?> ? (List<Map<String, Object>>) candidates : List.of();
+        } catch (Exception exception) {
+            log.error("YouTube 채널 후보 검색 연결 오류: {}", exception.getClass().getSimpleName());
+            throw new IllegalStateException("YouTube 채널 후보 검색 서비스 연결 실패", exception);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     public Map<String, Object> getManualKeywordContext(String keyword, int recentHours) {
         try {
             Map<String, Object> body = new HashMap<>();

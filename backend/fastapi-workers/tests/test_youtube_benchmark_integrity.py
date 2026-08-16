@@ -215,3 +215,50 @@ def test_channel_resolve_http_contract(monkeypatch, channel_ref, candidate, expe
     assert response.status_code == expected_status
     if expected_status == 200:
         assert response.json()["channel"]["channel_id"] == "UChlv4GSd7OQl3js-jkLOnFA"
+
+
+def test_channel_search_candidates_http_contract_clamps_limit(monkeypatch):
+    calls: list[tuple[str, int]] = []
+    expected = [{"channel_id": "UCcandidate", "title": "슈카월드"}]
+
+    def _fake_search(self, query: str, limit: int):  # noqa: ANN001
+        calls.append((query, limit))
+        return expected
+
+    monkeypatch.setattr(
+        trending.YouTubeTrendingAnalyzer,
+        "search_channel_candidates",
+        _fake_search,
+    )
+
+    response = client.post(
+        "/workers/youtube/channels/search-candidates",
+        json={"query": "슈카월드", "limit": 99},
+    )
+
+    assert response.status_code == 200
+    assert calls == [("슈카월드", 3)]
+    assert response.json() == {
+        "status": "ok",
+        "query": "슈카월드",
+        "candidates": expected,
+    }
+
+
+def test_channel_search_candidates_quota_exhaustion_returns_429(monkeypatch):
+    def _quota_exhausted(self, query: str, limit: int):  # noqa: ANN001
+        raise RuntimeError("오늘의 YouTube 채널 검색 한도에 도달했습니다.")
+
+    monkeypatch.setattr(
+        trending.YouTubeTrendingAnalyzer,
+        "search_channel_candidates",
+        _quota_exhausted,
+    )
+
+    response = client.post(
+        "/workers/youtube/channels/search-candidates",
+        json={"query": "슈카월드", "limit": 3},
+    )
+
+    assert response.status_code == 429
+    assert response.json()["detail"] == "오늘의 YouTube 채널 검색 한도에 도달했습니다."

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -79,20 +80,54 @@ public class ReferenceChannelService {
     }
 
     @Transactional(readOnly = true)
-    public List<BulkPreviewItem> preview(List<String> channelRefs) {
+    public List<BulkPreviewItem> preview(List<String> channelNames) {
         List<BulkPreviewItem> output = new ArrayList<>();
-        for (String channelRef : channelRefs == null ? List.<String>of() : channelRefs) {
-            String normalized = channelRef == null ? "" : channelRef.trim();
+        for (String channelName : channelNames == null ? List.<String>of() : channelNames) {
+            String normalized = channelName == null ? "" : channelName.trim();
             if (normalized.isEmpty()) {
                 continue;
             }
-            ChannelCandidate candidate = fastApiClient.resolveChannel(normalized).orElse(null);
-            output.add(new BulkPreviewItem(
-                    normalized,
-                    candidate,
-                    candidate == null ? "존재하는 YouTube 채널을 확인할 수 없습니다." : null
-            ));
+            try {
+                List<Map<String, Object>> candidates = isDirectChannelReference(normalized)
+                        ? fastApiClient.resolveChannel(normalized)
+                                .map(candidate -> List.of(candidateMap(candidate)))
+                                .orElseGet(List::of)
+                        : fastApiClient.searchChannelCandidates(normalized, 3);
+                output.add(new BulkPreviewItem(
+                        normalized,
+                        candidates,
+                        candidates.isEmpty() ? "YouTube 채널 후보를 찾지 못했습니다." : null
+                ));
+            } catch (RuntimeException exception) {
+                output.add(new BulkPreviewItem(
+                        normalized,
+                        List.of(),
+                        "YouTube 채널 후보 검색에 실패했습니다."
+                ));
+            }
         }
+        return output;
+    }
+
+    private boolean isDirectChannelReference(String value) {
+        return value.startsWith("UC")
+                || value.startsWith("@")
+                || value.startsWith("https://")
+                || value.startsWith("http://");
+    }
+
+    private Map<String, Object> candidateMap(ChannelCandidate candidate) {
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("channel_id", candidate.channelId());
+        output.put("title", candidate.title());
+        output.put("handle", candidate.handle());
+        output.put("description", candidate.description());
+        output.put("thumbnail_url", candidate.thumbnailUrl());
+        output.put("subscriber_count", candidate.subscriberCount());
+        output.put("subscriber_count_available", candidate.subscriberCountAvailable());
+        output.put("hidden_subscriber_count", candidate.hiddenSubscriberCount());
+        output.put("total_view_count", candidate.totalViewCount());
+        output.put("video_count", candidate.videoCount());
         return output;
     }
 
@@ -190,7 +225,11 @@ public class ReferenceChannelService {
         return ReferenceChannelTier.SMALL;
     }
 
-    public record BulkPreviewItem(String channelRef, ChannelCandidate candidate, String errorMessage) {
+    public record BulkPreviewItem(
+            String query,
+            List<Map<String, Object>> candidates,
+            String errorMessage
+    ) {
     }
 
     public record BulkConfirmFailure(String channelId, String errorMessage) {
