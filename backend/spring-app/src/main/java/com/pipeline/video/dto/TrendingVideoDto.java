@@ -34,6 +34,9 @@ public class TrendingVideoDto {
     private Boolean retentionAvailable;
     private String statisticsAsOf;
     private Boolean channelAvgViewsIsSample;
+    private Long channelRecentAvgViews;
+    private Integer channelRecentSampleSize;
+    private String outperformerBasis;
     private Boolean subscriberCountAvailable;
     private Boolean isLive;
     private List<String> tags;
