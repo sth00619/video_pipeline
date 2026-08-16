@@ -14,8 +14,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -98,7 +100,7 @@ public class DailyKeywordService {
 
         List<Map<String, Object>> collectedRows = new ArrayList<>();
         futures.forEach(future -> collectedRows.addAll(future.join()));
-        List<Map<String, Object>> rows = collectedRows.stream()
+        List<Map<String, Object>> rows = deduplicateByVideoId(collectedRows).stream()
                 .filter(row -> number(row.get("subscribers")) >= MIN_EVIDENCE_SUBSCRIBERS)
                 .filter(row -> number(row.get("views")) >= MIN_EVIDENCE_VIEWS)
                 .filter(row -> sourceMultiple(row) >= MIN_EVIDENCE_VIEWER_MULTIPLE)
@@ -112,6 +114,31 @@ public class DailyKeywordService {
                 .toList();
         snapshots.put(day, rows);
         return rows;
+    }
+
+    /**
+     * 시드가 달라도 같은 YouTube 영상은 한 번만 유지한다.
+     * 검색 시드 순서를 보존하고, 영상 ID가 없는 행은 서로 다른 근거로 취급한다.
+     */
+    private static List<Map<String, Object>> deduplicateByVideoId(List<Map<String, Object>> rows) {
+        Set<String> seenVideoIds = new LinkedHashSet<>();
+        List<Map<String, Object>> deduplicated = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            String videoId = evidenceVideoId(row);
+            if (videoId == null || seenVideoIds.add(videoId)) {
+                deduplicated.add(row);
+            }
+        }
+        return deduplicated;
+    }
+
+    private static String evidenceVideoId(Map<String, Object> row) {
+        Object rawIds = row.get("evidenceVideoIds");
+        if (!(rawIds instanceof List<?> ids) || ids.isEmpty() || ids.get(0) == null) {
+            return null;
+        }
+        String videoId = String.valueOf(ids.get(0)).trim();
+        return videoId.isEmpty() ? null : videoId;
     }
 
     private List<Map<String, Object>> collectSeed(String[] seed) {

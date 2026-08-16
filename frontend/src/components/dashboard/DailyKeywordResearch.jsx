@@ -139,7 +139,19 @@ export default function DailyKeywordResearch({ onUseKeyword }) {
   const dailyVideos = useMemo(() => dailyItems.map(item => ({ ...(valueOf(item, 'sourceVideos', 'source_videos')?.[0] || {}), title: item.keyword, performanceGrade: item.performanceGrade, performanceScore: item.performanceScore, views: item.views, subscribers: item.subscribers, likes: item.likes, comments: item.comments })), [dailyItems])
   const sourceVideos = useMemo(() => researchVideos.length ? researchVideos : dailyVideos, [researchVideos, dailyVideos])
   const trustedVideos = useMemo(() => sourceVideos.filter(isEligibleEvidence), [sourceVideos])
-  const premiumVideos = useMemo(() => { const premium = trustedVideos.filter(video => ['S', 'A'].includes(gradeFor(video))); const rest = trustedVideos.filter(video => !['S', 'A'].includes(gradeFor(video))); return [...premium, ...rest].slice(0, 12) }, [trustedVideos])
+  const premiumVideos = useMemo(() => {
+    const premium = trustedVideos.filter(video => ['S', 'A'].includes(gradeFor(video)))
+    const rest = trustedVideos.filter(video => !['S', 'A'].includes(gradeFor(video)))
+    const seenVideoIds = new Set()
+    return [...premium, ...rest]
+      .filter(video => {
+        const videoId = valueOf(video, 'videoId', 'video_id')
+        if (!videoId || seenVideoIds.has(videoId)) return false
+        seenVideoIds.add(videoId)
+        return true
+      })
+      .slice(0, 12)
+  }, [trustedVideos])
   const sourceSignature = useMemo(() => premiumVideos.map(video => `${valueOf(video, 'videoId', 'video_id')}:${video.title}`).join('|'), [premiumVideos])
   const selectedKeywords = useMemo(() => new Set(Object.keys(selected)), [selected])
   const dailyTrustedVideos = useMemo(() => dailyVideos.filter(isEligibleEvidence), [dailyVideos])

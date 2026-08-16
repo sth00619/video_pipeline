@@ -3,6 +3,8 @@ import { CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, ThumbsUp, Eye }
 import * as d3 from 'd3'
 
 const multipleOf = node => Number(node?.bestMultiple || 0)
+const MINDMAP_VIEW_BOX = Object.freeze({ x: -450, y: -230, width: 900, height: 460 })
+const MINDMAP_VIEW_BOX_VALUE = `${MINDMAP_VIEW_BOX.x} ${MINDMAP_VIEW_BOX.y} ${MINDMAP_VIEW_BOX.width} ${MINDMAP_VIEW_BOX.height}`
 
 function formatViews(num) {
   if (!num || isNaN(num)) return '0'
@@ -130,15 +132,20 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
     const fitToView = () => {
       const bounds = g.node()?.getBBox()
       if (!bounds || !bounds.width || !bounds.height) return
-      const fullWidth = svgRef.current.clientWidth || 900
-      const fullHeight = svgRef.current.clientHeight || 460
+      const viewBox = svgRef.current.viewBox?.baseVal
+      const viewBoxX = viewBox?.x ?? MINDMAP_VIEW_BOX.x
+      const viewBoxY = viewBox?.y ?? MINDMAP_VIEW_BOX.y
+      const viewBoxWidth = viewBox?.width || MINDMAP_VIEW_BOX.width
+      const viewBoxHeight = viewBox?.height || MINDMAP_VIEW_BOX.height
       const scale = Math.min(
-        0.9 * fullWidth / bounds.width,
-        0.9 * fullHeight / bounds.height,
+        0.85 * viewBoxWidth / bounds.width,
+        0.85 * viewBoxHeight / bounds.height,
         1.5
       )
-      const tx = fullWidth / 2 - scale * (bounds.x + bounds.width / 2)
-      const ty = fullHeight / 2 - scale * (bounds.y + bounds.height / 2)
+      const viewBoxCenterX = viewBoxX + viewBoxWidth / 2
+      const viewBoxCenterY = viewBoxY + viewBoxHeight / 2
+      const tx = viewBoxCenterX - scale * (bounds.x + bounds.width / 2)
+      const ty = viewBoxCenterY - scale * (bounds.y + bounds.height / 2)
       svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
     }
     fitToView()
@@ -165,7 +172,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
 
             {/* Mindmap SVG Container */}
             <div className="relative w-full h-[450px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
-              <svg ref={svgRef} viewBox="-450 -230 900 460" className="w-full h-full select-none">
+              <svg ref={svgRef} viewBox={MINDMAP_VIEW_BOX_VALUE} className="w-full h-full select-none">
                 <defs>
                   <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#4338ca" />
