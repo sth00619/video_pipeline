@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, ThumbsUp, Eye } from 'lucide-react'
-import * as d3 from 'd3'
 
 const MINDMAP_VIEW_BOX = Object.freeze({ x: -700, y: -230, width: 1400, height: 460 })
 const MINDMAP_VIEW_BOX_VALUE = `${MINDMAP_VIEW_BOX.x} ${MINDMAP_VIEW_BOX.y} ${MINDMAP_VIEW_BOX.width} ${MINDMAP_VIEW_BOX.height}`
@@ -117,40 +116,26 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
     }
   }, [mindmap, filteredPrimary])
 
-  // D3 Zoom behavior and auto-fit to view
+  // 마우스 휠 확대·축소 없이 현재 레이아웃을 한 번만 화면에 맞춘다.
   useEffect(() => {
     if (!svgRef.current || !gRef.current) return
-    const svg = d3.select(svgRef.current)
-    const g = d3.select(gRef.current)
-
-    const zoom = d3.zoom()
-      .scaleExtent([0.4, 2.5])
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform)
-      })
-
-    svg.call(zoom)
-
-    const fitToView = () => {
-      const bounds = g.node()?.getBBox()
-      if (!bounds || !bounds.width || !bounds.height) return
-      const viewBox = svgRef.current.viewBox?.baseVal
-      const viewBoxX = viewBox?.x ?? MINDMAP_VIEW_BOX.x
-      const viewBoxY = viewBox?.y ?? MINDMAP_VIEW_BOX.y
-      const viewBoxWidth = viewBox?.width || MINDMAP_VIEW_BOX.width
-      const viewBoxHeight = viewBox?.height || MINDMAP_VIEW_BOX.height
-      const scale = Math.min(
-        0.85 * viewBoxWidth / bounds.width,
-        0.85 * viewBoxHeight / bounds.height,
-        1.5
-      )
-      const viewBoxCenterX = viewBoxX + viewBoxWidth / 2
-      const viewBoxCenterY = viewBoxY + viewBoxHeight / 2
-      const tx = viewBoxCenterX - scale * (bounds.x + bounds.width / 2)
-      const ty = viewBoxCenterY - scale * (bounds.y + bounds.height / 2)
-      svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
-    }
-    fitToView()
+    const bounds = gRef.current.getBBox()
+    if (!bounds.width || !bounds.height) return
+    const viewBox = svgRef.current.viewBox?.baseVal
+    const viewBoxX = viewBox?.x ?? MINDMAP_VIEW_BOX.x
+    const viewBoxY = viewBox?.y ?? MINDMAP_VIEW_BOX.y
+    const viewBoxWidth = viewBox?.width || MINDMAP_VIEW_BOX.width
+    const viewBoxHeight = viewBox?.height || MINDMAP_VIEW_BOX.height
+    const scale = Math.min(
+      0.85 * viewBoxWidth / bounds.width,
+      0.85 * viewBoxHeight / bounds.height,
+      1.5
+    )
+    const viewBoxCenterX = viewBoxX + viewBoxWidth / 2
+    const viewBoxCenterY = viewBoxY + viewBoxHeight / 2
+    const tx = viewBoxCenterX - scale * (bounds.x + bounds.width / 2)
+    const ty = viewBoxCenterY - scale * (bounds.y + bounds.height / 2)
+    gRef.current.setAttribute('transform', `translate(${tx} ${ty}) scale(${scale})`)
   }, [layout])
 
   // Pagination for videos
