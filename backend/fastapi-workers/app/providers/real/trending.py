@@ -388,7 +388,7 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         # latest seven days; the caller can still type a breaking-news term and
         # receive videos from the last hour.
         published_after = (datetime.now(timezone.utc) - timedelta(hours=recent_hours or 24 * 7)).isoformat().replace("+00:00", "Z")
-        search_params = {
+        base_search_params = {
             "part": "snippet",
             "q": seed,
             "type": "video",
@@ -402,7 +402,6 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             "regionCode": region_code,
             "relevanceLanguage": "en" if region_code == "US" else "ko",
             "publishedAfter": published_after,
-            "videoDuration": "long",  # 20분 초과 롱폼만 검색
             # search.list에는 "일반 업로드만"을 뜻하는 eventType이 없다.
             # (completed는 종료된 라이브만 뜻한다.) 따라서 여기서는 넓게
             # 수집한 뒤 videos.list의 liveStreamingDetails로 실제 라이브와
@@ -412,15 +411,57 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         }
         if not _consume_search_quota(self._redis):
             raise RuntimeError("오늘의 YouTube 검색 할당량 보호 한도에 도달했습니다. 캐시된 결과를 사용해 주세요.")
-        search_response = requests.get(f"{self.base_url}/search", params=search_params, timeout=15)
-        search_response.raise_for_status()
-        search_items = search_response.json().get("items", [])
-        # 조회수 순으로 최대 50건을 이미 확보하므로, 매 시드마다 medium/long
-        # 검색을 두 번 더 할 필요가 없다. 최종 정렬에서 긴 영상을 우선해
-        # 롱폼 친화성은 유지하면서 일일 자동 수집 쿼터는 3분의 1로 줄인다.
+        long_response = requests.get(
+            f"{self.base_url}/search",
+            params={**base_search_params, "videoDuration": "long"},
+            timeout=15,
+        )
+        long_response.raise_for_status()
+        long_items = long_response.json().get("items", [])
+
+        # 4~20분 영상도 연구 후보에 포함하되, 두 번째 검색은 best-effort로
+        # 처리한다. medium 쿼터나 요청이 실패해도 먼저 확보한 long 결과는
+        # 그대로 후속 videos.list와 점수 계산에 전달한다.
+        medium_items: list[dict] = []
+        if _consume_search_quota(self._redis):
+            try:
+                medium_response = requests.get(
+                    f"{self.base_url}/search",
+                    params={**base_search_params, "videoDuration": "medium"},
+                    timeout=15,
+                )
+                medium_response.raise_for_status()
+                medium_items = medium_response.json().get("items", [])
+                logger.info("YouTube search window: medium call got %d items", len(medium_items))
+            except Exception as exc:
+                logger.warning(
+                    "YouTube medium search failed — long-only results returned: %s",
+                    exc,
+                )
+        else:
+            logger.warning(
+                "YouTube search quota exhausted — medium search skipped, long-only results returned"
+            )
+
+        # 같은 영상이 두 검색에 모두 포함되면 먼저 수집한 long 결과를
+        # 유지한다. videos.list 이후 단계는 병합 ID에 대해 한 번만 실행한다.
+        seen_ids: set[str] = set()
+        merged_items: list[dict] = []
+        for item in long_items + medium_items:
+            video_id = item.get("id", {}).get("videoId")
+            if video_id and video_id not in seen_ids:
+                seen_ids.add(video_id)
+                merged_items.append(item)
+
+        logger.info(
+            "YouTube search merge: long=%d medium=%d merged=%d",
+            len(long_items),
+            len(medium_items),
+            len(merged_items),
+        )
         video_ids = [
             item.get("id", {}).get("videoId")
-            for item in search_items
+            for item in merged_items
             if item.get("id", {}).get("videoId")
         ]
         video_ids = list(dict.fromkeys(video_ids))[:50]

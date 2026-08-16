@@ -107,10 +107,10 @@ def _collect_duration_results(monkeypatch) -> list:
 
 
 def test_search_list_includes_video_duration_long(monkeypatch):
-    captured_params: dict = {}
+    captured_durations: list[str | None] = []
 
     def _fake_get(url: str, params: dict, timeout: int):  # noqa: ARG001
-        captured_params.update(params)
+        captured_durations.append(params.get("videoDuration"))
         return _Response({"items": []})
 
     monkeypatch.setattr(trending.requests, "get", _fake_get)
@@ -123,7 +123,7 @@ def test_search_list_includes_video_duration_long(monkeypatch):
     )
 
     assert result == []
-    assert captured_params.get("videoDuration") == "long"
+    assert "long" in captured_durations
 
 
 def test_results_under_four_minutes_are_dropped(monkeypatch):

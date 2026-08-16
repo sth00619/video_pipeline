@@ -117,5 +117,5 @@ def test_keyword_search_uses_dedicated_quota_counter(monkeypatch):
     result = analyzer._collect_keyword_search("KOSPI", "반도체", limit=5, recent_hours=168)
 
     assert result == []
-    assert dedicated_calls == [analyzer._redis]
+    assert dedicated_calls == [analyzer._redis, analyzer._redis]
     assert "search.list" not in shared_operations
