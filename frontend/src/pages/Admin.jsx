@@ -10,6 +10,7 @@ import Layout from '../components/Layout'
 import JobFilterBar from '../components/JobFilterBar'
 import Pagination from '../components/Pagination'
 import StatusBadge from '../components/StatusBadge'
+import ReferenceChannelManager from '../components/admin/ReferenceChannelManager'
 import apiClient from '../api/client'
 import { formatAutonomy, formatCategory, isCompleted } from '../constants/jobStatus'
 
@@ -23,7 +24,7 @@ const PERSON_LICENSES = [
 export default function Admin() {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const [activeTab, setActiveTab] = useState('jobs') // 'jobs' | 'policy' | 'channels' | 'people'
+  const [activeTab, setActiveTab] = useState('jobs') // 'jobs' | 'policy' | 'channels' | 'people' | 'reference-channels'
   const [adminFilter, setAdminFilter] = useState('ALL')
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -332,12 +333,13 @@ export default function Admin() {
         </div>
 
         {/* 메인 탭 네비게이션 */}
-        <div className="flex items-center gap-2 mb-6 border-b border-slate-200 pb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-slate-200 pb-2">
           {[
             { id: 'jobs', label: '전체 작업 모니터링', icon: Video },
             { id: 'policy', label: '영상 길이별 예산 정책 설정', icon: Settings },
             { id: 'channels', label: '채널 프로필 관리', icon: Shield },
             { id: 'people', label: '실사 인물 에셋 관리', icon: Users },
+            { id: 'reference-channels', label: '레퍼런스 채널', icon: ExternalLink },
           ].map(tab => {
             const Icon = tab.icon
             const isActive = activeTab === tab.id
@@ -660,6 +662,9 @@ export default function Admin() {
             </div>
           </div>
         )}
+
+        {/* TAB 5: YouTube 레퍼런스 채널 관리 */}
+        {activeTab === 'reference-channels' && <ReferenceChannelManager />}
       </div>
     </Layout>
   )
