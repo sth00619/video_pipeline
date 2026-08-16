@@ -87,12 +87,12 @@ export default function Admin() {
 
   const { data: people = [] } = useQuery({
     queryKey: ['admin-people'],
-    queryFn: () => apiClient.get('/assets/people').then(r => r.data).catch(() => []),
+    queryFn: () => apiClient.get('/assets/person').then(r => r.data).catch(() => []),
   })
 
   const { data: photos = [], refetch: refetchPhotos } = useQuery({
     queryKey: ['admin-person-photos', selectedPersonId],
-    queryFn: () => apiClient.get(`/assets/people/${selectedPersonId}/photos`).then(r => r.data).catch(() => []),
+    queryFn: () => apiClient.get(`/assets/person/${selectedPersonId}/photos`).then(r => r.data).catch(() => []),
     enabled: !!selectedPersonId,
   })
 
@@ -167,11 +167,11 @@ export default function Admin() {
   })
 
   const createPerson = useMutation({
-    mutationFn: () => apiClient.post('/assets/people', {
+    mutationFn: () => apiClient.post('/assets/person', {
       personId: personForm.personId,
       nameKo: personForm.nameKo,
       nameEn: personForm.nameEn,
-      aliases: personForm.aliasesJson ? JSON.parse(personForm.aliasesJson) : []
+      aliasesJson: personForm.aliasesJson || null,
     }).then(r => r.data),
     onSuccess: () => {
       setPersonForm({ personId: '', nameKo: '', nameEn: '', aliasesJson: '' })
@@ -191,7 +191,7 @@ export default function Admin() {
       if (photoForm.authorName) fd.append('authorName', photoForm.authorName)
       fd.append('emotionTag', photoForm.emotionTag)
       fd.append('pose', photoForm.pose)
-      return apiClient.post(`/assets/people/${selectedPersonId}/photos`, fd).then(r => r.data)
+      return apiClient.post(`/assets/person/${selectedPersonId}/photos`, fd).then(r => r.data)
     },
     onSuccess: () => {
       setPhotoForm({ file: null, licenseType: 'OWNED_EXPLICIT', licenseRef: '', creditText: '', authorName: '', emotionTag: 'neutral', pose: 'portrait' })
@@ -202,7 +202,9 @@ export default function Admin() {
   })
 
   const reviewPhoto = useMutation({
-    mutationFn: ({ photoId, action }) => apiClient.post(`/assets/people/photos/${photoId}/review`, { action }).then(r => r.data),
+    mutationFn: ({ photoId, action }) => apiClient
+      .post(`/assets/person/${selectedPersonId}/photos/${photoId}/${action}`)
+      .then(r => r.data),
     onSuccess: () => {
       refetchPhotos()
       alert('사진 검토 결과가 적용되었습니다.')
