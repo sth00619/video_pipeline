@@ -43,6 +43,10 @@ class TrendingVideo:
     retention_available: bool = False
     statistics_as_of: str = ""
     channel_avg_views_is_sample: bool = False
+    # 최근 일반영상 기준 평균은 누적 채널 평균·검색 표본 평균과 구분한다.
+    channel_recent_avg_views: Optional[int] = None
+    channel_recent_sample_size: int = 0
+    outperformer_basis: str = "tiered_ratio"
     subscriber_count_available: bool = True
     # 라이브/라이브 다시보기는 일반 업로드와 시청 패턴이 달라 자동 주제
     # 근거에서 제외한다. YouTube의 liveStreamingDetails로 판별한 값이다.

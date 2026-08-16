@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 from app.providers.base import TrendingVideoAnalyzer, TrendingVideo
 from app.providers.mock.trending import MockTrendingVideoAnalyzer
 from app.config import REDIS_HOST, REDIS_PORT
-from app import runtime_config
+from app import config, runtime_config
 
 logger = logging.getLogger(__name__)
 
@@ -233,16 +233,182 @@ def _is_eligible_evidence_source(video: TrendingVideo) -> bool:
     """Only verified channels with a meaningful audience may drive recommendations."""
     minimum_subscribers = int(runtime_config.value("keyword_min_source_subscribers"))
     minimum_views = int(runtime_config.value("keyword_min_source_views"))
-    minimum_multiple = float(runtime_config.value("keyword_min_source_viewer_multiple"))
-    viewer_multiple = float(video.views or 0) / max(float(video.subscribers or 0), 1.0)
-    return (
+    metadata_eligible = (
         bool(video.subscriber_count_available)
         and int(video.subscribers or 0) >= minimum_subscribers
         and int(video.views or 0) >= minimum_views
-        and viewer_multiple >= minimum_multiple
         and 0 < float(video.hours_since_publish or 0) <= 24 * 7
         and (not bool(runtime_config.value("keyword_exclude_live")) or not video.is_live)
     )
+    return metadata_eligible and _is_high_response_video(video)[0]
+
+
+def _viewer_ratio_threshold(subscriber_count: int) -> float:
+    """자기평균 표본이 부족할 때 적용할 구독자 규모별 최소 조회율."""
+    if subscriber_count >= 1_000_000:
+        return 0.003
+    if subscriber_count >= 300_000:
+        return 0.006
+    if subscriber_count >= 50_000:
+        return 0.010
+    return 0.020
+
+
+def _fetch_channel_baseline(
+    analyzer: "YouTubeTrendingAnalyzer",
+    channel_id: str,
+) -> tuple[int, int]:
+    """채널 최근 일반영상의 평균 조회수와 표본 수를 반환한다."""
+    cache_key = f"youtube:channel-baseline:v1:{channel_id}"
+    if analyzer._redis:
+        try:
+            cached = analyzer._redis.get(cache_key)
+            if cached:
+                data = json.loads(cached)
+                average_views = int(data.get("average_views", 0) or 0)
+                sample_size = int(data.get("sample_size", 0) or 0)
+                logger.info(
+                    "YouTube recent baseline: channel_id=%s source=cache "
+                    "sample_size=%d playlist_calls=0 videos_calls=0 shared_units=0",
+                    channel_id,
+                    sample_size,
+                )
+                return average_views, sample_size
+        except Exception as exc:
+            logger.warning("Baseline cache read failed for %s: %s", channel_id, exc)
+
+    if not _consume_quota(analyzer._redis, 1, "channels.list"):
+        return 0, 0
+    channel_response = requests.get(
+        f"{analyzer.base_url}/channels",
+        params={"part": "contentDetails", "id": channel_id, "key": analyzer.api_key},
+        timeout=15,
+    )
+    if getattr(channel_response, "status_code", 200) != 200:
+        return 0, 0
+    channel_items = channel_response.json().get("items", [])
+    if not channel_items:
+        return 0, 0
+    uploads_id = (
+        channel_items[0]
+        .get("contentDetails", {})
+        .get("relatedPlaylists", {})
+        .get("uploads")
+    )
+    if not uploads_id:
+        return 0, 0
+
+    if not _consume_quota(analyzer._redis, 1, "playlistItems.list"):
+        return 0, 0
+    playlist_response = requests.get(
+        f"{analyzer.base_url}/playlistItems",
+        params={
+            "part": "contentDetails",
+            "playlistId": uploads_id,
+            "maxResults": 50,
+            "key": analyzer.api_key,
+        },
+        timeout=15,
+    )
+    if getattr(playlist_response, "status_code", 200) != 200:
+        return 0, 0
+    video_ids = [
+        item.get("contentDetails", {}).get("videoId")
+        for item in playlist_response.json().get("items", [])
+        if item.get("contentDetails", {}).get("videoId")
+    ]
+    if not video_ids:
+        return 0, 0
+
+    if not _consume_quota(analyzer._redis, 1, "videos.list"):
+        return 0, 0
+    videos_response = requests.get(
+        f"{analyzer.base_url}/videos",
+        params={
+            "part": "snippet,statistics,contentDetails,liveStreamingDetails",
+            "id": ",".join(video_ids[:50]),
+            "key": analyzer.api_key,
+        },
+        timeout=15,
+    )
+    if getattr(videos_response, "status_code", 200) != 200:
+        return 0, 0
+
+    video_items_by_id = {
+        item.get("id"): item
+        for item in videos_response.json().get("items", [])
+        if item.get("id")
+    }
+    eligible_views: list[int] = []
+    # videos.list 응답 순서에 의존하지 않고 uploads 재생목록의 최신순을 보존한다.
+    for video_id in video_ids:
+        item = video_items_by_id.get(video_id)
+        if not item:
+            continue
+        duration_seconds = _parse_iso8601_duration(
+            item.get("contentDetails", {}).get("duration", "PT0S")
+        )
+        is_live = (
+            item.get("snippet", {}).get("liveBroadcastContent") in {"live", "upcoming"}
+            or bool(item.get("liveStreamingDetails"))
+        )
+        if duration_seconds < 240 or is_live:
+            continue
+        try:
+            eligible_views.append(int(item.get("statistics", {})["viewCount"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    sample = eligible_views[:30]
+    average_views = round(sum(sample) / len(sample)) if sample else 0
+    sample_size = len(sample)
+    logger.info(
+        "YouTube recent baseline: channel_id=%s source=api "
+        "sample_size=%d playlist_calls=1 videos_calls=1 shared_units=3",
+        channel_id,
+        sample_size,
+    )
+
+    if analyzer._redis and sample_size > 0:
+        try:
+            analyzer._redis.setex(
+                cache_key,
+                6 * 60 * 60,
+                json.dumps(
+                    {
+                        "channel_id": channel_id,
+                        "average_views": average_views,
+                        "sample_size": sample_size,
+                        "criteria": "duration>=240, non-live",
+                        "calculated_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+        except Exception as exc:
+            logger.warning("Baseline cache write failed for %s: %s", channel_id, exc)
+
+    return average_views, sample_size
+
+
+def _is_high_response_video(video: TrendingVideo) -> tuple[bool, str]:
+    """최소 조회수와 자기평균 또는 규모별 조회율로 성과를 판정한다."""
+    views = int(video.views or 0)
+    subscribers = int(video.subscribers or 0)
+    if views < int(config.KEYWORD_MIN_SOURCE_VIEWS):
+        return False, "minimum_views"
+
+    baseline_count = int(video.channel_recent_sample_size or 0)
+    baseline_average = int(video.channel_recent_avg_views or 0)
+    if (
+        baseline_count >= int(config.KEYWORD_OUTPERFORMER_MIN_BASELINE_COUNT)
+        and baseline_average > 0
+    ):
+        required_views = baseline_average * float(config.KEYWORD_OUTPERFORMER_RECENT_MULTIPLE)
+        return views >= required_views, "recent_average_1_5x"
+
+    threshold = _viewer_ratio_threshold(subscribers)
+    return views / max(subscribers, 1) >= threshold, "tiered_ratio"
 
 
 def _is_eligible_exploration_source(video: TrendingVideo, ranking: str, min_subscribers: int | None) -> bool:
@@ -308,12 +474,19 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         )
         minimum_subscribers = int(runtime_config.value("keyword_min_source_subscribers"))
         minimum_views = int(runtime_config.value("keyword_min_source_views"))
-        minimum_multiple = float(runtime_config.value("keyword_min_source_viewer_multiple"))
+        recent_multiple = float(config.KEYWORD_OUTPERFORMER_RECENT_MULTIPLE)
+        minimum_baseline_count = int(config.KEYWORD_OUTPERFORMER_MIN_BASELINE_COUNT)
+        baseline_cap = int(config.KEYWORD_OUTPERFORMER_BASELINE_CAP_PER_REQ)
         # v5: v4에서 잘못된 eventType=completed 조회로 남은 빈 캐시를
         # 재사용하지 않는다. 일반 업로드를 포함해 다시 수집한 결과만 쓴다.
         ranking = ranking if ranking in {"evidence", "outperformer", "large_channel"} else "evidence"
         requested_min_subscribers = max(0, int(min_subscribers or 0))
-        cache_key = f"trending:v6:7d:{ranking}:requested-minsubs={requested_min_subscribers}:nonlive:minsubs={minimum_subscribers}:minviews={minimum_views}:minmultiple={minimum_multiple}:{category}:{seed}:{limit}:recent={recent_hours}"
+        cache_key = (
+            f"trending:v7:7d:{ranking}:requested-minsubs={requested_min_subscribers}:"
+            f"nonlive:minsubs={minimum_subscribers}:minviews={minimum_views}:"
+            f"recentmultiple={recent_multiple}:baselinecount={minimum_baseline_count}:"
+            f"baselinecap={baseline_cap}:{category}:{seed}:{limit}:recent={recent_hours}"
+        )
         if self._redis:
             try:
                 cached = self._redis.get(cache_key)
@@ -614,6 +787,9 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             sample_totals.setdefault(row["channel_id"], []).append(row["views"])
 
         output: list[TrendingVideo] = []
+        baseline_by_channel: dict[str, tuple[int, int]] = {}
+        baseline_attempts = 0
+        baseline_cap = max(0, int(config.KEYWORD_OUTPERFORMER_BASELINE_CAP_PER_REQ))
         for row in rows:
             item = row["item"]
             snippet = item.get("snippet", {})
@@ -652,17 +828,49 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
                          or bool(item.get("liveStreamingDetails"))),
             )
             video.performance_score, video.performance_grade = _score_video(video)
-            is_eligible = (
-                _is_eligible_evidence_source(video)
-                if ranking == "evidence"
-                else _is_eligible_exploration_source(video, ranking, min_subscribers)
-            )
+            if video.duration_seconds < 240:
+                continue
+
+            if ranking in {"evidence", "outperformer"}:
+                normalized_channel_id = (video.channel_id or "").strip()
+                if normalized_channel_id and normalized_channel_id not in baseline_by_channel:
+                    if baseline_attempts < baseline_cap:
+                        baseline_attempts += 1
+                        try:
+                            baseline_by_channel[normalized_channel_id] = _fetch_channel_baseline(
+                                self,
+                                normalized_channel_id,
+                            )
+                        except Exception as exc:
+                            logger.warning(
+                                "YouTube recent baseline failed; tiered fallback used: "
+                                "channel_id=%s error=%s",
+                                normalized_channel_id,
+                                type(exc).__name__,
+                            )
+                            baseline_by_channel[normalized_channel_id] = (0, 0)
+                    else:
+                        baseline_by_channel[normalized_channel_id] = (0, 0)
+                average_views, sample_size = baseline_by_channel.get(normalized_channel_id, (0, 0))
+                video.channel_recent_avg_views = average_views or None
+                video.channel_recent_sample_size = sample_size
+
+            if ranking == "evidence":
+                is_eligible = _is_eligible_evidence_source(video)
+                video.outperformer_basis = _is_high_response_video(video)[1]
+            else:
+                is_eligible = _is_eligible_exploration_source(video, ranking, min_subscribers)
+                if ranking == "outperformer" and is_eligible:
+                    is_eligible, video.outperformer_basis = _is_high_response_video(video)
             if not is_eligible:
                 logger.info(
-                    "Excluded non-qualifying YouTube source: video=%s subscribers=%s views=%s multiple=%.2f live=%s available=%s min_subs=%s min_views=%s",
+                    "Excluded non-qualifying YouTube source: video=%s subscribers=%s views=%s multiple=%.2f live=%s available=%s min_subs=%s min_views=%s basis=%s baseline_avg=%s baseline_sample=%s",
                     video.video_id, video.subscribers, video.views, video.views / max(video.subscribers, 1), video.is_live, video.subscriber_count_available,
                     min_subscribers if ranking == "large_channel" else runtime_config.value("keyword_min_source_subscribers"),
                     500 if ranking == "outperformer" else runtime_config.value("keyword_min_source_views"),
+                    video.outperformer_basis,
+                    video.channel_recent_avg_views,
+                    video.channel_recent_sample_size,
                 )
                 continue
             output.append(video)
@@ -677,7 +885,6 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
                     )
                 except Exception as exc:
                     logger.warning("YouTube static metadata cache write failed: %s", exc)
-        output = [video for video in output if video.duration_seconds >= 240]
         # A wider discovery pool is collected for the automatic map.  Rank by
         # verified score first, then prefer longform when scores are similar.
         grade_rank = {"S": 3, "A": 2, "B": 1, "C": 0}
