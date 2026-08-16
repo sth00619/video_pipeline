@@ -68,3 +68,35 @@ CREATE TABLE IF NOT EXISTS person_photo (
     transformation_log TEXT,
     created_at TIMESTAMP
 );
+
+-- 관리자 검증을 통과한 YouTube 레퍼런스 채널의 단일 저장소.
+CREATE TABLE IF NOT EXISTS reference_channel (
+    id                          BIGSERIAL PRIMARY KEY,
+    display_name                VARCHAR(120) NOT NULL,
+    channel_id                  VARCHAR(50)  NOT NULL UNIQUE,
+    youtube_title               VARCHAR(200),
+    youtube_handle              VARCHAR(120),
+    thumbnail_url               TEXT,
+    subscriber_count            BIGINT,
+    subscriber_count_hidden     BOOLEAN NOT NULL DEFAULT FALSE,
+    tier                        VARCHAR(20)  NOT NULL DEFAULT 'MEDIUM',
+    validation_status           VARCHAR(20)  NOT NULL DEFAULT 'VALID',
+    is_active                   BOOLEAN NOT NULL DEFAULT TRUE,
+    display_order               INTEGER NOT NULL DEFAULT 0,
+    last_validated_at           TIMESTAMP,
+    created_by                  VARCHAR(100),
+    created_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at                  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_reference_channel_active_order
+    ON reference_channel (is_active, display_order, id);
+
+-- 진단에서 실채널 일치가 확인된 경제사냥꾼만 초기 활성 채널로 등록한다.
+INSERT INTO reference_channel (
+    display_name, channel_id, youtube_title, tier,
+    validation_status, is_active, display_order, created_by
+) VALUES (
+    '경제사냥꾼', 'UC7usMJDHmtbs_oegmzQKKMA', '경제사냥꾼',
+    'LARGE', 'VALID', TRUE, 10, 'system_seed'
+) ON CONFLICT (channel_id) DO NOTHING;

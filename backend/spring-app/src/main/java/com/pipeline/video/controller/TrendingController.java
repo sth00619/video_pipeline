@@ -1,9 +1,10 @@
 package com.pipeline.video.controller;
 
 import com.pipeline.video.dto.TrendingVideoDto;
-import com.pipeline.video.service.FastApiClient;
+import com.pipeline.video.service.ReferenceChannelService;
 import com.pipeline.video.service.TrendingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +19,7 @@ import java.util.Map;
 public class TrendingController {
 
     private final TrendingService trendingService;
-    private final FastApiClient fastApiClient;
+    private final ReferenceChannelService referenceChannelService;
 
     @GetMapping("/api/trending/youtube")
     public ResponseEntity<List<TrendingVideoDto>> getTrendingYoutube(
@@ -29,8 +30,14 @@ public class TrendingController {
     }
 
     @GetMapping({"/api/youtube/channels/benchmark", "/api/trending/youtube/channels/benchmark"})
-    public ResponseEntity<Object> channelBenchmark(
-            @RequestParam(required = false) String channelIds) {
-        return ResponseEntity.ok(fastApiClient.getChannelBenchmarks(channelIds));
+    public ResponseEntity<Object> channelBenchmark() {
+        try {
+            return ResponseEntity.ok(referenceChannelService.getActiveBenchmarks());
+        } catch (RuntimeException exception) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(
+                    "status", "error",
+                    "message", "YouTube 통계 서비스 연결 실패"
+            ));
+        }
     }
 }

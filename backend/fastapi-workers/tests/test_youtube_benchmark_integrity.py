@@ -3,7 +3,9 @@ import json
 import logging
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.main import app
 from app.providers.real import trending
 
 
@@ -27,6 +29,9 @@ class _Redis:
     def setex(self, key: str, ttl: int, value: str) -> None:
         self.values[key] = value
         self.writes.append((key, ttl, value))
+
+
+client = TestClient(app)
 
 
 def _analyzer(redis_client=None) -> trending.YouTubeTrendingAnalyzer:  # noqa: ANN001
@@ -174,3 +179,39 @@ def test_channel_not_found_uses_short_negative_cache(monkeypatch):
     assert key.startswith("youtube:benchmark:v2:")
     assert ttl == 10 * 60
     assert json.loads(payload)[0]["subscriber_count"] is None
+
+
+def test_channel_ids_query_param_missing_returns_400():
+    response = client.get("/workers/youtube/channels/benchmark")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "channel_ids가 필요합니다."
+
+
+@pytest.mark.parametrize(
+    ("channel_ref", "candidate", "expected_status"),
+    [
+        ("@3protv", {"channel_id": "UChlv4GSd7OQl3js-jkLOnFA"}, 200),
+        ("삼프로TV", ValueError("채널 ID 또는 @handle 형식이 필요합니다."), 400),
+        ("UCmissing", None, 404),
+    ],
+)
+def test_channel_resolve_http_contract(monkeypatch, channel_ref, candidate, expected_status):
+    if isinstance(candidate, Exception):
+        monkeypatch.setattr(
+            trending.YouTubeTrendingAnalyzer,
+            "resolve_channel",
+            lambda self, value: (_ for _ in ()).throw(candidate),
+        )
+    else:
+        monkeypatch.setattr(
+            trending.YouTubeTrendingAnalyzer,
+            "resolve_channel",
+            lambda self, value: candidate,
+        )
+
+    response = client.get("/workers/youtube/channels/resolve", params={"channel_ref": channel_ref})
+
+    assert response.status_code == expected_status
+    if expected_status == 200:
+        assert response.json()["channel"]["channel_id"] == "UChlv4GSd7OQl3js-jkLOnFA"

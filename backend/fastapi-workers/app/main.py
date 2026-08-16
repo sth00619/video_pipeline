@@ -556,15 +556,32 @@ async def youtube_channel_benchmark(
     - 응답: 채널별 구독자수(근사), 평균조회수, 업로드 간격
     - 쿼터 비용: 채널당 ~3 유닛 (Redis 캐시 6hr)
     """
+    if channel_ids is None:
+        raise HTTPException(status_code=400, detail="channel_ids가 필요합니다.")
+
     try:
         from app.providers.real.trending import YouTubeTrendingAnalyzer
         analyzer = YouTubeTrendingAnalyzer()
 
-        ids = [c.strip() for c in channel_ids.split(",")] if channel_ids else None
+        ids = [c.strip() for c in channel_ids.split(",") if c.strip()]
         data = analyzer.get_channel_benchmarks(channel_ids=ids)
         return {"status": "ok", "channels": data}
     except Exception as e:
         raise HTTPException(500, f"채널 벤치마크 조회 실패: {str(e)}")
+
+
+@app.get("/workers/youtube/channels/resolve")
+def resolve_youtube_channel(channel_ref: str):
+    """채널 ID 또는 @handle을 Spring 저장 전에 실제 채널로 검증한다."""
+    from app.providers.real.trending import YouTubeTrendingAnalyzer
+
+    try:
+        candidate = YouTubeTrendingAnalyzer().resolve_channel(channel_ref)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if candidate is None:
+        raise HTTPException(status_code=404, detail="존재하는 YouTube 채널을 찾지 못했습니다.")
+    return {"status": "ok", "channel": candidate}
 
 
 class ManualKeywordContextRequest(BaseModel):

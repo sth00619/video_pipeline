@@ -1,14 +1,17 @@
 package com.pipeline.video.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pipeline.video.domain.ChannelCandidate;
 import com.pipeline.video.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -18,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -509,18 +513,38 @@ public class FastApiClient {
         }
     }
 
-    public Map<String, Object> getChannelBenchmarks(String channelIds) {
+    public Map<String, Object> getChannelBenchmarks(List<String> channelIds) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(fastApiUrl + "/workers/youtube/channels/benchmark")
+                .queryParam("channel_ids", String.join(",", channelIds))
+                .encode()
+                .toUriString();
         try {
-            String url = fastApiUrl + "/workers/youtube/channels/benchmark";
-            if (channelIds != null && !channelIds.isBlank()) {
-                url += "?channel_ids=" + channelIds;
-            }
-            String responseBody = restTemplate.getForObject(url, String.class);
-            return objectMapper.readValue(responseBody, Map.class);
+            return readMap(restTemplate.getForObject(url, String.class));
         } catch (Exception e) {
             log.error("채널 벤치마크 조회 오류: {}", e.getMessage());
-            return Map.of("status", "error", "channels", List.of());
+            throw new IllegalStateException("YouTube 통계 서비스 연결 실패", e);
         }
+    }
+
+    public Optional<ChannelCandidate> resolveChannel(String channelRef) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(fastApiUrl + "/workers/youtube/channels/resolve")
+                .queryParam("channel_ref", channelRef)
+                .encode()
+                .toUriString();
+        try {
+            Map<String, Object> response = readMap(restTemplate.getForObject(url, String.class));
+            if ("ok".equals(response.get("status")) && response.get("channel") != null) {
+                return Optional.of(objectMapper.convertValue(response.get("channel"), ChannelCandidate.class));
+            }
+        } catch (HttpClientErrorException.NotFound | HttpClientErrorException.BadRequest exception) {
+            return Optional.empty();
+        } catch (Exception exception) {
+            log.error("YouTube 채널 검증 연결 오류: {}", exception.getClass().getSimpleName());
+            throw new IllegalStateException("YouTube 채널 검증 서비스 연결 실패", exception);
+        }
+        return Optional.empty();
     }
 
     @SuppressWarnings("unchecked")
@@ -717,6 +741,11 @@ public class FastApiClient {
     // ============================
     // 공통 POST helper — UTF-8 charset 명시
     // ============================
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readMap(String responseBody) throws IOException {
+        return objectMapper.readValue(responseBody, Map.class);
+    }
+
     private String postJson(String urlStr, Map<String, Object> bodyMap) throws IOException {
         String jsonBody = objectMapper.writeValueAsString(bodyMap);
         log.info("FastAPI POST: {} bodyLen={}", urlStr, jsonBody.length());
