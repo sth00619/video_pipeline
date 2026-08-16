@@ -108,7 +108,8 @@ def _category_score(market_data: dict, category: str, candidate: dict) -> int:
 
 def _youtube_score(candidate: dict) -> int | None:
     videos = candidate.get("source_videos") or []
-    if not candidate.get("metrics_available") and not videos:
+    # 실제 영상 근거가 없는 후보에는 0점도 부여하지 않고 미수집 상태를 유지한다.
+    if not videos:
         return None
     engagement = float(candidate.get("engagement_ratio") or 0)
     outperformance = float(candidate.get("outperformance_index") or 0)

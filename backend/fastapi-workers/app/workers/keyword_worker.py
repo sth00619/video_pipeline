@@ -142,6 +142,7 @@ class KeywordWorker:
                     news_keywords, yt_candidates, market_data,
                     category, seed, limit, api_key
                 )
+                # 그라운딩 검사 전에 Claude 후보에도 실제 영상 근거를 먼저 연결한다.
                 candidates = self._attach_youtube_metrics(candidates, yt_candidates)
                 logger.info(f"Claude 순위화 완료: {len(candidates)}개 후보")
 
@@ -192,6 +193,8 @@ class KeywordWorker:
                 "입력 주제입니다. 최신 직접 근거가 부족하면 자동 확정하지 않습니다.",
                 "입력 주제를 최신 뉴스와 시장 데이터로 검증합니다.",
             ))
+        # seed 필터가 새 후보를 만든 뒤에도 직접 관련된 YouTube 근거를 다시 연결한다.
+        candidates = self._attach_youtube_metrics(candidates[:limit], yt_candidates)
         candidates = score_candidates(candidates[:limit], news_keywords, market_data, category, seed, self.extractor)
         candidates.sort(key=lambda candidate: int(candidate.get("score") or 0), reverse=True)
         for index, candidate in enumerate(candidates):
@@ -427,18 +430,21 @@ YouTube 트렌딩 분석 기반 키워드 후보:
     # YouTube 점수 계산 (기존 로직 유지)
     # ──────────────────────────────────────────────────────────
     def _attach_youtube_metrics(self, candidates: list, yt_candidates: list) -> list:
-        """Carry real API evidence into Claude-ranked candidates."""
+        """기존 seed 매칭 계약으로 실제 YouTube 근거를 후보에 연결한다."""
         for candidate in candidates:
-            name = str(candidate.get("keyword", "")).strip().lower()
-            match = next(
-                (item for item in yt_candidates
-                 if name and (name == str(item.get("keyword", "")).strip().lower()
-                              or name in str(item.get("keyword", "")).lower()
-                              or str(item.get("keyword", "")).lower() in name)),
-                None,
-            )
-            if not match:
+            keyword = str(candidate.get("keyword", "")).strip()
+            terms = _seed_specific_terms(keyword)
+            if not terms:
                 continue
+
+            matches = [
+                item for item in yt_candidates
+                if _candidate_matches_seed(item, terms)
+            ]
+            if not matches:
+                continue
+
+            best = matches[0]
             for key in (
                 "views", "subscribers", "channel_avg_views", "engagement_ratio",
                 "outperformance_index", "velocity_vph", "likes", "comments",
@@ -446,17 +452,48 @@ YouTube 트렌딩 분석 기반 키워드 후보:
                 "duration_seconds", "average_view_duration_seconds",
                 "average_view_percentage", "retention_available",
                 "channel_avg_views_is_sample", "subscriber_count_available",
-                "source_videos",
+                "channel_recent_avg_views", "channel_recent_sample_size",
+                "outperformer_basis",
             ):
-                if key in match:
-                    candidate[key] = match[key]
+                if key in best:
+                    candidate[key] = best[key]
+
+            source_videos = []
+            seen_video_ids = set()
+            for match in matches:
+                for video in match.get("source_videos") or []:
+                    video_id = str(video.get("video_id") or "").strip()
+                    dedupe_key = video_id or str(video)
+                    if dedupe_key in seen_video_ids:
+                        continue
+                    seen_video_ids.add(dedupe_key)
+                    source_videos.append(video)
+
+            if source_videos:
+                candidate["source_videos"] = source_videos
+                candidate["evidence_video_ids"] = [
+                    video["video_id"] for video in source_videos if video.get("video_id")
+                ]
+                candidate["metrics_available"] = True
         return candidates
 
     def _score_yt_videos(self, videos: list) -> list:
         scored = []
         for v in videos:
             engagement_ratio = round(v.views / max(v.subscribers, 1), 3)
-            outperformance_index = round(v.views / max(v.channel_avg_views, 1), 2)
+            recent_avg = int(v.channel_recent_avg_views or 0)
+            recent_sample_size = int(v.channel_recent_sample_size or 0)
+            if recent_sample_size >= 10 and recent_avg > 0:
+                baseline_views = recent_avg
+                outperformer_basis = (
+                    v.outperformer_basis
+                    if v.outperformer_basis in {"recent_average", "recent_average_1_5x"}
+                    else "recent_average"
+                )
+            else:
+                baseline_views = int(v.channel_avg_views or 0)
+                outperformer_basis = "channel_avg_fallback"
+            outperformance_index = round(v.views / baseline_views, 2) if baseline_views > 0 else 0.0
             velocity_vph = round(v.views / max(v.hours_since_publish, 0.1), 1)
 
             composite_score = (
@@ -477,6 +514,9 @@ YouTube 트렌딩 분석 기반 키워드 후보:
                 "views": v.views,
                 "subscribers": v.subscribers,
                 "channel_avg_views": v.channel_avg_views,
+                "channel_recent_avg_views": v.channel_recent_avg_views,
+                "channel_recent_sample_size": v.channel_recent_sample_size,
+                "outperformer_basis": outperformer_basis,
                 "competition": competition,
                 "engagement_ratio": engagement_ratio,
                 "outperformance_index": outperformance_index,
@@ -499,6 +539,10 @@ YouTube 트렌딩 분석 기반 키워드 후보:
                     "video_id": v.video_id,
                     "views": v.views,
                     "subscribers": v.subscribers,
+                    "channel_avg_views": v.channel_avg_views,
+                    "channel_recent_avg_views": v.channel_recent_avg_views,
+                    "channel_recent_sample_size": v.channel_recent_sample_size,
+                    "outperformer_basis": outperformer_basis,
                     "likes": v.likes,
                     "comments": v.comments,
                     "likes_available": v.likes_available,
@@ -691,6 +735,9 @@ def _seed_candidate(keyword: str, reason: str, content_angle: str) -> dict:
         "source_videos": [],
         "seed_priority": True,
         "metrics_available": False,
+        "channel_recent_avg_views": None,
+        "channel_recent_sample_size": 0,
+        "outperformer_basis": "tiered_ratio",
     }
 
 
