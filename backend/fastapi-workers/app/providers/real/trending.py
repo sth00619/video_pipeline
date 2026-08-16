@@ -399,7 +399,7 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             # not only established hits. Outperformer/evidence searches remain
             # view-led so high-response videos are represented in the pool.
             "order": "date" if ranking == "large_channel" else ("viewCount" if ranking == "outperformer" or limit >= 20 else "relevance"),
-            "regionCode": region_code,
+            "regionCode": region_code,  # 한국 카테고리는 KR, 미국 주식은 US를 두 검색에 공통 적용
             "relevanceLanguage": "en" if region_code == "US" else "ko",
             "publishedAfter": published_after,
             # search.list에는 "일반 업로드만"을 뜻하는 eventType이 없다.
