@@ -558,7 +558,7 @@ public class FastApiClient {
                 "limit", Math.min(Math.max(limit, 1), 3)
         );
         try {
-            Map<String, Object> response = readMap(restTemplate.postForObject(url, body, String.class));
+            Map<String, Object> response = readMap(postJson(url, body));
             Object candidates = response.get("candidates");
             return candidates instanceof List<?> ? (List<Map<String, Object>>) candidates : List.of();
         } catch (Exception exception) {
