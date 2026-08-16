@@ -11,12 +11,14 @@ v2에서 바뀐 것:
      부르지 않고 캐시를 반환합니다 (쿼터 절약 — 마스터플랜에서
      명시적으로 요구된 항목).
 """
+import hashlib
 import os
 import json
 import logging
 import requests
 from datetime import datetime, timezone, timedelta
 import re
+from urllib.parse import urlparse
 from app.providers.base import TrendingVideoAnalyzer, TrendingVideo
 from app.providers.mock.trending import MockTrendingVideoAnalyzer
 from app.config import REDIS_HOST, REDIS_PORT
@@ -31,6 +33,8 @@ _STATIC_METADATA_TTL_SECONDS = 24 * 60 * 60
 _SEARCH_QUOTA_DAILY_LIMIT = 100
 _SEARCH_QUOTA_WARNING_AT = 80  # 일일 한도의 80%부터 운영 경고
 _S_GRADE_COMMENT_DAILY_LIMIT = 30
+_BENCHMARK_CACHE_TTL_SECONDS = 6 * 60 * 60
+_BENCHMARK_NOT_FOUND_TTL_SECONDS = 10 * 60
 
 
 def _get_redis_client():
@@ -53,6 +57,86 @@ def _normalize_recent_hours(recent_hours: int | None) -> int:
     if recent_hours is None:
         return 24 * 7
     return max(1, min(int(recent_hours), 24 * 7))
+
+
+def _benchmark_error(channel_id: str, code: str, message: str) -> dict:
+    """채널 조회 실패를 0명 통계가 아닌 명시적 오류 행으로 표현한다."""
+    return {
+        "channel_id": channel_id,
+        "status": "error",
+        "error_code": code,
+        "error_message": message,
+        "title": None,
+        "subscriber_count": None,
+        "subscriber_count_available": False,
+        "hidden_subscriber_count": None,
+        "total_view_count": None,
+        "video_count": None,
+        "avg_views_recent_10": None,
+        "upload_gap_days": None,
+        "recent_videos": [],
+    }
+
+
+def _benchmark_cache_key(channel_ids: list[str]) -> str:
+    """입력 순서를 보존하면서 채널 ID와 API 키를 노출하지 않는 v2 캐시 키."""
+    ordered = "|".join(channel_ids)
+    digest = hashlib.sha256(ordered.encode("utf-8")).hexdigest()[:20]
+    return f"youtube:benchmark:v2:{digest}"
+
+
+def _channel_lookup_params(channel_ref: str) -> dict[str, str]:
+    """채널 ID, @handle, YouTube 채널 URL을 channels.list 필터로 변환한다."""
+    value = (channel_ref or "").strip()
+    if not value:
+        raise ValueError("채널 ID 또는 @handle 형식이 필요합니다.")
+
+    candidate_url = value
+    if value.startswith(("youtube.com/", "www.youtube.com/", "m.youtube.com/")):
+        candidate_url = f"https://{value}"
+    if candidate_url.startswith(("http://", "https://")):
+        parsed = urlparse(candidate_url)
+        host = (parsed.hostname or "").lower()
+        if host not in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
+            raise ValueError("지원하는 YouTube 채널 URL이 아닙니다.")
+        parts = [part for part in parsed.path.split("/") if part]
+        if parts and parts[0].startswith("@"):
+            return {"forHandle": parts[0]}
+        if len(parts) >= 2 and parts[0] == "channel" and parts[1].startswith("UC"):
+            return {"id": parts[1]}
+        raise ValueError("youtube.com/@handle 또는 youtube.com/channel/UC... 형식이 필요합니다.")
+
+    if value.startswith("UC"):
+        return {"id": value}
+    if value.startswith("@") and len(value) > 1:
+        return {"forHandle": value}
+    raise ValueError("채널 ID 또는 @handle 형식이 필요합니다.")
+
+
+def _resolved_channel(item: dict) -> dict:
+    """channels.list 원본을 저장 전 사람 확인용 공개 필드로 정규화한다."""
+    snippet = item.get("snippet", {})
+    stats = item.get("statistics", {})
+    hidden = bool(stats.get("hiddenSubscriberCount", False))
+    subscriber_count = None if hidden or "subscriberCount" not in stats else int(stats["subscriberCount"])
+    thumbnails = snippet.get("thumbnails", {})
+    thumbnail = (
+        thumbnails.get("high", {}).get("url")
+        or thumbnails.get("medium", {}).get("url")
+        or thumbnails.get("default", {}).get("url")
+    )
+    return {
+        "channel_id": item.get("id"),
+        "title": snippet.get("title", ""),
+        "handle": snippet.get("customUrl"),
+        "description": snippet.get("description", ""),
+        "thumbnail_url": thumbnail,
+        "subscriber_count": subscriber_count,
+        "subscriber_count_available": subscriber_count is not None,
+        "hidden_subscriber_count": hidden,
+        "total_view_count": int(stats.get("viewCount", 0)),
+        "video_count": int(stats.get("videoCount", 0)),
+    }
 
 
 def _consume_quota(redis_client, units: int, operation: str) -> bool:
@@ -671,12 +755,6 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
             except Exception as exc:
                 logger.warning("S-grade public comment sample failed for video=%s: %s", video.video_id, exc)
 
-    BENCHMARK_CHANNELS = {
-        "경제사냥꾼": "UC7usMJDHmtbs_oegmzQKKMA",
-        "삼프로TV": "UC86s17Zc-V7vP7zL6Z-Yd4g",
-        "주식하는형": "UCpAyogfL8-YzmKf3-wTfEBg",
-    }
-
     def get_channel_benchmarks(self, channel_ids: list[str] | None = None) -> list[dict]:
         """
         지정 채널들의 공개 지표를 channels.list + playlistItems.list + videos.list로 조회.
@@ -684,13 +762,18 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
         - Redis TTL: 6시간 (21,600초)
         - 구독자 수: Google API가 1,000 단위 근사값만 반환 → UI에서 ~ 표기 필요
         """
-        targets = channel_ids or list(self.BENCHMARK_CHANNELS.values())
-        targets = [cid for cid in targets if cid]
+        # 채널 목록의 단일 기준은 Spring/PostgreSQL이다. worker 내부에서
+        # 과거의 잘못된 정적 채널을 fallback으로 되살리지 않는다.
+        targets = list(dict.fromkeys(
+            channel_id.strip()
+            for channel_id in (channel_ids or [])
+            if channel_id and channel_id.strip()
+        ))
 
         if not targets:
             return []
 
-        cache_key = f"youtube:benchmark:{'_'.join(sorted(targets))}"
+        cache_key = _benchmark_cache_key(targets)
 
         if self._redis:
             try:
@@ -703,14 +786,26 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
 
         if not self.api_key:
             logger.warning("YOUTUBE_API_KEY 미설정 → 채널 벤치마크 수집 건너뜁니다")
-            return []
+            return [
+                _benchmark_error(
+                    channel_id,
+                    "fetch_failed",
+                    "YouTube 채널 통계를 사용할 수 없습니다.",
+                )
+                for channel_id in targets
+            ]
 
         results = []
         for channel_id in targets:
             try:
                 if not _consume_quota(self._redis, 1, "channels.list"):
                     logger.warning("YouTube quota limit reached for channels.list")
-                    break
+                    results.append(_benchmark_error(
+                        channel_id,
+                        "fetch_failed",
+                        "채널 통계를 일시적으로 불러오지 못했습니다.",
+                    ))
+                    continue
 
                 ch_resp = requests.get(
                     f"{self.base_url}/channels",
@@ -722,14 +817,30 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
                     timeout=15,
                 )
                 if ch_resp.status_code != 200:
+                    results.append(_benchmark_error(
+                        channel_id,
+                        "youtube_api_error",
+                        f"YouTube 채널 조회 실패({ch_resp.status_code})",
+                    ))
                     continue
                 ch_json = ch_resp.json()
                 if not ch_json.get("items"):
+                    results.append(_benchmark_error(
+                        channel_id,
+                        "channel_not_found",
+                        "존재하지 않거나 사용할 수 없는 채널 ID입니다.",
+                    ))
                     continue
 
                 ch = ch_json["items"][0]
-                snippet = ch["snippet"]
-                stats = ch["statistics"]
+                snippet = ch.get("snippet", {})
+                stats = ch.get("statistics", {})
+                hidden_subscriber_count = bool(stats.get("hiddenSubscriberCount", False))
+                subscriber_count = (
+                    None
+                    if hidden_subscriber_count or "subscriberCount" not in stats
+                    else int(stats["subscriberCount"])
+                )
                 uploads_id = ch.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
 
                 recent_videos: list[dict] = []
@@ -793,8 +904,13 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
 
                 results.append({
                     "channel_id": channel_id,
+                    "status": "ok",
+                    "error_code": None,
+                    "error_message": None,
                     "title": snippet.get("title", ""),
-                    "subscriber_count": int(stats.get("subscriberCount", 0)),
+                    "subscriber_count": subscriber_count,
+                    "subscriber_count_available": subscriber_count is not None,
+                    "hidden_subscriber_count": hidden_subscriber_count,
                     "total_view_count": int(stats.get("viewCount", 0)),
                     "video_count": int(stats.get("videoCount", 0)),
                     "avg_views_recent_10": avg_views,
@@ -802,16 +918,102 @@ class YouTubeTrendingAnalyzer(TrendingVideoAnalyzer):
                     "recent_videos": recent_videos,
                 })
             except Exception as exc:
-                logger.warning("[BenchmarkError] channel_id=%s: %s", channel_id, exc)
-                continue
+                logger.warning(
+                    "[BenchmarkError] channel_id=%s code=fetch_failed exception_type=%s",
+                    channel_id,
+                    type(exc).__name__,
+                )
+                results.append(_benchmark_error(
+                    channel_id,
+                    "fetch_failed",
+                    "채널 통계를 일시적으로 불러오지 못했습니다.",
+                ))
 
         if self._redis and results:
             try:
-                self._redis.setex(cache_key, 21600, json.dumps(results, ensure_ascii=False))
+                cacheable = all(
+                    row.get("status") == "ok" or row.get("error_code") == "channel_not_found"
+                    for row in results
+                )
+                if cacheable:
+                    ttl = (
+                        _BENCHMARK_NOT_FOUND_TTL_SECONDS
+                        if any(row.get("error_code") == "channel_not_found" for row in results)
+                        else _BENCHMARK_CACHE_TTL_SECONDS
+                    )
+                    self._redis.setex(cache_key, ttl, json.dumps(results, ensure_ascii=False))
             except Exception as exc:
                 logger.warning("Redis 캐시 저장 실패 (benchmark): %s", exc)
 
         return results
+
+    def resolve_channel(self, channel_ref: str) -> dict | None:
+        """채널 ID·handle·URL을 search.list 없이 channels.list로 검증한다."""
+        if not self.api_key:
+            return None
+        lookup_params = _channel_lookup_params(channel_ref)
+        if not _consume_quota(self._redis, 1, "channels.list"):
+            return None
+        try:
+            response = requests.get(
+                f"{self.base_url}/channels",
+                params={
+                    "part": "snippet,statistics",
+                    **lookup_params,
+                    "key": self.api_key,
+                },
+                timeout=15,
+            )
+            if response.status_code != 200:
+                return None
+            items = response.json().get("items", [])
+            return _resolved_channel(items[0]) if items else None
+        except Exception:
+            logger.warning("YouTube 채널 검증 요청에 실패했습니다.")
+            return None
+
+    def resolve_channel_ids(self, channel_ids: list[str]) -> list[dict]:
+        """검색 후보 ID를 실제 공개 통계로 보강하며 입력 순서를 유지한다."""
+        resolved: list[dict] = []
+        for channel_id in dict.fromkeys(channel_ids):
+            candidate = self.resolve_channel(channel_id)
+            if candidate is not None:
+                resolved.append(candidate)
+        return resolved
+
+    def search_channel_candidates(self, query: str, limit: int = 3) -> list[dict]:
+        """일반 이름은 전용 검색 버킷으로 후보만 찾고 자동 확정하지 않는다."""
+        normalized_query = (query or "").strip()
+        if not normalized_query or not self.api_key:
+            return []
+        if not _consume_search_quota(self._redis):
+            raise RuntimeError("오늘의 YouTube 채널 검색 한도에 도달했습니다.")
+
+        try:
+            response = requests.get(
+                f"{self.base_url}/search",
+                params={
+                    "part": "snippet",
+                    "q": normalized_query,
+                    "type": "channel",
+                    "maxResults": min(max(int(limit), 1), 3),
+                    "regionCode": "KR",
+                    "relevanceLanguage": "ko",
+                    "key": self.api_key,
+                },
+                timeout=15,
+            )
+            response.raise_for_status()
+            channel_ids = [
+                item.get("id", {}).get("channelId")
+                for item in response.json().get("items", [])
+                if item.get("id", {}).get("channelId")
+            ]
+        except Exception:
+            logger.warning("YouTube 채널 후보 검색에 실패했습니다.")
+            raise RuntimeError("YouTube 채널 후보 검색에 실패했습니다.") from None
+
+        return self.resolve_channel_ids(channel_ids)
 
 
 def _parse_iso8601_duration(value: str) -> float:
