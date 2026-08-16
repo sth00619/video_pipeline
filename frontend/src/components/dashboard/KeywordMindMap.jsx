@@ -2,11 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, ThumbsUp, Eye } from 'lucide-react'
 import * as d3 from 'd3'
 
-const MINDMAP_VIEW_BOX = Object.freeze({ x: -450, y: -230, width: 900, height: 460 })
+const MINDMAP_VIEW_BOX = Object.freeze({ x: -700, y: -230, width: 1400, height: 460 })
 const MINDMAP_VIEW_BOX_VALUE = `${MINDMAP_VIEW_BOX.x} ${MINDMAP_VIEW_BOX.y} ${MINDMAP_VIEW_BOX.width} ${MINDMAP_VIEW_BOX.height}`
 const CENTER_FILL = '#1e293b'
 const CENTER_TEXT = '#ffffff'
 const CENTER_RADIUS = 22
+const PRIMARY_X = 300
+const CHILD_X = 560
+const PRIMARY_VERTICAL_GAP = 64
+const CHILD_VERTICAL_GAP = 38
 
 function formatViews(num) {
   if (num == null || Number.isNaN(Number(num))) return '—'
@@ -73,21 +77,21 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
     const calculateBranch = (itemList, isLeft) => {
       const dir = isLeft ? -1 : 1
       const count = itemList.length
-      const startY = -((count - 1) * 80) / 2
+      const startY = -((count - 1) * PRIMARY_VERTICAL_GAP) / 2
 
       return itemList.map((item, idx) => {
-        const py = startY + idx * 80
-        const px = dir * 220
+        const py = startY + idx * PRIMARY_VERTICAL_GAP
+        const px = dir * PRIMARY_X
 
         const childrenRaw = expansionsMap.get(item.keyword) || []
         const childrenCount = Math.min(childrenRaw.length, 3)
-        const subStartY = py - ((childrenCount - 1) * 46) / 2
+        const subStartY = py - ((childrenCount - 1) * CHILD_VERTICAL_GAP) / 2
 
         const children = childrenRaw.slice(0, 3).map((child, cIdx) => {
           return {
             ...child,
-            x: dir * 380,
-            y: subStartY + cIdx * 46,
+            x: dir * CHILD_X,
+            y: subStartY + cIdx * CHILD_VERTICAL_GAP,
             direction: dir,
             parentX: px,
             parentY: py,
@@ -201,8 +205,8 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                   {/* Sub-children Nodes */}
                   {layout.nodes.flatMap(node => node.children).map(child => {
                     const isSelected = selectedKeywords.has(child.keyword)
-                    const boxWidth = 115
-                    const boxHeight = 30
+                    const boxWidth = 145
+                    const boxHeight = 36
                     const rectX = child.direction === 1 ? child.x : child.x - boxWidth
 
                     return (
@@ -216,7 +220,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           y={child.y - boxHeight / 2}
                           width={boxWidth}
                           height={boxHeight}
-                          rx="15"
+                          rx="18"
                           fill={isSelected ? '#f5f3ff' : '#f8fafc'}
                           stroke={isSelected ? '#7c3aed' : '#e2e8f0'}
                           strokeWidth={isSelected ? '1.5' : '1'}
@@ -228,10 +232,10 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           y={child.y + 4}
                           textAnchor="middle"
                           fill={isSelected ? '#7c3aed' : '#64748b'}
-                          fontSize="11"
+                          fontSize="13"
                           fontWeight="600"
                         >
-                          {child.keyword.length > 9 ? `${child.keyword.slice(0, 9)}…` : child.keyword}
+                          {child.keyword.length > 11 ? `${child.keyword.slice(0, 11)}…` : child.keyword}
                         </text>
                       </g>
                     )
@@ -241,8 +245,8 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                   {layout.nodes.map((node, idx) => {
                     const isSelected = selectedKeywords.has(node.keyword)
                     const accentColor = isSelected ? '#7c3aed' : primaryAccentColor(idx, node.direction)
-                    const boxWidth = 135
-                    const boxHeight = 38
+                    const boxWidth = 160
+                    const boxHeight = 46
                     const rectX = node.x - boxWidth / 2
 
                     return (
@@ -256,7 +260,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           y={node.y - boxHeight / 2}
                           width={boxWidth}
                           height={boxHeight}
-                          rx="19"
+                          rx="23"
                           fill={isSelected ? '#f5f3ff' : '#ffffff'}
                           stroke={isSelected ? '#7c3aed' : '#e2e8f0'}
                           strokeWidth={isSelected ? '2' : '1'}
@@ -264,10 +268,10 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                         />
                         <rect
                           x={rectX + 2}
-                          y={node.y - boxHeight / 2 + 5}
-                          width="4"
-                          height={boxHeight - 10}
-                          rx="2"
+                          y={node.y - boxHeight / 2 + 7}
+                          width="5"
+                          height={boxHeight - 14}
+                          rx="2.5"
                           fill={accentColor}
                           pointerEvents="none"
                         />
@@ -276,10 +280,10 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           y={node.y + 4}
                           textAnchor="middle"
                           fill="#1e293b"
-                          fontSize="12.5"
-                          fontWeight="600"
+                          fontSize="15"
+                          fontWeight="700"
                         >
-                          {node.keyword.length > 10 ? `${node.keyword.slice(0, 10)}…` : node.keyword}
+                          {node.keyword.length > 12 ? `${node.keyword.slice(0, 12)}…` : node.keyword}
                         </text>
 
                       </g>
@@ -289,10 +293,10 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                   {/* Center Node */}
                   <g className="cursor-default">
                     <rect
-                      x="-95"
-                      y="-25"
-                      width="190"
-                      height="50"
+                      x="-110"
+                      y="-32"
+                      width="220"
+                      height="64"
                       rx={CENTER_RADIUS}
                       ry={CENTER_RADIUS}
                       fill={CENTER_FILL}
@@ -300,20 +304,20 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                     />
                     <text
                       x="0"
-                      y="-2"
+                      y="-3"
                       textAnchor="middle"
                       fill={CENTER_TEXT}
-                      fontSize="14"
+                      fontSize="16"
                       fontWeight="800"
                     >
                       {layout.center.title.length > 13 ? `${layout.center.title.slice(0, 13)}…` : layout.center.title}
                     </text>
                     <text
                       x="0"
-                      y="14"
+                      y="17"
                       textAnchor="middle"
                       fill="#cbd5e1"
-                      fontSize="10"
+                      fontSize="11"
                       fontWeight="600"
                     >
                       주제 분석 중심
