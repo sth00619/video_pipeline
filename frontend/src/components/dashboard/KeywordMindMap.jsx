@@ -2,39 +2,37 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, ThumbsUp, Eye } from 'lucide-react'
 import * as d3 from 'd3'
 
-const multipleOf = node => Number(node?.bestMultiple || 0)
 const MINDMAP_VIEW_BOX = Object.freeze({ x: -450, y: -230, width: 900, height: 460 })
 const MINDMAP_VIEW_BOX_VALUE = `${MINDMAP_VIEW_BOX.x} ${MINDMAP_VIEW_BOX.y} ${MINDMAP_VIEW_BOX.width} ${MINDMAP_VIEW_BOX.height}`
+const CENTER_FILL = '#1e293b'
+const CENTER_TEXT = '#ffffff'
+const CENTER_RADIUS = 22
 
 function formatViews(num) {
-  if (!num || isNaN(num)) return '0'
-  if (num >= 10000000) return `${(num / 10000).toFixed(0)}만`
-  if (num >= 10000) return `${(num / 10000).toFixed(1)}만`
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}천`
-  return num.toLocaleString('ko-KR')
+  if (num == null || Number.isNaN(Number(num))) return '—'
+  const value = Number(num)
+  if (value >= 10000000) return `${(value / 10000).toFixed(0)}만`
+  if (value >= 10000) return `${(value / 10000).toFixed(1)}만`
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}천`
+  return value.toLocaleString('ko-KR')
 }
 
 function formatDuration(sec) {
-  if (!sec) return '1:30'
-  const m = Math.floor(sec / 60)
-  const s = Math.floor(sec % 60)
+  if (sec == null || Number.isNaN(Number(sec))) return '—'
+  const value = Number(sec)
+  const m = Math.floor(value / 60)
+  const s = Math.floor(value % 60)
   return `${m}:${s < 10 ? '0' : ''}${s}`
 }
 
-const PALETTES = [
-  { bg: '#fff1f2', stroke: '#f43f5e', text: '#9f1239', badgeBg: '#f43f5e', badgeText: '🔥 떡상 500%' },
-  { bg: '#fef3c7', stroke: '#f59e0b', text: '#78350f', badgeBg: '#f59e0b', badgeText: '⭐ 주목 100%' },
-  { bg: '#d1fae5', stroke: '#10b981', text: '#064e3b', badgeBg: '#10b981', badgeText: '✔ 상승세' },
-  { bg: '#e0e7ff', stroke: '#6366f1', text: '#312e81', badgeBg: '#6366f1', badgeText: '★ 급상승' },
-  { bg: '#f1f5f9', stroke: '#64748b', text: '#0f172a', badgeBg: null, badgeText: null },
-]
+function formatCount(value) {
+  if (value == null || Number.isNaN(Number(value))) return '—'
+  return Number(value).toLocaleString('ko-KR')
+}
 
-function getNodeStyle(node, idx) {
-  const mult = multipleOf(node)
-  if (mult >= 5 || idx % 4 === 0) return PALETTES[0]
-  if (mult >= 1 || idx % 4 === 1) return PALETTES[1]
-  if (mult >= 0.3 || idx % 4 === 2) return PALETTES[2]
-  return PALETTES[3]
+function primaryAccentColor(index, direction) {
+  if (direction === -1) return '#f43f5e'
+  return index % 3 === 1 ? '#7c3aed' : '#3b82f6'
 }
 
 export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), onToggle, evidenceVideos = [] }) {
@@ -166,20 +164,13 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-slate-900">오늘의 주식 기회 지도</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Interactive D3 mindmap chart</p>
+                <p className="text-xs text-slate-400 mt-0.5">근거 영상 기반 키워드 관계도</p>
               </div>
             </div>
 
             {/* Mindmap SVG Container */}
             <div className="relative w-full h-[450px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
               <svg ref={svgRef} viewBox={MINDMAP_VIEW_BOX_VALUE} className="w-full h-full select-none">
-                <defs>
-                  <linearGradient id="centerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#4338ca" />
-                    <stop offset="100%" stopColor="#312e81" />
-                  </linearGradient>
-                </defs>
-
                 <g ref={gRef}>
                   {/* Connection Lines */}
                   {layout.nodes.map(node => (
@@ -187,8 +178,9 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                       <path
                         d={`M 0,0 C ${node.x * 0.5},0 ${node.x * 0.5},${node.y} ${node.x},${node.y}`}
                         fill="none"
-                        stroke={selectedKeywords.has(node.keyword) ? '#4f46e5' : '#cbd5e1'}
-                        strokeWidth={selectedKeywords.has(node.keyword) ? '2.5' : '1.8'}
+                        stroke={selectedKeywords.has(node.keyword) ? '#7c3aed' : '#cbd5e1'}
+                        strokeWidth={selectedKeywords.has(node.keyword) ? '2' : '1.5'}
+                        opacity={selectedKeywords.has(node.keyword) ? '1' : '0.8'}
                         className="transition-all duration-300"
                       />
 
@@ -197,18 +189,18 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           key={child.keyword}
                           d={`M ${node.x},${node.y} C ${node.x + child.direction * 60},${node.y} ${node.x + child.direction * 60},${child.y} ${child.x},${child.y}`}
                           fill="none"
-                          stroke="#cbd5e1"
-                          strokeWidth="1.2"
-                          strokeDasharray="4 4"
+                          stroke="#e2e8f0"
+                          strokeWidth="1"
+                          strokeDasharray="4 3"
+                          opacity="0.5"
                         />
                       ))}
                     </g>
                   ))}
 
                   {/* Sub-children Nodes */}
-                  {layout.nodes.flatMap(node => node.children).map((child, idx) => {
+                  {layout.nodes.flatMap(node => node.children).map(child => {
                     const isSelected = selectedKeywords.has(child.keyword)
-                    const style = getNodeStyle(child, idx + 2)
                     const boxWidth = 115
                     const boxHeight = 30
                     const rectX = child.direction === 1 ? child.x : child.x - boxWidth
@@ -225,18 +217,19 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           width={boxWidth}
                           height={boxHeight}
                           rx="15"
-                          fill={isSelected ? '#4f46e5' : '#ffffff'}
-                          stroke={isSelected ? '#4f46e5' : style.stroke}
-                          strokeWidth="1.5"
+                          fill={isSelected ? '#f5f3ff' : '#f8fafc'}
+                          stroke={isSelected ? '#7c3aed' : '#e2e8f0'}
+                          strokeWidth={isSelected ? '1.5' : '1'}
+                          strokeDasharray="4 3"
                           className="transition-all duration-200 shadow-xs group-hover:scale-105"
                         />
                         <text
                           x={rectX + boxWidth / 2}
                           y={child.y + 4}
                           textAnchor="middle"
-                          fill={isSelected ? '#ffffff' : style.text}
+                          fill={isSelected ? '#7c3aed' : '#64748b'}
                           fontSize="11"
-                          fontWeight="700"
+                          fontWeight="600"
                         >
                           {child.keyword.length > 9 ? `${child.keyword.slice(0, 9)}…` : child.keyword}
                         </text>
@@ -247,7 +240,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                   {/* Primary Nodes */}
                   {layout.nodes.map((node, idx) => {
                     const isSelected = selectedKeywords.has(node.keyword)
-                    const style = getNodeStyle(node, idx)
+                    const accentColor = isSelected ? '#7c3aed' : primaryAccentColor(idx, node.direction)
                     const boxWidth = 135
                     const boxHeight = 38
                     const rectX = node.x - boxWidth / 2
@@ -264,31 +257,31 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           width={boxWidth}
                           height={boxHeight}
                           rx="19"
-                          fill={isSelected ? '#4f46e5' : style.bg}
-                          stroke={isSelected ? '#4f46e5' : style.stroke}
-                          strokeWidth={isSelected ? '2.5' : '1.8'}
+                          fill={isSelected ? '#f5f3ff' : '#ffffff'}
+                          stroke={isSelected ? '#7c3aed' : '#e2e8f0'}
+                          strokeWidth={isSelected ? '2' : '1'}
                           className="transition-all duration-200 shadow-sm group-hover:scale-105"
+                        />
+                        <rect
+                          x={rectX + 2}
+                          y={node.y - boxHeight / 2 + 5}
+                          width="4"
+                          height={boxHeight - 10}
+                          rx="2"
+                          fill={accentColor}
+                          pointerEvents="none"
                         />
                         <text
                           x={node.x}
                           y={node.y + 4}
                           textAnchor="middle"
-                          fill={isSelected ? '#ffffff' : style.text}
+                          fill="#1e293b"
                           fontSize="12.5"
-                          fontWeight="800"
+                          fontWeight="600"
                         >
                           {node.keyword.length > 10 ? `${node.keyword.slice(0, 10)}…` : node.keyword}
                         </text>
 
-                        {/* Badge overlay */}
-                        {style.badgeText && (
-                          <g transform={`translate(${node.x - 34}, ${node.y - boxHeight / 2 - 10})`}>
-                            <rect x="0" y="0" width="68" height="18" rx="9" fill={style.badgeBg} />
-                            <text x="34" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
-                              {style.badgeText}
-                            </text>
-                          </g>
-                        )}
                       </g>
                     )
                   })}
@@ -300,15 +293,16 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                       y="-25"
                       width="190"
                       height="50"
-                      rx="25"
-                      fill="url(#centerGrad)"
+                      rx={CENTER_RADIUS}
+                      ry={CENTER_RADIUS}
+                      fill={CENTER_FILL}
                       className="shadow-lg"
                     />
                     <text
                       x="0"
                       y="-2"
                       textAnchor="middle"
-                      fill="#ffffff"
+                      fill={CENTER_TEXT}
                       fontSize="14"
                       fontWeight="800"
                     >
@@ -318,20 +312,12 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                       x="0"
                       y="14"
                       textAnchor="middle"
-                      fill="#c7d2fe"
+                      fill="#cbd5e1"
                       fontSize="10"
                       fontWeight="600"
                     >
                       주제 분석 중심
                     </text>
-
-                    {/* Top Badge sitting on center node */}
-                    <g transform="translate(-45, -36)">
-                      <rect x="0" y="0" width="90" height="18" rx="9" fill="#ef4444" />
-                      <text x="45" y="12" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
-                        🔥 떡상 500%
-                      </text>
-                    </g>
                   </g>
                 </g>
               </svg>
@@ -363,10 +349,10 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                   const id = video.videoId || video.video_id
                   const title = video.title || '제목 정보 없음'
                   const channel = video.channelTitle || video.channel_title || '증권 채널'
-                  const views = video.views || video.viewCount || 13700000
-                  const likes = video.likes || 339
-                  const comments = video.comments || 23
-                  const duration = formatDuration(video.durationSeconds || video.duration_seconds || 150)
+                  const views = video.views ?? video.viewCount ?? null
+                  const likes = video.likes ?? video.likeCount ?? null
+                  const comments = video.comments ?? video.commentCount ?? null
+                  const duration = video.durationSeconds ?? video.duration_seconds ?? null
 
                   return (
                     <article
@@ -382,11 +368,11 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           />
                         ) : (
                           <div className="w-full h-full bg-slate-200 flex items-center justify-center text-[10px] text-slate-400">
-                            No Thumbnail
+                            썸네일 없음
                           </div>
                         )}
                         <span className="absolute bottom-1 right-1 px-1 py-0.5 bg-black/80 text-white text-[9px] font-bold rounded">
-                          {duration}
+                          {formatDuration(duration)}
                         </span>
                       </div>
 
@@ -400,8 +386,8 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                         </div>
                         <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500">
                           <span className="flex items-center gap-0.5"><Eye size={11} /> {formatViews(views)}</span>
-                          <span className="flex items-center gap-0.5"><ThumbsUp size={11} /> {likes}</span>
-                          <span className="flex items-center gap-0.5"><MessageCircle size={11} /> {comments}</span>
+                          <span className="flex items-center gap-0.5"><ThumbsUp size={11} /> {formatCount(likes)}</span>
+                          <span className="flex items-center gap-0.5"><MessageCircle size={11} /> {formatCount(comments)}</span>
                         </div>
                       </div>
                     </article>

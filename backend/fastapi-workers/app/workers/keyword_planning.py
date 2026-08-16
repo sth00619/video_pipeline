@@ -52,7 +52,7 @@ def _cache_key(keyword: str) -> str:
     # 사람이 Redis에서 찾기 쉬우면서 공백/한글도 안정적으로 쓰도록 hash suffix를 둔다.
     safe = re.sub(r"\s+", "-", keyword.strip().lower())[:48]
     # A layout/tokenization revision must not serve an old six-hour map.
-    digest = hashlib.sha256(f"v12:7d:nonlive:min-subs-3000:min-views-500:min-multiple-0.01:{keyword.strip().lower()}".encode("utf-8")).hexdigest()[:10]
+    digest = hashlib.sha256(f"v13:7d:nonlive:min-subs-3000:min-views-500:min-multiple-auto:{keyword.strip().lower()}".encode("utf-8")).hexdigest()[:10]
     return f"mindmap:{safe}:{digest}"
 
 
@@ -333,14 +333,12 @@ def build_mindmap(keyword: str, videos: list[dict[str, Any]]) -> dict[str, Any]:
         raise ValueError("중심 키워드를 입력해 주세요.")
     minimum_subscribers = int(runtime_config.value("keyword_min_source_subscribers"))
     minimum_views = int(runtime_config.value("keyword_min_source_views"))
-    minimum_multiple = float(runtime_config.value("keyword_min_source_viewer_multiple"))
     # Browser-cached or manually supplied rows must obey the same source rule.
     videos = [
         video for video in videos
         if bool(_value(video, "subscriberCountAvailable", "subscriber_count_available", default=True))
         and float(_value(video, "subscribers", "subscriberCount", "subscriber_count", default=0) or 0) >= minimum_subscribers
         and float(_value(video, "views", "viewCount", "view_count", default=0) or 0) >= minimum_views
-        and _multiple(video) >= minimum_multiple
         and 0 < float(_value(video, "hoursSincePublish", "hours_since_publish", default=0) or 0) <= 24 * 7
         and not bool(_value(video, "isLive", "is_live", default=False))
     ]

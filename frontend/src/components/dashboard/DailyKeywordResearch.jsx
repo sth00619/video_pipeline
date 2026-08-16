@@ -12,9 +12,8 @@ const PAGE_SIZE = 5
 const MAX_SELECTED_KEYWORDS = 5
 const MIN_EVIDENCE_SUBSCRIBERS = 3000
 const MIN_EVIDENCE_VIEWS = 500
-const MIN_EVIDENCE_VIEWER_MULTIPLE = 0.01
 const RESEARCH_TABS = [
-  { id: 'outperformer', label: '조회수 반응 높음', ranking: 'outperformer', minSubscribers: 0, description: '구독자 3천명 이상 채널에서 구독자 대비 조회 반응이 높은 영상 순' },
+  { id: 'outperformer', label: '조회수 반응 높음', ranking: 'outperformer', minSubscribers: 0, description: '구독자 3천명 이상 채널에서 채널 최근 평균 대비 조회 반응이 높은 영상 순' },
   { id: '50k', label: '5만+ 채널', ranking: 'large_channel', minSubscribers: 50_000, description: '구독자 5만명 이상 채널의 최근 업로드' },
   { id: '100k', label: '10만+ 채널', ranking: 'large_channel', minSubscribers: 100_000, description: '구독자 10만명 이상 채널의 최근 업로드' },
   { id: '200k', label: '20만+ 채널', ranking: 'large_channel', minSubscribers: 200_000, description: '구독자 20만명 이상 채널의 최근 업로드' },
@@ -30,7 +29,6 @@ const isEligibleEvidence = video => {
   const views = asNumber(valueOf(video, 'views', 'viewCount')) || 0
   return subscribers >= MIN_EVIDENCE_SUBSCRIBERS
     && views >= MIN_EVIDENCE_VIEWS
-    && views / Math.max(subscribers, 1) >= MIN_EVIDENCE_VIEWER_MULTIPLE
     && hours != null && hours > 0 && hours <= 24 * 7
     && valueOf(video, 'isLive', 'is_live') !== true
     && valueOf(video, 'subscriberCountAvailable', 'subscriber_count_available') !== false
@@ -136,7 +134,19 @@ export default function DailyKeywordResearch({ onUseKeyword }) {
   const addManual = useMutation({ mutationFn: () => apiClient.post('/keywords/manual', { keyword: manualKeyword, category: 'CUSTOM', note }), onSuccess: () => { setManualKeyword(''); setNote(''); setManualContext(null); queryClient.invalidateQueries({ queryKey: ['daily-keywords'] }) } })
 
   const dailyItems = data?.items || []
-  const dailyVideos = useMemo(() => dailyItems.map(item => ({ ...(valueOf(item, 'sourceVideos', 'source_videos')?.[0] || {}), title: item.keyword, performanceGrade: item.performanceGrade, performanceScore: item.performanceScore, views: item.views, subscribers: item.subscribers, likes: item.likes, comments: item.comments })), [dailyItems])
+  const dailyVideos = useMemo(() => dailyItems.map(item => {
+    const sourceVideo = valueOf(item, 'sourceVideos', 'source_videos')?.[0] || {}
+    return {
+      ...sourceVideo,
+      title: sourceVideo.title || valueOf(item, 'title', 'videoTitle', 'video_title') || item.keyword,
+      performanceGrade: item.performanceGrade,
+      performanceScore: item.performanceScore,
+      views: item.views,
+      subscribers: item.subscribers,
+      likes: item.likes,
+      comments: item.comments,
+    }
+  }), [dailyItems])
   const sourceVideos = useMemo(() => researchVideos.length ? researchVideos : dailyVideos, [researchVideos, dailyVideos])
   const trustedVideos = useMemo(() => sourceVideos.filter(isEligibleEvidence), [sourceVideos])
   const premiumVideos = useMemo(() => {
@@ -211,7 +221,7 @@ export default function DailyKeywordResearch({ onUseKeyword }) {
   }
 
   return <section className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${selectedKeywords.size > 0 ? 'pb-28' : ''}`}>
-    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-5 lg:px-6"><div><p className="text-xs font-bold text-indigo-600">YouTube 기반 롱폼 리서치</p><h2 className="mt-1 text-xl font-bold text-slate-900">오늘 무엇으로 롱폼을 만들까요?</h2><p className="mt-1 text-xs text-slate-500 leading-relaxed">최근 7일 · 일반 영상만 · 구독자 3천 이상 · 조회수 500 이상 · 조회수가 구독자 수의 1% 이상인 영상을 수집합니다.</p></div><button onClick={() => refresh.mutate()} disabled={refresh.isPending} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm disabled:opacity-50 transition"><RefreshCw size={14} className={refresh.isPending ? 'animate-spin text-indigo-600' : 'text-slate-500'} />오늘의 분석 새로고침</button></header>
+    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-5 lg:px-6"><div><p className="text-xs font-bold text-indigo-600">YouTube 기반 롱폼 리서치</p><h2 className="mt-1 text-xl font-bold text-slate-900">오늘 무엇으로 롱폼을 만들까요?</h2><p className="mt-1 text-xs text-slate-500 leading-relaxed">최근 7일 · 일반 영상만 · 구독자 3천 이상 · 조회수 500 이상 · 채널 최근 평균 대비 반응이 높은 영상을 수집합니다.</p></div><button onClick={() => refresh.mutate()} disabled={refresh.isPending} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm disabled:opacity-50 transition"><RefreshCw size={14} className={refresh.isPending ? 'animate-spin text-indigo-600' : 'text-slate-500'} />오늘의 분석 새로고침</button></header>
     <div className="border-b border-slate-200 bg-slate-50/30 p-5 lg:p-6">{makeMindmap.isPending && <p className="mt-4 rounded-xl bg-slate-50 p-5 text-center text-xs font-medium text-slate-500 border border-slate-200 animate-pulse">공통 태그와 근거 영상을 분석하는 중입니다...</p>}{mindmap && <><KeywordMindMap mindmap={mindmap} selectedKeywords={selectedKeywords} onToggle={toggleKeyword} evidenceVideos={premiumVideos} /><div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><h4 className="text-sm font-bold text-slate-900">스크립트용 정제 키워드 후보</h4><p className="mt-0.5 text-xs text-slate-600">근거 영상이 명확한 키워드만 최대 5개까지 선택합니다.</p></div><span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-bold text-indigo-700">{selectedKeywords.size}/{MAX_SELECTED_KEYWORDS}</span></div><div className="mt-3 flex flex-wrap gap-2">{(mindmap.primary || []).slice(0, 8).map(node => <button key={node.keyword} type="button" onClick={() => toggleKeyword(node.keyword, node)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${selectedKeywords.has(node.keyword) ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm' : 'border-slate-300 bg-white text-slate-800 hover:border-indigo-400 hover:bg-indigo-50/50'}`}>{selectedKeywords.has(node.keyword) && <Check size={13} className="mr-1 inline" />}{node.keyword} · 최고 조회율 {displaySubscriberResponse(node.bestMultiple)}</button>)}</div>{selectedKeywords.size >= MAX_SELECTED_KEYWORDS && <p className="mt-2 text-xs font-medium text-amber-700">최대 5개가 선택되었습니다. 다른 후보를 선택하려면 하나를 해제하세요.</p>}<div className="mt-3 grid gap-2 lg:grid-cols-2">{Object.entries(selected).map(([keyword, item]) => <KeywordReason key={keyword} keyword={keyword} metric={item.metric} />)}</div></div></>}</div>
     <ResearchSearchPanel keyword={researchKeyword} onKeywordChange={setResearchKeyword} activeTabId={activeResearchTabId} onTabChange={selectResearchTab} onSearch={searchCurrentTab} searching={searchVideos.isPending} videos={directTrustedVideos} visibleVideos={directVisible} page={directPage} onPageChange={page => movePage(setDirectPage, page, directRef)} scrollRef={directRef} onUseKeyword={onUseKeyword} />
     <div className="border-b border-slate-200 bg-white px-5 py-4 lg:px-6"><div className="flex flex-wrap gap-2.5"><input value={manualKeyword} onChange={event => { setManualKeyword(event.target.value); setManualContext(null) }} placeholder="긴급 뉴스 키워드를 직접 추가하기 전 최신 근거 확인" className="min-w-[240px] flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none shadow-sm" /><input value={note} onChange={event => setNote(event.target.value)} placeholder="추가 사유 메모 (선택)" className="w-48 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none shadow-sm" /><button onClick={requestManualPreview} disabled={!manualKeyword.trim() || previewManual.isPending} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 px-3.5 py-2 text-xs font-bold text-amber-800 disabled:opacity-50 transition shadow-xs">{previewManual.isPending ? <Loader size={14} className="animate-spin" /> : <Search size={14} />}최근 2시간 근거 확인</button></div></div><ManualContext context={manualContext} onAdd={() => addManual.mutate()} adding={addManual.isPending} />

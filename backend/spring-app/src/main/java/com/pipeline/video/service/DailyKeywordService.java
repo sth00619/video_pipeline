@@ -43,9 +43,6 @@ public class DailyKeywordService {
     private static final int REFRESH_TIMEOUT_SECONDS = 15;
     private static final long MIN_EVIDENCE_SUBSCRIBERS = 3_000L;
     private static final long MIN_EVIDENCE_VIEWS = 500L;
-    // "구독자 수의 1% 이상 조회"는 대형 채널의 최신 영상을 너무 일찍
-    // 탈락시키지 않으면서 반응이 전혀 없는 영상은 걸러내는 기준이다.
-    private static final double MIN_EVIDENCE_VIEWER_MULTIPLE = 0.01d;
 
     private final FastApiClient fastApiClient;
     private final Map<String, List<Map<String, Object>>> snapshots = new ConcurrentHashMap<>();
@@ -103,7 +100,6 @@ public class DailyKeywordService {
         List<Map<String, Object>> rows = deduplicateByVideoId(collectedRows).stream()
                 .filter(row -> number(row.get("subscribers")) >= MIN_EVIDENCE_SUBSCRIBERS)
                 .filter(row -> number(row.get("views")) >= MIN_EVIDENCE_VIEWS)
-                .filter(row -> sourceMultiple(row) >= MIN_EVIDENCE_VIEWER_MULTIPLE)
                 // The product is longform-first: retain Shorts as signals, but
                 // show longform evidence before equally strong Shorts.
                 .sorted(Comparator
@@ -228,7 +224,7 @@ public class DailyKeywordService {
         row.put("keyword", keyword);
         row.put("category", category);
         row.put("source", "manual");
-        row.put("reason", "직접 입력 · 최근 7일 안의 일반 영상 중 구독자 3천·조회수 500 이상, 조회수가 구독자 수의 1% 이상인 근거를 아직 찾지 못했습니다.");
+        row.put("reason", "직접 입력 · 최근 7일 안의 일반 영상 중 구독자 3천·조회수 500 이상이며 채널 최근 평균 대비 반응이 높은 근거를 아직 찾지 못했습니다.");
         row.put("evidenceVideoIds", List.of());
         row.put("sourceVideos", List.of());
         row.put("metricsAvailable", false);
@@ -267,16 +263,10 @@ public class DailyKeywordService {
         return value instanceof Number number ? number.doubleValue() : -1d;
     }
 
-    private static double sourceMultiple(Map<String, Object> row) {
-        double subscribers = number(row.get("subscribers"));
-        return subscribers > 0 ? number(row.get("views")) / subscribers : 0d;
-    }
-
     private static boolean isEligibleEvidence(TrendingVideoDto video) {
         return video != null && video.getSubscribers() != null
                 && video.getSubscribers() >= MIN_EVIDENCE_SUBSCRIBERS
                 && video.getViews() != null && video.getViews() >= MIN_EVIDENCE_VIEWS
-                && ratio(video.getViews(), video.getSubscribers()) != null && ratio(video.getViews(), video.getSubscribers()) >= MIN_EVIDENCE_VIEWER_MULTIPLE
                 && video.getHoursSincePublish() != null && video.getHoursSincePublish() > 0 && video.getHoursSincePublish() <= 24 * 7
                 && !Boolean.TRUE.equals(video.getIsLive())
                 && Boolean.TRUE.equals(video.getSubscriberCountAvailable());
