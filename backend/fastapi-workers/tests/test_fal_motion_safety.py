@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -117,7 +118,14 @@ def test_cached_safety_is_bound_to_the_exact_final_png(tmp_path):
     )
 
     assert fal_motion_safety_is_current(scene, str(image)) is True
-    image.write_bytes(image.read_bytes() + b"changed")
+    original_stat = image.stat()
+    original = image.read_bytes()
+    replacement = bytes([original[0] ^ 1]) + original[1:]
+    image.write_bytes(replacement)
+    os.utime(image, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+
+    assert image.stat().st_size == original_stat.st_size
+    assert image.stat().st_mtime_ns == original_stat.st_mtime_ns
     assert fal_motion_safety_is_current(scene, str(image)) is False
 
 

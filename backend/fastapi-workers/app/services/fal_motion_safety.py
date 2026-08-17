@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import os
 import re
@@ -105,12 +106,18 @@ def _read_tesseract_rows(image_path: str) -> tuple[str, list[dict[str, str]]]:
     return "completed", list(csv.DictReader(io.StringIO(completed.stdout), delimiter="\t"))
 
 
-def _image_identity(image_path: str) -> dict[str, int] | None:
+def _image_identity(image_path: str) -> dict[str, int | str] | None:
     try:
-        stat = os.stat(image_path)
+        with open(image_path, "rb") as image_file:
+            stat = os.fstat(image_file.fileno())
+            sha256 = hashlib.sha256(image_file.read()).hexdigest()
     except OSError:
         return None
-    return {"size": int(stat.st_size), "mtime_ns": int(stat.st_mtime_ns)}
+    return {
+        "size": int(stat.st_size),
+        "mtime_ns": int(stat.st_mtime_ns),
+        "sha256": sha256,
+    }
 
 
 def fal_motion_safety_is_current(scene: dict, image_path: str) -> bool:
