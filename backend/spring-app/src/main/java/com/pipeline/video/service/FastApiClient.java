@@ -569,10 +569,16 @@ public class FastApiClient {
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> getManualKeywordContext(String keyword, int recentHours) {
+        return getManualKeywordContext(keyword, recentHours, "KOSPI");
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getManualKeywordContext(String keyword, int recentHours, String category) {
         try {
             Map<String, Object> body = new HashMap<>();
             body.put("keyword", keyword);
             body.put("recent_hours", recentHours);
+            body.put("category", category == null || category.isBlank() ? "KOSPI" : category);
             return objectMapper.readValue(postJson(fastApiUrl + "/workers/keyword/manual-context", body), Map.class);
         } catch (Exception e) {
             throw new RuntimeException("수동 키워드 최신 근거 조회 오류: " + e.getMessage(), e);

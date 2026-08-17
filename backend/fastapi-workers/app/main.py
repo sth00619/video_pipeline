@@ -610,33 +610,92 @@ def search_youtube_channel_candidates(request: ChannelCandidateSearchRequest):
 
 class ManualKeywordContextRequest(BaseModel):
     keyword: str
-    recent_hours: int = 2
+    recent_hours: int = 3
+    category: str = "KOSPI"
+
+
+ALLOWED_NEWS_HOURS = {1, 3, 24}
+
+
+def _build_keyword_news_preview(keyword: str, hours: int, category: str) -> Dict[str, Any]:
+    normalized_keyword = keyword.strip()
+    if not normalized_keyword:
+        raise HTTPException(400, "keyword is required")
+    if hours not in ALLOWED_NEWS_HOURS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"hours는 {sorted(ALLOWED_NEWS_HOURS)} 중 하나여야 합니다.",
+        )
+
+    normalized_category = (category or "KOSPI").strip().upper()
+    analyzer_category = normalized_category if normalized_category in {
+        "KOSPI", "KOSDAQ", "US_STOCKS", "INDIVIDUAL_STOCK", "ASSOCIATED_STOCKS",
+    } else ""
+    try:
+        from app.providers.factory import get_trending_video_analyzer
+        from app.workers.news_keyword_extractor import NewsKeywordExtractor
+
+        videos = get_trending_video_analyzer().collect(
+            category=analyzer_category,
+            seed=normalized_keyword,
+            limit=12,
+            recent_hours=hours,
+        )
+        recent_videos = [
+            video.__dict__ for video in videos if (video.hours_since_publish or 999) <= hours
+        ]
+        extractor = NewsKeywordExtractor()
+        recent_news = extractor.search_recent_news(
+            normalized_keyword,
+            max_age_hours=hours,
+            outlet_filter=True,
+        )
+        if normalized_category == "US_STOCKS":
+            recent_news = extractor.search_recent_news_us_market(
+                normalized_keyword,
+                max_age_hours=hours,
+            ) + recent_news
+
+        deduplicated_news = []
+        seen_news = set()
+        for article in recent_news:
+            dedupe_key = str(article.get("url") or article.get("title") or "").strip()
+            if not dedupe_key or dedupe_key in seen_news:
+                continue
+            seen_news.add(dedupe_key)
+            deduplicated_news.append(article)
+
+        return {
+            "keyword": normalized_keyword,
+            "category": normalized_category,
+            "windowHours": hours,
+            "recentNews": deduplicated_news,
+            "recentVideos": recent_videos,
+            "evidenceStatus": "confirmed" if deduplicated_news or recent_videos else "not_found",
+            "outletFilter": True,
+            "disclaimer": "뉴스와 공개 영상은 최신성 확인용 근거이며, 특정 뉴스가 시장 움직임을 유발했다는 인과관계는 표시하지 않습니다.",
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("수동 키워드 최신 근거 조회 실패: %s", type(exc).__name__)
+        raise HTTPException(500, "수동 키워드 최신 근거 조회에 실패했습니다.") from exc
 
 
 @app.post("/workers/keyword/manual-context")
 def manual_keyword_context(request: ManualKeywordContextRequest):
     """Fresh public evidence that lets an operator validate a manual topic."""
-    keyword = request.keyword.strip()
-    if not keyword:
-        raise HTTPException(400, "keyword is required")
-    hours = max(1, min(request.recent_hours, 24))
-    try:
-        from app.providers.factory import get_trending_video_analyzer
-        from app.workers.news_keyword_extractor import NewsKeywordExtractor
+    return _build_keyword_news_preview(
+        request.keyword,
+        request.recent_hours,
+        request.category,
+    )
 
-        videos = get_trending_video_analyzer().collect(category="", seed=keyword, limit=12, recent_hours=hours)
-        recent_videos = [video.__dict__ for video in videos if (video.hours_since_publish or 999) <= hours]
-        news = NewsKeywordExtractor().search_recent_news(keyword, max_age_hours=hours)
-        return {
-            "keyword": keyword,
-            "windowHours": hours,
-            "recentNews": news,
-            "recentVideos": recent_videos,
-            "evidenceStatus": "confirmed" if news or recent_videos else "not_found",
-            "disclaimer": "뉴스와 공개 영상은 최신성 확인용 근거이며, 특정 뉴스가 시장 움직임을 유발했다는 인과관계는 표시하지 않습니다.",
-        }
-    except Exception as e:
-        raise HTTPException(500, f"수동 키워드 최신 근거 조회 실패: {str(e)}")
+
+@app.get("/workers/keyword-news-preview")
+def keyword_news_preview(keyword: str, hours: int = 3, category: str = "KOSPI"):
+    """운영 점검과 관리자 호출을 위한 긴급뉴스 미리보기 경로."""
+    return _build_keyword_news_preview(keyword, hours, category)
 
 
 class KeywordMindMapRequest(BaseModel):

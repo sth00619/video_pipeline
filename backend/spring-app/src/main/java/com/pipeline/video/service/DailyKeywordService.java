@@ -71,11 +71,21 @@ public class DailyKeywordService {
     }
 
     public Map<String, Object> previewManualKeyword(String keyword, int recentHours) {
+        return previewManualKeyword(keyword, recentHours, "KOSPI");
+    }
+
+    public Map<String, Object> previewManualKeyword(String keyword, int recentHours, String category) {
         String normalized = keyword == null ? "" : keyword.trim();
         if (normalized.isBlank()) {
             throw new IllegalArgumentException("키워드를 입력해 주세요.");
         }
-        return fastApiClient.getManualKeywordContext(normalized, Math.max(1, Math.min(recentHours, 24)));
+        // 기존 클라이언트의 기본값 2시간은 새 기본값 3시간으로 호환한다.
+        int normalizedHours = recentHours == 2 ? 3 : recentHours;
+        if (normalizedHours != 1 && normalizedHours != 3 && normalizedHours != 24) {
+            throw new IllegalArgumentException("시간 범위는 1시간, 3시간, 24시간 중에서 선택해 주세요.");
+        }
+        String normalizedCategory = category == null || category.isBlank() ? "KOSPI" : category.trim();
+        return fastApiClient.getManualKeywordContext(normalized, normalizedHours, normalizedCategory);
     }
 
     /**

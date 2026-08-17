@@ -11,11 +11,14 @@
   - NLTK/기본 파싱으로 영문 키워드 추출
 """
 import re
+import os
 import logging
 import time
+from html import unescape
 from datetime import date, datetime, timezone, timedelta
 from collections import Counter
 from typing import Optional
+from urllib.parse import urlparse
 
 import requests
 import feedparser
@@ -24,6 +27,55 @@ from app.config import FINNHUB_API_KEY
 from app.services.naver_api_hub import NaverApiHubClient, naver_api_hub_configured
 
 logger = logging.getLogger(__name__)
+
+KOREAN_FINANCE_NEWS_OUTLETS: list[dict[str, str]] = [
+    {"name": "연합뉴스", "domain": "yna.co.kr"},
+    {"name": "뉴스1", "domain": "news1.kr"},
+    {"name": "뉴시스", "domain": "newsis.com"},
+    {"name": "한국경제", "domain": "hankyung.com"},
+    {"name": "매일경제", "domain": "mk.co.kr"},
+    # chosun.com보다 먼저 판정해야 조선비즈 이름이 종합지로 덮이지 않는다.
+    {"name": "조선비즈", "domain": "biz.chosun.com"},
+    {"name": "이데일리", "domain": "edaily.co.kr"},
+    {"name": "머니투데이", "domain": "mt.co.kr"},
+    {"name": "파이낸셜뉴스", "domain": "fnnews.com"},
+    {"name": "헤럴드경제", "domain": "herald.co.kr"},
+    {"name": "서울경제", "domain": "sedaily.com"},
+    {"name": "아시아경제", "domain": "asiae.co.kr"},
+    {"name": "인베스트조선", "domain": "investchosun.com"},
+    {"name": "글로벌이코노믹", "domain": "g-enews.com"},
+    {"name": "비즈워치", "domain": "bizwatch.co.kr"},
+    {"name": "조선일보", "domain": "chosun.com"},
+    {"name": "중앙일보", "domain": "joongang.co.kr"},
+    {"name": "동아일보", "domain": "donga.com"},
+    {"name": "한국일보", "domain": "hankookilbo.com"},
+    {"name": "전자신문", "domain": "etnews.com"},
+    {"name": "뉴스핌", "domain": "newspim.com"},
+    {"name": "더벨", "domain": "thebell.co.kr"},
+    {"name": "한국금융신문", "domain": "fntimes.com"},
+]
+
+_EXCLUDED_NON_FINANCE_HOSTS = {"sports.chosun.com"}
+
+
+def _is_finance_outlet(url: str) -> tuple[bool, str]:
+    """URL 호스트가 승인된 금융 언론사 도메인인지 안전하게 판정한다."""
+    if not url:
+        return False, ""
+    try:
+        parsed = urlparse(str(url).strip())
+        if parsed.scheme not in {"http", "https"}:
+            return False, ""
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+    except ValueError:
+        return False, ""
+    if not hostname or hostname in _EXCLUDED_NON_FINANCE_HOSTS:
+        return False, ""
+    for outlet in KOREAN_FINANCE_NEWS_OUTLETS:
+        domain = outlet["domain"]
+        if hostname == domain or hostname.endswith(f".{domain}"):
+            return True, outlet["name"]
+    return False, ""
 
 # 한국 경제 뉴스 RSS 피드
 KR_RSS_FEEDS = {
@@ -189,12 +241,17 @@ class NewsKeywordExtractor:
     # ─────────────────────────────────────────────────────
     # 네이버 검색 API
     # ─────────────────────────────────────────────────────
-    def search_recent_news(self, query: str, max_age_hours: int = 2, limit: int = 6) -> list[dict]:
+    def search_recent_news(
+        self,
+        query: str,
+        max_age_hours: int = 2,
+        limit: int = 6,
+        outlet_filter: bool = False,
+    ) -> list[dict]:
         """NAVER API HUB를 우선 사용하고 Google News RSS를 보조로 사용한다.
 
-        Headline evidence is deliberately kept separate from market causality:
-        the interface can confirm freshness without claiming a headline caused
-        a price movement.
+        outlet_filter는 수동 긴급뉴스 확인에서만 명시적으로 활성화한다.
+        기존 7일 후보 점수 경로는 기본값 False로 원래 수집 범위를 유지한다.
         """
         normalized = re.sub(r"\s+", " ", query or "").strip()
         if not normalized:
@@ -212,10 +269,18 @@ class NewsKeywordExtractor:
                     published_at = _parse_naver_published_at(item.get("pubDate"))
                     if published_at is None or published_at < cutoff:
                         continue
+                    article_url = str(item.get("originallink") or item.get("link") or "")
+                    outlet_name = ""
+                    if outlet_filter:
+                        is_match, outlet_name = _is_finance_outlet(article_url)
+                        if not is_match:
+                            continue
                     articles.append({
                         "title": _clean_text(item.get("title", "")),
-                        "source": "NAVER 뉴스",
-                        "url": str(item.get("originallink") or item.get("link") or ""),
+                        "description": _clean_text(item.get("description", ""))[:200],
+                        "source": outlet_name or "NAVER 뉴스",
+                        "outlet": outlet_name,
+                        "url": article_url,
                         "publishedAt": published_at.isoformat().replace("+00:00", "Z"),
                         "hoursSincePublish": round((datetime.now(timezone.utc) - published_at).total_seconds() / 3600, 1),
                     })
@@ -245,10 +310,23 @@ class NewsKeywordExtractor:
                     if isinstance(raw_source, dict)
                     else str(raw_source or "Google 뉴스")
                 )
+                source_url = raw_source.get("href", "") if isinstance(raw_source, dict) else ""
+                article_url = entry.get("link", "")
+                outlet_name = ""
+                if outlet_filter:
+                    is_match, outlet_name = _is_finance_outlet(source_url or article_url)
+                    if not is_match:
+                        continue
                 articles.append({
-                    "title": re.sub(r"\s+", " ", entry.get("title", "")).strip(),
-                    "source": re.sub(r"\s+", " ", source_name).strip(),
-                    "url": entry.get("link", ""),
+                    "title": re.sub(r"\s+", " ", unescape(entry.get("title", ""))).strip(),
+                    "description": re.sub(
+                        r"\s+",
+                        " ",
+                        unescape(re.sub(r"<[^>]+>", " ", entry.get("summary", ""))).replace("\xa0", " "),
+                    ).strip()[:200],
+                    "source": outlet_name or re.sub(r"\s+", " ", source_name).strip(),
+                    "outlet": outlet_name,
+                    "url": article_url,
                     "publishedAt": published_at.isoformat().replace("+00:00", "Z"),
                     "hoursSincePublish": round((datetime.now(timezone.utc) - published_at).total_seconds() / 3600, 1),
                 })
@@ -257,6 +335,51 @@ class NewsKeywordExtractor:
             return articles
         except Exception as exc:
             logger.warning("최근 Google 뉴스 조회 실패(query=%s): %s", normalized, exc)
+            return []
+
+    def search_recent_news_us_market(
+        self,
+        query: str,
+        max_age_hours: int = 24,
+        limit: int = 10,
+    ) -> list[dict]:
+        """Finnhub 공개 일반 뉴스에서 시간창과 검색어가 맞는 미국 기사를 반환한다."""
+        api_key = os.environ.get("FINNHUB_API_KEY", "").strip() or FINNHUB_API_KEY
+        normalized = re.sub(r"\s+", " ", query or "").strip().casefold()
+        if not api_key or not normalized:
+            if not api_key:
+                logger.warning("FINNHUB_API_KEY 미설정 — 미국 시장 뉴스 건너뜀")
+            return []
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, min(max_age_hours, 24 * 30)))
+        try:
+            import finnhub
+
+            client = finnhub.Client(api_key=api_key)
+            raw_news = client.general_news("general", min_id=0)
+            articles = []
+            for item in raw_news:
+                published_at = datetime.fromtimestamp(int(item.get("datetime") or 0), tz=timezone.utc)
+                if published_at < cutoff:
+                    continue
+                title = re.sub(r"\s+", " ", str(item.get("headline") or "")).strip()
+                description = re.sub(r"\s+", " ", str(item.get("summary") or "")).strip()
+                if normalized not in f"{title} {description}".casefold():
+                    continue
+                source = re.sub(r"\s+", " ", str(item.get("source") or "Finnhub")).strip()
+                articles.append({
+                    "title": title,
+                    "description": description[:200],
+                    "source": source,
+                    "outlet": source,
+                    "url": str(item.get("url") or ""),
+                    "publishedAt": published_at.isoformat().replace("+00:00", "Z"),
+                    "hoursSincePublish": round((datetime.now(timezone.utc) - published_at).total_seconds() / 3600, 1),
+                })
+                if len(articles) >= limit:
+                    break
+            return articles
+        except Exception as exc:
+            logger.warning("Finnhub news 조회 실패: %s", exc)
             return []
 
     def search_news_multi_window(self, query: str, limit: int = 12) -> dict:

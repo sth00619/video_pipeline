@@ -12,6 +12,11 @@ const PAGE_SIZE = 5
 const MAX_SELECTED_KEYWORDS = 5
 const MIN_EVIDENCE_SUBSCRIBERS = 3000
 const MIN_EVIDENCE_VIEWS = 500
+const NEWS_HOUR_OPTIONS = [
+  { label: '1시간', value: 1 },
+  { label: '3시간', value: 3 },
+  { label: '24시간', value: 24 },
+]
 const RESEARCH_TABS = [
   { id: 'outperformer', label: '조회수 반응 높음', ranking: 'outperformer', minSubscribers: 0, description: '구독자 3천명 이상 채널에서 채널 최근 평균 대비 조회 반응이 높은 영상 순' },
   { id: '50k', label: '5만+ 채널', ranking: 'large_channel', minSubscribers: 50_000, description: '구독자 5만명 이상 채널의 최근 업로드' },
@@ -95,7 +100,54 @@ function KeywordReason({ keyword, metric }) {
 function ManualContext({ context, onAdd, adding }) {
   if (!context) return null
   const confirmed = context.evidenceStatus === 'confirmed'
-  return <div className="mx-5 mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h4 className="font-bold text-slate-900">직접 입력 키워드 최신성 확인 · {context.windowHours}시간</h4><p className={`mt-1 text-xs font-semibold ${confirmed ? 'text-emerald-700' : 'text-amber-700'}`}>{confirmed ? '최근 공개 뉴스 또는 영상 근거를 찾았습니다. 아래 근거를 확인한 뒤 후보에 추가하세요.' : '최근 1~2시간 안의 공개 근거를 찾지 못했습니다. 필요하면 근거 부족 상태로 추가할 수 있습니다.'}</p></div><button type="button" onClick={onAdd} disabled={adding} className="inline-flex items-center gap-1 rounded-lg bg-accent-gold px-3 py-2 text-xs font-bold text-navy-950 disabled:opacity-50"><Plus size={14} />후보에 추가</button></div><div className="mt-3 grid gap-3 lg:grid-cols-2"><div><p className="text-xs font-bold text-slate-800">최근 뉴스</p><div className="mt-2 space-y-2">{(context.recentNews || []).length ? context.recentNews.map(news => <a key={news.url || news.title} href={news.url} target="_blank" rel="noreferrer" className="block rounded-lg border border-amber-200 bg-white p-2 hover:border-amber-400"><p className="line-clamp-2 text-xs font-semibold text-slate-800">{news.title}</p><p className="mt-1 text-[10px] text-slate-600">{news.source || 'Google 뉴스'} · {news.hoursSincePublish}시간 전</p></a>) : <p className="rounded-lg border border-dashed border-amber-200 p-3 text-xs text-slate-600">최근 뉴스 없음</p>}</div></div><div><p className="text-xs font-bold text-slate-800">최근 공개 YouTube 영상</p><div className="mt-2 space-y-2">{(context.recentVideos || []).length ? context.recentVideos.slice(0, 4).map(video => <div key={video.video_id || video.videoId} className="rounded-lg border border-amber-200 bg-white p-2"><p className="line-clamp-2 text-xs font-semibold text-slate-800">{video.title}</p><VideoTags tags={video.tags} className="mt-1" /></div>) : <p className="rounded-lg border border-dashed border-amber-200 p-3 text-xs text-slate-600">최근 영상 없음</p>}</div></div></div><p className="mt-3 text-[10px] text-slate-600">{context.disclaimer}</p></div>
+  const recentNews = context.recentNews || []
+  const recentVideos = context.recentVideos || []
+  return (
+    <div className="mx-5 mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="font-bold text-slate-900">직접 입력 키워드 최신성 확인 · {context.windowHours}시간</h4>
+          <p className={`mt-1 text-xs font-semibold ${confirmed ? 'text-emerald-700' : 'text-amber-700'}`}>
+            {confirmed
+              ? '최근 공개 뉴스 또는 영상 근거를 찾았습니다. 아래 근거를 확인한 뒤 후보에 추가하세요.'
+              : `최근 ${context.windowHours}시간 안의 공개 근거를 찾지 못했습니다. 필요하면 근거 부족 상태로 추가할 수 있습니다.`}
+          </p>
+        </div>
+        <button type="button" onClick={onAdd} disabled={adding} className="inline-flex items-center gap-1 rounded-lg bg-accent-gold px-3 py-2 text-xs font-bold text-navy-950 disabled:opacity-50"><Plus size={14} />후보에 추가</button>
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div>
+          <p className="text-xs font-bold text-slate-800">최근 금융 언론사 뉴스</p>
+          <div className="mt-2 space-y-2">
+            {recentNews.length ? recentNews.map(news => (
+              <a key={news.url || news.title} href={news.url} target="_blank" rel="noreferrer" className="block rounded-lg border border-amber-200 bg-white p-3 hover:border-amber-400">
+                <div className="flex items-center gap-2">
+                  <span className="rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">{news.outlet || news.source || '언론사 미확인'}</span>
+                  <span className="text-[10px] text-slate-500">{news.hoursSincePublish}시간 전</span>
+                </div>
+                <p className="mt-1.5 line-clamp-2 text-xs font-bold text-slate-900">{news.title}</p>
+                {news.description && <p className="mt-1 line-clamp-2 text-[11px] text-slate-600">{news.description}</p>}
+              </a>
+            )) : (
+              <p className="rounded-lg border border-dashed border-amber-200 p-4 text-center text-xs text-slate-600">선택한 시간 내 금융 언론사 기사가 없습니다.</p>
+            )}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-bold text-slate-800">최근 공개 YouTube 영상</p>
+          <div className="mt-2 space-y-2">
+            {recentVideos.length ? recentVideos.slice(0, 4).map(video => (
+              <div key={video.video_id || video.videoId} className="rounded-lg border border-amber-200 bg-white p-2">
+                <p className="line-clamp-2 text-xs font-semibold text-slate-800">{video.title}</p>
+                <VideoTags tags={video.tags} className="mt-1" />
+              </div>
+            )) : <p className="rounded-lg border border-dashed border-amber-200 p-3 text-xs text-slate-600">최근 영상 없음</p>}
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 text-[10px] text-slate-600">{context.disclaimer}</p>
+    </div>
+  )
 }
 
 function ResearchSearchPanel({ keyword, onKeywordChange, activeTabId, onTabChange, onSearch, searching, videos, visibleVideos, page, onPageChange, scrollRef, onUseKeyword }) {
@@ -114,6 +166,7 @@ export default function DailyKeywordResearch({ onUseKeyword }) {
   const [manualKeyword, setManualKeyword] = useState('')
   const [note, setNote] = useState('')
   const [manualContext, setManualContext] = useState(null)
+  const [selectedNewsHours, setSelectedNewsHours] = useState(3)
   const [dailyPage, setDailyPage] = useState(1)
   const [directPage, setDirectPage] = useState(1)
   const [expanded, setExpanded] = useState(null)
@@ -130,7 +183,14 @@ export default function DailyKeywordResearch({ onUseKeyword }) {
       if (payload.requestId === mindmapRequestRef.current) setMindmap(result)
     },
   })
-  const previewManual = useMutation({ mutationFn: keyword => apiClient.post('/keywords/manual/preview', { keyword, recentHours: 2 }).then(response => response.data), onSuccess: setManualContext })
+  const previewManual = useMutation({
+    mutationFn: request => apiClient.post('/keywords/manual/preview', {
+      keyword: request.keyword,
+      recentHours: request.hours,
+      category: 'KOSPI',
+    }).then(response => response.data),
+    onSuccess: setManualContext,
+  })
   const addManual = useMutation({ mutationFn: () => apiClient.post('/keywords/manual', { keyword: manualKeyword, category: 'CUSTOM', note }), onSuccess: () => { setManualKeyword(''); setNote(''); setManualContext(null); queryClient.invalidateQueries({ queryKey: ['daily-keywords'] }) } })
 
   const dailyItems = data?.items || []
@@ -188,7 +248,11 @@ export default function DailyKeywordResearch({ onUseKeyword }) {
       return { ...current, [keyword]: { metric: { keyword, bestMultiple: node.bestMultiple ?? metrics.multiple, viewsPerHour: metrics.velocity, views: asNumber(node.views), likes: asNumber(node.likes), comments: asNumber(node.comments), matchedTags: node.raw || node.matchedTags || [], evidence: node.evidence || [] } } }
     })
   }
-  const requestManualPreview = () => { if (manualKeyword.trim()) previewManual.mutate(manualKeyword.trim()) }
+  const requestManualPreview = () => {
+    if (manualKeyword.trim()) {
+      previewManual.mutate({ keyword: manualKeyword.trim(), hours: selectedNewsHours })
+    }
+  }
   const movePage = (setter, page, ref) => { setter(page); ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   const searchCurrentTab = () => {
     const activeTab = RESEARCH_TABS.find(tab => tab.id === activeResearchTabId) || RESEARCH_TABS[0]
@@ -224,7 +288,29 @@ export default function DailyKeywordResearch({ onUseKeyword }) {
     <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 bg-slate-50/70 px-5 py-5 lg:px-6"><div><p className="text-xs font-bold text-indigo-600">YouTube 기반 롱폼 리서치</p><h2 className="mt-1 text-xl font-bold text-slate-900">오늘 무엇으로 롱폼을 만들까요?</h2><p className="mt-1 text-xs text-slate-500 leading-relaxed">최근 7일 · 일반 영상만 · 구독자 3천 이상 · 조회수 500 이상 · 채널 최근 평균 대비 반응이 높은 영상을 수집합니다.</p></div><button onClick={() => refresh.mutate()} disabled={refresh.isPending} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm disabled:opacity-50 transition"><RefreshCw size={14} className={refresh.isPending ? 'animate-spin text-indigo-600' : 'text-slate-500'} />오늘의 분석 새로고침</button></header>
     <div className="border-b border-slate-200 bg-slate-50/30 p-5 lg:p-6">{makeMindmap.isPending && <p className="mt-4 rounded-xl bg-slate-50 p-5 text-center text-xs font-medium text-slate-500 border border-slate-200 animate-pulse">공통 태그와 근거 영상을 분석하는 중입니다...</p>}{mindmap && <><KeywordMindMap mindmap={mindmap} selectedKeywords={selectedKeywords} onToggle={toggleKeyword} evidenceVideos={premiumVideos} /><div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><h4 className="text-sm font-bold text-slate-900">스크립트용 정제 키워드 후보</h4><p className="mt-0.5 text-xs text-slate-600">근거 영상이 명확한 키워드만 최대 5개까지 선택합니다.</p></div><span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-bold text-indigo-700">{selectedKeywords.size}/{MAX_SELECTED_KEYWORDS}</span></div><div className="mt-3 flex flex-wrap gap-2">{(mindmap.primary || []).slice(0, 8).map(node => <button key={node.keyword} type="button" onClick={() => toggleKeyword(node.keyword, node)} className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${selectedKeywords.has(node.keyword) ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm' : 'border-slate-300 bg-white text-slate-800 hover:border-indigo-400 hover:bg-indigo-50/50'}`}>{selectedKeywords.has(node.keyword) && <Check size={13} className="mr-1 inline" />}{node.keyword} · 최고 조회율 {displaySubscriberResponse(node.bestMultiple)}</button>)}</div>{selectedKeywords.size >= MAX_SELECTED_KEYWORDS && <p className="mt-2 text-xs font-medium text-amber-700">최대 5개가 선택되었습니다. 다른 후보를 선택하려면 하나를 해제하세요.</p>}<div className="mt-3 grid gap-2 lg:grid-cols-2">{Object.entries(selected).map(([keyword, item]) => <KeywordReason key={keyword} keyword={keyword} metric={item.metric} />)}</div></div></>}</div>
     <ResearchSearchPanel keyword={researchKeyword} onKeywordChange={setResearchKeyword} activeTabId={activeResearchTabId} onTabChange={selectResearchTab} onSearch={searchCurrentTab} searching={searchVideos.isPending} videos={directTrustedVideos} visibleVideos={directVisible} page={directPage} onPageChange={page => movePage(setDirectPage, page, directRef)} scrollRef={directRef} onUseKeyword={onUseKeyword} />
-    <div className="border-b border-slate-200 bg-white px-5 py-4 lg:px-6"><div className="flex flex-wrap gap-2.5"><input value={manualKeyword} onChange={event => { setManualKeyword(event.target.value); setManualContext(null) }} placeholder="긴급 뉴스 키워드를 직접 추가하기 전 최신 근거 확인" className="min-w-[240px] flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none shadow-sm" /><input value={note} onChange={event => setNote(event.target.value)} placeholder="추가 사유 메모 (선택)" className="w-48 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none shadow-sm" /><button onClick={requestManualPreview} disabled={!manualKeyword.trim() || previewManual.isPending} className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 px-3.5 py-2 text-xs font-bold text-amber-800 disabled:opacity-50 transition shadow-xs">{previewManual.isPending ? <Loader size={14} className="animate-spin" /> : <Search size={14} />}최근 2시간 근거 확인</button></div></div><ManualContext context={manualContext} onAdd={() => addManual.mutate()} adding={addManual.isPending} />
+    <div className="border-b border-slate-200 bg-white px-5 py-4 lg:px-6">
+      <div className="flex flex-wrap gap-2.5">
+        <input value={manualKeyword} onChange={event => { setManualKeyword(event.target.value); setManualContext(null) }} placeholder="긴급 뉴스 키워드를 직접 추가하기 전 최신 근거 확인" className="min-w-[240px] flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none shadow-sm" />
+        <input value={note} onChange={event => setNote(event.target.value)} placeholder="추가 사유 메모 (선택)" className="w-48 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none shadow-sm" />
+        <div className="flex overflow-hidden rounded-xl border border-slate-300 bg-white">
+          {NEWS_HOUR_OPTIONS.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => { setSelectedNewsHours(option.value); setManualContext(null) }}
+              className={`px-3 py-2 text-xs font-bold transition ${selectedNewsHours === option.value ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+              style={selectedNewsHours === option.value ? { color: '#ffffff' } : undefined}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <button type="button" onClick={requestManualPreview} disabled={!manualKeyword.trim() || previewManual.isPending} className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-amber-600 disabled:opacity-50">
+          {previewManual.isPending ? <Loader size={14} className="animate-spin" /> : <Search size={14} />}뉴스 근거 확인
+        </button>
+      </div>
+    </div>
+    <ManualContext context={manualContext} onAdd={() => addManual.mutate()} adding={addManual.isPending} />
     {selectedKeywords.size > 0 && <aside className="fixed inset-x-4 bottom-4 z-30 rounded-2xl border border-indigo-500/30 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-md lg:left-72 lg:right-8"><div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"><div className="min-w-0"><p className="text-xs font-bold text-white">선택한 정제 키워드 {selectedKeywords.size}개</p><div className="mt-1.5 flex flex-wrap gap-1.5">{[...selectedKeywords].map(item => <button key={item} onClick={() => toggleKeyword(item)} className="max-w-full truncate rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 px-3 py-1 text-xs font-semibold text-indigo-300 transition">{item} ×</button>)}</div></div><button onClick={openSelectedKeywordSetup} className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2.5 text-xs font-bold text-white shadow-md lg:w-auto transition">선택 키워드로 작업 설정 열기</button></div></aside>}
     <footer className="flex items-center gap-1 border-t border-slate-200 bg-slate-50 px-5 py-3 text-[11px] text-slate-500">타 채널의 평균 시청 시간·CTR·노출수는 공개 API로 확인할 수 없어 표시하지 않습니다.</footer>
   </section>
