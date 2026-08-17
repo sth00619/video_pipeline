@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import hashlib
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 from dotenv import load_dotenv
@@ -37,7 +38,27 @@ from app.services.evidence_capture import EvidenceCaptureError, EvidenceCaptureS
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="AI Video Pipeline Workers", version="0.5.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """서버 시작 자원을 초기화하고 종료 시 브라우저 프로세스를 정리한다."""
+    if not BFL_API_KEY:
+        logger.warning("BFL_API_KEY가 설정되지 않았습니다. V5 실제 이미지 생성은 비활성입니다.")
+    elif V5_BFL_ENABLED:
+        logger.info("V5 BFL 이미지 생성 경로가 활성화되었습니다.")
+    try:
+        result = PronunciationManager.get_instance().initialize()
+        logger.info("발음 사전 초기화: %s", result)
+    except Exception as exc:
+        logger.warning("발음 사전 초기화 실패 (TTS는 정상 작동): %s", exc)
+
+    try:
+        yield
+    finally:
+        EvidenceCaptureService.shutdown()
+
+
+app = FastAPI(title="AI Video Pipeline Workers", version="0.5.0", lifespan=lifespan)
 
 DATA_DIR = Path("/app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -107,26 +128,6 @@ def get_evidence_capture_service() -> EvidenceCaptureService:
     if evidence_capture_service is None:
         evidence_capture_service = EvidenceCaptureService()
     return evidence_capture_service
-
-
-@app.on_event("startup")
-async def startup_event():
-    """서버 시작 시 발음 사전을 초기화한다."""
-    if not BFL_API_KEY:
-        logger.warning("BFL_API_KEY가 설정되지 않았습니다. V5 실제 이미지 생성은 비활성입니다.")
-    elif V5_BFL_ENABLED:
-        logger.info("V5 BFL 이미지 생성 경로가 활성화되었습니다.")
-    try:
-        result = PronunciationManager.get_instance().initialize()
-        logger.info(f"발음 사전 초기화: {result}")
-    except Exception as e:
-        logger.warning(f"발음 사전 초기화 실패 (TTS는 정상 작동): {e}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Gracefully release the worker-lifetime Chromium process."""
-    EvidenceCaptureService.shutdown()
 
 
 @app.get("/health")
