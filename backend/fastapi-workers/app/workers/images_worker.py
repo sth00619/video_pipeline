@@ -47,6 +47,7 @@ from app.utils.gemini_pressure import gemini_pressure
 from app.utils.image_job_lock import acquire_image_job_lock, release_image_job_lock
 from app.utils.retry_policy import classify_image_error, error_signature
 from app.services.info_surface.info_scene_templates import select_template
+from app.services.fal_motion_safety import assess_fal_motion_safety
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,31 @@ def _visual_mix_audit(scenes: list[dict]) -> dict:
             if counts[mode] < minimum_generated:
                 failures.append(f"{mode}:{counts[mode]}<{minimum_generated}")
     return {"passed": not failures, "counts": dict(counts), "failures": failures}
+
+
+def _apply_fal_motion_safety_contract(scenes: list[dict]) -> dict[str, int]:
+    """최종 PNG를 검사해 문자·수치가 있는 Fal 후보를 정지 이미지로 바꾼다."""
+    selected = sum(1 for scene in scenes if scene.get("use_kling"))
+    blocked = 0
+    for scene in scenes:
+        was_selected = bool(scene.get("use_kling"))
+        safety = assess_fal_motion_safety(
+            scene,
+            str(scene.get("image_path") or ""),
+            scan_image=was_selected,
+        )
+        scene["fal_motion_safety"] = safety
+        if was_selected and not safety["eligible"]:
+            scene["use_kling"] = False
+            blocked += 1
+            logger.info(
+                "Fal 문자·수치 안전 게이트: scene=%s 정지 이미지로 전환 reasons=%s",
+                scene.get("index"),
+                safety["reasons"],
+            )
+    audit = {"selected": selected, "blocked": blocked, "eligible": selected - blocked}
+    logger.info("Fal 문자·수치 안전 게이트 완료: %s", audit)
+    return audit
 
 
 def _manual_review_reasons(scenes: list[dict], image_quality: dict | None = None) -> list[str]:
@@ -1417,6 +1443,7 @@ Rules:
             except Exception as e:
                 logger.error(f"씬 {i} 로컬 폴백 최종 실패: {e}")
 
+        _apply_fal_motion_safety_contract(generated)
         for scene in generated:
             scene["character_regions"] = _character_regions(scene)
         image_quality = assess_images(generated)
@@ -1869,6 +1896,7 @@ Rules:
         for result in sorted(results, key=lambda item: item["index"]):
             result.pop("spec", None)
             generated.append(result)
+        _apply_fal_motion_safety_contract(generated)
         for scene in generated:
             scene["character_regions"] = _character_regions(scene)
         image_quality = assess_images(generated)

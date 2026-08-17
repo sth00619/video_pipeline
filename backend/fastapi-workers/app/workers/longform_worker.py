@@ -56,6 +56,12 @@ from app.utils.narration_contract import (
 )
 from app.utils.output_qc import build_output_qc_report
 from app.services.kling_prompt_builder import build_kling_motion_prompt
+from app.services.fal_motion_safety import (
+    FAL_MOTION_SAFETY_POLICY_VERSION,
+    assess_fal_motion_safety,
+    fal_motion_metadata_block_reasons,
+    fal_motion_safety_is_current,
+)
 from app.services.annotate import render_annotations
 from app.services.verbatim_guard import validate as validate_verbatim
 from datetime import datetime, timezone
@@ -192,6 +198,7 @@ class LongformWorker:
                 "clip_count": int(runtime_config.value("intro_motion_clip_count")),
                 "clip_seconds": int(runtime_config.value("intro_motion_clip_seconds")),
                 "manual_values": [scene.get("use_kling") for scene in scenes],
+                "text_number_safety_policy_version": FAL_MOTION_SAFETY_POLICY_VERSION,
             },
             "overlay_policy": {
                 "version": OVERLAY_POLICY_VERSION,
@@ -287,23 +294,38 @@ class LongformWorker:
         intro_kling_indices, intro_motion_target, intro_motion_actual = _select_intro_kling_scenes(
             scenes, total_duration, max_clips_cap
         )
-        # V5 검증 수치는 Pillow로 완성된 PNG에 이미 합성된다. 이 PNG를
-        # image-to-video 모델에 보내면 글자와 숫자가 변형될 수 있으므로,
-        # 사실 오버레이가 있는 씬은 보수적으로 정지 이미지 경로만 사용한다.
+        candidate_intro_kling_indices = set(intro_kling_indices)
+        # 프롬프트의 금지문만으로는 이미지 속 숫자·글자를 보존할 수 없다.
+        # 최종 PNG와 메타데이터를 모두 통과한 씬만 Fal 후보로 남긴다.
         protected_fact_indices = {
             index for index, scene in enumerate(scenes)
             if _has_v5_verified_fact_overlay(scene)
         }
-        excluded_fact_indices = intro_kling_indices & protected_fact_indices
-        if excluded_fact_indices:
-            intro_kling_indices -= excluded_fact_indices
+        motion_block_reasons: dict[int, list[str]] = {}
+        protected_motion_indices: set[int] = set()
+        for index in sorted(intro_kling_indices):
+            safety = _ensure_fal_motion_safety(
+                scenes[index],
+                _article_image_path(scenes[index]),
+            )
+            if not safety["eligible"]:
+                protected_motion_indices.add(index)
+                motion_block_reasons[index] = list(safety["reasons"])
+        excluded_motion_indices = intro_kling_indices & protected_motion_indices
+        if excluded_motion_indices:
+            intro_kling_indices -= excluded_motion_indices
             intro_motion_actual = sum(
-                min(float(runtime_config.value("intro_motion_clip_seconds")), 5.0)
+                min(
+                    float(runtime_config.value("intro_motion_clip_seconds")),
+                    5.0,
+                    scene_duration_seconds(scenes[index]),
+                )
                 for index in intro_kling_indices
             )
             logger.info(
-                "V5 사실 오버레이 보호: FAL 후보에서 정보 씬 제외 indices=%s",
-                sorted(excluded_fact_indices),
+                "Fal 문자·수치 안전 게이트: 정지 이미지 전환 indices=%s reasons=%s",
+                sorted(excluded_motion_indices),
+                motion_block_reasons,
             )
         logger.info(
             "Opening Fal motion plan: target=%.1fs, actual=%.1fs, scenes=%s/%s, indices=%s",
@@ -396,11 +418,14 @@ class LongformWorker:
             target_seconds=intro_motion_target,
             selected_seconds=intro_motion_actual,
             selected_indices=intro_kling_indices,
+            candidate_indices=candidate_intro_kling_indices,
             requested_indices=requested_motion_indices,
             protected_fact_indices=protected_fact_indices,
             clip_modes=clip_modes,
             failures=clip_failures,
             has_manual_selection=has_manual_kling_selection,
+            protected_motion_indices=protected_motion_indices,
+            motion_block_reasons=motion_block_reasons,
         )
         logger.info(
             f"씬 클립 생성 완료: {len(clip_paths)}/{len(scenes)}개 성공, "
@@ -755,6 +780,15 @@ class LongformWorker:
         clip_path = str(temp_dir / f"clip_{i:03d}.mp4")
         if not _verify_image(img_path):
             raise RuntimeError(f"scene {i} image is missing or corrupt: {img_path}")
+        if use_kling:
+            safety = _ensure_fal_motion_safety(scene, img_path)
+            if not safety["eligible"]:
+                logger.info(
+                    "씬 %s Fal 호출 차단: 최종 PNG 문자·수치 안전 게이트 reasons=%s",
+                    i,
+                    safety["reasons"],
+                )
+                use_kling = False
         # An interrupted assembly can leave a valid *static* clip behind.  It
         # must never satisfy a later request for an opening Kling scene.
         motion_requested = bool(video_provider and use_kling)
@@ -1305,7 +1339,7 @@ def _scene_clip_fingerprint(
     except OSError:
         image_identity = {"size": None, "mtime_ns": None}
     contract = {
-        "schema": 3,
+        "schema": 4,
         "source_type": source_type,
         "duration": round(float(duration), 3),
         "image": image_identity,
@@ -1319,6 +1353,8 @@ def _scene_clip_fingerprint(
         "speech_bubble": scene.get("speech_bubble"),
         "bubble_text": scene.get("bubble_text"),
         "subtitle_text": scene.get("subtitle_text"),
+        "fal_motion_safety_policy_version": FAL_MOTION_SAFETY_POLICY_VERSION,
+        "fal_motion_safety": scene.get("fal_motion_safety"),
         "overlay_policy": {
             "version": OVERLAY_POLICY_VERSION,
             "verified_index_cards": RENDER_VERIFIED_INDEX_CARDS,
@@ -1368,6 +1404,15 @@ def _has_v5_verified_fact_overlay(scene: dict) -> bool:
     return isinstance(overlays, list) and bool(overlays)
 
 
+def _ensure_fal_motion_safety(scene: dict, image_path: str) -> dict:
+    """동일한 최종 PNG 검사는 재사용하고, 누락·구버전 결과만 다시 검사한다."""
+    if fal_motion_safety_is_current(scene, image_path):
+        return scene["fal_motion_safety"]
+    safety = assess_fal_motion_safety(scene, image_path, scan_image=True)
+    scene["fal_motion_safety"] = safety
+    return safety
+
+
 def _motion_contract_allows_scene(scene: dict) -> bool:
     """V5 장면은 텍스트 없는 일반형만 Fal 후보가 될 수 있다."""
     contract = scene.get("motion_contract")
@@ -1387,6 +1432,11 @@ def _should_request_kling_for_scene(
     if not selected_for_intro_motion:
         return False
     if _article_capture_for_scene(scene) or _has_v5_verified_fact_overlay(scene):
+        return False
+    if fal_motion_metadata_block_reasons(scene):
+        return False
+    safety = scene.get("fal_motion_safety")
+    if isinstance(safety, dict) and safety.get("eligible") is False:
         return False
     if not _motion_contract_allows_scene(scene):
         return False
@@ -1726,8 +1776,12 @@ def _build_kling_motion_plan(
     clip_modes: dict[int, str],
     failures: dict[int, str],
     has_manual_selection: bool,
+    candidate_indices: set[int] | None = None,
+    protected_motion_indices: set[int] | None = None,
+    motion_block_reasons: dict[int, list[str]] | None = None,
 ) -> dict:
     """최종 영상과 함께 저장할 초반 Kling 구간의 재현 가능한 계획이다."""
+    candidates = candidate_indices if candidate_indices is not None else selected_indices
     timeline = 0.0
     scene_windows = []
     for index, scene in enumerate(scenes):
@@ -1749,10 +1803,17 @@ def _build_kling_motion_plan(
         "clip_seconds": min(float(runtime_config.value("intro_motion_clip_seconds")), 5.0),
         "clip_count_cap": int(runtime_config.value("intro_motion_clip_count")),
         "manual_scene_filter_applied": bool(has_manual_selection),
-        "candidate_scene_indices": sorted(selected_indices),
+        "candidate_scene_indices": sorted(candidates),
+        "selected_scene_indices": sorted(selected_indices),
         "requested_scene_indices": sorted(requested_indices),
         "delivered_scene_indices": delivered_indices,
-        "protected_verified_fact_scene_indices": sorted(protected_fact_indices & selected_indices),
+        "protected_verified_fact_scene_indices": sorted(protected_fact_indices & candidates),
+        "protected_text_number_scene_indices": sorted((protected_motion_indices or set()) & candidates),
+        "motion_block_reasons": {
+            str(index): reasons
+            for index, reasons in sorted((motion_block_reasons or {}).items())
+            if index in candidates
+        },
         "failed_scene_indices": sorted(failures),
         "scene_windows": scene_windows,
     }
