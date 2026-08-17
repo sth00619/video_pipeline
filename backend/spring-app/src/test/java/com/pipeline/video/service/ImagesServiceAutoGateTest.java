@@ -3,6 +3,7 @@ package com.pipeline.video.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pipeline.video.domain.Asset;
 import com.pipeline.video.domain.AssetType;
+import com.pipeline.video.domain.GateName;
 import com.pipeline.video.domain.JobStatus;
 import com.pipeline.video.domain.VideoJob;
 import com.pipeline.video.dto.ImagesGenerateResponse;
@@ -18,18 +19,16 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Stage 2-A: AUTO mode image review gate unit tests.
+ * AUTO 모드 이미지 검수 게이트 단위 테스트.
  *
- * Verifies:
- * 1. requires_manual_review=true + AUTO mode -> job.status == IMAGES_RETRY_REQUIRED, confirm() not called
- * 2. requires_manual_review=false + AUTO mode -> normal auto-confirm (no regression)
- * 3. confirm() gate: requires_manual_review=true + username != "AUTO" -> IllegalStateException
- * 4. confirm() gate: username="AUTO" -> passes (internal auto-confirm path)
+ * 1. 수동 검토 필요 + AUTO 모드는 재시도 대기로 전환하고 자동 확정하지 않는다.
+ * 2. 수동 검토 불필요 + AUTO 모드는 기존처럼 자동 확정한다.
+ * 3. 수동 검토 필요 상태는 사람이 확인한 뒤 명시적으로 승인할 수 있다.
+ * 4. 내부 AUTO 확정 경로는 사전 게이트를 통과한 호출로 처리한다.
  */
 @ExtendWith(MockitoExtension.class)
 class ImagesServiceAutoGateTest {
@@ -56,7 +55,7 @@ class ImagesServiceAutoGateTest {
     }
 
     @Test
-    void confirm_requiresManualReview_nonAutoUser_throws() throws Exception {
+    void confirm_requiresManualReview_humanReviewer_canApprove() throws Exception {
         VideoJob job = new VideoJob();
         job.setId(1L);
         job.setStatus(JobStatus.IMAGES_PENDING);
@@ -72,10 +71,9 @@ class ImagesServiceAutoGateTest {
         when(assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(1L, AssetType.IMAGE_QC_REPORT))
                 .thenReturn(Optional.of(asset));
 
-        assertThatThrownBy(() -> imagesService.confirm(1L, "SONG"))
-                .isInstanceOf(IllegalStateException.class);
+        imagesService.confirm(1L, "SONG");
 
-        verify(gateService, never()).approve(any(), any(), any(), any());
+        verify(gateService).approve(eq(1L), eq(GateName.IMAGES), eq("SONG"), eq("이미지/GIF 확정"));
     }
 
     @Test
