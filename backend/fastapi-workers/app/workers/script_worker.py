@@ -522,8 +522,11 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
-            logger.warning("ANTHROPIC_API_KEY 미설정 — Mock 스크립트로 폴백")
-            return self._mock_generate(keyword, category_label, target_minutes, job_id)
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY가 설정되지 않았습니다. "
+                "스크립트 LLM 생성을 진행할 수 없습니다. "
+                "API 키를 설정하거나 Anthropic 크레딧을 확인하세요."
+            )
 
         # 시장 데이터 수집 (전달받지 못한 경우)
         if not market_data:
@@ -660,29 +663,12 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             # 길이·문장·장면 계약 실패는 실제 대본을 가짜 mock으로 바꾸지 않는다.
             raise
         except Exception as e:
-            logger.error(f"LLM API 호출 실패: {e} — Mock으로 폴백")
-            full_script, sections = self._mock_script(keyword, category_label, target_minutes)
-            sections = pace_sections_for_runtime(sections, int(length_contract["target_seconds"]))
-            sections = direct_scenes(enrich_scene_plans(sections))
-            if data_visuals_enabled:
-                for scene in sections:
-                    scene["market_snapshot"] = market_data
-            if data_visuals_enabled:
-                sections = _attach_verified_index_overlays(sections, market_data)
-                sections = _attach_verified_market_charts(sections)
-            sections = _classify_scene_types(sections)
-            sections = _validate_info_scene_payloads(sections)
-            if data_visuals_enabled:
-                sections = direct_editorial_overlays(sections)
-            verified_facts = []
-            narrative_plan = {"plan_id": "generation_fallback", "planner": "fallback", "story_beats": []}
-            flow_qa = {"passed": False, "method": "generation_fallback", "transition_issues": ["생성 실패"]}
-            fact_check_log = [f"오류: {str(e)}"]
-            used_real_llm = False
-            meta_title = "제목 자동 생성 실패"
-            meta_thumb = "Stock market background"
-            meta_desc = "상세 설명이 없습니다."
-            meta_shorts = "쇼츠 대본 자동 생성 실패"
+            logger.error(
+                "스크립트 LLM 호출 실패 — Mock 전환 금지, "
+                "Job을 실패 상태로 전파합니다: %s",
+                e,
+            )
+            raise RuntimeError(f"스크립트 생성 실패: {e}") from e
 
         logger.info(f"스크립트 생성 완료: {len(full_script)}자, job_id={job_id}")
 
