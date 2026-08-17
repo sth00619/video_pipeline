@@ -153,12 +153,23 @@ def _collect_keyword_news(terms: list[str]) -> list[dict]:
         # A script needs topical facts, not only the general market snapshot.
         # Seven days is long enough for a researched long-form topic; the
         # manual keyword UI keeps its stricter 1–2 hour freshness window.
-        for article in extractor.search_recent_news(term, max_age_hours=24 * 7, limit=6):
+        for article in extractor.search_recent_news(
+            term,
+            max_age_hours=24 * 7,
+            limit=6,
+            outlet_filter=True,
+        ):
             identity = (str(article.get("title", "")), str(article.get("url", "")))
             if identity in seen:
                 continue
             seen.add(identity)
             rows.append({**article, "matched_keyword": term})
+    if not rows:
+        logger.warning(
+            "스크립트 크로스체크: 23개 금융 언론사 기사 0건 "
+            "(keyword=%s, hours=168). 뉴스 검증 없이 진행합니다.",
+            ", ".join(_topic_terms_for_evidence(terms)),
+        )
     return rows[:12]
 
 # 2026-08-05, 사용자 명시 지시: 문장 단위를 짧게(15~20자) 끊어 TTS에 맞는
@@ -539,14 +550,11 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 
         try:
             keyword_news = _collect_keyword_news(selected_terms)
-            # A named topic must have its own evidence.  Generic index data is
-            # never allowed to replace it with an unrelated KOSPI script.
-            topic_terms = _keyword_coverage_terms(selected_terms)
-            if len(topic_terms) > 1 and not keyword_news and not is_market_level_forecast(selected_terms):
-                raise ScriptResearchRequiredError(
-                    f"선택 키워드({', '.join(topic_terms)})의 검증 가능한 최신 근거를 찾지 못했습니다. "
-                    "키워드를 수정하거나 근거 자료를 추가한 뒤 다시 시도하세요."
-                )
+            news_cross_check_status = (
+                "finance_outlet_articles_found"
+                if keyword_news
+                else "no_finance_outlet_articles"
+            )
 
             # 3-Round 팩트체크
             verified_facts, fact_check_log = self._multi_round_fact_check(
@@ -749,6 +757,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             "verified_facts": verified_facts,
             "fact_check_rounds": len(fact_check_log),
             "fact_check_log": fact_check_log,
+            "news_cross_check_status": news_cross_check_status,
             "market_snapshot_used": market_data is not None,
             "market_snapshot": market_data or {},
             "used_real_llm": used_real_llm,
