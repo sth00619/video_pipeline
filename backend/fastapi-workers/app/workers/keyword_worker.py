@@ -704,7 +704,18 @@ def _candidate_matches_seed(candidate: dict, terms: list[str]) -> bool:
     """Require meaningful overlap before a ranked candidate can be reused."""
     if not terms:
         return True
-    text = " ".join(str(candidate.get(key, "")) for key in ("keyword", "reason", "content_angle"))
+    # 표시용 키워드는 클릭베이트 괄호를 제거해 정제한다. 그러나
+    # ``[삼성전자 주가전망]``처럼 핵심 종목명이 괄호 안에만 있는 영상도
+    # 있으므로 근거 연결 판정에는 원본 YouTube 제목을 반드시 포함한다.
+    source_titles = " ".join(
+        str(video.get("title") or "")
+        for video in (candidate.get("source_videos") or [])
+        if isinstance(video, dict)
+    )
+    text = " ".join([
+        *(str(candidate.get(key, "")) for key in ("keyword", "reason", "content_angle")),
+        source_titles,
+    ])
     # Canonical aliases (삼전→삼성전자, 3분기→Q3, etc.) take precedence over
     # literal substring matching so the discovery and script stages agree.
     if seed_match(" ".join(terms), text):

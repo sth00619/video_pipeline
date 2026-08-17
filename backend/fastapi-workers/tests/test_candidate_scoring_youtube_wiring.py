@@ -76,6 +76,33 @@ def test_fuzzy_seed_match_connects_rephrased_youtube_candidate():
     assert primary["evidence_video_ids"] == ["video-1"]
 
 
+def test_original_youtube_title_matches_when_clean_keyword_removed_bracketed_stock_name():
+    worker = _worker()
+    candidate = _seed_candidate("삼성전자", "입력 주제", "종목 확인")
+    youtube_candidates = worker._score_yt_videos([
+        _video(title="[삼성전자 주가전망] 긴급 호재 발표")
+    ])
+
+    attached = worker._attach_youtube_metrics([candidate], youtube_candidates)[0]
+
+    assert youtube_candidates[0]["keyword"] == "호재 발표"
+    assert attached["metrics_available"] is True
+    assert attached["evidence_video_ids"] == ["video-1"]
+
+
+def test_original_title_does_not_weaken_multi_term_relevance_requirement():
+    worker = _worker()
+    candidate = _seed_candidate("삼성전자 반도체 실적", "입력 주제", "실적 확인")
+    youtube_candidates = worker._score_yt_videos([
+        _video(title="[삼성전자 주가전망] 긴급 호재 발표")
+    ])
+
+    attached = worker._attach_youtube_metrics([candidate], youtube_candidates)[0]
+
+    assert attached["metrics_available"] is False
+    assert attached["source_videos"] == []
+
+
 def test_recent_average_is_used_when_sample_has_ten_videos():
     scored = _worker()._score_yt_videos([_video()])[0]
 
