@@ -22,7 +22,7 @@ export default function Pagination({ total, currentPage, onChange, pageSize = 10
         <button type="button" aria-label="이전 페이지" title="이전 페이지" onClick={() => onChange(page - 1)} disabled={page === 1} className={buttonClass}>&lt;</button>
         {pages.map((number, index) => number === '…'
           ? <span key={`ellipsis-${index}`} className="w-5 text-center text-xs text-slate-400 font-medium" aria-hidden="true">…</span>
-          : <button type="button" key={number} aria-label={`${number}페이지`} aria-current={number === page ? 'page' : undefined} onClick={() => onChange(number)} className={`min-w-8 h-8 px-2.5 rounded-xl border text-xs font-bold transition shadow-sm ${number === page ? 'border-accent-cyan bg-accent-cyan text-white shadow-glow-cyan' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'}`}>{number}</button>
+          : <button type="button" key={number} aria-label={`${number}페이지`} aria-current={number === page ? 'page' : undefined} onClick={() => onChange(number)} style={number === page ? { color: '#ffffff' } : undefined} className={`min-w-8 h-8 px-2.5 rounded-xl border text-xs font-bold transition shadow-sm ${number === page ? 'border-slate-900 bg-slate-900 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900'}`}>{number}</button>
         )}
         <button type="button" aria-label="다음 페이지" title="다음 페이지" onClick={() => onChange(page + 1)} disabled={page === pageCount} className={buttonClass}>&gt;</button>
         <button type="button" aria-label="마지막 페이지" title="마지막 페이지" onClick={() => onChange(pageCount)} disabled={page === pageCount} className={buttonClass}>&gt;&gt;</button>

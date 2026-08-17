@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, MessageCircle, ThumbsUp, Eye } from 'lucide-react'
 
-const MINDMAP_VIEW_BOX = Object.freeze({ x: -700, y: -230, width: 1400, height: 460 })
+const MINDMAP_VIEW_BOX = Object.freeze({ x: -700, y: -180, width: 1400, height: 360 })
 const MINDMAP_VIEW_BOX_VALUE = `${MINDMAP_VIEW_BOX.x} ${MINDMAP_VIEW_BOX.y} ${MINDMAP_VIEW_BOX.width} ${MINDMAP_VIEW_BOX.height}`
 const CENTER_FILL = '#1e293b'
 const CENTER_TEXT = '#ffffff'
@@ -52,7 +52,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
 
   // Bidirectional Radial Layout Calculations
   const layout = useMemo(() => {
-    const centerTitle = mindmap?.center || '오늘의 주식 기회 지도'
+    const centerTitle = '오늘의 키워드'
     const items = filteredPrimary
 
     const expansionsMap = new Map()
@@ -148,7 +148,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
       <div className="flex flex-col lg:flex-row gap-5 items-start">
         
         {/* Left Card: D3 Interactive Mindmap (70% width) */}
-        <div className="w-full lg:w-[70%] min-h-[520px] overflow-hidden bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
+        <div className="w-full lg:w-[70%] min-h-[400px] overflow-hidden bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <div>
@@ -158,7 +158,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             </div>
 
             {/* Mindmap SVG Container */}
-            <div className="relative w-full h-[450px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
+            <div className="relative w-full h-[360px] mt-4 flex items-center justify-center bg-white overflow-hidden rounded-xl border border-slate-100">
               <svg ref={svgRef} viewBox={MINDMAP_VIEW_BOX_VALUE} className="w-full h-full select-none">
                 <g ref={gRef}>
                   {/* Connection Lines */}
@@ -167,9 +167,9 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                       <path
                         d={`M 0,0 C ${node.x * 0.5},0 ${node.x * 0.5},${node.y} ${node.x},${node.y}`}
                         fill="none"
-                        stroke={selectedKeywords.has(node.keyword) ? '#7c3aed' : '#cbd5e1'}
-                        strokeWidth={selectedKeywords.has(node.keyword) ? '2' : '1.5'}
-                        opacity={selectedKeywords.has(node.keyword) ? '1' : '0.8'}
+                        stroke={selectedKeywords.has(node.keyword) ? '#7c3aed' : '#64748b'}
+                        strokeWidth="2"
+                        opacity="1"
                         className="transition-all duration-300"
                       />
 
@@ -178,10 +178,10 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           key={child.keyword}
                           d={`M ${node.x},${node.y} C ${node.x + child.direction * 60},${node.y} ${node.x + child.direction * 60},${child.y} ${child.x},${child.y}`}
                           fill="none"
-                          stroke="#e2e8f0"
-                          strokeWidth="1"
+                          stroke="#94a3b8"
+                          strokeWidth="1.5"
                           strokeDasharray="4 3"
-                          opacity="0.5"
+                          opacity="1"
                         />
                       ))}
                     </g>
@@ -217,7 +217,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           y={child.y + 4}
                           textAnchor="middle"
                           fill={isSelected ? '#7c3aed' : '#64748b'}
-                          fontSize="13"
+                          fontSize="14"
                           fontWeight="600"
                         >
                           {child.keyword.length > 11 ? `${child.keyword.slice(0, 11)}…` : child.keyword}
@@ -265,7 +265,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                           y={node.y + 4}
                           textAnchor="middle"
                           fill="#1e293b"
-                          fontSize="15"
+                          fontSize="17"
                           fontWeight="700"
                         >
                           {node.keyword.length > 12 ? `${node.keyword.slice(0, 12)}…` : node.keyword}
@@ -289,23 +289,13 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
                     />
                     <text
                       x="0"
-                      y="-3"
+                      y="7"
                       textAnchor="middle"
                       fill={CENTER_TEXT}
-                      fontSize="16"
+                      fontSize="20"
                       fontWeight="800"
                     >
                       {layout.center.title.length > 13 ? `${layout.center.title.slice(0, 13)}…` : layout.center.title}
-                    </text>
-                    <text
-                      x="0"
-                      y="17"
-                      textAnchor="middle"
-                      fill="#cbd5e1"
-                      fontSize="11"
-                      fontWeight="600"
-                    >
-                      주제 분석 중심
                     </text>
                   </g>
                 </g>
@@ -395,7 +385,7 @@ export default function KeywordMindMap({ mindmap, selectedKeywords = new Set(), 
             >
               <ChevronLeft size={15} />
             </button>
-            <span className="px-3 py-1 text-xs font-semibold bg-indigo-600 text-white rounded-lg">
+            <span className="px-3 py-1 text-xs font-bold bg-slate-900 text-white rounded-lg" style={{ color: '#ffffff' }}>
               {videoPage}
             </span>
             <button
