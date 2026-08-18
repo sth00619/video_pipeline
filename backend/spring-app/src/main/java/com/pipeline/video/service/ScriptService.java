@@ -23,6 +23,9 @@ public class ScriptService {
 
     static final List<String> SCRIPT_AUDIT_FIELDS = List.of(
             "verified_facts",
+            "suspect_facts",
+            "fact_check_summary",
+            "news_articles",
             "news_cross_check_status",
             "used_real_llm",
             "source_ref",
