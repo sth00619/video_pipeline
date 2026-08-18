@@ -221,7 +221,38 @@ def _candidate_evidence_context(
     }
 
 
-def _script_audit_fields(verified_facts: list[dict], source_videos: list[dict]) -> dict:
+def _news_articles_for_audit(news_articles: list[dict]) -> list[dict]:
+    """URL이 확인된 금융 기사만 SCRIPT 감사 계보 형식으로 정규화한다."""
+    audit_articles: list[dict] = []
+    seen_links: set[str] = set()
+    for article in news_articles or []:
+        if not isinstance(article, dict):
+            continue
+        link = str(article.get("link") or article.get("url") or "").strip()
+        if not link or link in seen_links:
+            continue
+        seen_links.add(link)
+        audit_articles.append({
+            "title": str(article.get("title") or "").strip(),
+            "link": link,
+            "outlet": str(article.get("outlet") or article.get("source") or "").strip(),
+            "pubDate": str(
+                article.get("pubDate")
+                or article.get("publishedAt")
+                or article.get("published_at")
+                or ""
+            ).strip(),
+        })
+        if len(audit_articles) >= 12:
+            break
+    return audit_articles
+
+
+def _script_audit_fields(
+    verified_facts: list[dict],
+    source_videos: list[dict],
+    news_articles: Optional[list[dict]] = None,
+) -> dict:
     """SCRIPT 에셋에 남길 출처 계보만 작고 결정론적인 형태로 정규화한다."""
     source_refs: list[str] = []
     for fact in verified_facts or []:
@@ -254,7 +285,53 @@ def _script_audit_fields(verified_facts: list[dict], source_videos: list[dict]) 
         })
         if len(audit_videos) >= 5:
             break
-    return {"source_ref": source_refs, "source_videos": audit_videos}
+    return {
+        "source_ref": source_refs,
+        "source_videos": audit_videos,
+        "news_articles": _news_articles_for_audit(news_articles or []),
+    }
+
+
+def _split_verified_facts(all_facts: list) -> tuple[list[dict], list[dict]]:
+    """모순이 없는 사실과 감사용 모순 사실을 분리한다."""
+    clean_facts: list[dict] = []
+    suspect_facts: list[dict] = []
+    for fact in all_facts or []:
+        if not isinstance(fact, dict):
+            continue
+        if bool(fact.get("contradiction_detected", False)):
+            suspect_facts.append(fact)
+        else:
+            # 단일 출처 사실은 버리지 않고 검증 상태를 그대로 보존한다.
+            clean_facts.append(fact)
+
+    if suspect_facts:
+        logger.warning(
+            "verified_facts에서 모순 사실 %d건 제거: %s",
+            len(suspect_facts),
+            [str(fact.get("fact") or "")[:40] for fact in suspect_facts],
+        )
+    return clean_facts, suspect_facts
+
+
+def _build_fact_check_summary(all_facts: list, *, suspect_count: Optional[int] = None) -> dict:
+    """전체 팩트체크 결과를 clean/suspect 분리 전 기준으로 집계한다."""
+    facts = [fact for fact in (all_facts or []) if isinstance(fact, dict)]
+    contradicted = (
+        int(suspect_count)
+        if suspect_count is not None
+        else sum(1 for fact in facts if fact.get("contradiction_detected"))
+    )
+    return {
+        "total": len(facts),
+        "cross_verified": sum(1 for fact in facts if fact.get("cross_verified")),
+        "single_source": sum(
+            1
+            for fact in facts
+            if not fact.get("cross_verified") and not fact.get("contradiction_detected")
+        ),
+        "contradicted": contradicted,
+    }
 
 
 _KR_FINANCIAL_NUMBER = re.compile(
@@ -780,9 +857,14 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             )
 
             # 3-Round 팩트체크
-            verified_facts, fact_check_log = self._multi_round_fact_check(
+            all_facts, fact_check_log = self._multi_round_fact_check(
                 keyword, category_label, market_data, selected_terms, keyword_news, target_minutes,
                 source_videos,
+            )
+            verified_facts, suspect_facts = _split_verified_facts(all_facts)
+            fact_check_summary = _build_fact_check_summary(
+                all_facts,
+                suspect_count=len(suspect_facts),
             )
 
             try:
@@ -973,7 +1055,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
         unit_validation = _validate_unit_usage(full_script)
         thumbnail_brief = _build_thumbnail_brief(keyword, sections, verified_facts)
         content_depth_quality = assess_script_content_depth(full_script, sections, verified_facts)
-        script_audit = _script_audit_fields(verified_facts, source_videos)
+        script_audit = _script_audit_fields(verified_facts, source_videos, keyword_news)
         # 주석·장면 지시를 붙인 뒤에도 승인 대본의 수치 안전 계약이 유지되는지
         # 최종 반환 직전에 한 번 더 확인한다.
         unverified_numbers = _has_unverified_financial_numbers(full_script, verified_facts)
@@ -998,6 +1080,9 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             "keyword_validation": keyword_validation,
             "unit_validation": unit_validation,
             "verified_facts": verified_facts,
+            "suspect_facts": suspect_facts,
+            "fact_check_summary": fact_check_summary,
+            "news_articles": script_audit["news_articles"],
             "source_ref": script_audit["source_ref"],
             "source_videos": script_audit["source_videos"],
             "fact_check_rounds": len(fact_check_log),
