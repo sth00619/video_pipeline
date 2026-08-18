@@ -227,7 +227,12 @@ def score_candidates(candidates: list[dict], news_keywords: list[dict], market_d
         recent_news_7d: list[dict] = []
 
         try:
-            recent_news_7d = extractor.search_recent_news(keyword or seed, max_age_hours=24 * 7, limit=12)
+            recent_news_7d = extractor.search_recent_news(
+                keyword or seed,
+                max_age_hours=24 * 7,
+                limit=12,
+                outlet_filter=True,
+            )
             recent_news_24h = [art for art in recent_news_7d if float(art.get("hoursSincePublish") or 999) <= 24]
         except Exception:
             recent_news_7d = []

@@ -7,7 +7,14 @@ class _NoNewsExtractor:
     def extract_kr_keywords(self, category: str, seed: str, top_n: int = 15):
         return []
 
-    def search_recent_news(self, query: str, max_age_hours: int = 72, limit: int = 6):
+    def search_recent_news(
+        self,
+        query: str,
+        max_age_hours: int = 72,
+        limit: int = 6,
+        outlet_filter: bool = False,
+    ):
+        _ = outlet_filter
         return []
 
 

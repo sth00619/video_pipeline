@@ -7,7 +7,8 @@ class FakeExtractor:
     def __init__(self, rows):
         self.rows = rows
 
-    def search_recent_news(self, query, max_age_hours=72, limit=6):
+    def search_recent_news(self, query, max_age_hours=72, limit=6, outlet_filter=False):
+        _ = outlet_filter
         return self.rows[:limit]
 
 

@@ -30,7 +30,7 @@ def test_script_news_collection_uses_outlet_filter(monkeypatch):
     }]
 
 
-def test_candidate_scoring_news_does_not_use_outlet_filter():
+def test_candidate_scoring_news_uses_same_outlet_filter_as_script():
     extractor = _RecordingNewsExtractor()
 
     score_candidates(
@@ -43,7 +43,7 @@ def test_candidate_scoring_news_does_not_use_outlet_filter():
     )
 
     assert extractor.calls
-    assert "outlet_filter" not in extractor.calls[0]
+    assert extractor.calls[0]["outlet_filter"] is True
 
 
 def test_zero_news_articles_logs_warning_not_raises(monkeypatch, caplog):

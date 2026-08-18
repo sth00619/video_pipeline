@@ -9,7 +9,14 @@ class DummyExtractor:
         self._news_7d = news_7d
         self._fail = fail
 
-    def search_recent_news(self, query: str, max_age_hours: int = 72, limit: int = 6):
+    def search_recent_news(
+        self,
+        query: str,
+        max_age_hours: int = 72,
+        limit: int = 6,
+        outlet_filter: bool = False,
+    ):
+        _ = outlet_filter
         if self._fail:
             raise RuntimeError("API failure simulated")
         return self._news_7d
