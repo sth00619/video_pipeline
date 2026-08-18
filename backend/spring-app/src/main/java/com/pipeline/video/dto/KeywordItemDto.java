@@ -98,6 +98,10 @@ public class KeywordItemDto {
     @JsonProperty("evidence")
     private Map<String, Object> evidence;
 
+    // 후보 점수에 사용된 금융 기사 계보. 선택 확정 후 스크립트 근거로 전달한다.
+    @JsonProperty("news_articles")
+    private List<Map<String, Object>> newsArticles;
+
     // 키워드가 추출된 원본 영상들의 메타 정보
     @JsonProperty("source_videos")
     private List<SourceVideoDto> sourceVideos;

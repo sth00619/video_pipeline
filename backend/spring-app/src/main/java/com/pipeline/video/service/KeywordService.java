@@ -183,6 +183,7 @@ public class KeywordService {
                                 if (!selectedKeyword.equals(String.valueOf(candidate.get("keyword")))) continue;
                                 target.put("score", candidate.get("score"));
                                 target.put("evidence", candidate.get("evidence"));
+                                target.put("news_articles", candidate.get("news_articles"));
                                 return;
                             }
                         } catch (Exception exception) {
