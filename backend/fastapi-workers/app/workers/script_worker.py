@@ -462,8 +462,7 @@ def _requires_script_manual_review(
     )
 
 
-_TOPIC_SCOPE_MIN_RATIO = 0.30
-_TOPIC_SCOPE_FALLBACK_RATIO = 0.15
+_TOPIC_SCOPE_MIN_RATIO = 0.15
 _KEYWORD_ALIAS_MAP: dict[str, list[str]] = {
     "삼성전자": ["삼성", "SAMSUNG", "SEC"],
     "SK하이닉스": ["하이닉스", "SK Hynix", "HYNIX"],
@@ -513,23 +512,30 @@ def _keyword_aliases(keyword: str) -> list[str]:
     return list(dict.fromkeys(alias for alias in aliases if alias and alias != normalized))
 
 
+def _all_search_terms(keyword: str) -> set[str]:
+    """전체 키워드와 2글자 이상 구성어, 등록 별칭을 검색어로 묶는다."""
+    normalized = str(keyword or "").strip()
+    terms: set[str] = {normalized} if normalized else set()
+    terms.update(part for part in normalized.split() if len(part) >= 2)
+    terms.update(_keyword_aliases(normalized))
+    return {term for term in terms if term}
+
+
 def _validate_topic_scope(script_text: str, keyword: str) -> dict:
-    """내레이션 문단 중 선택 주제와 직접 연결된 문단 비율을 검사한다."""
-    registered_aliases = _keyword_aliases(keyword)
-    threshold = _TOPIC_SCOPE_MIN_RATIO if registered_aliases else _TOPIC_SCOPE_FALLBACK_RATIO
+    """복합 키워드와 별칭을 포함해 주제 연결 문단이 15% 이상인지 검사한다."""
+    search_terms = _all_search_terms(keyword)
     paragraphs = [paragraph.strip() for paragraph in str(script_text or "").splitlines() if paragraph.strip()]
     if not paragraphs:
         return {
             "passed": False,
             "keyword_mention_ratio": 0.0,
-            "required_ratio": threshold,
+            "required_ratio": _TOPIC_SCOPE_MIN_RATIO,
             "total_paragraphs": 0,
             "keyword_paragraphs": 0,
+            "search_terms_used": len(search_terms),
         }
 
-    coverage_terms = _keyword_coverage_terms(_selected_keyword_terms(keyword))
-    needles = [str(keyword or "").strip(), *coverage_terms, *registered_aliases]
-    needles = [needle.casefold() for needle in needles if needle]
+    needles = [term.casefold() for term in search_terms]
     keyword_paragraphs = sum(
         1
         for paragraph in paragraphs
@@ -537,11 +543,12 @@ def _validate_topic_scope(script_text: str, keyword: str) -> dict:
     )
     ratio = keyword_paragraphs / len(paragraphs)
     return {
-        "passed": ratio >= threshold,
+        "passed": ratio >= _TOPIC_SCOPE_MIN_RATIO,
         "keyword_mention_ratio": round(ratio, 2),
-        "required_ratio": threshold,
+        "required_ratio": _TOPIC_SCOPE_MIN_RATIO,
         "total_paragraphs": len(paragraphs),
         "keyword_paragraphs": keyword_paragraphs,
+        "search_terms_used": len(search_terms),
     }
 
 

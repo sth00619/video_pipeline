@@ -86,7 +86,7 @@ def test_keyword_alias_counts_in_topic_scope():
         script = "\n".join([related_sentence] * 5 + ["시장 분석입니다."] * 5)
         result = _validate_topic_scope(script, keyword)
         assert result["keyword_mention_ratio"] == 0.5, keyword
-        assert result["required_ratio"] == 0.3, keyword
+        assert result["required_ratio"] == 0.15, keyword
         assert result["passed"] is True, keyword
 
     unregistered = _validate_topic_scope(
