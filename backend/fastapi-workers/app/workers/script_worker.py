@@ -461,6 +461,153 @@ def _requires_script_manual_review(
         or unverified_numbers
     )
 
+
+_TOPIC_SCOPE_MIN_RATIO = 0.30
+_TOPIC_SCOPE_FALLBACK_RATIO = 0.15
+_KEYWORD_ALIAS_MAP: dict[str, list[str]] = {
+    "삼성전자": ["삼성", "SAMSUNG", "SEC"],
+    "SK하이닉스": ["하이닉스", "SK Hynix", "HYNIX"],
+    "반도체": ["HBM", "DRAM", "낸드", "메모리", "파운드리"],
+    "코스피": ["KOSPI", "종합주가", "코스피200"],
+    "코스닥": ["KOSDAQ"],
+    "미국주식": ["미국 증시", "뉴욕 증시", "S&P500", "S&P 500", "나스닥", "NASDAQ", "NYSE", "월가"],
+    "미국증시": ["미국 주식", "뉴욕 증시", "S&P500", "S&P 500", "나스닥", "NASDAQ", "NYSE", "월가"],
+    "금리": ["기준금리", "정책금리", "연준", "Fed", "FOMC", "채권금리", "bps"],
+    "환율": ["달러", "USD", "원달러", "달러원", "원/달러", "USD/KRW", "엔화", "위안화"],
+    "ETF": ["KODEX", "TIGER", "ACE", "RISE", "SOL", "HANARO", "KOSEF", "상장지수", "상장지수펀드"],
+    "2차전지": ["이차전지", "배터리", "리튬", "양극재", "음극재", "전해질"],
+    "인공지능": ["AI", "생성형 AI", "생성형AI", "LLM", "GPU"],
+    "AI": ["인공지능", "생성형 AI", "생성형AI", "LLM", "GPU"],
+    "비트코인": ["BTC", "가상자산", "암호화폐"],
+    "이더리움": ["ETH", "가상자산", "암호화폐"],
+    "가상자산": ["암호화폐", "비트코인", "BTC", "이더리움", "ETH"],
+    "채권": ["국채", "회사채", "채권금리", "수익률곡선"],
+    "원자재": ["원유", "유가", "WTI", "브렌트유", "구리", "귀금속"],
+    "국제유가": ["원유", "유가", "WTI", "브렌트유", "OPEC"],
+    "인플레이션": ["물가", "CPI", "PCE", "소비자물가"],
+    "물가": ["인플레이션", "CPI", "PCE", "소비자물가"],
+    "고용": ["실업률", "비농업고용", "NFP", "고용지표"],
+    "배당": ["배당금", "배당수익률", "주주환원", "자사주"],
+    "IPO": ["기업공개", "공모주", "신규상장"],
+    "공매도": ["쇼트", "대차잔고", "숏커버"],
+    "전기차": ["EV", "완성차", "전기차 배터리", "충전 인프라"],
+    "로봇": ["휴머노이드", "협동로봇", "산업용 로봇", "로보틱스"],
+    "바이오": ["제약", "신약", "임상", "헬스케어"],
+    "방산": ["방위산업", "무기체계", "국방", "수출계약"],
+    "조선": ["선박", "수주", "LNG선", "조선업"],
+    "원전": ["원자력", "SMR", "원자로", "원전 수출"],
+}
+
+
+def _keyword_aliases(keyword: str) -> list[str]:
+    """명시적으로 검토된 종목·주제 별칭만 반환한다."""
+    normalized = str(keyword or "").strip()
+    aliases: list[str] = []
+    for canonical, values in _KEYWORD_ALIAS_MAP.items():
+        if re.fullmatch(r"[A-Za-z0-9]+", canonical):
+            matched = bool(re.search(rf"(?<![A-Za-z0-9]){re.escape(canonical)}(?![A-Za-z0-9])", normalized, re.IGNORECASE))
+        else:
+            matched = canonical.casefold() in normalized.casefold()
+        if matched:
+            aliases.extend([canonical, *values])
+    return list(dict.fromkeys(alias for alias in aliases if alias and alias != normalized))
+
+
+def _validate_topic_scope(script_text: str, keyword: str) -> dict:
+    """내레이션 문단 중 선택 주제와 직접 연결된 문단 비율을 검사한다."""
+    registered_aliases = _keyword_aliases(keyword)
+    threshold = _TOPIC_SCOPE_MIN_RATIO if registered_aliases else _TOPIC_SCOPE_FALLBACK_RATIO
+    paragraphs = [paragraph.strip() for paragraph in str(script_text or "").splitlines() if paragraph.strip()]
+    if not paragraphs:
+        return {
+            "passed": False,
+            "keyword_mention_ratio": 0.0,
+            "required_ratio": threshold,
+            "total_paragraphs": 0,
+            "keyword_paragraphs": 0,
+        }
+
+    coverage_terms = _keyword_coverage_terms(_selected_keyword_terms(keyword))
+    needles = [str(keyword or "").strip(), *coverage_terms, *registered_aliases]
+    needles = [needle.casefold() for needle in needles if needle]
+    keyword_paragraphs = sum(
+        1
+        for paragraph in paragraphs
+        if any(needle in paragraph.casefold() for needle in needles)
+    )
+    ratio = keyword_paragraphs / len(paragraphs)
+    return {
+        "passed": ratio >= threshold,
+        "keyword_mention_ratio": round(ratio, 2),
+        "required_ratio": threshold,
+        "total_paragraphs": len(paragraphs),
+        "keyword_paragraphs": keyword_paragraphs,
+    }
+
+
+def _synthesize_revision_instruction(deterministic: dict, keyword: str) -> str:
+    """Claude가 비운 수정 지시를 결정론 실패 원인으로 합성한다."""
+    parts: list[str] = []
+    repetitions = deterministic.get("repetitions") or []
+    if repetitions:
+        samples: list[str] = []
+        for repetition in repetitions[:3]:
+            if isinstance(repetition, dict):
+                indexes = repetition.get("sentence_indexes") or []
+                label = "·".join(str(index) for index in indexes)
+                samples.append(f"문장 {label}" if label else str(repetition)[:40])
+            else:
+                samples.append(str(repetition)[:40])
+        parts.append(f"다음 반복 표현을 제거하거나 다르게 표현하세요: {'; '.join(samples)}")
+
+    rhythm = deterministic.get("rhetorical_rhythm") or {}
+    if rhythm and not rhythm.get("passed", True):
+        parts.append("같은 종결 어미가 연속되는 구간에 질문·전환·강조·이유 문장을 추가하세요.")
+
+    spoken_pacing = deterministic.get("spoken_pacing") or {}
+    if spoken_pacing and not spoken_pacing.get("passed", True):
+        parts.append("한 문장이 너무 길어 청취자가 따라가기 어렵습니다. 문장을 분리하세요.")
+
+    topic_scope = deterministic.get("topic_scope") or {}
+    if topic_scope and not topic_scope.get("passed", True):
+        ratio = float(topic_scope.get("keyword_mention_ratio") or 0.0)
+        parts.append(
+            f"대본의 {(1 - ratio) * 100:.0f}%가 '{keyword}'와 직접 연결되지 않습니다. "
+            f"관련 없는 항목을 '{keyword}'의 인과관계로 연결하거나 제거하세요."
+        )
+    return " / ".join(parts)
+
+
+def _apply_flow_qa_contract(flow_qa: dict, script_text: str, keyword: str) -> dict:
+    """Flow QA에 주제 범위 게이트와 결정론 수정 지시를 결합한다."""
+    result = dict(flow_qa or {})
+    deterministic = dict(result.get("deterministic") or {})
+    topic_scope = _validate_topic_scope(script_text, keyword)
+    deterministic["topic_scope"] = topic_scope
+    result["deterministic"] = deterministic
+    repetitions_passed = not bool(deterministic.get("repetitions") or [])
+    rhythm_passed = bool((deterministic.get("rhetorical_rhythm") or {}).get("passed", True))
+    spoken_pacing_passed = bool((deterministic.get("spoken_pacing") or {}).get("passed", True))
+    result["passed"] = (
+        bool(result.get("passed"))
+        and repetitions_passed
+        and rhythm_passed
+        and spoken_pacing_passed
+        and topic_scope["passed"]
+    )
+
+    revision_instruction = str(result.get("revision_instruction") or "").strip()
+    if not result["passed"] and not revision_instruction:
+        revision_instruction = _synthesize_revision_instruction(deterministic, keyword)
+        if revision_instruction:
+            logger.info(
+                "revision_instruction 자동 합성 (결정론 실패 원인): %s",
+                revision_instruction[:100],
+            )
+    result["revision_instruction"] = revision_instruction
+    return result
+
+
 # 2026-08-05, 사용자 명시 지시: 문장 단위를 짧게(15~20자) 끊어 TTS에 맞는
 # 대본을 구상한 뒤, 5~6초 화면 단위 묶기는 별도 단계(pace_sections_for_runtime)
 # 에 맡긴다. 예전 26~38자 목표는 "문장 하나 = 화면 하나(5~6초)"를 생성
@@ -916,6 +1063,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             except Exception as exc:
                 logger.warning("대본 흐름 QA 실패: %s", exc)
                 flow_qa = {"passed": False, "method": "unavailable", "transition_issues": ["흐름 QA 호출 실패"]}
+            flow_qa = _apply_flow_qa_contract(flow_qa, full_script, keyword)
 
             # job 147(2026-08-04): flow_qa가 리듬 문제(같은 평서문 3문장 이상
             # 연속 등)를 잡아내도 아무도 고치지 않아, AUTO 모드가 조용히
@@ -941,6 +1089,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                             script=full_script,
                             narrative_plan=narrative_plan,
                         )
+                        flow_qa = _apply_flow_qa_contract(flow_qa, full_script, keyword)
                     except Exception as exc:
                         logger.warning("리듬 재검사 실패: %s", exc)
                         break
