@@ -1035,7 +1035,14 @@ export default function JobDetail() {
               isManual || (isGuided && ['keyword', 'tts'].includes(step.key)) || canRetryBlockedImageStep
             )
             const guidedGates = ['KEYWORD','SCRIPT','TTS','IMAGES','PREVIEW']
-            const showGuidedApprove = (isGuided || isAuto) && ss === 'active' && guidedGates.includes(step.gate)
+            // SCRIPT는 실제 LLM 에셋이 저장되고 hard-fail·수동 검토 계약을
+            // 통과한 뒤에만 승인할 수 있다. 다른 게이트의 기존 동작은 유지한다.
+            const scriptReady = step.gate !== 'SCRIPT' || (
+              scriptData !== null &&
+              scriptData?.used_real_llm === true &&
+              scriptData?.requires_manual_review !== true
+            )
+            const showGuidedApprove = (isGuided || isAuto) && ss === 'active' && guidedGates.includes(step.gate) && scriptReady
             const showManualApprove = isManual && ss === 'active' && runningStep !== step.key
 
             return (
