@@ -256,6 +256,134 @@ def _script_audit_fields(verified_facts: list[dict], source_videos: list[dict]) 
             break
     return {"source_ref": source_refs, "source_videos": audit_videos}
 
+
+_KR_FINANCIAL_NUMBER = re.compile(
+    r"\d[\d,]*(?:\.\d+)?\s*(?:억|조|만|달러|원|%|bp|bps)",
+    re.IGNORECASE | re.UNICODE,
+)
+
+
+def _content_blocks_text(content_blocks) -> str:
+    """Claude 응답 블록을 JSON 후보를 찾을 수 있는 단일 문자열로 합친다."""
+    if isinstance(content_blocks, str):
+        return content_blocks
+    if isinstance(content_blocks, list):
+        parts: list[str] = []
+        for block in content_blocks:
+            if hasattr(block, "text") and isinstance(block.text, str):
+                parts.append(block.text)
+            elif isinstance(block, str):
+                parts.append(block)
+            elif hasattr(block, "get"):
+                parts.append(block.get("text", "") or "")
+        return "".join(parts)
+    return str(content_blocks or "")
+
+
+def _extract_verified_facts_json_text(content_blocks) -> str:
+    """코드 펜스 또는 첫 JSON 배열부터 검증 사실 후보 원문을 추출한다."""
+    text = _content_blocks_text(content_blocks)
+    fenced = re.search(r"```(?:json)?\s*([\s\S]*?)```", text, re.IGNORECASE)
+    if fenced:
+        return fenced.group(1).strip()
+
+    start = text.find("[")
+    if start < 0:
+        return ""
+    end = text.rfind("]")
+    return text[start:end + 1].strip() if end >= start else text[start:].strip()
+
+
+def _append_missing_json_closers(raw: str) -> str:
+    """문자열 리터럴 밖에서 열린 JSON 배열·객체의 닫는 괄호만 보완한다."""
+    stack: list[str] = []
+    in_string = False
+    escaped = False
+    pairs = {"[": "]", "{": "}"}
+    for char in raw:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char in pairs:
+            stack.append(char)
+        elif char in ("]", "}"):
+            if not stack or pairs[stack[-1]] != char:
+                return raw
+            stack.pop()
+    return raw + "".join(pairs[char] for char in reversed(stack))
+
+
+def _parse_verified_facts_from_text(content_blocks) -> list:
+    """검증 사실 JSON을 제한적으로 복구하고, 실패는 반드시 상위로 전파한다."""
+    raw = _extract_verified_facts_json_text(content_blocks)
+    if not raw:
+        raise RuntimeError("verified_facts: Claude 응답에서 JSON 블록을 찾을 수 없습니다.")
+
+    candidates = [
+        raw,
+        re.sub(r",\s*([\]}])", r"\1", raw),
+        _append_missing_json_closers(raw),
+    ]
+    last_error: json.JSONDecodeError | None = None
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+            if not isinstance(parsed, list):
+                raise RuntimeError("verified_facts JSON 최상위 값은 배열이어야 합니다.")
+            return parsed
+        except json.JSONDecodeError as exc:
+            last_error = exc
+
+    logger.error(
+        "verified_facts JSON 3단계 복구 실패: %s\n원본(앞 200자): %.200s",
+        last_error,
+        raw,
+    )
+    raise RuntimeError(f"verified_facts JSON 파싱 불가: {last_error}") from last_error
+
+
+def _has_unverified_financial_numbers(script_text: str, verified_facts: list) -> bool:
+    """검증 사실이 전혀 없는데 금융 단위가 붙은 수치가 있으면 참을 반환한다."""
+    if verified_facts:
+        return False
+    return bool(_KR_FINANCIAL_NUMBER.search(script_text or ""))
+
+
+def _ensure_no_unverified_financial_numbers(script_text: str, verified_facts: list) -> None:
+    """미검증 금융 수치를 SCRIPT 에셋 저장 전에 hard-fail한다."""
+    if _has_unverified_financial_numbers(script_text, verified_facts):
+        raise RuntimeError(
+            "미검증 금융 수치가 대본에 포함됐지만 verified_facts가 비어 있습니다. "
+            "AGENTS.md 안전 계약 위반 — 스크립트 에셋 저장을 거부합니다."
+        )
+
+
+def _requires_script_manual_review(
+    *,
+    rejected_scenes: list,
+    provider_log: list[dict],
+    house_style_quality: dict,
+    flow_qa: dict,
+    unverified_numbers: bool,
+    autonomy_mode: str | None,
+) -> bool:
+    """자율 모드와 무관하게 SCRIPT 품질 실패를 사람 검토로 보낸다."""
+    _ = autonomy_mode
+    return (
+        bool(rejected_scenes)
+        or any(item.get("fallback") for item in provider_log)
+        or not house_style_quality.get("passed", False)
+        or not flow_qa.get("passed", True)
+        or unverified_numbers
+    )
+
 # 2026-08-05, 사용자 명시 지시: 문장 단위를 짧게(15~20자) 끊어 TTS에 맞는
 # 대본을 구상한 뒤, 5~6초 화면 단위 묶기는 별도 단계(pace_sections_for_runtime)
 # 에 맡긴다. 예전 26~38자 목표는 "문장 하나 = 화면 하나(5~6초)"를 생성
@@ -736,6 +864,11 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                         break
                 if flow_qa.get("passed"):
                     logger.info("Flow QA 리듬 문제가 재편집으로 해결됨 (job_id=%s)", job_id)
+
+            # 팩트 JSON이 유효하게 비어 있을 수는 있지만, 그 상태에서 금융
+            # 단위가 붙은 수치를 Claude 대본에 허용하면 Job 184가 재발한다.
+            # 이미지·TTS 계보가 만들어지기 전에 SCRIPT 단계에서 즉시 차단한다.
+            _ensure_no_unverified_financial_numbers(full_script, verified_facts)
             # 대본 원문은 그대로 두고, 짧은 문장 조각만 5~6초 화면 체류 단위로
             # 묶는다. 이후 이미지·TTS·ASS가 모두 이 동일한 장면 계보를 사용한다.
             sections = pace_sections_for_runtime(sections, int(length_contract["target_seconds"]))
@@ -841,6 +974,18 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
         thumbnail_brief = _build_thumbnail_brief(keyword, sections, verified_facts)
         content_depth_quality = assess_script_content_depth(full_script, sections, verified_facts)
         script_audit = _script_audit_fields(verified_facts, source_videos)
+        # 주석·장면 지시를 붙인 뒤에도 승인 대본의 수치 안전 계약이 유지되는지
+        # 최종 반환 직전에 한 번 더 확인한다.
+        unverified_numbers = _has_unverified_financial_numbers(full_script, verified_facts)
+        _ensure_no_unverified_financial_numbers(full_script, verified_facts)
+        requires_manual_review = _requires_script_manual_review(
+            rejected_scenes=rejected_scenes,
+            provider_log=self._llm_provider_log,
+            house_style_quality=house_style_quality,
+            flow_qa=flow_qa,
+            unverified_numbers=unverified_numbers,
+            autonomy_mode=getattr(self, "_current_autonomy_mode", None),
+        )
 
         return {
             "job_id": job_id,
@@ -866,11 +1011,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             "narrative_plan": narrative_plan,
             "flow_qa": flow_qa,
             "content_depth_quality": content_depth_quality,
-            "requires_manual_review": False if getattr(self, "_current_autonomy_mode", None) == "AUTO" else (
-                bool(rejected_scenes)
-                or any(item.get("fallback") for item in self._llm_provider_log)
-                or not house_style_quality["passed"]
-            ),
+            "requires_manual_review": requires_manual_review,
             "storytelling_profile": DEFAULT_SCRIPT_STYLE_PROFILE,
             "style_mix_applied": default_style_mix(category),
             "structure": narrative_plan.get("plan_id", "adaptive_plan"),
@@ -1267,33 +1408,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 
     def _parse_verified_facts(self, content_blocks) -> list:
         """Claude 응답에서 JSON 배열 파싱"""
-        text = ""
-        # content_blocks가 list 형태(response.content)이거나 단일 텍스트(string)일 수 있으므로 처리
-        if isinstance(content_blocks, str):
-            text = content_blocks
-        elif isinstance(content_blocks, list):
-            for block in content_blocks:
-                if hasattr(block, "text") and isinstance(block.text, str):
-                    text += block.text
-                elif isinstance(block, str):
-                    text += block
-                elif hasattr(block, "get"):
-                    text += block.get("text", "") or ""
-        else:
-            text = str(content_blocks)
-
-        parsed_facts = []
-        try:
-            json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
-            if json_match:
-                parsed_facts = json.loads(json_match.group(1).strip())
-            else:
-                arr_match = re.search(r'\[[\s\S]*\]', text)
-                if arr_match:
-                    parsed_facts = json.loads(arr_match.group())
-        except Exception as e:
-            logger.warning(f"verified_facts JSON 파싱 실패: {e}")
-            return []
+        parsed_facts = _parse_verified_facts_from_text(content_blocks)
 
         cleaned_facts = []
         for item in parsed_facts:
