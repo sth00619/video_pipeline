@@ -115,10 +115,14 @@ public class ScriptService {
 
         if (autonomyService.isAuto(job)) {
             if (Boolean.TRUE.equals(result.getRequiresManualReview())) {
-                log.warn("AUTO 모드 — 스크립트 수동 검토 사유가 있으나 AUTO 정책에 따라 자동 확정합니다: jobId={}", jobId);
-            } else {
-                log.info("AUTO 모드 — 스크립트 자동 확정");
+                log.error(
+                        "AUTO 모드: 스크립트 품질 검사 실패 — requires_manual_review=true. " +
+                                "자동 확정 차단. Job {}을 SCRIPT_PENDING 상태로 유지합니다.",
+                        jobId
+                );
+                return result;
             }
+            log.info("AUTO 모드 — 스크립트 자동 확정");
             confirm(jobId, result.getScript(), result.getSections(), "AUTO");
         } else if (Boolean.TRUE.equals(result.getRequiresManualReview())) {
             log.warn("스크립트 수동 검토 대기: jobId={}, reason=mock-or-provider-fallback", jobId);
