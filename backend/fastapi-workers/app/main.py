@@ -787,6 +787,7 @@ class ScriptGenerateRequest(BaseModel):
     job_id: Optional[int] = 0
     voice_id: Optional[str] = None
     market_data: Optional[dict] = None  # KeywordWorker에서 전달된 market_snapshot
+    candidate_evidence: Optional[dict] = None  # 선택 후보의 뉴스·YouTube 근거
     autonomy_mode: Optional[str] = None
 
     # 숫자 카드·차트는 명시적으로 켠 레거시 작업에서만 사용한다.
@@ -815,6 +816,7 @@ def script_generate(request: ScriptGenerateRequest):
             storytelling_profile=request.storytelling_profile,
             voice_id=request.voice_id,
             autonomy_mode=request.autonomy_mode,
+            candidate_evidence=request.candidate_evidence,
         )
     except ScriptResearchRequiredError as exc:
         return JSONResponse(status_code=422, content={

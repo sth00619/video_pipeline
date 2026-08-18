@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
 
@@ -52,26 +53,37 @@ public class ScriptService {
                 jobId, job.getKeyword(), targetMinutes, llmTargetMinutes, categoryName);
 
         String marketSnapshotJson = null;
+        Map<String, Object> candidateEvidence = null;
         try {
             // 해당 jobId의 KEYWORD 에셋 조회
             java.util.List<Asset> keywordAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.KEYWORD);
             for (Asset a : keywordAssets) {
-                if (a.getMetaJson() != null && a.getMetaJson().contains("market_snapshot")) {
-                    Map<String, Object> metaMap = objectMapper.readValue(a.getMetaJson(), Map.class);
-                    if (metaMap.containsKey("market_snapshot")) {
-                        marketSnapshotJson = objectMapper.writeValueAsString(metaMap.get("market_snapshot"));
-                        log.info("KEYWORD 에셋에서 market_snapshot 추출 성공");
-                        break;
+                if (a.getMetaJson() == null || a.getMetaJson().isBlank()) {
+                    continue;
+                }
+                Map<String, Object> metaMap = objectMapper.readValue(a.getMetaJson(), Map.class);
+                if (marketSnapshotJson == null && metaMap.containsKey("market_snapshot")) {
+                    marketSnapshotJson = objectMapper.writeValueAsString(metaMap.get("market_snapshot"));
+                    log.info("KEYWORD 에셋에서 market_snapshot 추출 성공");
+                }
+                if (candidateEvidence == null && metaMap.containsKey("candidates")) {
+                    candidateEvidence = extractCandidateEvidence(metaMap.get("candidates"), job.getKeyword());
+                    if (candidateEvidence != null) {
+                        log.info("KEYWORD 에셋에서 선택 후보 근거 추출 성공: keyword={}", job.getKeyword());
                     }
+                }
+                if (marketSnapshotJson != null && candidateEvidence != null) {
+                    break;
                 }
             }
         } catch (Exception ex) {
-            log.warn("KEYWORD 에셋에서 market_snapshot 추출 오류: {}", ex.getMessage());
+            log.warn("KEYWORD 에셋에서 시장 데이터·후보 근거 추출 오류: {}", ex.getMessage());
         }
 
         ScriptGenerateResponse result = fastApiClient.generateScript(
                 jobId, job.getKeyword(), llmTargetMinutes, categoryName, marketSnapshotJson,
-                job.isDataVisualsEnabled(), job.getTtsVoiceId(), job.getAutonomy().name());
+                job.isDataVisualsEnabled(), job.getTtsVoiceId(), job.getAutonomy().name(),
+                candidateEvidence);
 
         // 실제 Claude 호출 수를 워커가 반환한다. 팩트체크뿐 아니라 내러티브 플랜과
         // 흐름 QA도 비용에 반영해야 영상별 예산 상한을 우회하지 않는다.
@@ -102,6 +114,36 @@ public class ScriptService {
         }
 
         return result;
+    }
+
+    /**
+     * 선택 키워드와 정확히 일치하는 후보의 근거 필드만 다음 단계로 전달한다.
+     * 일치 후보가 없거나 입력 구조가 잘못된 경우 기존 생성 경로를 유지하도록 null을 반환한다.
+     */
+    Map<String, Object> extractCandidateEvidence(Object candidatesRaw, String jobKeyword) {
+        if (!(candidatesRaw instanceof List<?> candidates) || jobKeyword == null) {
+            return null;
+        }
+        String expected = jobKeyword.trim();
+        for (Object item : candidates) {
+            if (!(item instanceof Map<?, ?> candidate)) {
+                continue;
+            }
+            Object rawKeyword = candidate.get("keyword");
+            if (rawKeyword == null || !expected.equalsIgnoreCase(String.valueOf(rawKeyword).trim())) {
+                continue;
+            }
+            Map<String, Object> evidence = new LinkedHashMap<>();
+            evidence.put("keyword", rawKeyword);
+            evidence.put("news_articles", candidate.get("news_articles"));
+            evidence.put("source_videos", candidate.get("source_videos"));
+            evidence.put("evidence_video_ids", candidate.get("evidence_video_ids"));
+            evidence.put("youtube_score", candidate.get("youtube_score"));
+            evidence.put("news_cross_check_status", candidate.get("news_cross_check_status"));
+            evidence.put("evidence", candidate.get("evidence"));
+            return evidence;
+        }
+        return null;
     }
 
     /**

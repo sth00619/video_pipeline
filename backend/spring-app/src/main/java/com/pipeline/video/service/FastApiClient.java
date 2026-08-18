@@ -198,7 +198,8 @@ public class FastApiClient {
     // Phase 3-2 — 스크립트
     public ScriptGenerateResponse generateScript(Long jobId, String keyword, int targetMinutes,
                                                   String category, String marketSnapshotJson, boolean dataVisualsEnabled,
-                                                  String voiceId, String autonomyMode) {
+                                                  String voiceId, String autonomyMode,
+                                                  Map<String, Object> candidateEvidence) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -206,6 +207,8 @@ public class FastApiClient {
             bodyMap.put("target_minutes", targetMinutes);
             bodyMap.put("category", category != null ? category : "CUSTOM");
             bodyMap.put("data_visuals_enabled", dataVisualsEnabled);
+            // null도 명시적으로 전송해 FastAPI의 선택형 계약과 payload 형태를 고정한다.
+            bodyMap.put("candidate_evidence", candidateEvidence);
             if (voiceId != null && !voiceId.isBlank()) {
                 bodyMap.put("voice_id", voiceId);
             }

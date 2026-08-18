@@ -172,6 +172,54 @@ def _collect_keyword_news(terms: list[str]) -> list[dict]:
         )
     return rows[:12]
 
+
+def _candidate_evidence_context(
+    collected_news: list[dict],
+    candidate_evidence: Optional[dict],
+) -> dict:
+    """후보 근거를 병합하되 금융 언론사 필터와 사실 검증 경계를 유지한다."""
+    merged_news = [row for row in (collected_news or []) if isinstance(row, dict)]
+    source_videos: list[dict] = []
+    evidence_video_ids: list[str] = []
+    if not isinstance(candidate_evidence, dict):
+        return {
+            "merged_news": merged_news,
+            "source_videos": source_videos,
+            "evidence_video_ids": evidence_video_ids,
+        }
+
+    seen_news = {
+        str(row.get("link") or row.get("url") or row.get("title") or "").strip()
+        for row in merged_news
+    }
+    for row in candidate_evidence.get("news_articles") or []:
+        if not isinstance(row, dict):
+            continue
+        # 후보 점수 경로는 23개 금융 언론사 필터를 거치지 않는다. 출처가
+        # 명시된 기사만 받아 WO-Script-02의 필터 계약을 우회하지 않는다.
+        if not str(row.get("outlet") or "").strip():
+            continue
+        identity = str(row.get("link") or row.get("url") or row.get("title") or "").strip()
+        if not identity or identity in seen_news:
+            continue
+        seen_news.add(identity)
+        merged_news.append(row)
+
+    source_videos = [
+        row for row in (candidate_evidence.get("source_videos") or [])
+        if isinstance(row, dict)
+    ][:10]
+    evidence_video_ids = list(dict.fromkeys(
+        str(video_id).strip()
+        for video_id in (candidate_evidence.get("evidence_video_ids") or [])
+        if str(video_id).strip()
+    ))
+    return {
+        "merged_news": merged_news,
+        "source_videos": source_videos,
+        "evidence_video_ids": evidence_video_ids,
+    }
+
 # 2026-08-05, 사용자 명시 지시: 문장 단위를 짧게(15~20자) 끊어 TTS에 맞는
 # 대본을 구상한 뒤, 5~6초 화면 단위 묶기는 별도 단계(pace_sections_for_runtime)
 # 에 맡긴다. 예전 26~38자 목표는 "문장 하나 = 화면 하나(5~6초)"를 생성
@@ -510,7 +558,8 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                  data_visuals_enabled: bool = False,
                  storytelling_profile: str = DEFAULT_SCRIPT_STYLE_PROFILE,
                  voice_id: Optional[str] = None,
-                 autonomy_mode: Optional[str] = None) -> dict:
+                 autonomy_mode: Optional[str] = None,
+                 candidate_evidence: Optional[dict] = None) -> dict:
         self._current_autonomy_mode = autonomy_mode
         category_label = CATEGORY_LABELS.get(category, "주식시장")
         self._llm_provider_log: list[dict] = []
@@ -550,6 +599,16 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 
         try:
             keyword_news = _collect_keyword_news(selected_terms)
+            collected_news_count = len(keyword_news)
+            candidate_context = _candidate_evidence_context(keyword_news, candidate_evidence)
+            keyword_news = candidate_context["merged_news"]
+            source_videos = candidate_context["source_videos"]
+            if isinstance(candidate_evidence, dict):
+                logger.info(
+                    "candidate_evidence 병합: 후보 뉴스 추가=%s건, YouTube 문맥=%s건",
+                    max(0, len(keyword_news) - collected_news_count),
+                    len(source_videos),
+                )
             news_cross_check_status = (
                 "finance_outlet_articles_found"
                 if keyword_news
@@ -558,7 +617,8 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 
             # 3-Round 팩트체크
             verified_facts, fact_check_log = self._multi_round_fact_check(
-                keyword, category_label, market_data, selected_terms, keyword_news, target_minutes
+                keyword, category_label, market_data, selected_terms, keyword_news, target_minutes,
+                source_videos,
             )
 
             try:
@@ -584,6 +644,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 keyword, category_label, target_minutes, target_chars,
                 verified_facts, market_data, storytelling_profile,
                 selected_terms, keyword_news, length_contract, narrative_plan,
+                source_videos,
             )
             # P2/P3은 사실 생성이 아닌 수사 장치 보강만 하며, 각각 최대 한 번의
             # Claude 호출만 사용한다. 비활성화하면 기존 생성 결과를 그대로 둔다.
@@ -795,11 +856,13 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 
     def _multi_round_fact_check(self, keyword: str, category_label: str,
                                  market_data: dict, selected_terms: list[str],
-                                 keyword_news: list[dict], target_minutes: int) -> tuple[list, list]:
+                                 keyword_news: list[dict], target_minutes: int,
+                                 source_videos: Optional[list[dict]] = None) -> tuple[list, list]:
         messages = []
         fact_check_log = []
         market_json = json.dumps(market_data, ensure_ascii=False, indent=2)
         news_json = json.dumps(keyword_news, ensure_ascii=False, indent=2)
+        video_json = json.dumps(source_videos or [], ensure_ascii=False, indent=2)
         
         target_fact_count = max(5, int(target_minutes or 1) * 5)
 
@@ -811,6 +874,9 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 <keyword_news_evidence>
 {news_json}
 </keyword_news_evidence>
+<youtube_topic_context>
+{video_json}
+</youtube_topic_context>
 
 <task>
 위 실제 시장 데이터에서 '{keyword}' 관련 핵심 사실들을 {target_fact_count}개 내외로 추출하세요 (영상 길이 {target_minutes}분에 비례).
@@ -819,6 +885,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 3. 데이터에 없는 내용 절대 금지.
 4. Every fact must directly concern at least one selected keyword. General market context may only explain a supplied keyword fact; it must never replace the selected topic.
 5. Keep point changes and percentage changes as separate, labelled values.
+6. YouTube 영상은 주제·관심도 문맥일 뿐 금융 사실이나 수치의 독립 검증 출처가 아니다. 영상 제목·조회수만으로 사실을 만들거나 교차 검증하지 않는다.
 형식: 번호. [출처] 사실 내용
 </task>"""
 
@@ -851,11 +918,13 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                                        selected_terms: Optional[list[str]] = None,
                                        keyword_news: Optional[list[dict]] = None,
                                        length_contract: Optional[dict] = None,
-                                       narrative_plan: Optional[dict] = None):
+                                       narrative_plan: Optional[dict] = None,
+                                       source_videos: Optional[list[dict]] = None):
         facts_text = "\n".join(f"- {f['fact']} (상세 정보: {f.get('figure', 'N/A')}, 출처: {f.get('source_field', 'N/A')}, 신뢰도: {f.get('confidence', 0):.2f})" for f in verified_facts)
         market_summary = _build_market_summary_for_script(market_data)
         selected_terms = selected_terms or _selected_keyword_terms(keyword)
         keyword_news = keyword_news or []
+        source_videos = source_videos or []
         narrative_plan = narrative_plan or {"plan_id": "adaptive_plan", "story_beats": []}
         style_instruction = (
             "정보 공개 간격과 전환 횟수는 내러티브 플랜의 선택 근거와 검증 사실의 밀도에 맞춰 정한다. "
@@ -871,6 +940,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 <verified_facts>{facts_text}</verified_facts>
 <market_context>{market_summary}</market_context>
 <keyword_news_evidence>{evidence_text}</keyword_news_evidence>
+<youtube_topic_context>{json.dumps(source_videos, ensure_ascii=False)}</youtube_topic_context>
 <narrative_plan>{json.dumps(narrative_plan, ensure_ascii=False)}</narrative_plan>
 작성 규칙:
 - [대사], [비주얼 설명 (한국어)], [비주얼 프롬프트 (영어)], [감정] 포함
@@ -878,6 +948,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 - The selected keywords are mandatory subjects, not optional context. Every section must directly explain a selected keyword, its verified impact, or the relationship between the selected keyword and the category. Do not replace this with a generic market crash, geopolitical event, or index recap unless the supplied evidence explicitly connects it.
 - Mention every distinctive entity, concept, and time qualifier contained in the selected topic naturally at least once. The category is the analytical lens, not a substitute for the selected topic.
 - Use unit-safe facts only: percentages use '퍼센트', index or price changes use '포인트'; never call a percentage a point value.
+- YouTube 영상은 주제·관심도 문맥으로만 사용한다. 영상 제목·조회수·좋아요 수를 금융 사실이나 수치의 검증 근거로 인용하지 않는다.
 - Write continuous, readable narration. Image scenes are derived after narration is complete; do not pad, shorten, or duplicate narration to reach a scene count.
 - 내러티브 플랜의 story_beats 순서·전환 목표를 따른다. 플랜은 고정 문구나 고정 비율이 아니라 소재에 맞춘 편집 의도다. 사실의 자연스러운 설명에 필요하면 인접 비트를 합치거나 짧게 조절할 수 있지만, 새 사실을 만들지 않는다. {style_instruction}
 - 앞 문장이 질문이면 바로 다음 문장 또는 다음 씬에서 검증 사실로 답한다. 같은 사실은 역할이 달라질 때만 다시 언급한다. 마지막은 도입을 반복하지 말고, 플랜의 체크포인트를 자연스럽게 정리한다.
