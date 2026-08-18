@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import com.pipeline.video.dto.SceneImageDto;
@@ -65,6 +66,20 @@ public class LongformService {
         this.autonomyService = autonomyService;
         this.costService = costService;
         this.jobService = jobService;
+    }
+
+    static Map<String, Object> buildReassembledScriptMetadata(
+            String script,
+            List<Map<String, Object>> sections,
+            Map<String, Object> existingScriptMeta) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("script", script);
+        metadata.put("final", true);
+        metadata.put("char_count", script.length());
+        metadata.put("sections", sections);
+        ScriptService.copyNonEmptyAuditFields(existingScriptMeta, metadata);
+        metadata.putIfAbsent("verified_facts", List.of());
+        return metadata;
     }
 
     /**
@@ -377,16 +392,22 @@ public class LongformService {
             sec.put("section", scene.getSection() != null ? scene.getSection() : "scene_" + scene.getIndex());
             newSections.add(sec);
         }
+        Map<String, Object> existingScriptMeta = new LinkedHashMap<>();
+        try {
+            java.util.Optional<Asset> existingScriptAsset = assetRepository
+                    .findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
+            if (existingScriptAsset.isPresent()) {
+                existingScriptMeta = objectMapper.readValue(existingScriptAsset.get().getMetaJson(), Map.class);
+            }
+        } catch (Exception e) {
+            log.warn("재조립 전 SCRIPT 감사 계보 복원 실패: {}", e.getMessage());
+        }
+
         Asset finalScriptAsset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.SCRIPT)
-                .metaJson(safeJson(Map.of(
-                        "script", newScript,
-                        "final", true,
-                        "char_count", newScript.length(),
-                        "sections", newSections,
-                        "verified_facts", List.of()
-                )))
+                .metaJson(safeJson(buildReassembledScriptMetadata(
+                        newScript, newSections, existingScriptMeta)))
                 .build();
         assetRepository.save(finalScriptAsset);
 

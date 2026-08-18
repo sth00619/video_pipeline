@@ -44,6 +44,15 @@ public class ScriptGenerateResponse {
     @JsonProperty("verified_facts")
     private List<Map<String, Object>> verifiedFacts;
 
+    @JsonProperty("source_ref")
+    private List<String> sourceRef;
+
+    @JsonProperty("source_videos")
+    private List<Map<String, Object>> sourceVideos;
+
+    @JsonProperty("news_cross_check_status")
+    private String newsCrossCheckStatus;
+
     @JsonProperty("fact_check_rounds")
     private Integer factCheckRounds;
 

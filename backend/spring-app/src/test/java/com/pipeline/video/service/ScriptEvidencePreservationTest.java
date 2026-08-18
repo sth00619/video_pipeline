@@ -1,0 +1,129 @@
+package com.pipeline.video.service;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pipeline.video.domain.Asset;
+import com.pipeline.video.domain.AssetType;
+import com.pipeline.video.domain.Autonomy;
+import com.pipeline.video.domain.Category;
+import com.pipeline.video.domain.JobStatus;
+import com.pipeline.video.domain.VideoJob;
+import com.pipeline.video.dto.ScriptGenerateResponse;
+import com.pipeline.video.repository.AssetRepository;
+import com.pipeline.video.repository.VideoJobRepository;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class ScriptEvidencePreservationTest {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ScriptService scriptService = new ScriptService(null, null, null, null, null, null);
+
+    @Test
+    void initialScriptAsset_containsNewsCrossCheckStatus() throws Exception {
+        VideoJobRepository jobRepository = mock(VideoJobRepository.class);
+        AssetRepository assetRepository = mock(AssetRepository.class);
+        FastApiClient fastApiClient = mock(FastApiClient.class);
+        GateService gateService = mock(GateService.class);
+        AutonomyService autonomyService = mock(AutonomyService.class);
+        CostService costService = mock(CostService.class);
+        ScriptService service = new ScriptService(
+                jobRepository, assetRepository, fastApiClient,
+                gateService, autonomyService, costService);
+        VideoJob job = VideoJob.builder()
+                .id(1L)
+                .title("테스트")
+                .keyword("삼성전자 실적")
+                .category(Category.INDIVIDUAL_STOCK)
+                .status(JobStatus.SCRIPT_PENDING)
+                .autonomy(Autonomy.GUIDED)
+                .longformTargetMinutes(5)
+                .build();
+        ScriptGenerateResponse response = new ScriptGenerateResponse();
+        response.setScript("검증된 대본");
+        response.setSections(List.of());
+        response.setCharCount(7);
+        response.setLlmCallCount(3);
+        response.setRequiresManualReview(false);
+        response.setNewsCrossCheckStatus("finance_outlet_articles_found");
+        response.setSourceRef(List.of("한국경제"));
+        response.setSourceVideos(List.of(Map.of("video_id", "video-1")));
+        when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+        when(assetRepository.findByJobIdAndAssetType(1L, AssetType.KEYWORD)).thenReturn(List.of());
+        when(fastApiClient.generateScript(
+                eq(1L), eq("삼성전자 실적"), eq(5), eq("INDIVIDUAL_STOCK"),
+                isNull(), eq(false), isNull(), eq("GUIDED"), isNull()
+        )).thenReturn(response);
+        when(autonomyService.isAuto(job)).thenReturn(false);
+
+        service.generate(1L, "SONG");
+
+        ArgumentCaptor<Asset> assetCaptor = ArgumentCaptor.forClass(Asset.class);
+        verify(assetRepository).save(assetCaptor.capture());
+
+        Map<String, Object> stored = objectMapper.readValue(
+                assetCaptor.getValue().getMetaJson(), new TypeReference<>() {});
+
+        assertThat(assetCaptor.getValue().getAssetType()).isEqualTo(AssetType.SCRIPT);
+        assertThat(stored.get("news_cross_check_status")).isEqualTo("finance_outlet_articles_found");
+        assertThat(stored.get("source_ref")).isEqualTo(List.of("한국경제"));
+        assertThat(stored.get("source_videos")).isEqualTo(List.of(Map.of("video_id", "video-1")));
+    }
+
+    @Test
+    void confirmedScriptAsset_preservesVerifiedFacts() {
+        List<Map<String, Object>> facts = List.of(Map.of(
+                "fact", "검증된 실적",
+                "source_ref", List.of("DART", "한국경제")
+        ));
+        Map<String, Object> previous = Map.of("verified_facts", facts);
+
+        Map<String, Object> confirmed = scriptService.buildConfirmedScriptMetadata(
+                "확정 대본", List.of(), facts, Map.of("passed", true), previous);
+
+        assertThat(confirmed.get("verified_facts")).isEqualTo(facts);
+    }
+
+    @Test
+    void confirmedScriptAsset_preservesNewsCrossCheckStatus() {
+        Map<String, Object> previous = Map.of(
+                "news_cross_check_status", "finance_outlet_articles_found",
+                "used_real_llm", true,
+                "source_ref", List.of("한국경제"),
+                "source_videos", List.of(Map.of("video_id", "video-1"))
+        );
+
+        Map<String, Object> confirmed = scriptService.buildConfirmedScriptMetadata(
+                "확정 대본", List.of(), List.of(), Map.of("passed", true), previous);
+
+        assertThat(confirmed.get("news_cross_check_status")).isEqualTo("finance_outlet_articles_found");
+        assertThat(confirmed.get("used_real_llm")).isEqualTo(true);
+        assertThat(confirmed.get("source_ref")).isEqualTo(List.of("한국경제"));
+        assertThat(confirmed.get("source_videos")).isEqualTo(List.of(Map.of("video_id", "video-1")));
+    }
+
+    @Test
+    void longformReassembly_doesNotWipeVerifiedFacts() {
+        List<Map<String, Object>> facts = List.of(Map.of("fact", "유지할 검증 사실"));
+        Map<String, Object> existing = Map.of(
+                "verified_facts", facts,
+                "news_cross_check_status", "finance_outlet_articles_found"
+        );
+
+        Map<String, Object> rebuilt = LongformService.buildReassembledScriptMetadata(
+                "재조립 대본", List.of(), existing);
+
+        assertThat(rebuilt.get("verified_facts")).isEqualTo(facts);
+        assertThat(rebuilt.get("news_cross_check_status")).isEqualTo("finance_outlet_articles_found");
+    }
+}

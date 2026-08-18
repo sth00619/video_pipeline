@@ -220,6 +220,42 @@ def _candidate_evidence_context(
         "evidence_video_ids": evidence_video_ids,
     }
 
+
+def _script_audit_fields(verified_facts: list[dict], source_videos: list[dict]) -> dict:
+    """SCRIPT 에셋에 남길 출처 계보만 작고 결정론적인 형태로 정규화한다."""
+    source_refs: list[str] = []
+    for fact in verified_facts or []:
+        if not isinstance(fact, dict):
+            continue
+        raw_refs = fact.get("source_ref") or fact.get("source_field") or []
+        if not isinstance(raw_refs, list):
+            raw_refs = [raw_refs]
+        for raw_ref in raw_refs:
+            source_ref = str(raw_ref or "").strip()
+            if source_ref and source_ref not in source_refs:
+                source_refs.append(source_ref)
+
+    audit_videos = []
+    for video in source_videos or []:
+        if not isinstance(video, dict):
+            continue
+        video_id = str(video.get("videoId") or video.get("video_id") or "").strip()
+        if not video_id:
+            continue
+        audit_videos.append({
+            "video_id": video_id,
+            "title": str(video.get("title") or ""),
+            "channel": str(
+                video.get("channelTitle")
+                or video.get("channel_title")
+                or video.get("channel")
+                or ""
+            ),
+        })
+        if len(audit_videos) >= 5:
+            break
+    return {"source_ref": source_refs, "source_videos": audit_videos}
+
 # 2026-08-05, 사용자 명시 지시: 문장 단위를 짧게(15~20자) 끊어 TTS에 맞는
 # 대본을 구상한 뒤, 5~6초 화면 단위 묶기는 별도 단계(pace_sections_for_runtime)
 # 에 맡긴다. 예전 26~38자 목표는 "문장 하나 = 화면 하나(5~6초)"를 생성
@@ -804,6 +840,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
         unit_validation = _validate_unit_usage(full_script)
         thumbnail_brief = _build_thumbnail_brief(keyword, sections, verified_facts)
         content_depth_quality = assess_script_content_depth(full_script, sections, verified_facts)
+        script_audit = _script_audit_fields(verified_facts, source_videos)
 
         return {
             "job_id": job_id,
@@ -816,6 +853,8 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             "keyword_validation": keyword_validation,
             "unit_validation": unit_validation,
             "verified_facts": verified_facts,
+            "source_ref": script_audit["source_ref"],
+            "source_videos": script_audit["source_videos"],
             "fact_check_rounds": len(fact_check_log),
             "fact_check_log": fact_check_log,
             "news_cross_check_status": news_cross_check_status,

@@ -292,6 +292,16 @@ def score_candidates(candidates: list[dict], news_keywords: list[dict], market_d
             "category_score": category_score,
             "youtube_score": youtube_score,
             "metrics_available": youtube_score is not None,
+            "news_articles": [
+                {
+                    "title": str(article.get("title") or ""),
+                    "link": str(article.get("url") or article.get("link") or ""),
+                    "outlet": str(article.get("outlet") or ""),
+                    "pubDate": str(article.get("publishedAt") or article.get("pubDate") or ""),
+                }
+                for article in direct_news_7d
+                if str(article.get("url") or article.get("link") or "").strip()
+            ],
             "evidence": {
                 "news_count": len(direct_news_7d),
                 "latest_news_at": latest.isoformat() if latest else None,

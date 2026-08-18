@@ -21,6 +21,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ScriptService {
 
+    static final List<String> SCRIPT_AUDIT_FIELDS = List.of(
+            "verified_facts",
+            "news_cross_check_status",
+            "used_real_llm",
+            "source_ref",
+            "source_videos"
+    );
+
     private final VideoJobRepository jobRepository;
     private final AssetRepository assetRepository;
     private final FastApiClient fastApiClient;
@@ -197,14 +205,19 @@ public class ScriptService {
         // 최종 스크립트 텍스트를 파싱하여 섹션 분리 (사용자 수정 사항 반영)
         List<Map<String, Object>> sections = new java.util.ArrayList<>();
         List<Map<String, Object>> verifiedFacts = List.of();
+        Map<String, Object> previousScriptMeta = new LinkedHashMap<>();
         
         try {
-            // 기존 에셋에서 verified_facts만 복원
+            // 기존 에셋에서 검증 사실과 감사 계보를 함께 복원한다.
             java.util.Optional<Asset> prevAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
             if (prevAssetOpt.isPresent()) {
-                ScriptGenerateResponse prevDto = objectMapper.readValue(prevAssetOpt.get().getMetaJson(), ScriptGenerateResponse.class);
-                if (prevDto.getVerifiedFacts() != null) {
-                    verifiedFacts = prevDto.getVerifiedFacts();
+                previousScriptMeta = objectMapper.readValue(prevAssetOpt.get().getMetaJson(), Map.class);
+                Object rawFacts = previousScriptMeta.get("verified_facts");
+                if (rawFacts instanceof List<?> facts && !facts.isEmpty()) {
+                    verifiedFacts = facts.stream()
+                            .filter(Map.class::isInstance)
+                            .map(item -> (Map<String, Object>) item)
+                            .toList();
                 }
             }
         } catch (Exception e) {
@@ -308,12 +321,12 @@ public class ScriptService {
         if (sections.isEmpty()) {
             // 폴백: 이전 에셋에서 복원
             try {
-                java.util.Optional<Asset> prevAssetOpt = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT);
-                if (prevAssetOpt.isPresent()) {
-                    ScriptGenerateResponse prevDto = objectMapper.readValue(prevAssetOpt.get().getMetaJson(), ScriptGenerateResponse.class);
-                    if (prevDto.getSections() != null) {
-                        sections = prevDto.getSections();
-                    }
+                Object rawSections = previousScriptMeta.get("sections");
+                if (rawSections instanceof List<?> storedSections) {
+                    sections = storedSections.stream()
+                            .filter(Map.class::isInstance)
+                            .map(item -> (Map<String, Object>) item)
+                            .toList();
                 }
             } catch (Exception e) {
                 log.warn("이전 스크립트 에셋 복원 실패: {}", e.getMessage());
@@ -357,14 +370,8 @@ public class ScriptService {
         Asset finalAsset = Asset.builder()
                 .jobId(jobId)
                 .assetType(AssetType.SCRIPT)
-                .metaJson(safeJson(Map.of(
-                        "script", scriptToSave,
-                        "final", true,
-                        "char_count", scriptToSave.length(),
-                        "sections", sections,
-                        "verified_facts", verifiedFacts,
-                        "house_style_gate", houseStyleGate
-                )))
+                .metaJson(safeJson(buildConfirmedScriptMetadata(
+                        scriptToSave, sections, verifiedFacts, houseStyleGate, previousScriptMeta)))
                 .build();
         assetRepository.save(finalAsset);
 
@@ -374,6 +381,39 @@ public class ScriptService {
             log.info("스크립트 수정/재확정 완료 (상태 유지: {}): jobId={}", job.getStatus(), jobId);
         }
         log.info("스크립트 확정: jobId={}, length={}자, sections={}개", jobId, scriptToSave.length(), sections.size());
+    }
+
+    Map<String, Object> buildConfirmedScriptMetadata(
+            String script,
+            List<Map<String, Object>> sections,
+            List<Map<String, Object>> verifiedFacts,
+            Map<String, Object> houseStyleGate,
+            Map<String, Object> previousScriptMeta) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("script", script);
+        metadata.put("final", true);
+        metadata.put("char_count", script.length());
+        metadata.put("sections", sections);
+        metadata.put("house_style_gate", houseStyleGate);
+        copyNonEmptyAuditFields(previousScriptMeta, metadata);
+        metadata.putIfAbsent("verified_facts", verifiedFacts != null ? verifiedFacts : List.of());
+        return metadata;
+    }
+
+    static void copyNonEmptyAuditFields(Map<String, Object> source, Map<String, Object> target) {
+        if (source == null || target == null) {
+            return;
+        }
+        for (String field : SCRIPT_AUDIT_FIELDS) {
+            Object value = source.get(field);
+            if (value == null || value instanceof String text && text.isBlank()) {
+                continue;
+            }
+            if (value instanceof List<?> list && list.isEmpty()) {
+                continue;
+            }
+            target.putIfAbsent(field, value);
+        }
     }
 
     private List<Map<String, Object>> normalizeSectionsForProduction(List<Map<String, Object>> sourceSections) {
