@@ -36,8 +36,8 @@ def test_role_costume_library_has_the_phase_two_fifteen_assets():
 def test_locked_prompt_keeps_background_and_data_surface_in_one_cartoon_medium():
     prompt = build_prompt(fallback_spec("scene-1", "시장 위험을 설명합니다."), {"verified": True})
     lower = prompt.lower()
-    assert "non-negotiable art direction" in lower
-    assert "same hand-illustrated cartoon medium" in lower
+    assert "channel visual range" in lower
+    assert "coherent hand-illustrated medium" in lower
     assert "no photorealism" in lower
     assert "chalkboard" in lower
 

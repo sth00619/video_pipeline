@@ -1,0 +1,80 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "job52_root_cause_korean_text_character",
+      "attempt": 1,
+      "attempt_id": "661f0655d7b14dc49633b903294990f6",
+      "estimated_usd": 0.14,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-24T04:30:11.934661+00:00",
+      "request_metadata": {
+        "prompt_sha256": "99366793a23cc771584887e39abd1fdd3f7b378f594ced97381788befedd60dd",
+        "reference_sha256": [
+          "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136",
+          "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+        ],
+        "text_contract": {
+          "version": "scene-local-text-contract-v2",
+          "approved_texts": [
+            "영업이익"
+          ],
+          "generated_texts": [
+            "영업이익"
+          ],
+          "deterministic_texts": [],
+          "bubble_allowed": false,
+          "bubble_text": "",
+          "sources": [
+            "scene.screen_texts"
+          ]
+        }
+      },
+      "completed_at": "2026-08-24T04:30:17.040169+00:00",
+      "status_code": 503
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "job52_root_cause_korean_text_character",
+      "attempt": 1,
+      "attempt_id": "52602bbd3877441ab630f4ae7f52978f",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-24T04:30:59.775781+00:00",
+      "request_metadata": {
+        "prompt_sha256": "99366793a23cc771584887e39abd1fdd3f7b378f594ced97381788befedd60dd",
+        "reference_sha256": [
+          "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136",
+          "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+        ],
+        "text_contract": {
+          "version": "scene-local-text-contract-v2",
+          "approved_texts": [
+            "영업이익"
+          ],
+          "generated_texts": [
+            "영업이익"
+          ],
+          "deterministic_texts": [],
+          "bubble_allowed": false,
+          "bubble_text": "",
+          "sources": [
+            "scene.screen_texts"
+          ]
+        }
+      },
+      "completed_at": "2026-08-24T04:31:39.312953+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 254,
+  "budget_overrun_krw": 0
+}

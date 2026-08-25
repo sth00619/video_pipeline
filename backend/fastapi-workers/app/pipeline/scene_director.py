@@ -39,24 +39,28 @@ class SceneSpec:
 
 
 _ROLES = [
-    ("detective", "tan detective coat, deerstalker cap, magnifying glass", "inspecting a glowing clue board"),
-    ("factory mechanic", "safety-yellow mechanic coveralls, tool belt, hard hat", "tightening a huge industrial valve with a wrench"),
-    ("chef", "white chef jacket, tall chef hat, gold-trimmed apron", "carefully plating a dramatic financial recipe"),
-    ("cleanroom engineer", "white cleanroom suit, clear visor, blue gloves", "examining a luminous semiconductor wafer"),
-    ("miner", "headlamp helmet, work vest, pickaxe", "discovering a glowing seam in a chart-shaped mine"),
-    ("professor", "navy cardigan, round glasses, pointer", "explaining an oversized illustrated board"),
-    ("explorer", "field explorer vest, utility cap, compass", "crossing a rugged market terrain with a map"),
-    ("referee", "striped referee jacket, whistle", "calling a decisive market play"),
+    ("finance analyst", "scene-appropriate business outfit", "presenting the scene's central relationship"),
+    ("field reporter", "reporter outfit suited to the location and weather", "reporting from within the event"),
+    ("professor", "academic outfit chosen for this explanation", "using one pointer toward the teaching prop"),
+    ("semiconductor researcher", "laboratory coat and optional scene-appropriate goggles", "examining one semiconductor object"),
+    ("market investigator", "investigator-inspired outfit without police insignia", "inspecting one market clue"),
+    ("factory engineer", "industrial workwear suited to the machinery", "operating one relevant mechanism"),
+    ("stage host", "formal presentation outfit suited to the event", "revealing the result to an audience"),
 ]
 
 _SYSTEM = """You are the scene director for an original Korean finance YouTube channel.
 Goldie is an anthropomorphic GOLD COIN mascot: embossed dot rim, expressive cartoon eyes,
 rosy cheeks, white-gloved hands and thin dark legs. Do not copy any existing channel mascot.
-Convert each narration line into a physical visual metaphor Goldie performs. Never draw a literal
-number/chart as the main idea. Every scene needs a different role costume, concrete action, a
-rich themed setting, and 3-6 relevant props. Do not request a screen, dashboard, chart, sign, document,
-or anything with readable markings: all facts and Korean typography are post-production graphics. The entire frame is a 2D Korean webtoon illustration.
-Choose one physical visual object that can later anchor an overlay and leave a naturally low-detail continuous area nearby. Never create a speech bubble, label, blank white panel, text, or numeric display.
+Convert each narration line into the most suitable 2D editorial scene. Preserve the channel's shared
+gold-coin mascot drawing language, but do not freeze one face, navy outfit, hat, character size, or
+presenter pose across the video. Costume and expression may change substantially when the metaphor
+or location supports them. Never use an unrelated police, safety, academic, or laboratory costume
+merely to manufacture variety. Choose a coherent physical action and natural anatomy.
+Composition may be object-led, character-led, chart-led, split comparison, classroom, laboratory,
+control room, stage, or environmental storytelling. Use only the props needed by that scene; do not
+force a fixed prop count or a board into every frame. Background people are allowed when they explain
+the market mechanism. Text, numbers, bubbles, and their surfaces are planned separately, so do not
+invent them here. The entire frame remains within the same 2D Korean editorial-comic visual range.
 Return ONLY a JSON array, one object per requested scene, preserving scene_id. Keys: scene_id,
 headline (Korean, 2-8 characters), metaphor (Korean), character_role, character_costume,
 character_action, character_emotion, setting, props (English string array), camera,
@@ -79,18 +83,32 @@ _SCENE_TOOL = {
 
 
 def fallback_spec(scene_id: str, narration: str, index: int = 0) -> SceneSpec:
-    role, costume, action = _ROLES[index % len(_ROLES)]
+    if any(word in narration for word in ("반도체", "웨이퍼", "칩", "장비", "소재")):
+        role, costume, action = _ROLES[3]
+    elif any(word in narration for word in ("뜻", "개념", "원리", "설명", "왜")):
+        role, costume, action = _ROLES[2]
+    elif any(word in narration for word in ("공장", "생산", "공급망", "설비")):
+        role, costume, action = _ROLES[5]
+    elif any(word in narration for word in ("발표", "기록", "결과", "순위")):
+        role, costume, action = _ROLES[6]
+    elif any(word in narration for word in ("함정", "의문", "확인", "찾", "왜")):
+        role, costume, action = _ROLES[4]
+    elif any(word in narration for word in ("현장", "폭락", "급락", "항구", "수출")):
+        role, costume, action = _ROLES[1]
+    else:
+        role, costume, action = _ROLES[0]
     negative = any(word in narration for word in ("하락", "폭락", "위험", "부족", "경고", "매도"))
     positive = any(word in narration for word in ("상승", "성장", "호재", "개선", "돌파", "증가"))
     mood = "negative" if negative else ("positive" if positive else "neutral")
-    headline = "경고!" if negative else ("기회다!" if positive else "핵심은?!")
+    # 헤드라인은 메타데이터용이며 이미지에 자동으로 쓰거나 말풍선으로 만들지 않는다.
+    headline = "경고" if negative else ("회복" if positive else "핵심")
     return SceneSpec(
         scene_id=scene_id, narration=narration, headline=headline,
         metaphor="Goldie physically investigates the hidden mechanism behind the market move.",
         character_role=role, character_costume=costume, character_action=action,
         character_emotion="focused expression with expressive cartoon eyebrows",
         setting="a densely detailed Korean finance webtoon stage",
-        props=["unlabeled market arrows", "stacked sealed folders", "industrial finance machinery"],
+        props=["one scene-specific evidence prop", "one contextual economic mechanism"],
         camera="dynamic low-angle editorial shot", mood=mood,
     )
 
@@ -100,7 +118,7 @@ class SceneDirector:
 
     def __init__(self, api_key: str | None = None):
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        self.model = os.getenv("SCENE_DIRECTOR_MODEL", "claude-sonnet-4-6")
+        self.model = "claude-sonnet-4-6"
 
     def direct_batch(self, lines: list[tuple[str, str]], topic_context: str = "") -> list[SceneSpec]:
         fallbacks = [fallback_spec(scene_id, narration, index) for index, (scene_id, narration) in enumerate(lines)]
@@ -109,7 +127,14 @@ class SceneDirector:
         try:
             import anthropic
             payload = [{"scene_id": scene_id, "narration": narration} for scene_id, narration in lines]
-            client = anthropic.Anthropic(api_key=self.api_key)
+            # 장면 지시는 품질 보강 단계이며 결정론적 폴백이 있다.
+            # SDK 기본 재시도로 동일 대형 요청을 수 분간 반복해 이미지
+            # 재개를 막지 않도록 단일 150초 마감 후 폴백한다.
+            client = anthropic.Anthropic(
+                api_key=self.api_key,
+                timeout=150.0,
+                max_retries=0,
+            )
             response = client.messages.create(
                 model=self.model, max_tokens=min(16000, max(1800, 520 * len(payload))), system=cached_system(_SYSTEM),
                 messages=[{"role": "user", "content": f"Topic: {topic_context or 'Korean finance'}\nScenes: {json.dumps(payload, ensure_ascii=False)}"}],
@@ -135,7 +160,7 @@ class SceneDirector:
                     character_action=str(data.get("character_action") or base.character_action),
                     character_emotion=str(data.get("character_emotion") or base.character_emotion),
                     setting=str(data.get("setting") or base.setting),
-                    props=(props + base.props)[:max(3, len(props))] if len(props) < 3 else props,
+                    props=props or base.props,
                     camera=str(data.get("camera") or base.camera),
                     side_characters=str(data.get("side_characters") or ""),
                     mood=str(data.get("mood") or base.mood).lower(),

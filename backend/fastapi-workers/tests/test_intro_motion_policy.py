@@ -1,4 +1,5 @@
 from app.utils.intro_motion import select_intro_motion_scene_indices
+from app.workers import images_worker
 from app.workers.longform_worker import _build_kling_motion_prompt
 
 
@@ -43,6 +44,30 @@ def test_budget_cap_never_selects_later_scenes_or_exceeds_fal_limit():
     assert indices == set(range(6))
     assert target == 40
     assert actual == 30
+
+
+def test_one_minute_plan_skips_protected_opening_frames_and_backfills_safe_scenes():
+    scenes = _scenes(12)
+    scenes[0]["protected"] = True
+    scenes[2]["protected"] = True
+
+    indices, target, actual = select_intro_motion_scene_indices(
+        scenes,
+        60,
+        short_seconds=45,
+        long_seconds=60,
+        short_threshold=600,
+        max_clips=3,
+        scene_eligible=lambda scene: not scene.get("protected", False),
+    )
+
+    assert indices == {1, 3, 4}
+    assert target == 45
+    assert actual == 15
+
+
+def test_images_worker_has_the_shared_fal_metadata_guard_connected():
+    assert callable(images_worker.fal_motion_metadata_block_reasons)
 
 
 def test_motion_prompt_uses_delivery_metadata_and_locks_camera_and_layout():

@@ -45,8 +45,15 @@ def test_visual_mix_preflight_requires_three_modes_and_rotates_generated_archety
     }
     archetypes = [scene["archetype"] for scene in result["generated_scenes"]]
     assert all(left != right for left, right in zip(archetypes, archetypes[1:]))
-    assert all(scene["numeric_visual_policy"] == "prohibited" for scene in result["generated_scenes"])
-    assert all(scene["overlay_policy"] == "ass_subtitle_only" for scene in result["generated_scenes"])
+    semantic = [scene for scene in result["generated_scenes"] if scene["visual_mode"] == "semantic_illustration"]
+    information = [scene for scene in result["generated_scenes"] if scene["visual_mode"] == "archetype_explainer"]
+    assert all(scene["numeric_visual_policy"] == "prohibited" for scene in semantic)
+    assert all(scene["numeric_visual_policy"] == "verified_facts_deterministic_only" for scene in information)
+    assert all(scene["overlay_policy"] == "ass_subtitle_only" for scene in semantic)
+    assert all(
+        scene["overlay_policy"] == "approved_nonnumeric_source_and_deterministic_numeric_surface"
+        for scene in information
+    )
     assert all(scene["overlay_policy"] == "underline_highlight_and_source_credit_only" for scene in result["article_scenes"])
     assert result["motion_preflight"]["external_request_started"] is False
     assert result["motion_preflight"]["requires_explicit_editor_selection"] is True

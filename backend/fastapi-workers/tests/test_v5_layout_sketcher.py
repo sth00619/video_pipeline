@@ -45,4 +45,4 @@ def test_prompt_uses_text_only_layout_contract_without_guide_frame_request():
     prompt = build_prompt(BENCHMARK_SCENES[-1], layout_instruction=instruction).lower()
     assert "layout contract" in prompt
     assert "do not draw any layout guide" in prompt
-    assert "short english labels" in prompt
+    assert "do not use filler english labels" in prompt

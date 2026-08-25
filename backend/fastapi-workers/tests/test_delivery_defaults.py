@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from app import runtime_config
-from app.utils.script_length import make_length_contract
+from app.utils.script_length import effective_duration_tolerance, make_length_contract
 from app.workers.tts_worker import TtsWorker
 from app.workers.script_worker import _is_market_level_forecast
 
@@ -32,6 +32,24 @@ class DeliveryDefaultsTests(unittest.TestCase):
         ]
         # No native boundary/whitespace: do not cut through connected speech.
         self.assertEqual(TtsWorker._sentence_pause_points(characters), [])
+
+    @patch("app.utils.script_length.resolve_cpm", return_value=(473.87, 1))
+    def test_one_matching_real_tts_sample_corrects_the_next_script_length(self, _resolve_cpm):
+        contract = make_length_contract(5, base_cpm=445, speed=0.9)
+
+        self.assertEqual(contract["target_chars"], 2369)
+        self.assertEqual(contract["effective_cpm"], 473.87)
+        self.assertEqual(contract["calibration_samples"], 1)
+
+    @patch("app.runtime_config.value", return_value=0.25)
+    @patch("app.utils.script_length.resolve_cpm", return_value=(473.87, 1))
+    def test_broad_env_tolerance_cannot_allow_a_short_five_minute_script(self, _resolve_cpm, _value):
+        contract = make_length_contract(5, base_cpm=400, speed=0.9)
+
+        self.assertEqual(contract["min_chars"], 2251)
+        self.assertEqual(contract["max_chars"], 2487)
+        self.assertEqual(contract["tolerance_pct"], 5)
+        self.assertEqual(effective_duration_tolerance(0.25), 0.05)
 
     def test_default_images_are_pro_2k_with_a_mascot(self):
         self.assertEqual(runtime_config.value("image_quality_tier"), "pro")

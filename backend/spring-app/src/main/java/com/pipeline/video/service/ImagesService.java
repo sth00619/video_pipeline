@@ -33,6 +33,9 @@ import java.util.List;
 public class ImagesService {
 
     private static final String PROVIDER_CREDIT_ERROR_CODE = "IMAGE_PROVIDER_CREDIT_REQUIRED";
+    private static final String PROVIDER_TEMPORARILY_UNAVAILABLE_ERROR_CODE =
+            "IMAGE_PROVIDER_TEMPORARILY_UNAVAILABLE";
+    private static final String IMAGE_GENERATION_ALREADY_RUNNING = "Image generation is already running";
 
     /**
      * A provider billing/quota failure is terminal for this attempt, but not
@@ -41,6 +44,12 @@ public class ImagesService {
      */
     public static class ImageProviderRetryRequiredException extends RuntimeException {
         public ImageProviderRetryRequiredException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    public static class ImageProviderTemporarilyUnavailableException extends RuntimeException {
+        public ImageProviderTemporarilyUnavailableException(String message, Throwable cause) {
             super(message, cause);
         }
     }
@@ -55,7 +64,10 @@ public class ImagesService {
     private final CostService costService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Transactional(noRollbackFor = ImageProviderRetryRequiredException.class)
+    @Transactional(noRollbackFor = {
+            ImageProviderRetryRequiredException.class,
+            ImageProviderTemporarilyUnavailableException.class
+    })
     public ImagesGenerateResponse generate(Long jobId, String username) {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
@@ -116,12 +128,31 @@ public class ImagesService {
                     job.getAutonomy() == null ? null : job.getAutonomy().name(),
                     remainingBudget, PricingConfig.GEMINI_IMAGE_ONLY_POLICY_VERSION);
         } catch (RuntimeException e) {
+            if (isImageGenerationAlreadyRunning(e)) {
+                // GUIDED 화면의 명시적 생성 요청과 Temporal 재개가 동시에 도착할
+                // 수 있다. Redis 잠금이 이미 실제 한 건을 보호하고 있으므로 이를
+                // 작업 실패로 바꾸지 말고, 먼저 시작한 요청의 완료를 기다린다.
+                ImagesGenerateResponse alreadyRunning = new ImagesGenerateResponse();
+                alreadyRunning.setStatus("ALREADY_RUNNING");
+                alreadyRunning.setJobId(jobId);
+                alreadyRunning.setReviewReasons(List.of("동일 작업의 이미지 생성이 이미 진행 중입니다."));
+                log.info("중복 이미지 생성 요청을 정상 대기 상태로 처리: jobId={}", jobId);
+                return alreadyRunning;
+            }
             if (isProviderCreditRequired(e)) {
                 job.setStatus(JobStatus.IMAGES_RETRY_REQUIRED);
                 jobRepository.save(job);
                 log.warn("이미지 공급자 크레딧/쿼터 부족으로 재시도 대기: jobId={}", jobId);
                 throw new ImageProviderRetryRequiredException(
                         "이미지 공급자 크레딧 또는 쿼터가 부족합니다. 충전 후 이미지 생성만 다시 시도해 주세요.", e);
+            }
+            if (isProviderTemporarilyUnavailable(e)) {
+                job.setStatus(JobStatus.IMAGES_PENDING);
+                jobRepository.save(job);
+                log.warn("Gemini Pro 과부하로 이미지 생성 재개 대기: jobId={}", jobId);
+                throw new ImageProviderTemporarilyUnavailableException(
+                        "Gemini Pro 이미지 생성 서비스가 현재 과부하입니다. 완료된 씬은 보존됐으며 잠시 후 이미지 생성만 다시 시도할 수 있습니다.",
+                        e);
             }
             throw e;
         }
@@ -201,6 +232,26 @@ public class ImagesService {
         for (Throwable current = error; current != null; current = current.getCause()) {
             String message = current.getMessage();
             if (message != null && message.contains(PROVIDER_CREDIT_ERROR_CODE)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isProviderTemporarilyUnavailable(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            String message = current.getMessage();
+            if (message != null && message.contains(PROVIDER_TEMPORARILY_UNAVAILABLE_ERROR_CODE)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isImageGenerationAlreadyRunning(Throwable error) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            String message = current.getMessage();
+            if (message != null && message.contains(IMAGE_GENERATION_ALREADY_RUNNING)) {
                 return true;
             }
         }

@@ -1,0 +1,50 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "job52_root_cause_korean_text_character",
+      "attempt": 1,
+      "attempt_id": "ab412665e82140de9b5c24c70140c6cf",
+      "estimated_usd": 0.14,
+      "amount_krw": 254,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-24T05:24:17.268980+00:00",
+      "request_metadata": {
+        "prompt_sha256": "3f0e9f33c5fde5bb198195ac1cb2388783d38facebceb2ee75bbeff9184f213f",
+        "reference_sha256": [
+          "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6",
+          "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+          "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+          "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+          "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+        ],
+        "text_contract": {
+          "version": "scene-local-text-contract-v3-contextual-layout",
+          "approved_texts": [
+            "영업이익"
+          ],
+          "generated_texts": [
+            "영업이익"
+          ],
+          "deterministic_texts": [],
+          "surface_plan": [],
+          "surface_count": 0,
+          "bubble_policy": "unplanned",
+          "bubble_allowed": false,
+          "bubble_text": "",
+          "sources": [
+            "scene.screen_texts",
+            "scene.screen_text_plan"
+          ]
+        }
+      },
+      "completed_at": "2026-08-24T05:24:47.966151+00:00",
+      "status_code": 200
+    }
+  ],
+  "total_krw": 254,
+  "budget_overrun_krw": 0
+}

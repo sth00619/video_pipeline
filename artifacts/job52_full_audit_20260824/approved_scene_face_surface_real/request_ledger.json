@@ -1,0 +1,168 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "job52_root_cause_korean_text_character",
+      "attempt": 1,
+      "attempt_id": "252e2c53822f4610aa03ba295ccd0883",
+      "estimated_usd": 0.14,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "network_error",
+      "reserved_at": "2026-08-24T12:37:22.038372+00:00",
+      "request_metadata": {
+        "prompt_sha256": "c1d7f3c314edaa410007c87d66d1059fa70129d8291e664507fcbe7c9f1a029f",
+        "reference_sha256": [
+          "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+          "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+          "a2d2fee40b190d0efa1f78e30440db3fefffd2fe61a1b291d81cf7cfbf20c92c"
+        ],
+        "text_contract": {
+          "version": "scene-local-text-contract-v5-approved-scene-surface",
+          "approved_texts": [
+            "영업이익"
+          ],
+          "generated_texts": [
+            "영업이익"
+          ],
+          "deterministic_texts": [],
+          "surface_plan": [
+            {
+              "text": "영업이익",
+              "surface": "existing solid machine-mounted production monitor",
+              "surface_style": "opaque_equipment_display",
+              "role": "supporting_metric_label",
+              "prominence": "secondary",
+              "max_occurrences": 1
+            }
+          ],
+          "surface_count": 1,
+          "placement_mode": "explicit_plan",
+          "hierarchy_policy": "follow_explicit_scene_plan",
+          "surface_material_policy": "integrated_opaque_scene_surface",
+          "detached_translucent_card_allowed": false,
+          "bubble_policy": "unplanned",
+          "bubble_allowed": false,
+          "bubble_text": "",
+          "sources": [
+            "scene.screen_texts",
+            "scene.screen_text_plan"
+          ]
+        }
+      },
+      "completed_at": "2026-08-24T12:39:24.019666+00:00"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "job52_root_cause_korean_text_character",
+      "attempt": 1,
+      "attempt_id": "b350caca75e9483dacb11cccaac43a3d",
+      "estimated_usd": 0.14,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "network_error",
+      "reserved_at": "2026-08-24T12:40:03.177692+00:00",
+      "request_metadata": {
+        "prompt_sha256": "c1d7f3c314edaa410007c87d66d1059fa70129d8291e664507fcbe7c9f1a029f",
+        "reference_sha256": [
+          "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+          "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+          "a2d2fee40b190d0efa1f78e30440db3fefffd2fe61a1b291d81cf7cfbf20c92c"
+        ],
+        "text_contract": {
+          "version": "scene-local-text-contract-v5-approved-scene-surface",
+          "approved_texts": [
+            "영업이익"
+          ],
+          "generated_texts": [
+            "영업이익"
+          ],
+          "deterministic_texts": [],
+          "surface_plan": [
+            {
+              "text": "영업이익",
+              "surface": "existing solid machine-mounted production monitor",
+              "surface_style": "opaque_equipment_display",
+              "role": "supporting_metric_label",
+              "prominence": "secondary",
+              "max_occurrences": 1
+            }
+          ],
+          "surface_count": 1,
+          "placement_mode": "explicit_plan",
+          "hierarchy_policy": "follow_explicit_scene_plan",
+          "surface_material_policy": "integrated_opaque_scene_surface",
+          "detached_translucent_card_allowed": false,
+          "bubble_policy": "unplanned",
+          "bubble_allowed": false,
+          "bubble_text": "",
+          "sources": [
+            "scene.screen_texts",
+            "scene.screen_text_plan"
+          ]
+        }
+      },
+      "completed_at": "2026-08-24T12:42:06.778709+00:00"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "job52_root_cause_korean_text_character",
+      "attempt": 1,
+      "attempt_id": "dfad84ea09e14876940d0d4dc85335c9",
+      "estimated_usd": 0.14,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "network_error",
+      "reserved_at": "2026-08-24T12:44:18.876164+00:00",
+      "request_metadata": {
+        "prompt_sha256": "c1d7f3c314edaa410007c87d66d1059fa70129d8291e664507fcbe7c9f1a029f",
+        "reference_sha256": [
+          "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+          "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+          "a2d2fee40b190d0efa1f78e30440db3fefffd2fe61a1b291d81cf7cfbf20c92c"
+        ],
+        "text_contract": {
+          "version": "scene-local-text-contract-v5-approved-scene-surface",
+          "approved_texts": [
+            "영업이익"
+          ],
+          "generated_texts": [
+            "영업이익"
+          ],
+          "deterministic_texts": [],
+          "surface_plan": [
+            {
+              "text": "영업이익",
+              "surface": "existing solid machine-mounted production monitor",
+              "surface_style": "opaque_equipment_display",
+              "role": "supporting_metric_label",
+              "prominence": "secondary",
+              "max_occurrences": 1
+            }
+          ],
+          "surface_count": 1,
+          "placement_mode": "explicit_plan",
+          "hierarchy_policy": "follow_explicit_scene_plan",
+          "surface_material_policy": "integrated_opaque_scene_surface",
+          "detached_translucent_card_allowed": false,
+          "bubble_policy": "unplanned",
+          "bubble_allowed": false,
+          "bubble_text": "",
+          "sources": [
+            "scene.screen_texts",
+            "scene.screen_text_plan"
+          ]
+        }
+      },
+      "completed_at": "2026-08-24T12:49:22.579385+00:00"
+    }
+  ],
+  "total_krw": 0,
+  "budget_overrun_krw": 0
+}

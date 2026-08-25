@@ -1,0 +1,1433 @@
+{
+  "version": "fal-local-object-motion-preflight-v1",
+  "fal_called": false,
+  "scene_count": 53,
+  "selected_count": 2,
+  "eligible_count": 2,
+  "scenes": [
+    {
+      "scene_index": 0,
+      "scene_id": "script_scene_001",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:deterministic_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "커튼·리본·선물 상자 중 핵심 소품 하나만 짧게 열리거나 흔들림",
+      "secondary_motion": "마스코트의 고개 또는 한쪽 팔만 자연스럽게 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 1,
+      "scene_id": "script_scene_002",
+      "selected_candidate": true,
+      "eligible_before_image_ocr": true,
+      "block_reasons": [],
+      "primary_motion": "하락선이나 붉은 방향 화살표 한 개만 짧게 아래로 이동",
+      "secondary_motion": "마스코트의 눈·눈썹 반응과 한쪽 팔 동작만 작게 연결",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 2,
+      "scene_id": "script_scene_003",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "커튼·리본·선물 상자 중 핵심 소품 하나만 짧게 열리거나 흔들림",
+      "secondary_motion": "마스코트의 고개 또는 한쪽 팔만 자연스럽게 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 3,
+      "scene_id": "script_scene_004",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "하락선이나 붉은 방향 화살표 한 개만 짧게 아래로 이동",
+      "secondary_motion": "마스코트의 눈·눈썹 반응과 한쪽 팔 동작만 작게 연결",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 4,
+      "scene_id": "script_scene_005",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 5,
+      "scene_id": "script_scene_006",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:deterministic_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 6,
+      "scene_id": "script_scene_007",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 7,
+      "scene_id": "script_scene_008",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "하락선이나 붉은 방향 화살표 한 개만 짧게 아래로 이동",
+      "secondary_motion": "마스코트의 눈·눈썹 반응과 한쪽 팔 동작만 작게 연결",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 8,
+      "scene_id": "script_scene_009",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 9,
+      "scene_id": "script_scene_010",
+      "selected_candidate": true,
+      "eligible_before_image_ocr": true,
+      "block_reasons": [],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 10,
+      "scene_id": "script_scene_011",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:diagram",
+        "visual_text_policy:approved_generated_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 11,
+      "scene_id": "script_scene_012",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:deterministic_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 12,
+      "scene_id": "script_scene_013",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 13,
+      "scene_id": "script_scene_014",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 14,
+      "scene_id": "script_scene_015",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 15,
+      "scene_id": "script_scene_016",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 16,
+      "scene_id": "script_scene_017",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "커튼·리본·선물 상자 중 핵심 소품 하나만 짧게 열리거나 흔들림",
+      "secondary_motion": "마스코트의 고개 또는 한쪽 팔만 자연스럽게 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 17,
+      "scene_id": "script_scene_018",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:approved_generated_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "웨이퍼 컨베이어나 회로의 빛 흐름 한 개만 천천히 이동",
+      "secondary_motion": "연구 도구 또는 마스코트의 한쪽 손만 짧게 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 18,
+      "scene_id": "script_scene_019",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 19,
+      "scene_id": "script_scene_020",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 20,
+      "scene_id": "script_scene_021",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:diagram",
+        "visual_text_policy:deterministic_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 21,
+      "scene_id": "script_scene_022",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 22,
+      "scene_id": "script_scene_023",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 23,
+      "scene_id": "script_scene_024",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:approved_generated_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 24,
+      "scene_id": "script_scene_025",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "환율 게이지 바늘 또는 통화 흐름 표식 한 개만 이동",
+      "secondary_motion": "배경의 무문자 신호등 한 개만 한 번 점멸",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 25,
+      "scene_id": "script_scene_026",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "환율 게이지 바늘 또는 통화 흐름 표식 한 개만 이동",
+      "secondary_motion": "배경의 무문자 신호등 한 개만 한 번 점멸",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 26,
+      "scene_id": "script_scene_027",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "하락선이나 붉은 방향 화살표 한 개만 짧게 아래로 이동",
+      "secondary_motion": "마스코트의 눈·눈썹 반응과 한쪽 팔 동작만 작게 연결",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 27,
+      "scene_id": "script_scene_028",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 28,
+      "scene_id": "script_scene_029",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:approved_generated_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 29,
+      "scene_id": "script_scene_030",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 30,
+      "scene_id": "script_scene_031",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 31,
+      "scene_id": "script_scene_032",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "커튼·리본·선물 상자 중 핵심 소품 하나만 짧게 열리거나 흔들림",
+      "secondary_motion": "마스코트의 고개 또는 한쪽 팔만 자연스럽게 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 32,
+      "scene_id": "script_scene_033",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 33,
+      "scene_id": "script_scene_034",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:approved_generated_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "웨이퍼 컨베이어나 회로의 빛 흐름 한 개만 천천히 이동",
+      "secondary_motion": "연구 도구 또는 마스코트의 한쪽 손만 짧게 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 34,
+      "scene_id": "script_scene_035",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 35,
+      "scene_id": "script_scene_036",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 36,
+      "scene_id": "script_scene_037",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 37,
+      "scene_id": "script_scene_038",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 38,
+      "scene_id": "script_scene_039",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 39,
+      "scene_id": "script_scene_040",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:deterministic_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 40,
+      "scene_id": "script_scene_041",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:diagram",
+        "visual_text_policy:approved_generated_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 41,
+      "scene_id": "script_scene_042",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:diagram",
+        "motion_contract_ineligible"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 42,
+      "scene_id": "script_scene_043",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "커튼·리본·선물 상자 중 핵심 소품 하나만 짧게 열리거나 흔들림",
+      "secondary_motion": "마스코트의 고개 또는 한쪽 팔만 자연스럽게 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 43,
+      "scene_id": "script_scene_044",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 44,
+      "scene_id": "script_scene_045",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:diagram",
+        "visual_text_policy:approved_generated_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "하락선이나 붉은 방향 화살표 한 개만 짧게 아래로 이동",
+      "secondary_motion": "마스코트의 눈·눈썹 반응과 한쪽 팔 동작만 작게 연결",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 45,
+      "scene_id": "script_scene_046",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 46,
+      "scene_id": "script_scene_047",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 47,
+      "scene_id": "script_scene_048",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "visual_text_policy:deterministic_surface_text",
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 48,
+      "scene_id": "script_scene_049",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "환율 게이지 바늘 또는 통화 흐름 표식 한 개만 이동",
+      "secondary_motion": "배경의 무문자 신호등 한 개만 한 번 점멸",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 49,
+      "scene_id": "script_scene_050",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "motion_contract_ineligible",
+        "screen_texts"
+      ],
+      "primary_motion": "환율 게이지 바늘 또는 통화 흐름 표식 한 개만 이동",
+      "secondary_motion": "배경의 무문자 신호등 한 개만 한 번 점멸",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 50,
+      "scene_id": "script_scene_051",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "대본의 핵심 물리 소품 한 개만 3~5초 동안 작게 움직임",
+      "secondary_motion": "마스코트가 있으면 얼굴과 한쪽 팔만 최소 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 51,
+      "scene_id": "script_scene_052",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "screen_texts"
+      ],
+      "primary_motion": "하락선이나 붉은 방향 화살표 한 개만 짧게 아래로 이동",
+      "secondary_motion": "마스코트의 눈·눈썹 반응과 한쪽 팔 동작만 작게 연결",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    },
+    {
+      "scene_index": 52,
+      "scene_id": "script_scene_053",
+      "selected_candidate": false,
+      "eligible_before_image_ocr": false,
+      "block_reasons": [
+        "information_scene_type:metric",
+        "motion_contract_ineligible"
+      ],
+      "primary_motion": "커튼·리본·선물 상자 중 핵심 소품 하나만 짧게 열리거나 흔들림",
+      "secondary_motion": "마스코트의 고개 또는 한쪽 팔만 자연스럽게 반응",
+      "locked_elements": [
+        "카메라 위치와 줌",
+        "화면 가장자리와 전체 배경",
+        "모든 문자·숫자·차트 표면",
+        "캐릭터 얼굴 구조와 사지 개수"
+      ],
+      "forbidden_motion": [
+        "전 화면 지글링 또는 노이즈",
+        "전역 카메라 흔들림",
+        "글자·숫자 재그리기",
+        "배경 전체의 물결 왜곡",
+        "추가 손·팔·캐릭터 생성"
+      ],
+      "post_generation_gate": "motion_locality_v1_and_final_frame_text_integrity"
+    }
+  ],
+  "intro_motion_target_seconds": 45.0,
+  "intro_motion_planned_seconds": 10.0,
+  "estimated_total_seconds": 300.0,
+  "selected_scene_indices": [
+    1,
+    9
+  ],
+  "visual_mix_summary": {
+    "version": "longform-three-visual-mix-v1",
+    "scene_count": 53,
+    "counts": {
+      "archetype_explainer": 18,
+      "semantic_illustration": 35
+    },
+    "article_scene_ids": [],
+    "information_scene_ids": [
+      "script_scene_001",
+      "script_scene_006",
+      "script_scene_011",
+      "script_scene_012",
+      "script_scene_018",
+      "script_scene_021",
+      "script_scene_024",
+      "script_scene_027",
+      "script_scene_029",
+      "script_scene_034",
+      "script_scene_040",
+      "script_scene_041",
+      "script_scene_042",
+      "script_scene_045",
+      "script_scene_048",
+      "script_scene_049",
+      "script_scene_050",
+      "script_scene_053"
+    ],
+    "semantic_scene_ids": [
+      "script_scene_002",
+      "script_scene_003",
+      "script_scene_004",
+      "script_scene_005",
+      "script_scene_007",
+      "script_scene_008",
+      "script_scene_009",
+      "script_scene_010",
+      "script_scene_013",
+      "script_scene_014",
+      "script_scene_015",
+      "script_scene_016",
+      "script_scene_017",
+      "script_scene_019",
+      "script_scene_020",
+      "script_scene_022",
+      "script_scene_023",
+      "script_scene_025",
+      "script_scene_026",
+      "script_scene_028",
+      "script_scene_030",
+      "script_scene_031",
+      "script_scene_032",
+      "script_scene_033",
+      "script_scene_035",
+      "script_scene_036",
+      "script_scene_037",
+      "script_scene_038",
+      "script_scene_039",
+      "script_scene_043",
+      "script_scene_044",
+      "script_scene_046",
+      "script_scene_047",
+      "script_scene_051",
+      "script_scene_052"
+    ]
+  }
+}

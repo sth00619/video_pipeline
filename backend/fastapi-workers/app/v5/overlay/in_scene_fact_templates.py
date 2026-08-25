@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from PIL import Image, ImageDraw, ImageFont
@@ -38,10 +39,18 @@ class InSceneTemplate:
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont:
-    # 영문 전광판/계산대 글꼴에는 Arial Bold가 원본 카툰의 두꺼운 산세리프에
-    # 가장 가깝다. 환경에 없을 경우 Pillow 기본 글꼴로 조용히 바꾸지 않고 실패한다.
-    path = "C:/Windows/Fonts/arialbd.ttf"
-    return ImageFont.truetype(path, size=size)
+    # 운영체제별 굵은 산세리프 후보를 명시적으로 순회한다. Pillow 기본 글꼴로
+    # 조용히 낮추지 않으며, 승인된 후보가 하나도 없을 때만 실패한다.
+    candidates = (
+        "C:/Windows/Fonts/arialbd.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+        "/app/assets/fonts/BlackHanSans-Regular.ttf",
+    )
+    for candidate in candidates:
+        if Path(candidate).is_file():
+            return ImageFont.truetype(candidate, size=size)
+    raise OSError("그림 내부 정보 표면에 사용할 굵은 글꼴이 없습니다.")
 
 
 def _fit(text: str, max_width: int, start_size: int) -> ImageFont.FreeTypeFont:

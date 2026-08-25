@@ -331,6 +331,17 @@ export default function JobDetail() {
     }
   })
 
+  const revalidateScriptMut = useMutation({
+    mutationFn: () => jobsApi.revalidateScript(id),
+    onSuccess: () => {
+      qc.invalidateQueries(['job', id])
+      qc.invalidateQueries(['assets', id, 'SCRIPT'])
+    },
+    onError: (err) => {
+      alert('스크립트 재검증 실패: ' + (err.response?.data?.message || err.message))
+    },
+  })
+
   const confirmKeywordMut = useMutation({
     mutationFn: (keyword) => jobsApi.confirmKeyword(id, keyword),
     onSuccess: () => {
@@ -1031,8 +1042,11 @@ export default function JobDetail() {
             const ss = getStepStatus(step, job, approvals)
             const approval = approvals.find(a => a.gate === step.gate)
             const canRetryBlockedImageStep = job.status === 'IMAGES_RETRY_REQUIRED' && step.key === 'images'
+            // GUIDED 워크플로는 각 생성 Activity를 자동 실행하지 않는다.
+            // 따라서 키워드·TTS뿐 아니라 대본, 이미지, 조립 단계에도 실제
+            // 실행 버튼이 있어야 승인 게이트까지 진행할 수 있다.
             const showRun = ss === 'active' && runningStep === null && (
-              isManual || (isGuided && ['keyword', 'tts'].includes(step.key)) || canRetryBlockedImageStep
+              isManual || isGuided || canRetryBlockedImageStep
             )
             const guidedGates = ['KEYWORD','SCRIPT','TTS','IMAGES','PREVIEW']
             // SCRIPT는 실제 LLM 에셋이 저장되고 hard-fail·수동 검토 계약을
@@ -1062,6 +1076,16 @@ export default function JobDetail() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {step.gate === 'SCRIPT' && ss === 'active' && scriptData?.requires_manual_review === true && (
+                      <button
+                        type="button"
+                        onClick={() => revalidateScriptMut.mutate()}
+                        disabled={revalidateScriptMut.isPending || !!runningStep}
+                        className="text-xs bg-amber-50 text-amber-700 border border-amber-300 px-3 py-2 rounded-xl hover:bg-amber-100 transition font-semibold disabled:opacity-50"
+                      >
+                        {revalidateScriptMut.isPending ? '재검증 중…' : '최신 기준으로 재검증'}
+                      </button>
+                    )}
                     {showRun && (
                       <div className="flex items-center gap-2">
                         {step.key === 'tts' && (showRun || (isGuided && ss === 'active')) && (
@@ -1162,7 +1186,7 @@ export default function JobDetail() {
                       <div className="flex items-center justify-end text-gray-200 font-semibold">
                         <div className="text-navy-400 text-xs">
                           목표 분량: <span className="text-accent-cyan">{job.longformTargetMinutes || 1}분</span>
-                          (약 <span className="text-accent-cyan">{(job.longformTargetMinutes || 1) * 650}자</span> 생성)
+                          (동일 음성 실측 기준 약 <span className="text-accent-cyan">{Math.round((job.longformTargetMinutes || 1) * 475)}자</span> 생성)
                         </div>
                       </div>
                     )}

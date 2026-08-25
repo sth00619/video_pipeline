@@ -150,9 +150,61 @@ class ScriptEvidencePreservationTest {
     }
 
     @Test
+    void scriptResponse_preservesNarrationContractForLaterCaptionImageSync() throws Exception {
+        String json = """
+                {"narration_contract": {
+                    "version": "narration-source-v1",
+                    "canonical_text_sha256": "abc123",
+                    "section_count": 2
+                }}
+                """;
+
+        ScriptGenerateResponse dto = objectMapper.readValue(json, ScriptGenerateResponse.class);
+
+        assertThat(dto.getNarrationContract())
+                .containsEntry("version", "narration-source-v1")
+                .containsEntry("section_count", 2);
+    }
+
+    @Test
     void auditFields_includeNewsArticlesSuspectFactsAndFactCheckSummary() {
         assertThat(ScriptService.SCRIPT_AUDIT_FIELDS)
-                .contains("news_articles", "suspect_facts", "fact_check_summary");
+                .contains(
+                        "news_articles",
+                        "suspect_facts",
+                        "fact_check_summary",
+                        "flow_qa",
+                        "requires_manual_review",
+                        "narration_contract");
+    }
+
+    @Test
+    void confirmedAndReassembledScriptAssets_preserveNarrationAndQualityContracts() {
+        Map<String, Object> narrationContract = Map.of(
+                "version", "narration-source-v1",
+                "canonical_text_sha256", "abc123",
+                "section_count", 49
+        );
+        Map<String, Object> flowQa = Map.of("passed", true);
+        Map<String, Object> previous = Map.of(
+                "narration_contract", narrationContract,
+                "flow_qa", flowQa,
+                "requires_manual_review", false,
+                "keyword_validation", Map.of("passed", true),
+                "unit_validation", Map.of("passed", true)
+        );
+
+        Map<String, Object> confirmed = scriptService.buildConfirmedScriptMetadata(
+                "확정 대본", List.of(), List.of(), Map.of("passed", true), previous);
+        Map<String, Object> rebuilt = LongformService.buildReassembledScriptMetadata(
+                "재조립 대본", List.of(), confirmed);
+
+        assertThat(confirmed.get("narration_contract")).isEqualTo(narrationContract);
+        assertThat(confirmed.get("flow_qa")).isEqualTo(flowQa);
+        assertThat(confirmed.get("requires_manual_review")).isEqualTo(false);
+        assertThat(rebuilt.get("narration_contract")).isEqualTo(narrationContract);
+        assertThat(rebuilt.get("flow_qa")).isEqualTo(flowQa);
+        assertThat(rebuilt.get("requires_manual_review")).isEqualTo(false);
     }
 
     @Test

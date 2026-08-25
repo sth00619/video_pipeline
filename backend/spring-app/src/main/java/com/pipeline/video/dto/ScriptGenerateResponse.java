@@ -96,4 +96,9 @@ public class ScriptGenerateResponse {
 
     @JsonProperty("quality_report")
     private Map<String, Object> qualityReport;
+
+    /** 승인 대본과 장면별 TTS 원문 해시 계보. 알 수 없는 필드로 버리면
+     * 이미지 단계가 생성 시점의 장면 경계를 감사할 수 없다. */
+    @JsonProperty("narration_contract")
+    private Map<String, Object> narrationContract;
 }

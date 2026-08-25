@@ -64,6 +64,51 @@ def _intro_frame_difference(video_path: str) -> float:
     return round(sum(abs(left - right) for left, right in zip(first, later)) / (len(first) * 255), 5)
 
 
+def _frame_difference(video_path: str, first_position: float, later_position: float) -> float:
+    first = _frame_signature(video_path, first_position)
+    later = _frame_signature(video_path, later_position)
+    if not first or len(first) != len(later):
+        return 0.0
+    return round(sum(abs(left - right) for left, right in zip(first, later)) / (len(first) * 255), 5)
+
+
+def _delivered_motion_frame_differences(
+    video_path: str,
+    motion_plan: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """실제 Fal 장면 내부 프레임만 비교해 정적 도입부를 오탐하지 않는다."""
+    delivered = {
+        int(index)
+        for index in motion_plan.get("delivered_scene_indices") or []
+        if isinstance(index, (int, float, str)) and str(index).isdigit()
+    }
+    rows: list[dict[str, Any]] = []
+    for window in motion_plan.get("scene_windows") or []:
+        try:
+            index = int(window["index"])
+            start = float(window["start_seconds"])
+            end = float(window["end_seconds"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if index not in delivered or end - start < 0.35:
+            continue
+        first_position = min(end - 0.10, start + 0.08)
+        later_position = min(end - 0.08, start + 1.50)
+        if later_position <= first_position:
+            continue
+        rows.append({
+            "index": index,
+            "start_seconds": round(start, 3),
+            "end_seconds": round(end, 3),
+            "normalized_difference": _frame_difference(
+                video_path,
+                first_position,
+                later_position,
+            ),
+        })
+    return rows
+
+
 def build_output_qc_report(
     *,
     job_id: int,
@@ -78,6 +123,7 @@ def build_output_qc_report(
     planned_kling: int,
     actual_kling: int,
     fal_failures: dict[int, str],
+    kling_motion_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     probe = _ffprobe(output_path)
     video = next((s for s in probe.get("streams", []) if s.get("codec_type") == "video"), {})
@@ -92,7 +138,45 @@ def build_output_qc_report(
     first_sentence = request_meta.get("first_sentence") or first_chunk_text
     request_provenance = "provider_request" if request_meta else "persisted_tts_chunks"
     leading = _leading_silence_seconds(audio_path) if Path(audio_path).exists() else 0.0
-    frame_difference = _intro_frame_difference(output_path)
+    motion_plan = kling_motion_plan if isinstance(kling_motion_plan, dict) else {}
+    delivered_frame_differences = _delivered_motion_frame_differences(output_path, motion_plan)
+    if delivered_frame_differences:
+        frame_difference = max(row["normalized_difference"] for row in delivered_frame_differences)
+    else:
+        # 구버전 결과에는 장면 시간창이 없으므로 기존 도입부 비교를 유지한다.
+        frame_difference = _intro_frame_difference(output_path)
+    delivered_indices = motion_plan.get("delivered_scene_indices") or []
+    scene_windows = motion_plan.get("scene_windows") or []
+    delivered_windows = [
+        window for window in scene_windows
+        if window.get("index") in delivered_indices
+    ]
+    first_motion_start = min(
+        (float(window.get("start_seconds", 0.0)) for window in delivered_windows),
+        default=None,
+    )
+    try:
+        video_duration = float(
+            motion_plan.get("video_duration_seconds")
+            or probe.get("format", {}).get("duration")
+            or 0.0
+        )
+    except (TypeError, ValueError):
+        video_duration = 0.0
+    early_limit = min(60.0, video_duration * 0.30) if video_duration > 0 else 0.0
+    try:
+        selected_motion_seconds = float(motion_plan.get("selected_scene_seconds") or 0.0)
+    except (TypeError, ValueError):
+        selected_motion_seconds = 0.0
+    motion_ratio = selected_motion_seconds / video_duration if video_duration > 0 else 0.0
+    motion_timing_passed = (
+        planned_kling == 0
+        or (
+            first_motion_start is not None
+            and first_motion_start <= early_limit + 1e-6
+            and 0.0 < motion_ratio <= 0.35
+        )
+    )
     styles = sorted({str(scene.get("style_profile")) for scene in scenes if scene.get("style_profile")})
 
     checks = {
@@ -141,6 +225,16 @@ def build_output_qc_report(
         "intro_motion_frame_diff": {
             "passed": planned_kling == 0 or frame_difference >= 0.002,
             "normalized_difference": frame_difference,
+            "delivered_scene_differences": delivered_frame_differences,
+        },
+        "intro_motion_timing": {
+            "passed": motion_timing_passed,
+            "first_motion_start_seconds": (
+                round(first_motion_start, 3) if first_motion_start is not None else None
+            ),
+            "early_limit_seconds": round(early_limit, 3),
+            "selected_motion_seconds": round(selected_motion_seconds, 3),
+            "motion_ratio": round(motion_ratio, 4),
         },
     }
     passed_count = sum(bool(check.get("passed")) for check in checks.values())

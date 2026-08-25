@@ -41,4 +41,11 @@ public class ScriptController {
                 "char_count", request.getFinalScript().length()
         ));
     }
+
+    @PostMapping("/revalidate")
+    public ResponseEntity<Map<String, Object>> revalidate(
+            @PathVariable Long jobId,
+            @AuthenticationPrincipal String username) {
+        return ResponseEntity.ok(scriptService.revalidate(jobId, username));
+    }
 }

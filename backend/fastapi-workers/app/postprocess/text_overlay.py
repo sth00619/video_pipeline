@@ -1,6 +1,7 @@
 """이미지 모델이 아닌 결정론적 방식으로 대본 문구를 합성한다."""
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -17,6 +18,13 @@ FONT_CANDIDATES = (
     "/app/assets/fonts/BlackHanSans-Regular.ttf",
     "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
 )
+SURFACE_FONT_CANDIDATES = (
+    # OCR와 작은 정보 표면 가독성은 장식성이 강한 제목 폰트보다 정자형
+    # 고딕이 안정적이다. 선 굵기는 외곽선으로 원래 만화 스타일에 맞춘다.
+    "/usr/share/fonts/truetype/nanum/NanumBarunGothicBold.ttf",
+    "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+    "/app/assets/fonts/BlackHanSans-Regular.ttf",
+)
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont:
@@ -24,6 +32,13 @@ def _font(size: int) -> ImageFont.FreeTypeFont:
         if Path(candidate).exists():
             return ImageFont.truetype(candidate, size)
     return ImageFont.load_default()
+
+
+def _surface_font(size: int) -> ImageFont.FreeTypeFont:
+    for candidate in SURFACE_FONT_CANDIDATES:
+        if Path(candidate).exists():
+            return ImageFont.truetype(candidate, size)
+    return _font(size)
 
 
 def add_headline(image_path: str, output_path: str, headline: str, mood: str = "neutral") -> str:
@@ -51,6 +66,88 @@ def add_headline(image_path: str, output_path: str, headline: str, mood: str = "
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     image.convert("RGB").save(output_path, quality=95)
     return output_path
+
+
+def add_surface_caption(
+    image_path: str,
+    text: str,
+    region: tuple[float, float, float, float],
+) -> dict:
+    """기존 물리 표면 위에 승인 대본 기반 한글 문구를 결정론적으로 합성한다."""
+    caption = str(text or "").strip()
+    if not caption:
+        return {"image_path": image_path, "text": "", "bbox": None}
+    image = Image.open(image_path).convert("RGBA")
+    width, height = image.size
+    x, y, region_width, region_height = region
+    left, top = round(x * width), round(y * height)
+    right, bottom = round((x + region_width) * width), round((y + region_height) * height)
+    if left < 0 or top < 0 or right > width or bottom > height or left >= right or top >= bottom:
+        raise ValueError("결정론 표면 문구 좌표가 이미지 범위를 벗어났습니다.")
+
+    padding = max(10, round(min(right - left, bottom - top) * .08))
+    max_width = max(20, right - left - padding * 2)
+    max_height = max(20, bottom - top - padding * 2)
+    font = None
+    for size in range(max(18, round(max_height * .42)), 15, -1):
+        candidate = _surface_font(size)
+        probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+        bbox = probe.multiline_textbbox((0, 0), caption, font=candidate, spacing=max(4, size // 5), align="center")
+        if bbox[2] - bbox[0] <= max_width and bbox[3] - bbox[1] <= max_height:
+            font = candidate
+            break
+    if font is None:
+        raise ValueError("물리 표면에 비해 승인 문구가 너무 깁니다.")
+
+    # 표면 평균 밝기에 따라 잉크를 고르되, 외곽선으로 원래 2D 만화 선화와
+    # 같은 가독성을 유지한다. 별도의 사각 UI 카드는 만들지 않는다.
+    luminance = image.convert("L").crop((left, top, right, bottom)).resize((1, 1)).getpixel((0, 0))
+    fill = (26, 31, 44, 255) if luminance >= 132 else (250, 247, 232, 255)
+    stroke = (250, 247, 232, 235) if luminance >= 132 else (17, 24, 39, 235)
+    draw = ImageDraw.Draw(image)
+    spacing = max(4, int(getattr(font, "size", 20)) // 5)
+    bbox = draw.multiline_textbbox((0, 0), caption, font=font, spacing=spacing, align="center")
+    text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    # 밝은 정보판의 한글 획에 두꺼운 반전 외곽선을 두르면 Tesseract가
+    # `억`을 `열`처럼 읽는 사례가 있었다. 밝은 물리 표면은 얇은 외곽선만,
+    # 어두운 표면은 선화와 분리되는 2px 외곽선을 사용한다.
+    stroke_width = 1 if luminance >= 132 else max(2, round(min(width, height) * .0018))
+    draw.multiline_text(
+        (left + (right - left - text_width) / 2, top + (bottom - top - text_height) / 2 - bbox[1]),
+        caption,
+        font=font,
+        fill=fill,
+        spacing=spacing,
+        align="center",
+        stroke_width=stroke_width,
+        stroke_fill=stroke,
+    )
+    original_format = Image.open(image_path).format or "PNG"
+    if original_format in {"JPEG", "JPG"}:
+        image.convert("RGB").save(image_path, "JPEG", quality=95)
+    else:
+        image.save(image_path, original_format)
+    text_left = round(left + (right - left - text_width) / 2)
+    text_top = round(top + (bottom - top - text_height) / 2)
+    rendered_bbox = [
+        max(0, text_left - padding),
+        max(0, text_top - padding),
+        min(width, text_left + text_width + padding),
+        min(height, text_top + text_height + padding),
+    ]
+    final_image = Image.open(image_path).convert("RGB")
+    crop = final_image.crop(tuple(rendered_bbox))
+    return {
+        "image_path": image_path,
+        "text": caption,
+        # OCR은 복잡한 전체 장면이 아니라 실제 렌더된 글자 주변만 읽는다.
+        "bbox": rendered_bbox,
+        "font_size": int(getattr(font, "size", 0) or 0),
+        "stroke_width": stroke_width,
+        "text_sha256": hashlib.sha256(caption.encode("utf-8")).hexdigest(),
+        "rendered_crop_sha256": hashlib.sha256(crop.tobytes()).hexdigest(),
+        "render_policy_version": 2,
+    }
 
 
 def script_caption(scene: dict) -> str:

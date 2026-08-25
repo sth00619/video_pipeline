@@ -1,6 +1,7 @@
 package com.pipeline.video.controller;
 
 import com.pipeline.video.exception.BudgetExceededException;
+import com.pipeline.video.service.ImagesService.ImageProviderTemporarilyUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
                 "error", "ILLEGAL_STATE",
                 "message", e.getMessage()
+        ));
+    }
+
+    @ExceptionHandler(ImageProviderTemporarilyUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleImageProviderTemporarilyUnavailable(
+            ImageProviderTemporarilyUnavailableException e) {
+        log.warn("이미지 공급자 일시 과부하: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                "error", "IMAGE_PROVIDER_TEMPORARILY_UNAVAILABLE",
+                "message", e.getMessage(),
+                "retryable", true
         ));
     }
 

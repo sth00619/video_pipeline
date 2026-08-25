@@ -18,6 +18,11 @@ from app import runtime_config
 
 _LOCK = threading.Lock()
 
+_GEMINI_IMAGE_RATE_KEYS = {
+    "gemini-3-pro-image": "img_cost_pro_2k_usd",
+    "gemini-3.1-flash-image": "img_cost_flash_2k_usd",
+}
+
 
 class ProviderRequestBudgetExceeded(RuntimeError):
     """외부 이미지 요청 한 건을 예약할 수 없을 때 발생한다."""
@@ -57,8 +62,9 @@ class ProviderRequestAudit:
     @classmethod
     def for_job(cls, *, job_id: int, scene_key: str, model: str) -> "ProviderRequestAudit":
         """V4 공용 비용 원장에 Gemini 시도를 기록한다."""
-        if model != "gemini-3-pro-image":
-            raise ValueError("이미지 생성 모델은 gemini-3-pro-image만 허용합니다.")
+        rate_key = _GEMINI_IMAGE_RATE_KEYS.get(model)
+        if rate_key is None:
+            raise ValueError(f"지원하지 않는 Gemini 이미지 생성 모델입니다: {model}")
         rates = runtime_config.get()
         preflight = load_preflight(job_id) or {}
         return cls(
@@ -66,8 +72,12 @@ class ProviderRequestAudit:
             scene_key=scene_key,
             provider="gemini",
             model=model,
-            request_kind="gemini_pro_request",
-            unit_usd=float(rates["img_cost_pro_2k_usd"]),
+            request_kind=(
+                "gemini_pro_request"
+                if model == "gemini-3-pro-image"
+                else "gemini_flash_image_request"
+            ),
+            unit_usd=float(rates[rate_key]),
             usd_krw=float(rates["usd_krw"]),
             budget_limit_krw=int(preflight.get("budget_limit_krw") or rates["max_budget_per_video_krw"]),
             request_metadata={"policy_version": preflight.get("policy_version", "runtime-default")},
@@ -86,14 +96,18 @@ class ProviderRequestAudit:
         request_metadata: dict[str, Any] | None = None,
     ) -> "ProviderRequestAudit":
         """V5처럼 작업 디렉터리가 다른 실행에도 같은 게이트를 사용한다."""
-        if model != "gemini-3-pro-image":
-            raise ValueError("이미지 생성 모델은 gemini-3-pro-image만 허용합니다.")
+        if model not in _GEMINI_IMAGE_RATE_KEYS:
+            raise ValueError(f"지원하지 않는 Gemini 이미지 생성 모델입니다: {model}")
         return cls(
             path=path,
             scene_key=scene_key,
             provider="gemini",
             model=model,
-            request_kind="gemini_pro_request",
+            request_kind=(
+                "gemini_pro_request"
+                if model == "gemini-3-pro-image"
+                else "gemini_flash_image_request"
+            ),
             unit_usd=unit_usd,
             usd_krw=usd_krw,
             budget_limit_krw=budget_limit_krw,

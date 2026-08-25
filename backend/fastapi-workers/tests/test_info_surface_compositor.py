@@ -12,7 +12,7 @@ cv2 = pytest.importorskip("cv2")
 from app.services.info_surface.contracts import InfoItem, InfoSurfacePlan, SurfaceContract
 from app.services.info_surface.detector import detect_surface_quad, detection_from_normalized_region
 from app.services.info_surface.warp_compositor import composite_planar, diegetic_supersample_factor, render_data_cutaway
-from app.workers.images_worker import ImagesWorker
+from app.workers.images_worker import ImagesWorker, _restore_raw_before_deterministic_overlay
 
 
 def _input():
@@ -184,11 +184,52 @@ def test_v5_verified_overlay_present_is_always_false():
 
     # information 씬에 해당하는 유효 V5 타입
     contract_info = plan_v5_scene_contract(
-        {"scene_type": "metric", "narration": "PER이란 주가수익비율입니다."},
+        {
+            "scene_type": "metric",
+            "narration": "PER이란 주가수익비율입니다.",
+            "screen_texts": ["PER", "주가수익비율"],
+        },
         index=1,
     )
     assert contract_info["verified_overlay_present"] is False
-    assert contract_info["verified_overlay_mode"] == "non_numeric_prompt_embedded_script_caption"
+    assert contract_info["visual_text_policy"] == "approved_generated_surface_text"
+    assert contract_info["source_visual_text_policy"] == "script_captioned"
+    assert contract_info["surface_caption"]["generated_texts"] == ["PER", "주가수익비율"]
+    assert contract_info["verified_overlay_mode"] == "scene_local_approved_generated_text"
+
+
+def test_general_scene_routes_approved_financial_text_to_deterministic_surface():
+    """일반형도 대본 승인 수치가 있으면 실제 장면 표면에 정확히 렌더링한다."""
+    contract = plan_v5_scene_contract(
+        {
+            "scene_type": "general",
+            "narration": "코스피는 6597포인트 수준까지 밀렸습니다.",
+            "screen_texts": ["코스피", "6597포인트"],
+            "screen_text_validation": {"passed": True},
+        },
+        index=19,
+    )
+
+    assert contract["source_visual_text_policy"] == "script_captioned"
+    assert contract["visual_text_policy"] == "deterministic_surface_text"
+    assert contract["surface_caption"]["generated_texts"] == ["코스피"]
+    assert contract["surface_caption"]["deterministic_texts"] == ["6597포인트"]
+    assert contract["surface_caption"]["korean"] == "6597포인트"
+
+
+def test_general_numeric_scene_restores_raw_before_resume_overlay():
+    """일반형 수치 씬도 재개할 때 합성된 최종본이 아니라 원본에서 다시 시작한다."""
+    assert _restore_raw_before_deterministic_overlay({
+        "scene_type": "general",
+        "narration": "코스피는 6597포인트까지 밀렸습니다.",
+        "screen_texts": ["코스피", "6597포인트"],
+        "screen_text_validation": {"passed": True},
+    }) is True
+    assert _restore_raw_before_deterministic_overlay({
+        "scene_type": "general",
+        "narration": "시장은 크게 흔들렸습니다.",
+        "screen_texts": [],
+    }) is False
 
 
 def test_v5_attach_contracts_does_not_inject_verified_overlays():
@@ -318,6 +359,42 @@ def test_attach_contracts_injects_overlays_for_facts_with_evidence_fields():
     contract = attached.get("v5_render_contract", {})
     assert contract.get("verified_overlay_present") is True
     assert contract.get("verified_overlay_mode") == "diegetic_surface_fact"
+
+
+def test_attach_contracts_uses_only_fact_whose_value_occurs_in_current_scene():
+    """다른 장면의 검증 사실이 목록 앞에 있어도 현재 장면 표면으로 새지 않는다."""
+    scenes = [{
+        "scene_type": "metric",
+        "narration": "코스피가 2,650포인트를 기록했습니다.",
+        "screen_texts": ["코스피 2,650포인트"],
+        "verified_facts": [
+            {
+                "indicator": "NASDAQ",
+                "value": "18,500",
+                "figure": "18,500포인트",
+                "fact": "나스닥 18,500포인트 기록",
+            },
+            {
+                "indicator": "KOSPI",
+                "value": "2,650",
+                "figure": "2,650포인트",
+                "fact": "코스피 2,650포인트 기록",
+            },
+        ],
+    }]
+
+    attached = attach_v5_scene_contracts(scenes)[0]
+
+    assert attached["v5_verified_overlays"] == [{
+        "source_ref": "facts[1]",
+        "value": "2,650",
+        "label": "KOSPI",
+        "visualization": "text",
+        "anchor": {
+            **attached["v5_verified_overlays"][0]["anchor"],
+        },
+    }]
+    assert "18,500" not in str(attached["v5_verified_overlays"])
 
 
 def test_attach_contracts_skips_injection_when_value_not_in_evidence():

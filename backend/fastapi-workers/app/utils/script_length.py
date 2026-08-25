@@ -16,14 +16,20 @@ from typing import Any
 
 CALIBRATION_PATH = Path(os.getenv("TTS_CPS_CALIBRATION_PATH", "/app/data/tts_cps_calibration.json"))
 TOLERANCE = 0.15
+MAX_SCRIPT_DURATION_TOLERANCE = 0.05
+
+
+def effective_duration_tolerance(configured: float) -> float:
+    """운영 시간 허용치를 1~5% 사이로 제한한다."""
+    return max(0.01, min(float(configured), MAX_SCRIPT_DURATION_TOLERANCE))
 
 
 def get_tolerance() -> float:
     try:
         from app import runtime_config
-        return float(runtime_config.value("tts_duration_tolerance"))
+        return effective_duration_tolerance(float(runtime_config.value("tts_duration_tolerance")))
     except Exception:
-        return 0.15
+        return MAX_SCRIPT_DURATION_TOLERANCE
 
 
 def spoken_char_count(text: str) -> int:
@@ -57,11 +63,17 @@ def _write_calibrations(value: dict[str, Any]) -> None:
 
 
 def resolve_cpm(default_cpm: float, voice_id: str | None, model_id: str | None, speed: float) -> tuple[float, int]:
-    """Return a calibrated CPM when at least two comparable samples exist."""
+    """같은 음성·모델·속도의 실측 CPM이 한 건이라도 있으면 사용한다.
+
+    ElevenLabs 정렬 응답으로 실제 길이를 확정한 샘플은 다음 영상의 분량을
+    맞추는 가장 가까운 기준이다. 두 번째 샘플을 기다리는 동안 기본 CPM으로
+    되돌아가면, Job 52처럼 이미 확인한 3분 25초 결과를 다시 5분으로 예측하는
+    큰 오차가 반복된다. 관측치는 저장 단계에서 80~900 CPM 범위로 제한된다.
+    """
     row = _read_calibrations().get(_key(voice_id, model_id, speed), {})
     samples = int(row.get("samples", 0) or 0)
     measured = float(row.get("cpm", 0) or 0)
-    if samples >= 2 and measured > 0:
+    if samples >= 1 and measured > 0:
         return measured, samples
     return float(default_cpm), samples
 
@@ -82,7 +94,7 @@ def make_length_contract(
     safe_minutes = max(1, int(target_minutes or 1))
     safe_speed = max(0.5, min(float(speed or 1.0), 1.5))
     calibrated_cpm, samples = resolve_cpm(base_cpm, voice_id, model_id, safe_speed)
-    effective_cpm = calibrated_cpm if samples >= 2 else calibrated_cpm * safe_speed
+    effective_cpm = calibrated_cpm if samples >= 1 else calibrated_cpm * safe_speed
     # Avoid banker's rounding: a half-character budget should round up so the
     # displayed target is intuitive to operators.
     target_chars = int(safe_minutes * effective_cpm + 0.5)

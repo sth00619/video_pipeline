@@ -28,9 +28,9 @@ from app import runtime_config
 from app.utils.quality_gate import enrich_scene_plan, assess_images, persist_quality_report
 from app.utils.art_direction import direct_scenes, plan_image_quality_tiers, compile_editorial_prompt, assess_art_diversity, flag_archetype_content_mismatch
 from app.utils.scene_entity_binder import bind_scene_entities, compute_grounding_score
-from app.utils.visual_qa import assess_visual_alignment
+from app.utils.visual_qa import assess_local_edit_preservation, assess_visual_alignment
 from app.utils import gemini_batch
-from app.pipeline.scene_director import SceneDirector, SceneSpec
+from app.pipeline.scene_director import SceneDirector, SceneSpec, fallback_spec
 from app.providers.real.prompt_builder import build_prompt
 from app.v5.scene.runtime_contract import (
     attach_v5_scene_contracts,
@@ -39,15 +39,35 @@ from app.v5.scene.runtime_contract import (
     v5_provider_options,
 )
 from app.v5.scene.longform_visual_mix import apply_longform_visual_mix
-from app.v5.providers.gemini_provider import _load_default_references
+from app.v5.providers.gemini_provider import _load_default_references, select_contextual_reference_paths
 from app.utils.budget import ProviderRequestAudit, plan_preflight, record_cost, write_preflight
 from app.utils.intro_motion import infer_total_duration_seconds, select_intro_motion_scene_indices, scene_duration_seconds
-from app.utils.narration_contract import build_script_contract, verify_tts_against_script_contract
+from app.utils.narration_contract import (
+    bind_caption_chunks_to_scenes,
+    normalize_scene_sentence_boundaries,
+    build_script_contract,
+    verify_tts_against_script_contract,
+)
 from app.utils.gemini_pressure import gemini_pressure
 from app.utils.image_job_lock import acquire_image_job_lock, release_image_job_lock
 from app.utils.retry_policy import classify_image_error, error_signature
+from app.utils.image_text_contract import (
+    build_scene_text_contract,
+    contains_financial_number,
+    detected_deterministic_texts,
+    require_sanitized_generated_text_prompt,
+    visible_text_contract_result,
+)
+from app.utils.character_integrity_contract import apply_character_integrity_contract
+from app.utils.scene_screen_text_planner import attach_scene_screen_texts
 from app.services.info_surface.info_scene_templates import select_template
-from app.services.fal_motion_safety import assess_fal_motion_safety
+from app.services.fal_motion_safety import (
+    assess_fal_motion_safety,
+    fal_motion_metadata_block_reasons,
+    inspect_visible_text,
+)
+from app.services.final_frame_text_integrity import require_final_frame_text_integrity
+from app.services.fal_motion_intent import build_fal_motion_preflight
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +91,371 @@ from app.utils.entity_english_map import REAL_ENTITY_ENGLISH_MAP, get_entity_eng
 
 STYLE_SUFFIX = (
     "original 2D Korean finance comic, bold ink outlines, cel shading, "
-    "single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people"
+    "at most one round gold coin mascot, no secondary mascot, contextual background people allowed when the scene needs them"
 )
+
+# LLM이 같은 승인 장면을 조금 다르게 표현해도 재개 실행이 이미 승인된 PNG를
+# 전부 다시 과금하지 않도록, 생성 문장 자체가 아니라 안정적인 장면 계약에
+# 지문을 묶는다. 프롬프트 정책을 의도적으로 바꾸면 이 버전을 올린다.
+IMAGE_LINEAGE_FINGERPRINT_VERSION = 7
+PROMPT_CACHE_POLICY_VERSION = 7
+PROMPT_CACHE_COMPATIBLE_VERSIONS = (6,)
+
+
+def _reference_asset_fingerprints(paths: list[str]) -> list[dict[str, str]]:
+    """참조 파일 내용이 바뀌면 같은 경로여도 재개 지문이 달라지게 한다."""
+    fingerprints: list[dict[str, str]] = []
+    for value in paths:
+        path = Path(value)
+        digest = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else "missing"
+        fingerprints.append({"path": str(path), "sha256": digest})
+    return fingerprints
+
+
+def _stable_image_lineage_fingerprint(
+    ctx: dict,
+    *,
+    character_style_prompt: str,
+    character_reference_paths: list[str],
+    use_composite: bool,
+    character_poses_dir: str | None,
+    lora_model_id: str | None,
+    lora_trigger_word: str | None,
+    lora_scale: float | None,
+) -> str:
+    """비결정적인 LLM 시각 문장이 아닌 승인 장면 계약으로 재개 지문을 만든다."""
+    payload = {
+        "fingerprint_version": IMAGE_LINEAGE_FINGERPRINT_VERSION,
+        "approved_scene_text": ctx.get("text") or "",
+        "approved_prompt_en": ctx.get("prompt_en") or "",
+        "prompt_ko": ctx.get("prompt_ko") or "",
+        "screen_texts": list(ctx.get("screen_texts") or []),
+        "style_profile": ctx.get("style_profile"),
+        "image_profile": ctx["image_profile"],
+        "character_style_prompt": character_style_prompt,
+        "character_references": _reference_asset_fingerprints(character_reference_paths),
+        "use_composite": use_composite,
+        "character_poses_dir": character_poses_dir,
+        "lora_model_id": lora_model_id,
+        "lora_trigger_word": lora_trigger_word,
+        "lora_scale": lora_scale,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+    ).hexdigest()
+
+
+def _image_prompt_cache_key(
+    *,
+    index: int,
+    narration: str,
+    scene_type: str,
+    visual_mode: str,
+    character_required: bool,
+    core_entities: list,
+    core_figures: list,
+    screen_texts: list[str] | None = None,
+    policy_version: int = PROMPT_CACHE_POLICY_VERSION,
+) -> str:
+    """같은 승인 장면의 영문 시각 프롬프트를 재호출하지 않는 안정 키다."""
+    payload = {
+        "policy_version": int(policy_version),
+        "index": index,
+        "narration": narration,
+        "scene_type": scene_type,
+        "visual_mode": visual_mode,
+        "character_required": character_required,
+        "core_entities": core_entities,
+        "core_figures": core_figures,
+        # 장면의 콘텐츠·구도 프롬프트와 화면 문자 계약은 계보가 다르다.
+        # 승인 screen_texts가 보완됐다는 이유만으로 콘텐츠 중심 프롬프트를
+        # Claude에 53번 다시 쓰게 하지 않는다. 정확 문구는 매 렌더 직전
+        # _bounded_text_generation_prompt가 최신 계약으로 결합한다.
+        "screen_texts": [],
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
+    ).hexdigest()
+
+
+class GeneratedImageTextDetectedError(RuntimeError):
+    """현재 장면 허용 목록 밖의 글자가 검출되어 표면 교정이 필요함."""
+
+
+class GeneratedImageVisualContractError(RuntimeError):
+    """장면별 비전 검수에서 실제로 확인된 범주만 교정해야 함."""
+
+    def __init__(self, message: str, review: dict):
+        super().__init__(message)
+        self.review = review
+
+
+class LocalEditPreservationError(GeneratedImageVisualContractError):
+    """표적 교정이 실패 범위 밖의 기존 장면 요소까지 바꾼 경우다."""
+
+
+class DeterministicSurfaceMissingError(GeneratedImageVisualContractError):
+    """승인 수치를 안전하게 넣을 빈 실제 소품 표면을 찾지 못한 경우다."""
+
+
+class VisualQaUnavailableError(RuntimeError):
+    """검수 연결 오류 때문에 같은 이미지를 다시 과금하면 안 되는 상태."""
+
+
+def _sanitize_unplanned_prompt_structure(prompt: str, text_contract: dict) -> str:
+    """과거 캐시의 빈 패널·임의 말풍선 지시를 장면 계약에 맞게 교정한다."""
+    cleaned = str(prompt or "")
+    if not text_contract.get("bubble_allowed"):
+        # 문장 뒤에 덧붙은 임의 말풍선 절만 제거하고 앞의 차트·인물 행동은
+        # 보존한다. 말풍선이 문장 전체인 경우에는 그 문장만 삭제한다.
+        cleaned = re.sub(
+            r"\s+(?:despite|with|while)\s+[^.]*?speech\s+bubbles?[^.]*?(?=\.|$)",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        cleaned = re.sub(
+            r"(?:^|(?<=[.!?]))\s*[^.!?]*speech\s+bubbles?[^.!?]*[.!?]?",
+            " ",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+
+    has_deterministic_text = bool(text_contract.get("deterministic_texts"))
+    if has_deterministic_text:
+        # 과거 Claude 프롬프트가 수치마다 별도의 빈 플래카드·카드를
+        # 추가하도록 만든 문장을 먼저 제거한다. 장면에 이미 존재하는 메인
+        # 모니터·계기·제품 면을 쓰는 것이 원칙이며, 안전한 면이 실제로 없으면
+        # 후단 표면 검출기가 해당 후보를 거절하고 장면 전체를 다시 구성한다.
+        cleaned = re.sub(
+            r"(?:^|(?<=[.!?]))\s*(?:one|a|an)\s+[^.!?]{0,80}?\b(?:blank|empty|unlettered)\b"
+            r"[^.!?]{0,100}?\b(?:placard|panel|card|safe\s*zone|display)\b"
+            r"[^.!?]{0,100}?\b(?:reserved|awaits?|waiting|waits?)\b[^.!?]*[.!?]?",
+            " ",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+    surface_adjective = (
+        "unlettered opaque scene-integrated"
+        if has_deterministic_text
+        else "detailed scene-integrated"
+    )
+    cleaned = re.sub(r"\bblank\b", surface_adjective, cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\b(?:reserved|awaits?|waiting|waits?)\s+(?:for\s+)?(?:later\s+)?(?:post-production\s+)?"
+        r"(?:values?|figures?|text|labels?|labeling|value\s+insertion|critical\s+figures?)\b",
+        (
+            "carrying non-linguistic diagram structure and preserving one small in-perspective area "
+            "for exact deterministic typography"
+            if has_deterministic_text
+            else "as a natural part of the environment"
+        ),
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+    return cleaned
+
+
+def _bounded_text_generation_prompt(
+    prompt: str,
+    *,
+    retry: bool = False,
+    retry_feedback: dict | None = None,
+    audit_target: dict | None = None,
+) -> str:
+    """승인 문자열은 보존하고 비승인 문자열만 이미지 프롬프트에서 제거한다."""
+    cleaned = str(prompt or "")
+    text_contract = build_scene_text_contract(audit_target)
+    generated_texts = list(text_contract["generated_texts"])
+    cleaned, report = require_sanitized_generated_text_prompt(
+        cleaned,
+        allowed_texts=generated_texts,
+    )
+    cleaned = _sanitize_unplanned_prompt_structure(cleaned, text_contract)
+    if isinstance(audit_target, dict):
+        audit_target["image_text_contract"] = text_contract
+        audit_target["image_prompt_text_contract"] = {
+            **report,
+            "retry_contract": bool(retry),
+            "retry_failure_categories": list((retry_feedback or {}).get("failure_categories") or []),
+        }
+    if generated_texts:
+        exact_values = " | ".join(generated_texts)
+        surface_plan = list(text_contract.get("surface_plan") or [])
+        placement_note = (
+            " Follow these scene-specific text placements: "
+            + json.dumps(surface_plan, ensure_ascii=False)
+            + ". Unless that plan explicitly declares a holographic surface_style or material, render the wording on a solid opaque "
+            "scene-mounted monitor, opaque wall-mounted information board, machine gauge, or painted or engraved prop face that already belongs to the set."
+            if surface_plan else
+            " No text-surface layout was explicitly planned: keep each used string visually subordinate and place it once on an existing "
+            "solid opaque scene-native monitor, opaque wall-mounted information board, machine gauge, or painted or engraved prop face only when it helps the narration. "
+            "Do not create a new board, panel, title card, oversized sign, safe zone, detached glass card, translucent floating UI, or hologram for it."
+        )
+        suffix = (
+            " FINAL SCENE-LOCAL TEXT CONTRACT: the only readable text that may appear is the following exact "
+            f"case-sensitive string list: [{exact_values}]. Copy each selected string exactly without translation, "
+            "abbreviation, missing characters, extra characters, or pseudo-text."
+            f"{placement_note} The script-specific physical objects, action, and causal relationship determine the visual hierarchy. "
+            "Do not force all scenes into one giant board or one fixed typography layout. "
+            "No unapproved fake ticker, invented company, logo, watermark, or secondary number. "
+            "On documents, books, cheques, certificates, newspapers, and equipment labels, do not add microprint, serial numbers, dates, currency symbols, or filler lettering outside this exact list. "
+            "A detached translucent or holographic text card is forbidden unless the explicit scene-local surface plan requests that exact material."
+        )
+    else:
+        suffix = (
+            " FINAL SCENE-LOCAL TEXT CONTRACT: this scene has no approved generated string. Do not add readable "
+            "Korean or English, letters, digits, pseudo-text, logos, watermark, fake tickers, or invented labels. "
+            "Keep boards, monitors, packages, documents, and gauges visually rich with material, diagrams, color blocks, "
+            "and non-linguistic shapes; do not remove the props or simplify the environment. Books, documents, cheques, "
+            "certificates, newspapers, and labels must use clearly non-linguistic blank lines or graphic blocks, never microprint or serial numbers."
+        )
+    deterministic = list(text_contract["deterministic_texts"])
+    if deterministic:
+        suffix += (
+            " Use a calm region inside an existing storyboard-essential physical screen, gauge, board, product face, or document for the exact deterministic values "
+            f"[{ ' | '.join(deterministic) }]. Do not draw those numeric values yourself. Do not add a second placard, detached card, empty safe zone, "
+            "or generic panel merely to hold the later typography."
+        )
+    if retry:
+        categories = set((retry_feedback or {}).get("failure_categories") or ["text_unexpected_or_malformed"])
+        reason = str((retry_feedback or {}).get("reason") or "").strip()
+        suffix += (
+            " PREVIOUS RENDER NEEDS A SCENE-LOCAL CORRECTION. Preserve every element that was not named by the failed review: "
+            "the scene's economic story, successful composition, useful props, information density, palette, and original 2D comic rendering."
+        )
+        if any(category.startswith("text_") for category in categories):
+            suffix += (
+                " Correct only the offending text-bearing surfaces. Copy approved strings exactly and once; replace every other word, "
+                "microprint, serial number, date, currency symbol, or pseudo-letter on papers, books, cheques, certificates, monitors, and labels "
+                "with non-linguistic blank lines or graphic marks. Do not remove screens, boards, diagrams, arrows, background detail, or the physical props."
+            )
+        if categories & {"character_anatomy", "character_extra_limbs"}:
+            suffix += " Correct only the main mascot anatomy: one connected body, exactly two arms and two hands, with no detached or duplicate limb."
+        if categories & {"character_face_identity", "character_face_simplified"}:
+            suffix += (
+                " Correct only the mascot into the broad round gold-coin 2D family shown across the channel scene references: embossed rim, coherent expressive face, "
+                "compact cartoon anatomy, and compatible dark ink language. Do not copy one reference face, iris treatment, blush, costume, pose, or action."
+            )
+        if "speech_bubble_unapproved" in categories:
+            suffix += " Remove only the unplanned speech or thought bubble and restore the background behind it."
+        if "text_surface_detached_translucent_card" in categories:
+            suffix += " Move only the approved wording onto an existing opaque in-world surface; remove the detached translucent card."
+        if "number_panel_only" in categories:
+            suffix += " Keep any approved value subordinate and rebuild the emphasis around the narration's physical objects, action, and causal relationship."
+        if "scene_required_props_missing" in categories:
+            suffix += " Add only the explicitly required missing scene props without changing the character design or overall art style."
+        if "deterministic_surface_missing" in categories:
+            suffix += (
+                " Recompose one storyboard-essential existing object in this exact setting so its physical monitor, gauge, product face, board, or document includes "
+                "a calm readable region occupying roughly 6 to 14 percent of the frame. Keep that object causally connected to the narration, fully visible, and clear of every character and hand. "
+                "Do not add a second placard, floating card, title card, giant board, hologram, or empty studio composition."
+            )
+        if "local_edit_blur_smear_artifact" in categories:
+            suffix += (
+                " Render a fresh clean 2D candidate with crisp intentional ink contours on foreground and background figures and props. "
+                "Do not use muddy depth-of-field face blobs, smeared ghost lettering, melted panel edges, or inpainting-like blur patches."
+            )
+        if "text_generated_deterministic_numeric" in categories:
+            suffix += (
+                " Generate a fresh base illustration without writing any approved financial number yourself. "
+                "Keep the storyboard-essential physical screen or board, but fill its future numeric area only with calm material tone and non-linguistic chart structure for deterministic post-production."
+            )
+        if "scene_composition_plan_mismatch" in categories:
+            suffix += " Correct only the explicit scene composition, camera, or placement mismatch while preserving all successful content."
+        if "scene_semantic_mismatch" in categories:
+            suffix += " Replace only the off-topic visual metaphor with concrete objects and actions that directly explain this scene's narration."
+        if "style_severe_mismatch" in categories:
+            suffix += " Restore the original Job-52-like 2D editorial comic language: bold variable ink, cel shading, colorful layered finance context; no glossy 3D or empty studio."
+        if reason:
+            suffix += f" Review evidence to correct: {reason[:500]}"
+    cleaned, integrity_report = apply_character_integrity_contract(cleaned + suffix, audit_target)
+    if isinstance(audit_target, dict):
+        audit_target["character_integrity_contract"] = integrity_report
+    return cleaned
+
+
+# 내부 테스트·오래된 호출의 이름 호환성을 유지하되 의미는 허용 목록 계약이다.
+_strict_textless_generation_prompt = _bounded_text_generation_prompt
+
+
+def _restore_raw_before_deterministic_overlay(scene: dict) -> bool:
+    """재개 시 모든 결정론 수치 씬은 합성 전 원본으로 되돌린다."""
+    if is_v5_final_lane_scene(scene):
+        return True
+    return bool(build_scene_text_contract(scene).get("deterministic_texts"))
+
+
+def _requires_full_scene_regeneration(review: dict | None) -> bool:
+    """국소 편집을 누적하면 악화되는 화질 결함인지 판정한다."""
+    categories = set((review or {}).get("failure_categories") or [])
+    return bool(categories & {
+        "local_edit_blur_smear_artifact",
+        "text_generated_deterministic_numeric",
+    })
+
+
+def _inspect_generated_textless_image(
+    scene: dict,
+    image_path: str,
+    *,
+    ocr_rows=None,
+) -> dict:
+    """OCR 결과가 현재 장면 허용 문자열 밖으로 새지 않았는지 확인한다."""
+    if _article_evidence_path(scene):
+        return {"passed": True, "status": "skipped_article_evidence", "visible_tokens": []}
+    inspection = inspect_visible_text(image_path, ocr_rows=ocr_rows)
+    status = str(inspection.get("status") or "failed")
+    tokens = list(inspection.get("visible_tokens") or [])
+    if status != "completed":
+        raise NonRetryableImageGenerationError(f"생성 이미지 OCR을 실행할 수 없음: status={status}")
+    generated_financial_texts = detected_deterministic_texts(tokens, scene)
+    if generated_financial_texts:
+        review = {
+            "failure_categories": ["text_generated_deterministic_numeric"],
+            "reason": "기본 이미지에 생성 모델이 금융 수치를 직접 그렸습니다: "
+            + ", ".join(generated_financial_texts),
+            "raw": {"generated_deterministic_texts": generated_financial_texts},
+        }
+        raise GeneratedImageVisualContractError(review["reason"], review)
+    result = visible_text_contract_result(tokens, scene)
+    if not result["passed"]:
+        duplicate_summary = (
+            " 승인 문구 중복: " + ", ".join(result.get("duplicate_texts") or [])
+            if result.get("duplicate_texts") else ""
+        )
+        raise GeneratedImageTextDetectedError(
+            "현재 장면의 문자 계약 위반: 비승인/훼손 문자="
+            + ", ".join(result["unexpected_texts"][:8])
+            + duplicate_summary
+        )
+    return {**result, "status": status, "visible_tokens": tokens}
+
+
+def _inspect_generated_visual_image(scene: dict, image_path: str) -> dict:
+    """최종 저장 전에 한 장씩 의미·문자·얼굴·해부학을 교차 검증한다."""
+    if not bool(runtime_config.value("visual_qa_enabled")):
+        return {"skipped": True, "reason": "visual_qa_disabled"}
+    review_scene = {**scene, "final_image_path": image_path}
+    report = assess_visual_alignment([review_scene], enabled=True, max_scenes=1)
+    reviewed = list(report.get("reviewed") or [])
+    warnings = list(report.get("warnings") or [])
+    if warnings or not reviewed:
+        detail = ", ".join(str(value) for value in warnings[:4]) or "no_review_result"
+        raise VisualQaUnavailableError(f"장면 비전 검수를 완료하지 못함: {detail}")
+
+    review = reviewed[0]
+    failures = list(review.get("failure_categories") or [])
+    failures = list(dict.fromkeys(failures))
+    review["failure_categories"] = failures
+    scene["visual_qa_review"] = review
+    if failures:
+        raise GeneratedImageVisualContractError(
+            "장면 비전 계약 위반: " + ", ".join(failures) + f"; {review.get('reason') or ''}",
+            review,
+        )
+    return review
 
 
 def _ocr_review_reasons(scenes: list[dict]) -> list[str]:
@@ -152,7 +535,11 @@ def _manual_review_reasons(scenes: list[dict], image_quality: dict | None = None
     semantic = quality.get("semantic_alignment") or {}
     if bool(runtime_config.value("visual_qa_enabled")) and not semantic.get("reviewed"):
         reasons.append("VISUAL_QA_UNAVAILABLE")
-    expected_semantic_reviews = min(len(scenes), int(runtime_config.value("visual_qa_max_scenes")), 24)
+    configured_review_limit = int(runtime_config.value("visual_qa_max_scenes"))
+    expected_semantic_reviews = (
+        len(scenes) if configured_review_limit <= 0
+        else min(len(scenes), configured_review_limit)
+    )
     if bool(runtime_config.value("visual_qa_enabled")) and len(semantic.get("reviewed") or []) < expected_semantic_reviews:
         reasons.append(
             f"VISUAL_QA_INCOMPLETE:{len(semantic.get('reviewed') or [])}<{expected_semantic_reviews}"
@@ -344,6 +731,10 @@ class ImageProviderCreditRequiredError(RuntimeError):
     """The configured image provider cannot render until billing/quota is restored."""
 
 
+class ImageProviderTemporarilyUnavailableError(RuntimeError):
+    """공급자 과부하로 현재 실행만 멈췄으며 기존 씬은 재개 가능한 상태다."""
+
+
 def _is_non_retryable_image_error(exc: Exception) -> bool:
     return not classify_image_error(exc).retryable
 
@@ -429,10 +820,13 @@ class ImagesWorker:
         fictionalized_labels: dict[str, str] | None = None,
         visual_mode: str | None = None,
         character_required: bool = True,
+        screen_texts: list[str] | None = None,
     ) -> str:
         """
         대사(narration)와 바인딩된 엔티티/수치를 읽고 내용에 맞는 시각 은유 배경/캐릭터 프롬프트를 LLM으로 생성한다.
-        - core_entities / core_figures가 존재하면 물리적 전광판, 표지판, 소품 표면에 해당 정보가 명시적으로 반영되도록 시스템 프롬프트에 지시한다.
+        - core_entities / core_figures는 장면 의미와 소품 선택을 고정한다.
+          비수치 이름·문구는 scene-local screen_texts에 승인된 경우 직접 쓸 수 있고,
+          금융 수치는 결정론 표면 렌더러가 담당한다.
         - character_required=True일 경우 Goldie(금화 마스코트) 캐릭터가 전경의 1/3 크기로 명시 배치된다.
         - 매 씬마다 대사가 다르면 반드시 다른 프롬프트가 나와야 함
         """
@@ -445,14 +839,15 @@ class ImagesWorker:
                 "Convert Korean financial narration into a vivid 2D scene featuring the channel's Goldie (2D gold coin mascot) news reporter. "
                 "The scene MUST depict the 2D gold coin mascot character standing as a financial reporter or presenter. "
                 "The background features an appropriate display surface (such as a standing presentation screen, wall display board, or weather map) "
-                "showing the economic figures, charts, and entity labels mentioned in the narration. "
+                "using charts and physical props to represent the economic situation. "
+                "Only the supplied scene-local approved strings may be written; never invent filler labels. "
                 "Output only the prompt text, no explanation, no markdown."
             )
             char_rules = (
-                "- You MUST depict Goldie (the 2D gold coin mascot character) standing prominent in the foreground, taking up 50% to 65% of total frame height.\n"
-                "- Goldie MUST ALWAYS wear full scene-appropriate outfit/clothing (e.g. business suit, vest, jacket, coat, safety vest) and scene-appropriate headwear/hat (e.g. fedora hat, safety helmet, reporter hat, cap, graduation cap). NEVER depict the coin character bare without clothes or headwear.\n"
-                "- Exactly ONE 2D gold coin mascot character is present. NO extra people, NO secondary mascot characters, NO cyan/green creatures.\n"
-                "- The background is tailored to the scene archetype (e.g. standing reporter board, data lab display, or presentation screen)."
+                "- Depict one Goldie gold-coin mascot when the storyboard calls for a presenter. Its size, side, crop, expression, costume, and headwear follow this scene's role and composition; do not default every scene to the same finance-anchor outfit or face.\n"
+                "- Keep the mascot recognizably within the same round coin-character drawing family while allowing expressive variation.\n"
+                "- Background people may appear when the narration needs an audience, traders, shoppers, press, or workers; never add a second coin mascot.\n"
+                "- The background and information surfaces follow this scene's specific visual metaphor, not a default studio template."
             )
         elif character_required and visual_mode != "background_only":
             system = (
@@ -462,10 +857,10 @@ class ImagesWorker:
                 "Output only the prompt text, no explanation, no markdown."
             )
             char_rules = (
-                "- You MUST depict Goldie (the 2D gold coin mascot character) standing prominent in the foreground, taking up 50% to 65% of total frame height.\n"
-                "- Goldie MUST ALWAYS wear full scene-appropriate outfit/clothing (e.g. business suit, vest, jacket, coat, safety vest) and scene-appropriate headwear/hat (e.g. fedora hat, safety helmet, reporter hat, cap, graduation cap). NEVER depict the coin character bare without clothes or headwear.\n"
-                "- Exactly ONE 2D gold coin mascot character is present in the scene. NO extra people, NO secondary characters, NO green/mint creatures.\n"
-                "- The character stands actively reacting to or presenting the economic situation in the scene."
+                "- Depict one Goldie gold-coin mascot with scene-specific size, placement, expression, costume, headwear, and action; do not copy one neutral face or navy presenter outfit into every scene.\n"
+                "- Preserve the shared round coin-character drawing language, not a frozen face sheet.\n"
+                "- Background people may appear only when they serve the scene's economic story; never add a second coin mascot.\n"
+                "- The character reacts to or presents the economic situation in the way this particular scene requires."
             )
         else:
             system = (
@@ -492,8 +887,7 @@ class ImagesWorker:
             if uncertain_entities:
                 uncertain_clause = (
                     f"- UNCERTAIN UNMAPPED ENTITIES ({', '.join(uncertain_entities)}): "
-                    f"If marked 'uncertain', render official English name ONLY if confident of exact spelling; "
-                    f"otherwise render WITHOUT any text label — generic signage/screen prop with no readable company name rather than guessing.\n"
+                    f"Use only generic industry props for semantic context. Never guess or render a company name, logo, or text label.\n"
                 )
 
             figures_clause = ""
@@ -502,17 +896,39 @@ class ImagesWorker:
                 if fig_list:
                     fig_str = ", ".join(fig_list)
                     figures_clause = (
-                        f"- Core Verified Numerical Figures: Render these exact verified numeric values ({fig_str}) clearly as readable text on the main monitor or display screen.\n"
-                        f"- Do NOT invent or guess unverified secondary arbitrary numbers, random dates, or fake tick marks.\n"
+                        f"- Core Verified Numerical Figures for semantic direction only: {fig_str}. Do NOT render these values unless they also appear in the scene-local approved screen-text list.\n"
+                        f"- Let one storyboard-essential existing physical prop contain a calm in-perspective region for deterministic post-production; never add a separate blank placard, floating card, or safe-zone panel.\n"
+                        f"- Do NOT invent or guess secondary numbers, dates, labels, or fake tick marks.\n"
                     )
 
             entity_instructions = (
                 f"\nCRITICAL ENTITY & FIGURE GROUNDING INSTRUCTIONS:\n"
-                f"- Core Verified Entities (render as explicit readable block text on physical signage, monitors, or barrels): {entities_str}\n"
+                f"- Core Verified Entities for semantic grounding only; depict their relevant industry objects. Render a name only if it is in the scene-local approved screen-text list: {entities_str}\n"
                 f"{figures_clause}"
                 f"{uncertain_clause}"
-                f"- Incorporate at least one labeled prop or screen referencing these entities alongside rich environmental storytelling props.\n"
-                f"- Do NOT translate Korean narration sentences into large text blocks on blackboards.\n"
+                f"- Incorporate at least one relevant unlabeled physical prop alongside rich environmental storytelling props.\n"
+                f"- Every readable sign, monitor, board, paper, gauge, and package must use only a scene-local approved exact string. Non-readable chart strokes and material details remain allowed.\n"
+            )
+
+        approved_generated_texts = [
+            value for value in (screen_texts or []) if not contains_financial_number(value)
+        ]
+        deterministic_texts = [
+            value for value in (screen_texts or []) if contains_financial_number(value)
+        ]
+        if approved_generated_texts:
+            screen_text_clause = (
+                "- SCENE-LOCAL APPROVED GENERATED TEXT: "
+                + " | ".join(approved_generated_texts)
+                + ". Use at most these exact strings, copied character-for-character on natural in-world surfaces.\n"
+            )
+        else:
+            screen_text_clause = "- This scene has no approved image-model text. Do not invent labels or pseudo-text.\n"
+        if deterministic_texts:
+            screen_text_clause += (
+                "- Use a calm region of an existing storyboard-essential, perspective-correct physical prop for deterministic values: "
+                + " | ".join(deterministic_texts)
+                + ". Do not draw those financial numbers in the base raster, and do not add a separate blank placard, floating card, or safe-zone panel.\n"
             )
 
         from app.utils.scene_content_classifier import classify_narration_content_type
@@ -529,13 +945,16 @@ Composition hint: {composition}
 Visual mode: {visual_mode or "general"}
 {content_type_instructions}
 {entity_instructions}
+{screen_text_clause}
 Convert the narration's core economic situation into a physical visual scene.
 Rules:
-- Abstract concepts must become concrete physical objects/environments with clear entity labeling
+- Abstract concepts must become concrete physical objects/environments; identify entities through context, props, and only approved exact strings
 - Each scene must be visually distinct. Never repeat the same background.
 - Do NOT translate narration sentences into large blackboard text. Use environmental props and scene-specific backgrounds.
+- Do not generate unapproved Korean, English, numbers, logos, or pseudo-text. A bubble or split composition appears only when this scene's storyboard explicitly plans it.
+- Choose the scene's own visual hierarchy. Some scenes may be simple and iconic; others may be dense, split, chart-led, object-led, or environment-led. Do not force one board, studio, prop count, character size, or camera layout across the video.
 {char_rules}
-- NEVER introduce secondary lab technicians, secondary mint characters, or secondary human figures. Depict Goldie (the 2D gold coin mascot) as the ONLY character in the scene.
+- Never introduce a second coin mascot. Human background figures are allowed only when they have a clear scene role.
 - Keep under 75 words.
 - End with exactly: {STYLE_SUFFIX}"""
 
@@ -552,15 +971,15 @@ Rules:
             logger.warning("대사 기반 프롬프트 재생성 실패 (씬: %s): %s", title, exc)
             mapped_entities = [get_entity_english_name(e)[0] for e in (core_entities or []) if get_entity_english_name(e)[1] != "uncertain"]
             fig_list = [f.get("raw") for f in (core_figures or []) if isinstance(f, dict) and f.get("raw")]
-            ent_clause = f" with labeled display for {', '.join(mapped_entities)}" if mapped_entities else ""
+            ent_clause = f" with industry-specific unlabeled physical props associated with {', '.join(mapped_entities)}" if mapped_entities else ""
             if fig_list:
-                ent_clause += f" showing '{', '.join(fig_list)}'"
+                ent_clause += " and a calm region on one storyboard-essential existing physical prop for exact verified values in post-production, without a separate blank placard or floating card"
             if strategy.content_type == "concept_explainer" or scene_type == "classroom":
-                setting = "A cozy 2D classroom with green blackboard displaying the core concept name, open textbooks and academic balance scale"
+                setting = "A cozy 2D classroom with an illustrated green teaching wall, open textbooks and an academic balance scale"
             elif strategy.content_type == "comparison" or scene_type == "split_stage":
                 setting = "A split-stage 2D financial environment comparing two contrasting sides with distinct company logos"
             elif strategy.content_type == "macro_geopolitical" or scene_type == "risk_control_room":
-                setting = "A 2D geopolitical risk control room with oil barrels, red alert monitors displaying core commodity names and price figures"
+                setting = "A 2D geopolitical risk control room with oil barrels, red alert lamps and scene-appropriate illustrated monitor surfaces"
             elif strategy.content_type == "entity_news" or scene_type == "briefing_podium":
                 setting = "A sleek 2D press briefing stage with curved LED display screen"
             elif scene_type == "real_estate_office":
@@ -681,12 +1100,64 @@ Rules:
                     str(script_data.get("script") or ""),
                     list(script_data.get("sections") or script_data.get("scenes") or []),
                 )
-                verify_tts_against_script_contract(tts_data, contract)
+                narration_sync = verify_tts_against_script_contract(tts_data, contract)
+                scenes_meta, sentence_boundary_sync = normalize_scene_sentence_boundaries(
+                    list(scenes_meta),
+                )
+                caption_sync = bind_caption_chunks_to_scenes(
+                    list(scenes_meta),
+                    list(tts_data.get("chunks") or []),
+                )
+                tts_chunks = list(tts_data.get("chunks") or [])
+                for scene, mapping in zip(scenes_meta, caption_sync["mappings"]):
+                    narration = str(
+                        scene.get("text_for_tts") or scene.get("content") or scene.get("text") or ""
+                    ).strip()
+                    planned = scene.get("caption_chunk_plan")
+                    if isinstance(planned, dict) and isinstance(planned.get("chunks"), list):
+                        planned_texts = [str(item.get("text") or "") for item in planned["chunks"]]
+                        actual_texts = [
+                            str(item.get("text") or "")
+                            for item in tts_chunks[
+                                mapping["chunk_start_index"]:mapping["chunk_end_index"] + 1
+                            ]
+                        ]
+                        if planned_texts != actual_texts:
+                            raise RuntimeError(
+                                f"장면 {mapping['scene_index'] + 1}의 SCRIPT 예상 자막 청크와 "
+                                "실제 TTS 자막 청크가 다릅니다. 설정 변경 후 TTS를 재사용할 수 없습니다."
+                            )
+                    scene["subtitle_text"] = narration
+                    scene["caption_chunk_contract"] = mapping
+                    # 이미지 프롬프트가 설명해야 하는 의미 원문도 동일한 장면
+                    # 텍스트 해시로 고정한다. 실제 자막 문구를 이미지 안에
+                    # 그리라는 뜻이 아니라, 이미지의 설명 대상 계보이다.
+                    scene["caption_image_contract"] = {
+                        "version": mapping["version"],
+                        "scene_text_sha256": mapping["scene_text_sha256"],
+                        "prompt_semantic_source_sha256": mapping["scene_text_sha256"],
+                        "caption_compact_sha256": mapping["caption_compact_sha256"],
+                        "chunk_start_index": mapping["chunk_start_index"],
+                        "chunk_end_index": mapping["chunk_end_index"],
+                        "transition_on_caption_boundary": True,
+                    }
+                self.tts_subtitle_sync = {
+                    **narration_sync,
+                    "scene_sentence_boundary": sentence_boundary_sync,
+                    "caption_scene_contract_version": caption_sync["version"],
+                    "scene_count": caption_sync["scene_count"],
+                    "all_scene_boundaries_on_caption_boundaries": True,
+                    "scene_mappings": caption_sync["mappings"],
+                }
             except Exception as exc:
                 raise RuntimeError(f"이미지 단계 대본·TTS·자막 계보 검증 실패: {exc}") from exc
 
         if not scenes_meta:
             scenes_meta = []
+        else:
+            # 이전 대본 자산도 재생성 없이 최신 장면 로컬 문자 계약을 적용한다.
+            # 기존 명시 screen_texts는 보존하고, 빈 씬만 승인 대본에서 추출한다.
+            scenes_meta = attach_scene_screen_texts(scenes_meta)
         still_image_pilot = bool(script_data.get("still_image_pilot"))
         if still_image_pilot:
             test_budget_limit = int(runtime_config.value("gemini_test_image_budget_krw"))
@@ -789,6 +1260,10 @@ Rules:
                     )
                 ),
                 clip_seconds=float(runtime_config.value("intro_motion_clip_seconds")),
+                # 이미지 생성 전에는 OCR 결과가 아직 없으므로 장면 계약만으로
+                # 문자·수치·기사형을 건너뛴다. 최종 PNG OCR은 생성 직후 다시
+                # 검사하며, 조립 단계가 안전한 다음 후보를 한 번 더 선택한다.
+                scene_eligible=lambda candidate: not fal_motion_metadata_block_reasons(candidate),
             )
             template_scene_count = sum(
                 1 for scene in pending_billable_scenes
@@ -907,6 +1382,17 @@ Rules:
                 sum(1 for s in scenes_meta if s.get("use_kling")),
                 sorted(intro_motion_indices),
             )
+            # 아직 Fal/Kling을 호출하지 않는다. 승인될 최종 PNG를 기준으로
+            # 움직일 사물과 고정할 영역을 미리 기록해, 후속 단계가 전 화면
+            # 지글링을 기본 효과처럼 선택하지 못하게 한다.
+            motion_plan_path = Path(f"/app/data/jobs/{job_id}/images/fal_motion_plan.json")
+            motion_plan_path.parent.mkdir(parents=True, exist_ok=True)
+            staged_motion_plan = motion_plan_path.with_suffix(".tmp")
+            staged_motion_plan.write_text(
+                json.dumps(build_fal_motion_preflight(scenes_meta), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            os.replace(staged_motion_plan, motion_plan_path)
 
         # Visual direction is deliberately separate from script writing. One
         # coordinated request assigns a distinct role/costume/action to every
@@ -923,22 +1409,92 @@ Rules:
                 for index, scene in enumerate(scenes_meta)
                 if index not in article_evidence_indices
             ]
-            specs = SceneDirector().direct_batch(lines, topic_context=topic_context) if lines else []
+            direction_cache_path = Path(f"/app/data/jobs/{job_id}/images/scene_direction_cache.json")
+            direction_input_hash = hashlib.sha256(json.dumps(
+                {"model": "claude-sonnet-4-6", "topic": topic_context, "lines": lines},
+                ensure_ascii=False,
+                sort_keys=True,
+            ).encode("utf-8")).hexdigest()
+            specs: list[SceneSpec] = []
+            try:
+                cached_direction = json.loads(direction_cache_path.read_text(encoding="utf-8"))
+                if cached_direction.get("input_sha256") == direction_input_hash:
+                    specs = [
+                        SceneSpec(**item)
+                        for item in cached_direction.get("specs") or []
+                        if isinstance(item, dict)
+                    ]
+                    if len(specs) != len(lines):
+                        specs = []
+            except (OSError, ValueError, TypeError):
+                specs = []
+            # 이전 실행이 SceneDirector 후 장면별 최종 프롬프트까지
+            # 저장한 뒤 중단됐다면 동일 대형 Anthropic 요청을 다시 보내지
+            # 않는다. 이전 지시 캐시가 없던 작업은 최종 프롬프트를
+            # 바꾸지 않는 결정론적 spec으로 계보를 승격한다.
+            if not specs and lines:
+                prompt_manifest_path = Path(f"/app/data/jobs/{job_id}/images/prompt_manifest.json")
+                try:
+                    prompt_manifest = json.loads(prompt_manifest_path.read_text(encoding="utf-8"))
+                except (OSError, ValueError, TypeError):
+                    prompt_manifest = {}
+                if isinstance(prompt_manifest, dict) and all(
+                    str(index) in prompt_manifest and str((prompt_manifest[str(index)] or {}).get("prompt_en") or "").strip()
+                    for index in range(len(lines))
+                ):
+                    specs = [
+                        fallback_spec(scene_id, narration, index)
+                        for index, (scene_id, narration) in enumerate(lines)
+                    ]
+                    logger.info(
+                        "완전한 프롬프트 캐시에서 SceneDirector 결정론적 지시를 복원: job=%s scenes=%s",
+                        job_id, len(specs),
+                    )
+            if specs:
+                if not direction_cache_path.is_file():
+                    direction_cache_path.parent.mkdir(parents=True, exist_ok=True)
+                    staged_direction = direction_cache_path.with_suffix(".tmp")
+                    staged_direction.write_text(json.dumps({
+                        "input_sha256": direction_input_hash,
+                        "model": "claude-sonnet-4-6",
+                        "specs": [spec.to_dict() for spec in specs],
+                    }, ensure_ascii=False, indent=2), encoding="utf-8")
+                    os.replace(staged_direction, direction_cache_path)
+                logger.info("SceneDirector 지시 캐시 재사용: job=%s scenes=%s", job_id, len(specs))
+            elif lines:
+                specs = SceneDirector().direct_batch(lines, topic_context=topic_context)
+                direction_cache_path.parent.mkdir(parents=True, exist_ok=True)
+                staged_direction = direction_cache_path.with_suffix(".tmp")
+                staged_direction.write_text(json.dumps({
+                    "input_sha256": direction_input_hash,
+                    "model": "claude-sonnet-4-6",
+                    "specs": [spec.to_dict() for spec in specs],
+                }, ensure_ascii=False, indent=2), encoding="utf-8")
+                os.replace(staged_direction, direction_cache_path)
             directed_specs = {int(spec.scene_id): spec for spec in specs if str(spec.scene_id).isdigit()}
             for index, scene in enumerate(scenes_meta):
                 if spec := directed_specs.get(index):
                     scene["scene_spec"] = spec.to_dict()
                     scene["headline"] = spec.headline
+            # V5 계약은 SceneDirector의 장면별 의상·행동·카메라 결정을 소비해야
+            # 한다. 이전에는 V5 계약을 먼저 만든 뒤 director 결과를 붙여 실제
+            # 프롬프트가 그 다양성을 무시했다.
+            if all(scene.get("scene_type") for scene in scenes_meta):
+                scenes_meta = attach_v5_scene_contracts(scenes_meta)
 
-        # V5 최종 경로는 승인된 캐릭터·화풍 참조 2장을 같은 순서로 반드시 전달한다.
-        # 단일 캐릭터 시트만 보내면서 두 번째 스타일 참조를 언급하면 계약이 모순된다.
+        # 사용자가 선택한 캐릭터 시트가 있어도 승인 화풍·장면 참조는 항상 병합한다.
+        # 기존에는 명시 캐릭터 한 장만 전송되어 같은 대본에서도 화풍과 얼굴이
+        # 흔들렸고, 참조 경로만 지문에 들어가 파일 교체도 감지하지 못했다.
         is_v5_final_batch = any(is_v5_final_lane_scene(scene) for scene in scenes_meta)
         selected_character_exists = bool(character_image_path and Path(character_image_path).exists())
         character_reference_paths = []
-        reference_candidates = (
-            [character_image_path] if selected_character_exists
-            else _load_default_references()
-        )
+        default_references = _load_default_references()
+        if selected_character_exists:
+            # 사용자가 명시적으로 고른 캐릭터 참조만 별도 정체성 참고로 앞에
+            # 두고, 실제 Job 52 장면에서 추출한 화풍 범위는 모두 유지한다.
+            reference_candidates = [character_image_path, *default_references]
+        else:
+            reference_candidates = default_references
         for path in reference_candidates:
             if path and Path(path).exists() and path not in character_reference_paths:
                 character_reference_paths.append(path)
@@ -1000,6 +1556,7 @@ Rules:
             )
             return {
                 **scene,
+                "_job_id": job_id,
                 "index": index,
                 "section": scene.get("section", f"scene_{index}"),
                 "prompt_en": prompt_en,
@@ -1140,6 +1697,7 @@ Rules:
                     fictionalized_labels=fictionalized_labels,
                     visual_mode=b_visual_mode,
                     character_required=character_required,
+                    screen_texts=list(scene.get("screen_texts") or []),
                 )
                 scene["prompt_en"] = prompt_en
                 scene["prompt"] = prompt_en
@@ -1150,6 +1708,7 @@ Rules:
                     prompt_for_scene(scene)
                     or (build_prompt(spec, scene.get("market_chart"), template) if spec else compile_editorial_prompt(scene, base_prompt))
                 )
+            base_generation_prompt = prompt_en
             prompt_ko = scene.get("prompt_ko") or narration or scene.get("title") or ""
             pose = scene.get("pose", "neutral")
             art_direction = scene.get("art_direction") or {}
@@ -1205,10 +1764,13 @@ Rules:
                     effective_character_style = character_style_prompt if character_required else "none"
                     if use_composite and character_required:
                         # [S2-3] 이중 레이어 합성
+                        generation_prompt = _bounded_text_generation_prompt(
+                            base_generation_prompt, audit_target=scene,
+                        )
                         bg_path = str(job_dir / f"scene_{i:03d}_bg.png")
                         background_path = bg_path
                         self._generate_background_layer(
-                            ai_provider, prompt_en, bg_path, section, pose, image_profile,
+                            ai_provider, generation_prompt, bg_path, section, pose, image_profile,
                             job_id=job_id, scene_key=f"image:{i}",
                         )
                         self._normalize_canvas(bg_path)
@@ -1216,9 +1778,11 @@ Rules:
                             scene, bg_path, character_poses_dir, pose_asset, img_path, job_id,
                             fallback_pose=(scene.get("art_direction") or {}).get("fallback_pose") or pose,
                         )
+                        _inspect_generated_textless_image(scene, img_path)
                             
                     else:
                         max_retries = max(3, min(int(runtime_config.value("gemini_retry_max")), 8))
+                        text_rejections = 0
                         for attempt in range(max_retries):
                             if is_direct_pro_scene and last_pro_request_finished_at is not None:
                                 delay_seconds = max(
@@ -1235,13 +1799,22 @@ Rules:
                                     )
                                     time.sleep(remaining_delay)
                             try:
+                                generation_prompt = _bounded_text_generation_prompt(
+                                    base_generation_prompt,
+                                    retry=text_rejections > 0,
+                                    audit_target=scene,
+                                )
+                                scene_reference_paths = (
+                                    select_contextual_reference_paths(generation_prompt, effective_reference_paths)
+                                    if is_direct_pro_scene and character_required else effective_reference_paths
+                                )
                                 ai_provider.generate_image(
-                                    prompt=prompt_en,
+                                    prompt=generation_prompt,
                                     output_path=raw_img_path,
                                     section=section,
-                                    keyword=prompt_en[:30],
-                                    character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
-                                    character_image_paths=effective_reference_paths,
+                                    keyword=generation_prompt[:30],
+                                    character_image_path=scene_reference_paths[0] if scene_reference_paths else None,
+                                    character_image_paths=scene_reference_paths,
                                     character_style_prompt=effective_character_style,
                                     lora_model_id=lora_model_id,
                                     lora_trigger_word=lora_trigger_word,
@@ -1266,6 +1839,17 @@ Rules:
                                     last_pro_request_finished_at = time.monotonic()
                             # [S5] AI 품질 자동 검수
                             if os.path.exists(raw_img_path) and os.path.getsize(raw_img_path) > 15000:
+                                try:
+                                    _inspect_generated_textless_image(scene, raw_img_path)
+                                except GeneratedImageTextDetectedError as exc:
+                                    text_rejections += 1
+                                    logger.warning(
+                                        "씬 %s의 비승인/훼손 문자열을 감지해 해당 표면만 재생성함: %s",
+                                        i, exc,
+                                    )
+                                    if text_rejections < 2:
+                                        continue
+                                    raise
                                 # 이미지 위 요약 헤드라인은 소품 표면 계약을 깨고
                                 # ASS 자막과 중복되므로 모든 운영 경로에서 합성하지 않는다.
                                 import shutil
@@ -1274,7 +1858,7 @@ Rules:
                                 # v4 보드 검출 실패는 이 경로에서만 한 번 더 생성한다.
                                 # 일반 제공자 재시도와 분리해 비용/manifest 의미를 보존한다.
                                 if scene.pop("_template_regeneration_request", None):
-                                    regen_prompt = prompt_en + " Regenerate this same template with the blank physical board much larger, unobstructed, and clearly separated from the character."
+                                    regen_prompt = generation_prompt + " Regenerate this same template with the physical information surface much larger, unobstructed, and clearly separated from the character."
                                     ai_provider.generate_image(
                                         prompt=regen_prompt, output_path=raw_img_path, section=section, keyword=regen_prompt[:30],
                                         character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
@@ -1290,6 +1874,7 @@ Rules:
                                         ),
                                         style_locked=bool(spec),
                                     )
+                                    _inspect_generated_textless_image(scene, raw_img_path)
                                     self._replace_with_regenerated_surface_source(scene, raw_img_path, img_path)
                                     # ProviderRequestAudit가 이 Gemini Pro 요청을 이미 원장에
                                     # 기록한다. 여기서 다시 record_cost를 호출하면 한 요청이
@@ -1312,7 +1897,10 @@ Rules:
                         num_vars = math.ceil(duration / max_hold)
                         for v in range(1, num_vars):
                             var_img_path = str(job_dir / f"scene_{i:03d}_var_{v}.jpg")
-                            var_prompt = prompt_en + f", alternate visual angle version {v}"
+                            var_prompt = _bounded_text_generation_prompt(
+                                base_generation_prompt + f", alternate visual angle version {v}",
+                                audit_target=scene,
+                            )
                             try:
                                 if use_composite and character_required:
                                     var_bg_path = str(job_dir / f"scene_{i:03d}_bg_var_{v}.png")
@@ -1469,7 +2057,11 @@ Rules:
                 scene["quality_score"] = min(scene["quality_score"], semantic["score"])
                 scene["retry_recommended"] = scene["retry_recommended"] or semantic["retry_recommended"]
                 if semantic["retry_recommended"]:
-                    scene["quality_flags"] = [*scene["quality_flags"], "semantic_review_recommended"]
+                    scene["quality_flags"] = list(dict.fromkeys([
+                        *scene["quality_flags"],
+                        "semantic_review_recommended",
+                        *semantic.get("failure_categories", []),
+                    ]))
         image_quality["art_direction"] = assess_art_diversity(generated)
         image_quality["semantic_alignment"] = semantic_quality
         image_quality["scene_metadata_contract"] = _scene_metadata_contract(scenes_meta, generated)
@@ -1507,6 +2099,15 @@ Rules:
         """
         import shutil
 
+        prompt_cache_path = Path(job_dir) / "prompt_manifest.json"
+        try:
+            prompt_cache = json.loads(prompt_cache_path.read_text(encoding="utf-8"))
+            if not isinstance(prompt_cache, dict):
+                prompt_cache = {}
+        except (OSError, ValueError, TypeError):
+            prompt_cache = {}
+        prompt_cache_dirty = False
+
         def valid_image(path: str) -> bool:
             try:
                 if not os.path.exists(path) or os.path.getsize(path) <= 15000:
@@ -1514,7 +2115,7 @@ Rules:
                 try:
                     from PIL import Image
                     with Image.open(path) as image:
-                        image.verify()
+                        image.load()
                 except ImportError:
                     pass
                 return True
@@ -1522,6 +2123,7 @@ Rules:
                 return False
 
         def make_context(original: dict, index: int) -> dict:
+            nonlocal prompt_cache_dirty
             binding_map = {str(b.scene_id): b for b in (entity_bindings or [])}
             binding_by_index = {b.scene_index: b for b in (entity_bindings or [])}
             binding = binding_map.get(str(original.get("scene_id"))) or binding_by_index.get(index)
@@ -1561,20 +2163,65 @@ Rules:
                 or "Financial editorial scene representing" in str(base_prompt)
                 or mismatch is not None
             )
-            if needs_rebuild and narration:
+            scene_type = str(scene.get("archetype") or scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general")
+            prompt_cache_key = _image_prompt_cache_key(
+                index=index,
+                narration=narration,
+                scene_type=scene_type,
+                visual_mode=str(b_visual_mode),
+                character_required=character_required,
+                core_entities=list(core_entities or []),
+                core_figures=list(core_figures or []),
+                screen_texts=list(scene.get("screen_texts") or []),
+            )
+            compatible_prompt_cache_keys = {
+                prompt_cache_key,
+                *(
+                    _image_prompt_cache_key(
+                        index=index,
+                        narration=narration,
+                        scene_type=scene_type,
+                        visual_mode=str(b_visual_mode),
+                        character_required=character_required,
+                        core_entities=list(core_entities or []),
+                        core_figures=list(core_figures or []),
+                        screen_texts=list(scene.get("screen_texts") or []),
+                        policy_version=version,
+                    )
+                    for version in PROMPT_CACHE_COMPATIBLE_VERSIONS
+                ),
+            }
+            cached_prompt = prompt_cache.get(str(index))
+            if (
+                needs_rebuild
+                and isinstance(cached_prompt, dict)
+                and cached_prompt.get("key") in compatible_prompt_cache_keys
+                and str(cached_prompt.get("prompt_en") or "").strip()
+            ):
+                prompt_en = str(cached_prompt["prompt_en"])
+                scene["prompt_en"] = prompt_en
+                scene["prompt"] = prompt_en
+                if cached_prompt.get("key") != prompt_cache_key:
+                    prompt_cache[str(index)] = {"key": prompt_cache_key, "prompt_en": prompt_en}
+                    prompt_cache_dirty = True
+                logger.info("씬 '%s': 승인 장면 프롬프트 캐시 재사용", scene.get("title"))
+            elif needs_rebuild and narration:
                 prompt_en = self._build_prompt_from_narration(
                     narration=narration,
-                    scene_type=str(scene.get("archetype") or scene.get("scene_type") or scene.get("visual_type") or scene.get("section") or "general"),
+                    scene_type=scene_type,
                     title=str(scene.get("title") or f"scene_{index}"),
                     core_entities=core_entities,
                     core_figures=core_figures,
                     fictionalized_labels=fictionalized_labels,
                     visual_mode=b_visual_mode,
                     character_required=character_required,
+                    screen_texts=list(scene.get("screen_texts") or []),
                 )
                 scene["prompt_en"] = prompt_en
                 scene["prompt"] = prompt_en
                 scene["grounding_score_pre"] = compute_grounding_score(prompt_en, core_entities)
+                prompt_cache[str(index)] = {"key": prompt_cache_key, "prompt_en": prompt_en}
+                prompt_cache_dirty = True
                 logger.info("씬 '%s': 대사 기반 프롬프트로 교체됨 (이유: %s, grounding_pre: %.2f)", scene.get("title"), "아키타입 미스매치 감지" if mismatch else "폴백/빈값 트리거", scene["grounding_score_pre"])
             else:
                 prompt_en = (
@@ -1609,6 +2256,12 @@ Rules:
             }
 
         contexts = [make_context(scene, index) for index, scene in enumerate(scenes_meta)]
+        if prompt_cache_dirty:
+            staged_prompt_cache = prompt_cache_path.with_suffix(".tmp")
+            staged_prompt_cache.write_text(
+                json.dumps(prompt_cache, ensure_ascii=False, indent=2), encoding="utf-8",
+            )
+            os.replace(staged_prompt_cache, prompt_cache_path)
         manifest_path = job_dir / "images_manifest.json"
         try:
             image_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -1616,20 +2269,30 @@ Rules:
                 image_manifest = {}
         except (OSError, ValueError, TypeError):
             image_manifest = {}
+        loaded_manifest_version = int(image_manifest.get("_fingerprint_version") or 1)
+        visual_qa_cache_path = job_dir / "visual_qa_cache.json"
+        try:
+            visual_qa_cache = json.loads(visual_qa_cache_path.read_text(encoding="utf-8"))
+            if not isinstance(visual_qa_cache, dict):
+                visual_qa_cache = {}
+        except (OSError, ValueError, TypeError):
+            visual_qa_cache = {}
+        for ctx in contexts:
+            cached_review = visual_qa_cache.get(str(ctx["index"]))
+            if isinstance(cached_review, dict):
+                ctx["visual_qa_review"] = cached_review
 
         def fingerprint(ctx: dict) -> str:
-            payload = {
-                "prompt_en": ctx["prompt_en"],
-                "image_profile": ctx["image_profile"],
-                "character_style_prompt": character_style_prompt,
-                "character_reference_paths": character_reference_paths,
-                "use_composite": use_composite,
-                "character_poses_dir": character_poses_dir,
-                "lora_model_id": lora_model_id,
-                "lora_trigger_word": lora_trigger_word,
-                "lora_scale": lora_scale,
-            }
-            return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()
+            return _stable_image_lineage_fingerprint(
+                ctx,
+                character_style_prompt=character_style_prompt,
+                character_reference_paths=character_reference_paths,
+                use_composite=use_composite,
+                character_poses_dir=character_poses_dir,
+                lora_model_id=lora_model_id,
+                lora_trigger_word=lora_trigger_word,
+                lora_scale=lora_scale,
+            )
 
         def render_one(ctx: dict) -> dict:
             index = ctx["index"]
@@ -1642,10 +2305,10 @@ Rules:
             # 씬 유형 -> 아키타입 기본 구도 주입 및 프롬프트 검증
             SCENE_TYPE_TO_ARCHETYPE = {
                 "character_hero": "briefing podium on stage, spotlight, financial presenter at center",
-                "news_context": "retail shock market backdrop, news event setting, breaking news headline banner",
-                "data_visual": "risk control room, glowing financial chart monitors and data screens",
-                "character_explainer": "classroom chalkboard, conceptual financial explanation backdrop",
-                "comparison": "trade calculator, giant golden balance scale stage with market weights",
+                "news_context": "retail shock market backdrop, news event setting, torn blank fabric ribbon",
+                "data_visual": "risk control room with analog signal lamps, physical gauges, and colored light paths",
+                "character_explainer": "classroom teaching wall with abstract shapes and arrows only",
+                "comparison": "giant golden balance scale stage with two physical market weights",
                 "takeaway": "briefing podium, illuminated presentation stage",
             }
             prompt_en = ctx.get("prompt_en", "")
@@ -1669,8 +2332,9 @@ Rules:
                 elif any(k in narration_text for k in ["지수", "포인트", "마감"]):
                     metaphors.append("giant illuminated scoreboard displaying stock market results")
                 elif any(k in narration_text for k in ["전망", "방향"]):
-                    metaphors.append("foggy financial crossroads with glowing directional signs")
+                    metaphors.append("foggy financial crossroads with diverging colored light paths")
 
+                metaphor_str = ", ".join(metaphors) or "one clear physical economic metaphor with no written marks"
                 prompt_en = f"{archetype_setting}, {metaphor_str}, dark navy tone, {STYLE_SUFFIX}"
                 ctx["prompt_en"] = prompt_en
 
@@ -1678,23 +2342,96 @@ Rules:
             effective_reference_paths = character_reference_paths if character_required else []
             tier = image_profile.get("tier", "pro")
             scene_fingerprint = fingerprint(ctx)
-            # Legacy files without a manifest remain resumable; once a
-            # manifest exists, a changed prompt/profile forces regeneration.
-            if valid_image(img_path) and (str(index) not in image_manifest or image_manifest.get(str(index)) == scene_fingerprint):
+            manifest_fingerprint = image_manifest.get(str(index))
+            contract_rejections = 0
+            provider_transient_failures = 0
+            retry_feedback: dict | None = None
+            retry_source_path = str(job_dir / f"scene_{index:03d}_rejected.png")
+            full_regeneration_after_local_drift = False
+
+            def preserve_retry_source(source_path: str) -> None:
+                """실패 프레임을 다음 요청의 국소 편집 기준으로 보존한다."""
+                if valid_image(source_path):
+                    shutil.copy2(source_path, retry_source_path)
+            # 외부 이미지 응답 저장 직후 OCR/합성 단계에서 프로세스가 끊기면
+            # 유효한 원본 PNG만 남을 수 있다. 같은 원본을 다시 과금하지 않고
+            # 최신 문자 게이트를 통과한 경우에만 최종 PNG로 승격한다.
+            if not valid_image(img_path) and valid_image(raw_img_path):
+                try:
+                    _inspect_generated_textless_image(ctx, raw_img_path)
+                    shutil.copy2(raw_img_path, img_path)
+                    self._apply_image_overlays(ctx, img_path)
+                    _inspect_generated_visual_image(ctx, img_path)
+                except GeneratedImageTextDetectedError as exc:
+                    preserve_retry_source(raw_img_path)
+                    contract_rejections += 1
+                    retry_feedback = {
+                        "failure_categories": ["text_unexpected_or_malformed"],
+                        "reason": str(exc),
+                    }
+                    logger.warning("기존 scene %s 원본 PNG의 비승인/훼손 텍스트를 감지해 재생성함: %s", index, exc)
+                except GeneratedImageVisualContractError as exc:
+                    if not isinstance(exc, DeterministicSurfaceMissingError):
+                        preserve_retry_source(img_path)
+                    else:
+                        full_regeneration_after_local_drift = True
+                    contract_rejections += 1
+                    retry_feedback = exc.review
+                    logger.warning("기존 scene %s 원본 PNG의 비전 계약 위반을 감지해 재생성함: %s", index, exc)
+                else:
+                    return {
+                        **ctx,
+                        "image_path": img_path,
+                        "clean_plate_path": None,
+                        "asset_layout_metadata": _asset_layout_metadata(ctx, None),
+                        "generation_method": "resumed_validated_raw",
+                        "quality_score": 90,
+                        "_fingerprint": scene_fingerprint,
+                    }
+            # v1은 비결정적인 LLM 영문 표현을 지문에 넣었기 때문에 동일 승인
+            # 대본 재개도 전 장면을 재과금했다. 한 번만 기존 PNG를 엄격 OCR로
+            # 재검증해 v2 안정 지문으로 승격한다.
+            legacy_resume = loaded_manifest_version < IMAGE_LINEAGE_FINGERPRINT_VERSION and bool(manifest_fingerprint)
+            if valid_image(img_path) and (
+                manifest_fingerprint is None
+                or manifest_fingerprint == scene_fingerprint
+                or legacy_resume
+            ) and contract_rejections == 0:
                 # Validate/recreate the final composited still from its saved
                 # source image on every resume entry point.
                 # V5 검증 수치 오버레이는 원본 Gemini 출력 위에만 한 번 적용한다.
                 # 이미 합성된 PNG에 재개 실행이 겹쳐 쓰면 값이 누적되므로, 보존한
                 # raw 이미지를 먼저 복원한 뒤 최신 검증 사실을 다시 반영한다.
-                if is_v5_final_lane_scene(ctx) and valid_image(raw_img_path):
-                    shutil.copy2(raw_img_path, img_path)
-                self._apply_image_overlays(ctx, img_path)
-                resumed_clean_plate = str(job_dir / f"scene_{index:03d}_bg.png")
-                if not Path(resumed_clean_plate).is_file():
-                    resumed_clean_plate = None
-                return {**ctx, "image_path": img_path, "clean_plate_path": resumed_clean_plate,
-                        "asset_layout_metadata": _asset_layout_metadata(ctx, resumed_clean_plate),
-                        "generation_method": "resumed_existing", "quality_score": 90, "_fingerprint": scene_fingerprint}
+                source_for_ocr = raw_img_path if valid_image(raw_img_path) else img_path
+                try:
+                    _inspect_generated_textless_image(ctx, source_for_ocr)
+                    if _restore_raw_before_deterministic_overlay(ctx) and valid_image(raw_img_path):
+                        shutil.copy2(raw_img_path, img_path)
+                    self._apply_image_overlays(ctx, img_path)
+                    _inspect_generated_visual_image(ctx, img_path)
+                except GeneratedImageTextDetectedError as exc:
+                    preserve_retry_source(source_for_ocr)
+                    contract_rejections += 1
+                    retry_feedback = {
+                        "failure_categories": ["text_unexpected_or_malformed"],
+                        "reason": str(exc),
+                    }
+                    logger.warning("기존 scene %s PNG의 비승인/훼손 텍스트를 감지해 재생성함: %s", index, exc)
+                except GeneratedImageVisualContractError as exc:
+                    if not isinstance(exc, DeterministicSurfaceMissingError):
+                        preserve_retry_source(img_path)
+                    else:
+                        full_regeneration_after_local_drift = True
+                    contract_rejections += 1
+                    retry_feedback = exc.review
+                    logger.warning("기존 scene %s PNG의 비전 계약 위반을 감지해 재생성함: %s", index, exc)
+                else:
+                    resumed_clean_plate = str(job_dir / f"scene_{index:03d}_bg.png")
+                    if not Path(resumed_clean_plate).is_file():
+                        resumed_clean_plate = None
+                    return {**ctx, "image_path": img_path, "clean_plate_path": resumed_clean_plate,
+                            "asset_layout_metadata": _asset_layout_metadata(ctx, resumed_clean_plate),
+                            "generation_method": "resumed_existing", "quality_score": 90, "_fingerprint": scene_fingerprint}
 
             max_retries = max(3, min(int(runtime_config.value("gemini_retry_max")), 8))
             base_backoff = max(0.5, float(runtime_config.value("gemini_pro_retry_base_seconds")))
@@ -1703,13 +2440,160 @@ Rules:
                 if is_job_stopped(job_id):
                     raise RuntimeError(f"Job {job_id} stopped by user.")
                 provider_request_started = False
+                localized_edit = False
                 try:
+                    generation_prompt = _bounded_text_generation_prompt(
+                        ctx["prompt_en"],
+                        retry=contract_rejections > 0,
+                        retry_feedback=retry_feedback,
+                        audit_target=ctx,
+                    )
+                    scene_reference_paths = (
+                        select_contextual_reference_paths(
+                            generation_prompt,
+                            effective_reference_paths,
+                            # 동일 Pro 요청이 공급자 5xx를 한 차례 소진한 뒤에는
+                            # 얼굴 범위 참조와 가장 가까운 장면 화풍 한 장만 남긴다.
+                            # 모델·해상도·장면 계약은 유지하면서 요청 부담만 줄인다.
+                            max_references=2 if provider_transient_failures else 3,
+                        )
+                        if is_v5_final_lane_scene(ctx) and character_required else effective_reference_paths
+                    )
+                    if provider_transient_failures and is_v5_final_lane_scene(ctx):
+                        logger.info(
+                            "Gemini Pro transient recovery: scene=%s references=%s prompt/model unchanged",
+                            index,
+                            len(scene_reference_paths),
+                        )
+                    localized_edit = (
+                        contract_rejections > 0
+                        and valid_image(retry_source_path)
+                        and not full_regeneration_after_local_drift
+                    )
+                    if localized_edit:
+                        scene_reference_paths = [
+                            retry_source_path,
+                            *(path for path in scene_reference_paths if path != retry_source_path),
+                        ][:3]
+                        generation_prompt = (
+                            "The FIRST attached image is the previously rejected full scene. Edit that same frame locally. "
+                            "Keep all successful composition, camera, palette, background, props, character identity, costume, pose, and 2D linework unchanged. "
+                            "Apply only the scene-local corrections named below. Any later attached images are channel identity and style references.\n\n"
+                            + generation_prompt
+                        )
+                        categories = set((retry_feedback or {}).get("failure_categories") or [])
+                        review_raw = (retry_feedback or {}).get("raw") or {}
+                        malformed_texts = list(review_raw.get("unexpected_or_malformed_texts") or [])
+                        text_only_categories = {
+                            "text_unexpected_or_malformed", "text_approved_duplicate",
+                        }
+                        if categories and categories.issubset(text_only_categories) and malformed_texts:
+                            from app.services.local_text_repair import (
+                                assess_deterministic_inpaint_surface,
+                                inpaint_text_regions,
+                                locate_malformed_text_regions,
+                                text_regions_from_visual_review,
+                            )
+
+                            regions = text_regions_from_visual_review(review_raw, malformed_texts)
+                            already_located = {region.text for region in regions}
+                            missing_targets = [value for value in malformed_texts if value not in already_located]
+                            if missing_targets:
+                                regions.extend(locate_malformed_text_regions(
+                                    retry_source_path,
+                                    missing_targets,
+                                    job_id=job_id,
+                                    scene_key=f"local_text_repair:scene_{index:03d}",
+                                ))
+                            located_texts = {region.text for region in regions}
+                            unlocated_texts = [value for value in malformed_texts if value not in located_texts]
+                            surface_preflight = (
+                                assess_deterministic_inpaint_surface(retry_source_path, regions)
+                                if regions and not unlocated_texts else
+                                {"passed": False, "reason": "incomplete_coordinates", "regions": []}
+                            )
+                            if not surface_preflight.get("passed"):
+                                # 좌표가 정확해도 컬러 게이지·차트·직인처럼 복잡한
+                                # 표면이면 인페인팅이 흐린 얼룩을 만든다. 해당 문자열
+                                # 전체를 비전 국소 편집 경로로 넘긴다.
+                                ctx["local_text_surface_preflight"] = surface_preflight
+                                regions = []
+                                unlocated_texts = list(malformed_texts)
+                            if not regions or unlocated_texts:
+                                # 좌표 판독이 불완전할 때 임의 상자를 지우지 않는다. 같은
+                                # 승인 프롬프트와 원본 프레임을 사용하는 국소 비전 편집으로
+                                # 넘기고, 아래 원본-후보 보존 게이트에서 전역 재구성을 막는다.
+                                ctx["local_text_repair_fallback"] = {
+                                    "reason": "safe_coordinates_unavailable",
+                                    "unlocated_texts": unlocated_texts or malformed_texts,
+                                }
+                                approved_replacements = list(dict.fromkeys(
+                                    str(value).strip()
+                                    for value in (
+                                        ((ctx.get("v5_render_contract") or {}).get("surface_caption") or {}).get("generated_texts")
+                                        or []
+                                    )
+                                    if str(value).strip()
+                                ))
+                                generation_prompt += (
+                                    "\n\nCoordinate-safe deterministic text repair was unavailable. "
+                                    "Using the FIRST reference frame, correct only these malformed glyph clusters: "
+                                    + json.dumps(unlocated_texts or malformed_texts, ensure_ascii=False)
+                                    + ". The only exact replacement strings allowed on the same existing physical surfaces are: "
+                                    + json.dumps(approved_replacements, ensure_ascii=False)
+                                    + ". Keep every correct label and all non-text pixels, composition, character, props, palette, and linework unchanged. "
+                                    "When the intended approved replacement is unambiguous, write it exactly in the original sign or monitor lettering style. "
+                                    "Otherwise remove only the malformed glyphs and restore the underlying surface. Do not add a card or detached label."
+                                )
+                            else:
+                                local_repair = inpaint_text_regions(
+                                    retry_source_path,
+                                    raw_img_path,
+                                    regions,
+                                )
+                                _inspect_generated_textless_image(ctx, raw_img_path)
+                                shutil.copy2(raw_img_path, img_path)
+                                self._apply_image_overlays(ctx, img_path)
+                                preservation = assess_local_edit_preservation(
+                                    retry_source_path,
+                                    img_path,
+                                    allowed_change_categories=sorted(categories),
+                                )
+                                if preservation.get("status") != "completed":
+                                    raise VisualQaUnavailableError(
+                                        "결정론 문자 수리 원본-후보 비교를 완료하지 못함: "
+                                        + str(preservation.get("warning") or "unknown")
+                                    )
+                                if not preservation.get("passed"):
+                                    raise LocalEditPreservationError(
+                                        "결정론 문자 수리가 비문제 영역을 변경함: "
+                                        + str(preservation.get("reason") or ""),
+                                        {
+                                            "failure_categories": ["local_edit_scope_drift"],
+                                            "reason": str(preservation.get("reason") or ""),
+                                            "raw": preservation,
+                                        },
+                                    )
+                                ctx["local_text_repair"] = local_repair
+                                ctx["local_edit_preservation"] = preservation
+                                _inspect_generated_visual_image(ctx, img_path)
+                                Path(retry_source_path).unlink(missing_ok=True)
+                                return {
+                                    **ctx,
+                                    "image_path": img_path,
+                                    "background_path": background_path,
+                                    "clean_plate_path": background_path,
+                                    "asset_layout_metadata": _asset_layout_metadata(ctx, background_path),
+                                    "generation_method": "deterministic_local_text_repair",
+                                    "quality_score": 90,
+                                    "_fingerprint": scene_fingerprint,
+                                }
                     Path(raw_img_path).unlink(missing_ok=True)
                     if use_composite and character_required:
                         bg_path = str(job_dir / f"scene_{index:03d}_bg.png")
                         background_path = bg_path
                         self._generate_background_layer(
-                            ai_provider, ctx["prompt_en"], bg_path, ctx["section"], ctx["pose"], image_profile,
+                            ai_provider, generation_prompt, bg_path, ctx["section"], ctx["pose"], image_profile,
                             job_id=job_id, scene_key=f"image:{index}",
                         )
                         if not valid_image(bg_path):
@@ -1721,17 +2605,18 @@ Rules:
                             ctx["art_direction"].get("pose_asset") or ctx["pose"], img_path, job_id,
                             fallback_pose=ctx["art_direction"].get("fallback_pose") or ctx["pose"],
                         )
+                        _inspect_generated_textless_image(ctx, img_path)
                             
                     else:
                         gemini_pressure.acquire()
                         provider_request_started = True
                         ai_provider.generate_image(
-                            prompt=ctx["prompt_en"],
+                            prompt=generation_prompt,
                             output_path=raw_img_path,
                             section=ctx["section"],
-                            keyword=ctx["prompt_en"][:30],
-                            character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
-                            character_image_paths=effective_reference_paths,
+                            keyword=generation_prompt[:30],
+                            character_image_path=scene_reference_paths[0] if scene_reference_paths else None,
+                            character_image_paths=scene_reference_paths,
                             character_style_prompt=character_style_prompt if character_required else "none",
                             lora_model_id=lora_model_id,
                             lora_trigger_word=lora_trigger_word,
@@ -1749,18 +2634,22 @@ Rules:
                             ),
                             style_locked=bool(ctx["spec"]) or bool(provider_options.get("style_locked")),
                             suppress_legacy_style_lock=bool(provider_options.get("suppress_legacy_style_lock")),
-                            gemini_reference_contract_declared=bool(provider_options.get("gemini_reference_contract_declared")),
+                            gemini_reference_contract_declared=(
+                                localized_edit
+                                or bool(provider_options.get("gemini_reference_contract_declared"))
+                            ),
                         )
                         if not valid_image(raw_img_path):
                             raise RuntimeError("provider returned a missing, undersized, or invalid image")
                         gemini_pressure.outcome()
                         provider_request_started = False
-                        
+
+                        _inspect_generated_textless_image(ctx, raw_img_path)
                         shutil.copy2(raw_img_path, img_path)
                         
                         self._apply_image_overlays(ctx, img_path)
                         if ctx.pop("_template_regeneration_request", None):
-                            regen_prompt = ctx["prompt_en"] + " Regenerate this same template with the blank physical board much larger, unobstructed, and clearly separated from the character."
+                            regen_prompt = generation_prompt + " Regenerate this same template with the blank physical board much larger, unobstructed, and clearly separated from the character."
                             ai_provider.generate_image(
                                 prompt=regen_prompt, output_path=raw_img_path, section=ctx["section"], keyword=regen_prompt[:30],
                                 character_image_path=effective_reference_paths[0] if effective_reference_paths else None,
@@ -1776,6 +2665,7 @@ Rules:
                                 ),
                                 style_locked=bool(ctx["spec"]),
                             )
+                            _inspect_generated_textless_image(ctx, raw_img_path)
                             self._replace_with_regenerated_surface_source(ctx, raw_img_path, img_path)
                             # 재생성 요청도 ProviderRequestAudit가 이미 기록한다.
                             self._apply_image_overlays(ctx, img_path)
@@ -1783,6 +2673,30 @@ Rules:
 
                     if not valid_image(img_path):
                         raise RuntimeError("final image validation failed")
+                    if localized_edit:
+                        preservation = assess_local_edit_preservation(
+                            retry_source_path,
+                            img_path,
+                            allowed_change_categories=list((retry_feedback or {}).get("failure_categories") or []),
+                        )
+                        if preservation.get("status") != "completed":
+                            raise VisualQaUnavailableError(
+                                "국소 수정 원본-후보 비교를 완료하지 못함: "
+                                + str(preservation.get("warning") or "unknown")
+                            )
+                        ctx["local_edit_preservation"] = preservation
+                        if not preservation.get("passed"):
+                            raise LocalEditPreservationError(
+                                "국소 수정이 비문제 영역을 변경함: "
+                                + str(preservation.get("reason") or "원본 구도·얼굴·소품 보존 실패"),
+                                {
+                                    "failure_categories": ["local_edit_scope_drift"],
+                                    "reason": str(preservation.get("reason") or ""),
+                                    "raw": preservation,
+                                },
+                            )
+                    _inspect_generated_visual_image(ctx, img_path)
+                    Path(retry_source_path).unlink(missing_ok=True)
                     return {
                         **ctx,
                         "image_path": img_path,
@@ -1797,11 +2711,77 @@ Rules:
                     last_error = exc
                     if provider_request_started:
                         gemini_pressure.outcome(str(exc))
+                    if isinstance(exc, LocalEditPreservationError) and localized_edit:
+                        # Gemini 국소 편집이 배경·팔레트·소품까지 재해석하면 그 후보는
+                        # 폐기한다. 같은 실패 프레임을 다시 편집해 드리프트를 누적하지
+                        # 않고, 원래 장면 프롬프트로 새 후보를 만든 뒤 장면 계약 전체를
+                        # 다시 검수한다.
+                        Path(retry_source_path).unlink(missing_ok=True)
+                        full_regeneration_after_local_drift = True
+                        contract_rejections = 0
+                        logger.warning(
+                            "Image scene %s local edit drifted; discarded candidate and switching to full scene regeneration: %s",
+                            index,
+                            exc,
+                        )
+                        continue
+                    if isinstance(exc, VisualQaUnavailableError):
+                        raise NonRetryableImageGenerationError(
+                            f"scene {index} 비전 검수 연결을 확인할 때까지 동일 이미지를 재생성하지 않음: {exc}"
+                        ) from exc
+                    if isinstance(exc, DeterministicSurfaceMissingError):
+                        Path(retry_source_path).unlink(missing_ok=True)
+                        full_regeneration_after_local_drift = True
+                        contract_rejections += 1
+                        retry_feedback = exc.review
+                        if contract_rejections >= 3:
+                            raise NonRetryableImageGenerationError(
+                                f"scene {index} 안전한 결정론 수치 표면을 3개 후보에서 찾지 못함: {exc}"
+                            ) from exc
+                        logger.warning(
+                            "Image scene %s has no safe numeric surface; regenerating the full scene %s/3",
+                            index,
+                            contract_rejections,
+                        )
+                        continue
+                    if isinstance(exc, (GeneratedImageTextDetectedError, GeneratedImageVisualContractError)):
+                        review = exc.review if isinstance(exc, GeneratedImageVisualContractError) else {}
+                        if _requires_full_scene_regeneration(review):
+                            # 흐린 인물·녹은 패널·인페인팅 얼룩은 한 부분만 다시
+                            # 그리면 주변 화풍과 구도가 더 흔들린다. 실패 프레임을
+                            # 참조 편집하지 않고 동일 장면 계약으로 새 후보를 만든다.
+                            Path(retry_source_path).unlink(missing_ok=True)
+                            full_regeneration_after_local_drift = True
+                        else:
+                            preserve_retry_source(raw_img_path if valid_image(raw_img_path) else img_path)
+                        contract_rejections += 1
+                        retry_feedback = (
+                            review
+                            if isinstance(exc, GeneratedImageVisualContractError)
+                            else {
+                                "failure_categories": ["text_unexpected_or_malformed"],
+                                "reason": str(exc),
+                            }
+                        )
+                        if contract_rejections >= 3:
+                            raise NonRetryableImageGenerationError(
+                                f"scene {index} 장면별 표적 교정 2회 후에도 계약을 통과하지 못함: {exc}"
+                            ) from exc
+                        logger.warning(
+                            "Image scene %s rejected by scene-local QA; targeted retry %s/2: %s",
+                            index, contract_rejections, exc,
+                        )
+                        continue
+                    if "image request exhausted" in str(exc).lower():
+                        raise NonRetryableImageGenerationError(
+                            f"scene {index} 공급자 내부 재시도를 이미 소진함; 바깥 루프에서 같은 장기 요청을 중첩 재시도하지 않음: {exc}"
+                        ) from exc
                     decision = classify_image_error(exc)
                     if not decision.retryable:
                         raise NonRetryableImageGenerationError(
                             f"scene {index} stopped: non-retryable ({decision.reason}): {exc}"
                         ) from exc
+                    provider_transient_failures += 1
                     if attempt + 1 >= max_retries:
                         break
                     delay = min(60.0, base_backoff * (2 ** attempt) + random.uniform(0.0, 1.0))
@@ -1820,20 +2800,48 @@ Rules:
         same_error_counts: Counter[str] = Counter()
         break_count = max(1, int(runtime_config.value("image_same_error_break_count")))
         def persist_manifest() -> None:
+            image_manifest["_fingerprint_version"] = IMAGE_LINEAGE_FINGERPRINT_VERSION
             staged = manifest_path.with_suffix(".tmp")
             staged.write_text(json.dumps(image_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
             os.replace(staged, manifest_path)
 
-        with ThreadPoolExecutor(max_workers=min(max_workers, len(contexts)), thread_name_prefix="image") as pool:
+        def persist_visual_qa_review(result: dict) -> None:
+            review = result.get("visual_qa_review")
+            if not isinstance(review, dict):
+                return
+            visual_qa_cache[str(result["index"])] = review
+            staged = visual_qa_cache_path.with_suffix(".tmp")
+            staged.write_text(json.dumps(visual_qa_cache, ensure_ascii=False, indent=2), encoding="utf-8")
+            os.replace(staged, visual_qa_cache_path)
+
+        worker_count = min(max_workers, len(contexts))
+        with ThreadPoolExecutor(max_workers=worker_count, thread_name_prefix="image") as pool:
+            # 전체 씬을 미리 큐에 넣으면 첫 씬에서 회로 차단기가 열려도 worker가
+            # 다음 씬을 먼저 꺼내 외부 요청을 시작할 수 있다. 실제 동시성만큼만
+            # 제출하고 완료 결과를 확인한 뒤 한 장씩 보충한다.
+            context_iter = iter(contexts)
             futures = {}
-            for i, ctx in enumerate(contexts):
-                if i > 0:
-                    time.sleep(0.8)  # 3개 동시 파이프라인 처리를 위한 최적화 딜레이 (0.8초)
-                futures[pool.submit(render_one, ctx)] = ctx["index"]
-            for future in as_completed(futures):
-                index = futures[future]
+
+            def submit_next() -> bool:
+                try:
+                    next_ctx = next(context_iter)
+                except StopIteration:
+                    return False
+                futures[pool.submit(render_one, next_ctx)] = next_ctx["index"]
+                return True
+
+            for _ in range(worker_count):
+                if not submit_next():
+                    break
+                if worker_count > 1:
+                    time.sleep(0.8)
+
+            while futures:
+                future = next(as_completed(tuple(futures)))
+                index = futures.pop(future)
                 try:
                     result = future.result()
+                    persist_visual_qa_review(result)
                     image_manifest[str(index)] = result.pop("_fingerprint", "")
                     persist_manifest()
                     # 병렬 Gemini Pro 요청의 비용은 ProviderRequestAudit가 기록한다.
@@ -1842,7 +2850,7 @@ Rules:
                 except Exception as exc:
                     failures.append((index, str(exc)))
                     logger.error("Parallel image scene failed: job=%s scene=%s error=%s", job_id, index, exc)
-                    if isinstance(exc, NonRetryableImageGenerationError):
+                    if isinstance(exc, (NonRetryableImageGenerationError, VisualQaUnavailableError)):
                         for pending in futures:
                             pending.cancel()
                         root_cause = exc.__cause__ or exc
@@ -1860,9 +2868,12 @@ Rules:
                     if same_error_counts[signature] >= break_count:
                         for pending in futures:
                             pending.cancel()
-                        raise RuntimeError(
-                            f"Image generation circuit breaker opened after {same_error_counts[signature]} identical transient failures: {signature}"
+                        raise ImageProviderTemporarilyUnavailableError(
+                            "IMAGE_PROVIDER_TEMPORARILY_UNAVAILABLE: Gemini Pro 이미지 생성 서비스가 현재 과부하입니다. "
+                            "완료된 씬과 비용 원장은 보존됐으며, 공급자 회복 후 이미지 생성만 다시 시도하면 이어서 진행됩니다. "
+                            f"scene={index}, transient_failures={same_error_counts[signature]}"
                         ) from exc
+                submit_next()
 
         # Do not discard hundreds of successful renders because a transient
         # 503 exhausted one scene's local attempts.  Finish the first pass,
@@ -1879,6 +2890,7 @@ Rules:
                     index = futures[future]
                     try:
                         result = future.result()
+                        persist_visual_qa_review(result)
                         image_manifest[str(index)] = result.pop("_fingerprint", "")
                         persist_manifest()
                         # 복구 요청 역시 ProviderRequestAudit가 비용을 기록한다.
@@ -1919,7 +2931,11 @@ Rules:
                 scene["quality_score"] = min(scene["quality_score"], semantic["score"])
                 scene["retry_recommended"] = scene["retry_recommended"] or semantic["retry_recommended"]
                 if semantic["retry_recommended"]:
-                    scene["quality_flags"] = [*scene["quality_flags"], "semantic_review_recommended"]
+                    scene["quality_flags"] = list(dict.fromkeys([
+                        *scene["quality_flags"],
+                        "semantic_review_recommended",
+                        *semantic.get("failure_categories", []),
+                    ]))
         image_quality["art_direction"] = assess_art_diversity(generated)
         image_quality["semantic_alignment"] = semantic_quality
         image_quality["scene_metadata_contract"] = _scene_metadata_contract(scenes_meta, generated)
@@ -2310,15 +3326,89 @@ Rules:
         if isinstance(layered, dict) and layered.get("surface_image_path"):
             self._resume_layered_scene(scene, img_path, layered)
             self._apply_verified_fact_overlay(scene, img_path)
+            self._apply_deterministic_surface_caption(scene, img_path)
+            scene["final_frame_text_integrity"] = require_final_frame_text_integrity(img_path, scene)
             return
         self._normalize_canvas(img_path)
-        # V5는 이미지 모델이 만든 글자를 쓰지 않는다. 대본의 짧은 문구만
-        # 후처리로 합성하여 화풍과 캐릭터의 일관성을 유지한다.
+        # AI 원본 글자는 사용하지 않는다. 정보형 장면의 정확한 한글 문구와
+        # 검증 사실은 후처리로 합성하고 최종 OCR까지 통과해야 한다.
         if isinstance(scene.get("v5_render_contract"), dict):
             self._apply_verified_fact_overlay(scene, img_path)
+            self._apply_deterministic_surface_caption(scene, img_path)
+            scene["final_frame_text_integrity"] = require_final_frame_text_integrity(img_path, scene)
             return
         # 기존 chart warp/data-cutaway 경로는 운영 이미지 생성에서 사용하지 않는다.
         return
+
+    def _apply_deterministic_surface_caption(self, scene: dict, img_path: str) -> None:
+        """검증 수치가 없는 정보형 장면에 승인 대본 기반 한글 문구를 합성한다."""
+        overlays = scene.get("v5_verified_overlays")
+        if isinstance(overlays, list) and overlays:
+            # 같은 표면에는 검증 사실 렌더러가 label/value를 담당한다.
+            return
+        contract = scene.get("v5_render_contract")
+        if not isinstance(contract, dict) or contract.get("visual_text_policy") != "deterministic_surface_text":
+            return
+        caption = contract.get("surface_caption")
+        region = contract.get("primary_surface_region")
+        text = str(caption.get("korean") or "").strip() if isinstance(caption, dict) else ""
+        if not text:
+            raise ValueError("결정론 표면 문구 계약에 한글 문구가 없습니다.")
+        if not isinstance(region, (list, tuple)) or len(region) != 4:
+            raise ValueError("결정론 표면 문구 계약에 물리 표면 좌표가 없습니다.")
+        from app.postprocess.text_overlay import add_surface_caption
+        from app.services.overlay.surface_detector import detect_surface
+
+        # 아키타입 좌표는 생성 프롬프트의 구도 가이드일 뿐 실제 생성 결과의
+        # 모니터 위치가 아니다. 최종 PNG 안에서 빈 물리 표면을 다시 찾아야
+        # 지구본·캐릭터 위에 거대한 글자가 얹히는 일을 막을 수 있다.
+        detection = detect_surface(
+            img_path,
+            "board",
+            job_id=int(scene.get("_job_id") or 0) or None,
+            scene_key=f"deterministic_surface:{scene.get('index', scene.get('scene_id', 'unknown'))}",
+        )
+        if detection is not None:
+            xs = [point[0] for point in detection.quad]
+            ys = [point[1] for point in detection.quad]
+            detected_region = (min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys))
+            inset_x = detected_region[2] * .06
+            inset_y = detected_region[3] * .08
+            region = (
+                detected_region[0] + inset_x,
+                detected_region[1] + inset_y,
+                detected_region[2] - inset_x * 2,
+                detected_region[3] - inset_y * 2,
+            )
+            scene["deterministic_surface_detection"] = {
+                "strategy": detection.strategy,
+                "confidence": detection.confidence,
+                "quad": [list(point) for point in detection.quad],
+                "resolved_region": list(region),
+            }
+        else:
+            scene["deterministic_surface_detection"] = {
+                "strategy": "rejected_no_safe_surface",
+                "confidence": 0.0,
+            }
+            raise DeterministicSurfaceMissingError(
+                "캐릭터·기존 글자와 겹치지 않는 테두리 있는 빈 물리 표면을 찾지 못했습니다.",
+                {
+                    "failure_categories": ["deterministic_surface_missing"],
+                    "reason": "안전한 빈 모니터/보드가 없어 정적 좌표 폴백을 금지하고 전체 장면을 다시 생성합니다.",
+                    "raw": {"deterministic_surface_detection": scene["deterministic_surface_detection"]},
+                },
+            )
+
+        render_metadata = add_surface_caption(
+            img_path, text, tuple(float(value) for value in region),
+        )
+        scene["deterministic_text_regions"] = [render_metadata]
+        logger.info(
+            "scene %s deterministic surface caption baked: %s",
+            scene.get("scene_id") or scene.get("id") or "?",
+            text,
+        )
 
     def _apply_verified_fact_overlay(self, scene: dict, img_path: str) -> None:
         """검증 수치 오버레이 계획이 있는 V5 장면에만 소품 표면 텍스트를 합성한다.

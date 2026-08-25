@@ -1,0 +1,24 @@
+{
+  "job_id": 54,
+  "scene_index": 1,
+  "method": "deterministic_local_text_repair",
+  "source_sha256": "40957985f077a3d874d9f8beb0a6769204b3181639f199fb6345fad61c2c11b8",
+  "output_sha256": "6e24ab0197b562d02b783997bae2172e9c17e1d2fb91213bf0e75b5d9c711273",
+  "removed_regions": [
+    {
+      "detected_text": "SHASHOLIER CERTIFICATE",
+      "bbox_normalized": [0.297, 0.818, 0.066, 0.035]
+    },
+    {
+      "detected_text": "SHAREHILDER",
+      "bbox_normalized": [0.646, 0.815, 0.054, 0.034]
+    }
+  ],
+  "mask_pixel_ratio": 0.00315345,
+  "outside_mask_max_delta": 0,
+  "pixel_preservation_passed": true,
+  "local_edit_preservation_score": 78,
+  "local_edit_preservation_passed": true,
+  "visual_qa_passed": true,
+  "note": "승인된 삼성전자·주주환원 문구와 구도·캐릭터·배경·소품은 보존하고, 하단 증서의 훼손 영문 획만 제거했다."
+}

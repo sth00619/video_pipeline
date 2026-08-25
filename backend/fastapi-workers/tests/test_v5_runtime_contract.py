@@ -18,10 +18,14 @@ def _scene(scene_id: str, scene_type: str, content: str) -> dict:
 
 
 def test_runtime_contract_uses_gemini_for_general_and_information_scenes():
+    metric_scene = _scene("metric-01", "metric", "코스피 하락폭과 위험 지표를 설명합니다.")
+    metric_scene["screen_texts"] = ["코스피 하락폭"]
+    graph_scene = _scene("graph-01", "graph", "시장 추이 막대그래프를 비교합니다.")
+    graph_scene["screen_texts"] = ["시장 추이"]
     scenes = attach_v5_scene_contracts([
         _scene("general-01", "general", "항만 물류 차질의 배경을 설명합니다."),
-        _scene("metric-01", "metric", "코스피 하락폭과 위험 지표를 설명합니다."),
-        _scene("graph-01", "graph", "시장 추이 막대그래프를 비교합니다."),
+        metric_scene,
+        graph_scene,
     ])
 
     general, metric, graph = [scene["v5_render_contract"] for scene in scenes]
@@ -29,13 +33,14 @@ def test_runtime_contract_uses_gemini_for_general_and_information_scenes():
     assert general["tier"] == "body"
     assert metric["tier"] == graph["tier"] == "hero"
     assert general["visual_text_policy"] == "strict_textless"
-    assert metric["visual_text_policy"] == graph["visual_text_policy"] == "script_captioned"
-    assert general["style_contract_version"] == "2026-08-03-r4-korean-nonnumeric-three-mode-v1"
+    assert metric["visual_text_policy"] == graph["visual_text_policy"] == "approved_generated_surface_text"
+    assert metric["source_visual_text_policy"] == graph["source_visual_text_policy"] == "script_captioned"
+    assert general["style_contract_version"] == "2026-08-25-r8-job52-range-scene-local-v1"
     assert metric["style_contract_version"] == general["style_contract_version"]
     assert general["verified_overlay_mode"] == "not_applicable"
-    assert metric["verified_overlay_mode"] == "non_numeric_prompt_embedded_script_caption"
+    assert metric["verified_overlay_mode"] == graph["verified_overlay_mode"] == "scene_local_approved_generated_text"
     assert general["visual_mode_contract"]["overlay_policy"] == "ass_subtitle_only"
-    assert metric["visual_mode_contract"]["numeric_visual_policy"] == "prohibited"
+    assert metric["visual_mode_contract"]["numeric_visual_policy"] == "verified_facts_deterministic_only"
     assert v5_provider_options(scenes[0]) == {
         "image_provider": "gemini",
         "gemini_model": "gemini-3-pro-image",
@@ -62,6 +67,7 @@ def test_runtime_contract_rotates_consecutive_archetypes_and_records_visual_mode
     assert scenes[1]["visual_mix_adjustment"]["reason"] == "consecutive_archetype_avoidance"
     assert first["visual_mode"] == second["visual_mode"] == "archetype_explainer"
     assert general["visual_mode"] == "semantic_illustration"
+    assert "opening_visual_contract" not in scenes[0]
 
 
 def test_runtime_contract_marks_captured_article_as_article_evidence_mode():
@@ -83,17 +89,62 @@ def test_runtime_contract_marks_captured_article_as_article_evidence_mode():
 
 def test_runtime_contract_preserves_primary_surface_and_does_not_invent_verified_values():
     source = _scene("metric-01", "metric", "코스피 하락폭과 위험 지표를 설명합니다.")
-    planned = attach_v5_scene_contracts([source])[0]
-    contract = planned["v5_render_contract"]
+    source["screen_texts"] = ["코스피 하락폭"]
+    contract = plan_v5_scene_contract(source, 2)
 
-    assert planned["scene_type"] == "metric"
     assert contract["selection"]["archetype"] == "risk_control_room"
     assert len(contract["primary_surface_region"]) == 4
     assert contract["verified_overlay_present"] is False
     assert "caption" in contract["semantic_visual_plan"]
     assert "prop_visuals" in contract["semantic_visual_plan"]
-    assert "v5_verified_overlays" not in planned
-    assert "physically part of that prop" in prompt_for_scene(planned).lower()
+    assert contract["visual_text_policy"] == "approved_generated_surface_text"
+    assert contract["source_visual_text_policy"] == "script_captioned"
+    assert contract["surface_caption"]["generated_texts"] == ["코스피 하락폭"]
+    assert contract["surface_caption"]["deterministic_texts"] == []
+    assert contract["surface_caption"]["placement_mode"] == "contextual_supporting"
+    assert "approved exact text items are ['코스피 하락폭']" in contract["prompt_en"].lower()
+    assert "never create a new board" in contract["prompt_en"].lower()
+    assert "solid opaque scene-mounted monitor" in contract["prompt_en"].lower()
+    assert "detached translucent glass card" in contract["prompt_en"].lower()
+    assert "<semantic_surface>" not in contract["prompt_en"]
+    assert "do not include any visible typographic mark" not in contract["prompt_en"].lower()
+
+
+def test_semiconductor_earnings_diagram_routes_to_data_lab_not_professor_classroom():
+    source = _scene(
+        "semiconductor-earnings",
+        "diagram",
+        "반도체 영업이익 구조를 웨이퍼 생산 라인과 함께 설명합니다.",
+    )
+    source["screen_texts"] = ["영업이익"]
+
+    contract = plan_v5_scene_contract(source, 0)
+
+    assert contract["selection"]["archetype"] == "data_lab"
+    assert contract["scene_spec"]["costume"] == "reporter"
+    assert "location-appropriate reporter" in contract["scene_wardrobe"]
+    assert "exactly one brown fedora" not in contract["scene_wardrobe"]
+    assert "brown tweed blazer" not in contract["prompt_en"]
+
+
+def test_v5_prompt_preserves_scene_local_setting_and_required_props():
+    source = _scene("local-props", "diagram", "반도체 영업이익 구조를 설명합니다.")
+    source.update({
+        "screen_texts": ["영업이익"],
+        "visual_intent": "two chip modules are removed from a physical balance",
+        "art_direction": {
+            "setting": "semiconductor wafer production line",
+            "props": ["two chip modules", "physical balance", "wafer conveyor"],
+        },
+    })
+
+    prompt = plan_v5_scene_contract(source, 0)["prompt_en"].lower()
+
+    assert "scene-specific meaning, setting, and prop options" in prompt
+    assert "two chip modules are removed from a physical balance" in prompt
+    assert "semiconductor wafer production line" in prompt
+    assert "wafer conveyor" in prompt
+    assert "do not replace it with a generic rising or falling chart" in prompt
 
 
 def test_runtime_contract_does_not_confuse_style_contract_numbers_with_verified_facts():
@@ -108,7 +159,7 @@ def test_runtime_contract_does_not_confuse_style_contract_numbers_with_verified_
     assert "SCENE VARIATION SEED" not in prompt
 
 
-def test_runtime_contract_restores_text_only_layout_contract_for_general_and_information_scenes():
+def test_runtime_contract_does_not_force_one_layout_on_general_and_information_scenes():
     general = plan_v5_scene_contract(
         _scene("general-layout", "general", "항만 물류 차질의 배경을 설명합니다."),
         0,
@@ -120,8 +171,27 @@ def test_runtime_contract_restores_text_only_layout_contract_for_general_and_inf
 
     for contract in (general, information):
         prompt = contract["prompt_en"]
-        assert "<layout_contract>" in prompt
-        assert "Do not draw any layout guide, safe-area outline, placeholder, or empty display." in prompt
+        assert "<layout_contract>" not in prompt
+        assert "do not automatically place a giant board" in prompt.lower()
+
+
+def test_runtime_contract_honors_scene_director_costume_action_and_camera():
+    source = _scene("lab-context", "diagram", "반도체 장비를 분석합니다.")
+    source["screen_texts"] = ["영업이익"]
+    source["scene_spec"] = {
+        "character_costume": "white laboratory coat with goggles resting above the eyes",
+        "character_action": "examining a wafer with one hand",
+        "camera": "wide diagonal laboratory view",
+    }
+
+    contract = plan_v5_scene_contract(source, 0)
+    prompt = contract["prompt_en"].lower()
+
+    assert contract["scene_wardrobe"] == "white laboratory coat with goggles resting above the eyes"
+    assert "white laboratory coat with goggles" in prompt
+    assert "examining a wafer with one hand" in prompt
+    assert "wide diagonal laboratory view" in prompt
+    assert "navy tv-anchor suit" not in prompt
 
 
 def test_general_scene_can_explicitly_use_an_environment_only_composition():
@@ -154,8 +224,19 @@ def test_runtime_contract_keeps_verified_overlay_input_unchanged_when_present():
     planned = attach_v5_scene_contracts([source])[0]
     assert planned["v5_verified_overlays"] == source["v5_verified_overlays"]
     assert planned["v5_render_contract"]["verified_overlay_present"] is False
-    assert planned["v5_render_contract"]["visual_text_policy"] == "script_captioned"
-    assert "no floating text anywhere" in planned["v5_render_contract"]["prompt_en"].lower()
+    assert planned["v5_render_contract"]["visual_text_policy"] == "deterministic_surface_text"
+    assert "no readable or pseudo-readable words" in planned["v5_render_contract"]["prompt_en"].lower()
+
+
+def test_information_scene_without_approved_screen_text_does_not_invent_caption():
+    contract = plan_v5_scene_contract(
+        _scene("metric-no-copy", "metric", "시장 흐름을 물리적 저울로 설명합니다."),
+        0,
+    )
+
+    assert contract["source_visual_text_policy"] == "strict_textless"
+    assert contract["visual_text_policy"] == "strict_textless"
+    assert contract["surface_caption"] is None
 
 
 def test_runtime_contract_derives_chart_overlay_only_from_matching_verified_fact():
@@ -212,7 +293,7 @@ def test_runtime_contract_uses_korean_context_without_numeric_or_floating_ui():
     prompt = contract["prompt_en"].lower()
     assert "recognizably korean hypermarket" in prompt
     assert "no real brand logo" in prompt
-    assert "speech bubbles, comic balloons, caption chips" in prompt
+    assert "dialogue balloons, split comparison, board, chart, sign" in prompt
     assert "numeric_visual_policy" in contract["visual_mode_contract"]
 
 

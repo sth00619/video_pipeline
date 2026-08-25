@@ -53,6 +53,14 @@ def test_default_voice_resolves_to_requested_korean_reference_voice(monkeypatch)
     assert TtsWorker._resolve_elevenlabs_voice_id("custom_voice") == "custom_voice"
 
 
+def test_long_elevenlabs_render_gets_the_remaining_read_window():
+    connect_timeout, read_timeout = TtsWorker._elevenlabs_http_timeout(240)
+
+    assert connect_timeout == 10
+    assert read_timeout == 230
+    assert TtsWorker._elevenlabs_http_timeout(120) == (10, 110)
+
+
 def test_cer_ignores_whitespace_and_punctuation_only_differences():
     assert TtsWorker._char_error_rate("Market rises.", "Market   rises!") == 0
 

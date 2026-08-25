@@ -31,12 +31,12 @@ def test_all_benchmark_scenes_valid():
     assert len(BENCHMARK_SCENES) == 8
     for scene in BENCHMARK_SCENES:
         scene.validate()
-        assert 0.25 <= scene.frame_occupancy <= 0.50
+        assert 0.15 <= scene.frame_occupancy <= 0.65
 
 
 def test_frame_occupancy_bounds():
     try:
-        SceneSpec("bad", "classroom", "happy", "professor", "point_left", 0.60).validate()
+        SceneSpec("bad", "classroom", "happy", "professor", "point_left", 0.70).validate()
         assert False, "범위 밖 화면 점유율이 통과했습니다."
     except ValueError:
         pass

@@ -95,6 +95,32 @@ def test_v4_success_record_does_not_duplicate_a_reserved_gemini_attempt(tmp_path
     assert ledger["items"][0]["kind"] == "gemini_pro_request"
 
 
+def test_flash_2k_attempt_uses_its_own_model_rate_and_kind(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(budget, "_job_path", lambda _job_id, _name: tmp_path / _name)
+    monkeypatch.setattr(budget.runtime_config, "get", lambda: {
+        "img_cost_flash_1k_usd": 0.067,
+        "img_cost_flash_2k_usd": 0.101,
+        "img_cost_pro_2k_usd": 0.134,
+        "kling_cost_per_clip_usd": 0.35,
+        "usd_krw": 1400,
+        "max_budget_per_video_krw": 1000,
+    })
+
+    audit = ProviderRequestAudit.for_job(
+        job_id=54,
+        scene_key="pilot:image:1",
+        model="gemini-3.1-flash-image",
+    )
+    token = audit.before_attempt(attempt=1)
+    audit.after_attempt(token, status_code=200, outcome="http_200")
+
+    ledger = json.loads((tmp_path / "cost_ledger.json").read_text(encoding="utf-8"))
+    assert ledger["total_krw"] == 141
+    assert ledger["items"][0]["model"] == "gemini-3.1-flash-image"
+    assert ledger["items"][0]["kind"] == "gemini_flash_image_request"
+    assert ledger["items"][0]["estimated_usd"] == 0.101
+
+
 def test_kling_success_record_does_not_duplicate_a_reserved_request(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(budget, "_job_path", lambda _job_id, _name: tmp_path / _name)
     monkeypatch.setattr(budget.runtime_config, "get", lambda: {
@@ -125,7 +151,7 @@ def test_provider_records_each_retry_before_post(tmp_path: Path, monkeypatch):
     calls = []
 
     def fake_post(*_args, **_kwargs):
-        calls.append(True)
+        calls.append(_kwargs)
         return responses.pop(0)
 
     monkeypatch.setattr("requests.post", fake_post)
@@ -151,6 +177,8 @@ def test_provider_records_each_retry_before_post(tmp_path: Path, monkeypatch):
 
     # 핵심 검증: HTTP 시도가 2번 모두 원장에 기록됐는가
     assert len(calls) == 2
+    assert all(call["timeout"] == (20.0, 300.0) for call in calls)
+    assert all(call["headers"]["X-Server-Timeout"] == "285" for call in calls)
     assert len(ledger["items"]) == 2, "재시도 포함 모든 attempt가 원장에 기록돼야 한다"
 
     assert [(item["status"], item["request_id"]) for item in ledger["items"]] == [
@@ -208,3 +236,81 @@ def test_reference_payload_order_matches_the_v3_declared_contract(tmp_path: Path
         b"character", b"style",
     ]
     assert len(parts) == 3  # 두 참조 이미지와 하나의 텍스트 프롬프트
+
+
+def test_priority_service_tier_is_a_top_level_generate_content_field(tmp_path: Path, monkeypatch):
+    import base64
+    from io import BytesIO
+
+    from PIL import Image
+
+    source = BytesIO()
+    Image.new("RGB", (2, 2), "white").save(source, "PNG")
+    generated = base64.b64encode(source.getvalue()).decode()
+    captured = {}
+
+    class Response:
+        status_code = 200
+        headers = {"x-gemini-service-tier": "priority"}
+        text = "ok"
+
+        @staticmethod
+        def json():
+            return {"candidates": [{"content": {"parts": [{"inlineData": {"data": generated}}]}}]}
+
+    def fake_post(_endpoint, *, json, **_kwargs):
+        captured["payload"] = json
+        return Response()
+
+    monkeypatch.setattr("requests.post", fake_post)
+    output = tmp_path / "priority.png"
+
+    assert NanaBananaProvider()._generate_gemini_api(
+        "priority contract", str(output), "not-a-real-key", [],
+        model="gemini-3-pro-image", image_size="2K", service_tier="priority",
+        max_attempts=1,
+    )
+    assert captured["payload"]["serviceTier"] == "priority"
+    assert "serviceTier" not in captured["payload"]["generationConfig"]
+
+
+def test_flash_image_uses_the_same_reference_edit_contract(tmp_path: Path, monkeypatch):
+    import base64
+    from io import BytesIO
+
+    from PIL import Image
+
+    source = BytesIO()
+    Image.new("RGB", (2, 2), "white").save(source, "PNG")
+    generated = base64.b64encode(source.getvalue()).decode()
+    captured = {}
+
+    class Response:
+        status_code = 200
+        headers = {}
+        text = "ok"
+
+        @staticmethod
+        def json():
+            return {"candidates": [{"content": {"parts": [{"inlineData": {"data": generated}}]}}]}
+
+    def fake_post(endpoint, *, json, headers, timeout):
+        captured.update(endpoint=endpoint, payload=json, headers=headers, timeout=timeout)
+        return Response()
+
+    monkeypatch.setattr("requests.post", fake_post)
+    reference = tmp_path / "rejected.png"
+    reference.write_bytes(b"failed-frame")
+    output = tmp_path / "flash.png"
+
+    assert NanaBananaProvider()._generate_gemini_api(
+        "같은 프레임에서 잘못된 글자만 수정", str(output), "not-a-real-key", [str(reference)],
+        model="gemini-3.1-flash-image", image_size="2K", max_attempts=1,
+        reference_contract_declared=True,
+    )
+    assert captured["endpoint"].endswith("/gemini-3.1-flash-image:generateContent")
+    assert captured["payload"]["generationConfig"]["imageConfig"] == {
+        "aspectRatio": "16:9", "imageSize": "2K",
+    }
+    assert captured["timeout"] == (20.0, 180.0)
+    assert captured["headers"]["X-Server-Timeout"] == "150"

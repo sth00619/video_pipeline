@@ -1,0 +1,299 @@
+{
+  "status": "review_required",
+  "scene": {
+    "scene_id": "job52_root_cause_korean_text_character",
+    "index": 0,
+    "scene_type": "diagram",
+    "title": "실적의 구조를 확인하는 장면",
+    "content": "코스피 영업이익이 늘어도 두 반도체 기업을 제외한 전체 흐름이 함께 좋아졌는지 확인해야 합니다.",
+    "text": "코스피 영업이익이 늘어도 두 반도체 기업을 제외한 전체 흐름이 함께 좋아졌는지 확인해야 합니다.",
+    "screen_texts": [
+      "영업이익"
+    ],
+    "screen_text_validation": {
+      "passed": true,
+      "reasons": []
+    },
+    "visual_intent": "A single continuous Korean semiconductor analysis room. One perspective-correct wall display is integrated into the set. Two chip modules are removed from a physical balance while a broad factory production line continues behind them, making the exclusion-versus-total relationship immediately clear. The round gold coin finance presenter wears a stable navy analyst suit and one simple navy cap, points with one hand while the other hand rests naturally, with exactly two arms and two white-gloved hands. Rich foreground instruments, midground balance, and background wafer line; never a giant word panel or split screen.",
+    "art_direction": {
+      "character_required": true,
+      "wardrobe": "stable navy finance-presenter suit with one simple navy cap",
+      "setting": "Korean semiconductor analysis room and wafer production line",
+      "props": [
+        "two chip modules",
+        "physical balance",
+        "wafer production line",
+        "one integrated wall display"
+      ]
+    },
+    "verified_facts": [],
+    "visual_mode": "archetype_explainer",
+    "motion_contract": {
+      "eligible": false,
+      "requires_explicit_selection": true,
+      "character_required": true,
+      "default_motion_type": "pointing_explain",
+      "blocked_reasons": [
+        "article_capture_or_script_caption_or_information_surface"
+      ]
+    },
+    "v5_render_contract": {
+      "scene_id": "job52_root_cause_korean_text_character",
+      "scene_type": "diagram",
+      "visual_mode": "archetype_explainer",
+      "visual_mode_contract": {
+        "asset_source": "v5_gemini_scene",
+        "text_policy": "scene_local_approved_text",
+        "overlay_policy": "approved_nonnumeric_source_and_deterministic_numeric_surface",
+        "numeric_visual_policy": "verified_facts_deterministic_only",
+        "character_policy": "fixed_reference_when_character_required"
+      },
+      "selection": {
+        "scene_type": "diagram",
+        "archetype": "data_lab",
+        "alternatives": [
+          "classroom",
+          "trade_calculator"
+        ],
+        "selection_reason": "네트워크·홀로그램·추세 흐름이므로 넓은 물리 그래프 벽이 있는 data_lab을 추천",
+        "physical_surfaces": [
+          "one broad curved presentation wall",
+          "analog gauge faces",
+          "console etchings"
+        ],
+        "primary_physical_surface": "one broad curved presentation wall"
+      },
+      "scene_spec": {
+        "scene_id": "job52_root_cause_korean_text_character",
+        "archetype": "data_lab",
+        "emotion": "explain",
+        "costume": "reporter",
+        "pose": "present",
+        "frame_occupancy": 0.35,
+        "character_position": "center",
+        "character_required": true
+      },
+      "required_wardrobe": "wearing exactly one brown fedora hat as its only headwear, and a navy TV-anchor suit",
+      "prompt_en": "<prop_surface_priority> PROP SURFACE — broad curved broadcast-analysis wall on the left side of the studio. The exact approved Korean text '영업이익' is written DIRECTLY ON THE BROAD CURVED BROADCAST-ANALYSIS WALL ON THE LEFT SIDE OF THE STUDIO surface. The text '영업이익' is PHYSICALLY PART OF THE broad curved broadcast-analysis wall on the left side of the studio — it looks like it was printed, painted, or written ON the physical surface, not floating in mid-air, not a separate text layer, not a sticker placed on top. It is physically part of that prop and has the same material texture and lighting as the broad curved broadcast-analysis wall on the left side of the studio around it. Put a balanced amber sideways trend line with connecting concept arrows directly below the words on that same surface. SCRIPT MEANING VISUALS: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart. Render these as physical illustrations, object silhouettes, arrows, and non-numeric chart shapes integrated into this same archetype; they explain the script without adding labels, values, or a second text-bearing prop. Show the exact caption exactly ONCE, only on the named primary surface. All secondary consoles, screens, gauges, signs, containers, and background props must contain no readable words and no partial repetition of any caption word. The prop itself is the message. No numerals, no other Korean or English words, no brand marks, and no floating text anywhere else in the image. </prop_surface_priority> <character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, CHARACTER IDENTITY LOCK: the first supplied character reference image is the authoritative model sheet. Reproduce its exact round coin silhouette, embossed rim, warm gold material, thick dark outer contour, large brown oval eyes with two white highlights each, thick curved eyebrows, small rounded nose, rosy circular cheeks, and compact navy-suit body proportions. Keep these facial traits identical in every scene. Preserve the short outer eyelashes exactly as shown in the authoritative reference; do not remove, multiply, lengthen, or restyle them. Do not change the eye shape or iris style, make the face flatter or more 3D-rendered, or reinterpret the mascot as a different character. Only the mouth, eyebrows, and arm pose may change to express scene emotion. Both visible hands must wear the same white cartoon gloves from the character reference; never show bare golden hands. Rosy circular cheeks remain visible even for worried or alarmed expressions. The character perimeter uses only one dark brown or black ink outline: absolutely no white sticker-cutout border, white halo, or white stroke around the hat, coin, suit, limbs, or shoes., calm friendly explaining expression, gentle smile, wearing exactly one brown fedora hat as its only headwear, and a navy TV-anchor suit, one arm extended presenting, open palm gesture </character> <composition> Premium economic-explainer cartoon illustration. Place the gold coin mascot in the right-side foreground, while the broad background prop (chalkboard / screen / map / board) fills the left side of the frame. Character is full-body visible from head to shoes and occupies no more than 35% of the total frame width; the primary explanatory prop occupies at least 60% of the frame. Do not use a close portrait crop or an oversized mascot head. The character wears exactly the single headwear item named in its costume description below — never a second hat, never a mix of two headwear pieces, and never a different headwear than the one the costume names. Character expression must match scene tone: down market = worried/sweating expression, up market = confident/happy expression, neutral = calm/explaining expression. Exactly one headwear item total, matching the costume description exactly; no stacked or duplicate headwear. Keep clear foreground, midground, and background depth around the one designated physical explanatory prop. For this wide broadcast-analysis-studio view, show the mascot from hat to shoes at the same full-body scale as the other economic-explainer scenes; keep the character within the right-side foreground and leave the curved presentation wall, cameras, and console visibly spacious around it. Do not use a close portrait crop. </composition> <scene> Use a distinct camera angle, prop arrangement, and lighting balance for this scene. STAGE: a tactile broadcast analysis studio with one broad curved presentation wall, cameras, and an analog control console. KEY PROPS: a physical illuminated presentation mural with non-writing line and bar silhouettes, studio cameras on tripods, cable bundles, analog gauges, and a desk microphone. LIGHTING: warm amber studio spotlights with restrained cool-blue fill light. DECORATIVE DETAIL: painted chart strokes, practical studio equipment, cable lines, analog dials, and color-only explanatory marks. LOCAL CONTEXT: Use a recognizably Korean business setting: Seoul-like office towers, Korean brokerage dealing-room proportions, local street and harbor details, or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, readable Korean text, or numeric signage Featured entities for semantic grounding only; do not render their names or logos: ARM Holdings, KOSPI, PER.. Never make one giant number, word, board, or detached panel the whole visual idea. Show the script-specific economic cause, mechanism, and consequence through at least three connected physical props distributed across foreground, midground, and background. </scene> <art_direction> NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. BOLD THICK BLACK INK OUTLINES (3-5px equivalent) on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. Readable words are permitted only when the scene-local text contract lists their exact spelling; never invent, translate, duplicate, abbreviate, or decorate them with pseudo-text. NO image-model-generated financial numbers; financial numbers remain reserved for deterministic rendering. NO unapproved captions, logo, or watermark anywhere in the generated image. NO speech bubbles, comic balloons, caption chips, title cards, lower-thirds, or detached callout boxes. Never create floating dashboards, detached UI cards, pasted-on rectangles, empty title cards, or layout-guide frames. When the scene contract names one physical information surface, depict that surface as a substantial in-world prop with the same ink outline, material, lighting, depth, and perspective as the surrounding set. Follow the scene-local text contract on that surface and keep all other surfaces free of writing-like marks. Do not add extra information panels beyond that named surface. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame. The gold coin mascot character MUST be prominently sized, occupying at minimum 1/3 of the frame height. The circular coin face is ALWAYS fully visible — never obscured by helmets, masks, or visors (any hat or hard hat sits on top of the coin, face remains 100% visible). Perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. White cartoon gloves, brown cartoon shoes, full body visible, proportional cartoon body. Exactly one headwear item per scene, exactly as the costume describes it. Never stack two headwear pieces, and never substitute a different headwear than the one the costume names. DATA-LAB BENCHMARK VISUAL TREATMENT: render a tactile hand-drawn broadcast analysis studio with ceiling spotlights, visible cameras, cables, analog console details, and one broad curved presentation wall physically built into the set. Use warm amber key light balanced with restrained cool-blue fill, thick bold black ink outlines, hard shadow edges, and flat high-contrast cel shading. The presentation wall remains the only clear information surface, while the surrounding set stays busy through physical studio equipment and non-writing material detail. Do not turn this into a neon sci-fi control room, a glossy 3D fintech dashboard, a minimal vector infographic, or broad empty wall space. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use this script-meaning visual brief: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. Do not add a second information-bearing prop or borrow objects from another archetype setting. </background_information_density> <semantic_surface> 영업이익 physical prop surface with neutral direction </semantic_surface> <script_meaning_visuals> a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart </script_meaning_visuals> <fact_surface_contract> IN-SCENE FACT-SURFACE CONTRACT: this is a diagram scene. The only permitted information-bearing prop is one broad curved presentation wall. Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, not an overlay placed on top of the frame. Every other gauge, screen, map, placard, document, and console must show only needles, color blocks, abstract shapes, or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations. Only the exact script-derived Korean or English caption named in the PROP SURFACE section may appear on this primary prop. Do not add any other readable words, figures, labels, or values. </fact_surface_contract> <reserve> Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. Show only continuous background texture in those areas. Do not place a mascot's face or hands there when a mascot is required. </reserve> <layout_contract> LAYOUT CONTRACT: keep the mascot in the center foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display. </layout_contract> <exclusions> DO NOT INCLUDE any Korean or English text other than the exact approved caption, any numeral, factual value, channel logo, watermark, generic floating dashboard card, detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. If a mascot is present it is the only anthropomorphic character; every other prop must be inanimate. </exclusions>",
+      "provider": "gemini_pro",
+      "tier": "hero",
+      "visual_text_policy": "approved_generated_surface_text",
+      "source_visual_text_policy": "script_captioned",
+      "motion_contract": {
+        "eligible": false,
+        "requires_explicit_selection": true,
+        "character_required": true,
+        "default_motion_type": "pointing_explain",
+        "blocked_reasons": [
+          "article_capture_or_script_caption_or_information_surface"
+        ]
+      },
+      "style_contract_version": "2026-08-03-r4-korean-nonnumeric-three-mode-v1",
+      "primary_surface_region": [
+        0.12,
+        0.12,
+        0.47,
+        0.48
+      ],
+      "surface_caption": {
+        "english": "영업이익",
+        "korean": "",
+        "texts": [],
+        "approved_texts": [
+          "영업이익"
+        ],
+        "generated_texts": [
+          "영업이익"
+        ],
+        "deterministic_texts": [],
+        "direction": "neutral",
+        "target": "one broad curved presentation wall"
+      },
+      "semantic_visual_plan": {
+        "caption": "SEMICONDUCTOR OUTLOOK",
+        "direction": "neutral",
+        "prop_visuals": "a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart",
+        "background_visuals": "an electronics-factory mural, chip trays, and circuit-board patterns integrated into the same studio set. SCENE-SPECIFIC SCRIPT VISUAL: A single continuous Korean semiconductor analysis room. One perspective-correct wall display is integrated into the set. Two chip modules are removed from a physical balance while a broad factory production line continues behind them, making the exclusion-versus-total relationship immediately clear. The round gold coin finance presenter wears a stable navy analyst suit and one simple navy cap, points with one hand while the other hand rests naturally, with exactly two arms and two white-gloved hands. Rich foreground instruments, midground balance, and background wafer line; never a giant word panel or split screen."
+      },
+      "verified_overlay_mode": "scene_local_approved_generated_text",
+      "verified_overlay_present": false
+    },
+    "v5_scene_type_selection": {
+      "scene_type": "diagram",
+      "archetype": "data_lab",
+      "alternatives": [
+        "classroom",
+        "trade_calculator"
+      ],
+      "selection_reason": "네트워크·홀로그램·추세 흐름이므로 넓은 물리 그래프 벽이 있는 data_lab을 추천",
+      "physical_surfaces": [
+        "one broad curved presentation wall",
+        "analog gauge faces",
+        "console etchings"
+      ],
+      "primary_physical_surface": "one broad curved presentation wall"
+    },
+    "v5_scene_spec": {
+      "scene_id": "job52_root_cause_korean_text_character",
+      "archetype": "data_lab",
+      "emotion": "explain",
+      "costume": "reporter",
+      "pose": "present",
+      "frame_occupancy": 0.35,
+      "character_position": "center",
+      "character_required": true
+    },
+    "image_profile": {
+      "tier": "pro",
+      "model": "gemini-3-pro-image",
+      "image_size": "2K",
+      "v5_final_lane": true
+    },
+    "image_text_contract": {
+      "version": "scene-local-text-contract-v2",
+      "approved_texts": [
+        "영업이익"
+      ],
+      "generated_texts": [
+        "영업이익"
+      ],
+      "deterministic_texts": [],
+      "bubble_allowed": false,
+      "bubble_text": "",
+      "sources": [
+        "scene.screen_texts"
+      ]
+    },
+    "image_prompt_text_contract": {
+      "version": "scene-local-text-contract-v2",
+      "changed": false,
+      "allowed_generated_texts": [
+        "영업이익"
+      ],
+      "violations_before": [],
+      "violations_after": [],
+      "retry_contract": false
+    },
+    "character_integrity_contract": {
+      "version": "character-integrity-v1",
+      "changes": [
+        "removed_unapproved_speech_bubble"
+      ],
+      "wardrobe": "wearing exactly one brown fedora hat as its only headwear, and a navy TV-anchor suit",
+      "bubble_allowed": false
+    },
+    "image_path": "/workspace/artifacts/job52_full_audit_20260824/real_api_pilot_retry1/job52_root_cause_korean_text_character.png",
+    "final_image_path": "/workspace/artifacts/job52_full_audit_20260824/real_api_pilot_retry1/job52_root_cause_korean_text_character.png"
+  },
+  "model": "gemini-3-pro-image",
+  "estimated_usd": 0.14,
+  "estimated_krw": 254,
+  "prompt": "<prop_surface_priority> PROP SURFACE — broad curved broadcast-analysis wall on the left side of the studio. The exact approved Korean text '영업이익' is written DIRECTLY ON THE BROAD CURVED BROADCAST-ANALYSIS WALL ON THE LEFT SIDE OF THE STUDIO surface. The text '영업이익' is PHYSICALLY PART OF THE broad curved broadcast-analysis wall on the left side of the studio — it looks like it was printed, painted, or written ON the physical surface, not floating in mid-air, not a separate text layer, not a sticker placed on top. It is physically part of that prop and has the same material texture and lighting as the broad curved broadcast-analysis wall on the left side of the studio around it. Put a balanced amber sideways trend line with connecting concept arrows directly below the words on that same surface. SCRIPT MEANING VISUALS: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart. Render these as physical illustrations, object silhouettes, arrows, and non-numeric chart shapes integrated into this same archetype; they explain the script without adding labels, values, or a second text-bearing prop. Show the exact caption exactly ONCE, only on the named primary surface. All secondary consoles, screens, gauges, signs, containers, and background props must contain no readable words and no partial repetition of any caption word. The prop itself is the message. No numerals, no other Korean or English words, no brand marks, and no floating text anywhere else in the image. </prop_surface_priority> <character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, CHARACTER IDENTITY LOCK: the first supplied character reference image is the authoritative model sheet. Reproduce its exact round coin silhouette, embossed rim, warm gold material, thick dark outer contour, large brown oval eyes with two white highlights each, thick curved eyebrows, small rounded nose, rosy circular cheeks, and compact navy-suit body proportions. Keep these facial traits identical in every scene. Preserve the short outer eyelashes exactly as shown in the authoritative reference; do not remove, multiply, lengthen, or restyle them. Do not change the eye shape or iris style, make the face flatter or more 3D-rendered, or reinterpret the mascot as a different character. Only the mouth, eyebrows, and arm pose may change to express scene emotion. Both visible hands must wear the same white cartoon gloves from the character reference; never show bare golden hands. Rosy circular cheeks remain visible even for worried or alarmed expressions. The character perimeter uses only one dark brown or black ink outline: absolutely no white sticker-cutout border, white halo, or white stroke around the hat, coin, suit, limbs, or shoes., calm friendly explaining expression, gentle smile, wearing exactly one brown fedora hat as its only headwear, and a navy TV-anchor suit, one arm extended presenting, open palm gesture </character> <composition> Premium economic-explainer cartoon illustration. Place the gold coin mascot in the right-side foreground, while the broad background prop (chalkboard / screen / map / board) fills the left side of the frame. Character is full-body visible from head to shoes and occupies no more than 35% of the total frame width; the primary explanatory prop occupies at least 60% of the frame. Do not use a close portrait crop or an oversized mascot head. The character wears exactly the single headwear item named in its costume description below — never a second hat, never a mix of two headwear pieces, and never a different headwear than the one the costume names. Character expression must match scene tone: down market = worried/sweating expression, up market = confident/happy expression, neutral = calm/explaining expression. Exactly one headwear item total, matching the costume description exactly; no stacked or duplicate headwear. Keep clear foreground, midground, and background depth around the one designated physical explanatory prop. For this wide broadcast-analysis-studio view, show the mascot from hat to shoes at the same full-body scale as the other economic-explainer scenes; keep the character within the right-side foreground and leave the curved presentation wall, cameras, and console visibly spacious around it. Do not use a close portrait crop. </composition> <scene> Use a distinct camera angle, prop arrangement, and lighting balance for this scene. STAGE: a tactile broadcast analysis studio with one broad curved presentation wall, cameras, and an analog control console. KEY PROPS: a physical illuminated presentation mural with non-writing line and bar silhouettes, studio cameras on tripods, cable bundles, analog gauges, and a desk microphone. LIGHTING: warm amber studio spotlights with restrained cool-blue fill light. DECORATIVE DETAIL: painted chart strokes, practical studio equipment, cable lines, analog dials, and color-only explanatory marks. LOCAL CONTEXT: Use a recognizably Korean business setting: Seoul-like office towers, Korean brokerage dealing-room proportions, local street and harbor details, or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, readable Korean text, or numeric signage Featured entities for semantic grounding only; do not render their names or logos: ARM Holdings, KOSPI, PER.. Never make one giant number, word, board, or detached panel the whole visual idea. Show the script-specific economic cause, mechanism, and consequence through at least three connected physical props distributed across foreground, midground, and background. </scene> <art_direction> NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. BOLD THICK BLACK INK OUTLINES (3-5px equivalent) on EVERY element; cel shading with soft gradients; highly saturated, organized colors; dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. Readable words are permitted only when the scene-local text contract lists their exact spelling; never invent, translate, duplicate, abbreviate, or decorate them with pseudo-text. NO image-model-generated financial numbers; financial numbers remain reserved for deterministic rendering. NO unapproved captions, logo, or watermark anywhere in the generated image. NO in-world atmospheric shapes, in-world atmospheric shapes, caption chips, title cards, lower-thirds, or detached callout boxes. Never create floating dashboards, detached UI cards, pasted-on rectangles, empty title cards, or layout-guide frames. When the scene contract names one physical information surface, depict that surface as a substantial in-world prop with the same ink outline, material, lighting, depth, and perspective as the surrounding set. Follow the scene-local text contract on that surface and keep all other surfaces free of writing-like marks. Do not add extra information panels beyond that named surface. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame. The gold coin mascot character MUST be prominently sized, occupying at minimum 1/3 of the frame height. The circular coin face is ALWAYS fully visible — never obscured by helmets, masks, or visors (any hat or hard hat sits on top of the coin, face remains 100% visible). Perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. White cartoon gloves, brown cartoon shoes, full body visible, proportional cartoon body. Exactly one headwear item per scene, exactly as the costume describes it. Never stack two headwear pieces, and never substitute a different headwear than the one the costume names. DATA-LAB BENCHMARK VISUAL TREATMENT: render a tactile hand-drawn broadcast analysis studio with ceiling spotlights, visible cameras, cables, analog console details, and one broad curved presentation wall physically built into the set. Use warm amber key light balanced with restrained cool-blue fill, thick bold black ink outlines, hard shadow edges, and flat high-contrast cel shading. The presentation wall remains the only clear information surface, while the surrounding set stays busy through physical studio equipment and non-writing material detail. Do not turn this into a neon sci-fi control room, a glossy 3D fintech dashboard, a minimal vector infographic, or broad empty wall space. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use this script-meaning visual brief: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. Do not add a second information-bearing prop or borrow objects from another archetype setting. </background_information_density> <semantic_surface> 영업이익 physical prop surface with neutral direction </semantic_surface> <script_meaning_visuals> a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart </script_meaning_visuals> <fact_surface_contract> IN-SCENE FACT-SURFACE CONTRACT: this is a diagram scene. The only permitted information-bearing prop is one broad curved presentation wall. Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, not an overlay placed on top of the frame. Every other gauge, screen, map, placard, document, and console must show only needles, color blocks, abstract shapes, or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations. Only the exact script-derived Korean or English caption named in the PROP SURFACE section may appear on this primary prop. Do not add any other readable words, figures, labels, or values. </fact_surface_contract> <reserve> Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. Show only continuous background texture in those areas. Do not place a mascot's face or hands there when a mascot is required. </reserve> <layout_contract> LAYOUT CONTRACT: keep the mascot in the center foreground and keep its face and hands away from a calm lower band and a quiet upper-right corner. Keep the designated mid-frame readable for a later fact overlay while preserving ordinary scene depth and fully dressed diegetic props. Do not draw any layout guide, safe-area outline, placeholder, or empty display. </layout_contract> <exclusions> DO NOT INCLUDE any Korean or English text other than the exact approved caption, any numeral, factual value, channel logo, watermark, generic floating dashboard card, detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. If a mascot is present it is the only anthropomorphic character; every other prop must be inanimate. </exclusions> FINAL SCENE-LOCAL TEXT CONTRACT: the only readable text that may appear is the following exact case-sensitive string list: [영업이익]. Copy each selected string exactly without translation, abbreviation, duplication, missing characters, extra characters, or pseudo-text. Use at most one natural in-world surface per string. All other surfaces contain no writing-like marks. No logos, watermark, in-world atmospheric shape, in-world atmospheric shape, fake ticker, invented company, or secondary number. FINAL CHARACTER INTEGRITY CONTRACT: preserve the authoritative mascot reference face exactly—the same perfectly round coin silhouette, eye size and spacing, pupils, rosy cheeks, rim dots, outline weight, and mouth style. Wardrobe is wearing exactly one brown fedora hat as its only headwear, and a navy TV-anchor suit; it may add exactly one scene-appropriate headwear item, never stack hats, never use a police uniform unless the approved wardrobe explicitly says police, and never cover the face with a visor. Show exactly two arms and exactly two white-gloved hands total, attached naturally at the shoulders; no extra limb, duplicate hand, detached hand, fused fingers, or hidden third arm. Use one primary arm action only. Do not add a white sticker/cutout halo around the mascot. No speech bubble, thought bubble, comic balloon, or text balloon anywhere. ",
+  "prompt_sha256": "99366793a23cc771584887e39abd1fdd3f7b378f594ced97381788befedd60dd",
+  "references": [
+    {
+      "role": "character",
+      "path": "/workspace/backend/fastapi-workers/out/references/character_reference_v4_identity_clean.png",
+      "sha256": "709537f537503ff2b8e92b9398c3096bbb7a00a4c24366306d56d2e1c4b33136"
+    },
+    {
+      "role": "style",
+      "path": "/workspace/backend/fastapi-workers/out/references/style_reference_v4_medium_clean.png",
+      "sha256": "8f9091506f278ef5c9e6c1cbe315775d38825749099da7901e7d68743f4b1a94"
+    }
+  ],
+  "output_path": "/workspace/artifacts/job52_full_audit_20260824/real_api_pilot_retry1/job52_root_cause_korean_text_character.png",
+  "seconds": 50.6,
+  "ocr": {
+    "version": "scene-local-text-contract-v2",
+    "approved_texts": [
+      "영업이익"
+    ],
+    "generated_texts": [
+      "영업이익"
+    ],
+    "deterministic_texts": [],
+    "bubble_allowed": false,
+    "bubble_text": "",
+    "sources": [
+      "scene.screen_texts"
+    ],
+    "detected_texts": [],
+    "unexpected_texts": [],
+    "passed": true,
+    "status": "completed",
+    "visible_tokens": []
+  },
+  "visual_qa": {
+    "enabled": true,
+    "reviewed": [
+      {
+        "index": 0,
+        "score": 62,
+        "retry_recommended": true,
+        "failure_categories": [],
+        "reason": "반도체 생산 라인과 물리적 저울 프롭이 누락되었으며, 설정이 분석실 대신 방송 스튜디오로 표현되었습니다.",
+        "raw": {
+          "scene_match": 45,
+          "finance_specificity": 50,
+          "composition": 65,
+          "style_adherence": 70,
+          "text_integrity": 75,
+          "character_identity": 70,
+          "repetition_risk": 40,
+          "visible_texts": [
+            "영업이익"
+          ],
+          "unexpected_or_malformed_texts": [],
+          "missing_approved_texts": [],
+          "speech_bubble_present": false,
+          "anatomy_pass": true,
+          "extra_limbs_or_hands": false,
+          "wardrobe_match": true,
+          "face_identity_match": true,
+          "number_panel_only": false,
+          "decision": "review",
+          "reason": "반도체 생산 라인과 물리적 저울 프롭이 누락되었으며, 설정이 분석실 대신 방송 스튜디오로 표현되었습니다."
+        }
+      }
+    ],
+    "skipped": [],
+    "warnings": [],
+    "score": 62
+  },
+  "ledger": {
+    "video_id": "job52_root_cause_pilot",
+    "total_spent_krw": 254,
+    "total_ceiling_krw": 40000,
+    "buckets": {
+      "image_draft": 0,
+      "image_final": 254,
+      "image_edit": 0,
+      "motion": 0,
+      "tts": 0,
+      "retry": 0
+    },
+    "entries": [
+      {
+        "scene_id": "job52_root_cause_korean_text_character",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "request_kind": "generate",
+        "bucket": "image_final",
+        "estimated_cost_usd": 0.14,
+        "actual_cost_usd": null,
+        "currency_rate_snapshot": 1815.0,
+        "estimated_cost_krw": 254,
+        "actual_cost_krw": null,
+        "budget_committed_krw": 254,
+        "status": "ok",
+        "cost_status": "unverified_until_console_reconciliation",
+        "metadata": {
+          "cost_status": "unverified_until_console_reconciliation",
+          "reference_image_count": 2
+        },
+        "ts": 1787545900.4207094
+      }
+    ]
+  }
+}

@@ -6,11 +6,12 @@ from app.utils.art_direction import SHARED_STYLE_LOCK_PROMPT
 
 STYLE_LOCK = SHARED_STYLE_LOCK_PROMPT
 
-# 템플릿 장면에는 빈 물리 보드를 허용한다. 전역 금지문을 그대로 쓰면
-# 생성 모델이 v4의 보드 계약을 무시해 quad 검출이 구조적으로 실패한다.
-TEMPLATE_STYLE_LOCK = STYLE_LOCK.replace(
-    "Do not depict screens, dashboards, charts, signboards, documents, labels, UI panels, blank white rectangles, empty title cards, empty frames, boards, or presentation panels. Use unlabeled physical props and a continuous full-bleed illustrated background instead.",
-    "Depict exactly one large unlabeled physical information board or screen specified by the scene template. It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. Keep every other area as a continuous full-bleed illustrated background.",
+# 전역 스타일 계약도 이제 장면이 지정한 물리 표면 하나를 허용한다. 템플릿은
+# 그 허용 범위를 "정확히 하나"로 더 좁혀 보드 검출과 화풍 보존을 함께 고정한다.
+TEMPLATE_STYLE_LOCK = STYLE_LOCK + (
+    " Depict exactly one large unlabeled physical information board or screen specified by the scene template. "
+    "It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. "
+    "Keep every other area as a continuous full-bleed illustrated background."
 )
 
 CHARACTER_LOCK = (

@@ -9,6 +9,14 @@ from typing import Any, Callable
 from app.utils.sentence_splitter import split_sentences
 
 
+# 한국어 한 문장을 영어식 "단어 수"와 글자 수 중 하나로만 자르면 의미가
+# 파편화된다. 레퍼런스 호흡에 맞춰 공백 제외 글자 수와 띄어쓰기 단어 수를
+# 함께 검사한다. 38단어짜리 문장은 막되, 35~50자의 자연스러운 한국어 한
+# 문장은 5~6초 화면에서 읽을 수 있도록 허용한다.
+_SPOKEN_SENTENCE_HARD_CAP_CHARS = 52
+_SPOKEN_SENTENCE_HARD_CAP_WORDS = 20
+
+
 def _compact(value: str) -> str:
     return re.sub(r"[^0-9A-Za-z가-힣]", "", value or "")
 
@@ -27,11 +35,25 @@ def _sentence_role(sentence: str) -> str:
         return "question"
     if re.search(r"(?:하지만|그런데|다만|반대로|꼭 그렇지는 않|그렇지 않|아닙니다|문제는|여기서)", text):
         return "turn"
-    if re.search(r"(?:중요한 건|핵심은|봐야 할 건|바로 .*입니다|한 줄만|절대)", text):
+    if re.search(
+        r"(?:중요한 건|핵심은|봐야 할 건|바로 .*입니다|한 줄만|절대|"
+        r"(?:기억|주목|확인|살펴|생각해)\s*.*(?:하세요|보세요)[.!…]?$)",
+        text,
+    ):
         return "emphasis"
     if re.search(r"(?:때문입니다|이유는|왜냐하면|그래서)", text):
         return "reason"
+    # ``~죠``·``~인 겁니다``는 사실을 그대로 전달하는 문장이어도 TTS에서
+    # 정형적인 ``~습니다`` 설명문과 분명히 다른 리듬으로 들린다. 종결
+    # 다양화가 실제로 설명형 연속 구간도 끊도록 별도 역할로 분류한다.
+    if re.search(r"(?:(?:인|은|는) 겁니다|인거예요|죠|고요|해볼까요|볼까요)[.!…]?$", text):
+        return "conversational"
     return "description"
+
+
+def sentence_role(sentence: str) -> str:
+    """SCRIPT 리듬 복구 단계와 동일한 문장 역할 판정을 공유한다."""
+    return _sentence_role(sentence)
 
 
 def _ending_register(sentence: str) -> str:
@@ -42,7 +64,7 @@ def _ending_register(sentence: str) -> str:
     존댓말을 유지한 준구어체는 별도 리듬으로 취급한다.
     """
     text = re.sub(r"\s+", " ", sentence or "").strip()
-    if re.search(r"(?:(?:인|은|는) 겁니다|인거예요|겠죠|고요|해볼까요|볼까요)[.!…]?$", text):
+    if re.search(r"(?:(?:인|은|는) 겁니다|인거예요|죠|고요|해볼까요|볼까요)[.!…]?$", text):
         return "conversational_honorific"
     if re.search(r"니다[.!…]?$", text):
         return "formal_declarative"
@@ -57,7 +79,7 @@ def _rhythm_checks(sentences: list[str]) -> dict[str, Any]:
     for index, role in enumerate(roles + ["__end__"]):
         if index and role != roles[start]:
             length = index - start
-            if roles[start] == "description" and length >= 3:
+            if roles[start] == "description" and length >= 5:
                 runs.append({
                     "role": "description",
                     "sentence_indexes": list(range(start + 1, index + 1)),
@@ -71,7 +93,7 @@ def _rhythm_checks(sentences: list[str]) -> dict[str, Any]:
     for index, ending in enumerate(ending_registers + ["__end__"]):
         if index and ending != ending_registers[start]:
             length = index - start
-            if ending_registers[start] == "formal_declarative" and length >= 3:
+            if ending_registers[start] == "formal_declarative" and length >= 5:
                 formal_ending_runs.append({
                     "ending": "formal_declarative",
                     "sentence_indexes": list(range(start + 1, index + 1)),
@@ -87,14 +109,18 @@ def _rhythm_checks(sentences: list[str]) -> dict[str, Any]:
         "passed": not runs and not formal_ending_runs,
     }
 
-
 def _spoken_pacing_checks(sentences: list[str]) -> dict[str, Any]:
     """Keep the script readable in one TTS performance before captions split it."""
     visible_lengths = [len(re.sub(r"\s+", "", sentence)) for sentence in sentences]
     overlong = [
-        {"sentence_index": index + 1, "length": length}
+        {
+            "sentence_index": index + 1,
+            "length": length,
+            "word_count": len(sentences[index].split()),
+        }
         for index, length in enumerate(visible_lengths)
-        if length > 38
+        if length > _SPOKEN_SENTENCE_HARD_CAP_CHARS
+        or len(sentences[index].split()) > _SPOKEN_SENTENCE_HARD_CAP_WORDS
     ]
     short_runs: list[dict[str, Any]] = []
     start: int | None = None
@@ -113,7 +139,10 @@ def _spoken_pacing_checks(sentences: list[str]) -> dict[str, Any]:
     question_punctuation_issues = [
         index + 1
         for index, sentence in enumerate(sentences)
-        if re.search(r"(?:까요|습니까|나요)\s*\.?$", sentence.strip()) and "?" not in sentence
+        # 설명형 ``~니까요.``에는 ``까요`` 글자가 포함되지만 질문이 아니다.
+        # 이를 질문부호 누락으로 잡으면 정상적인 이유 문장이 Flow QA를
+        # 실패시키므로 ``니까요`` 안의 ``까요``는 제외한다.
+        if re.search(r"(?:(?<!니)까요|습니까|나요)\s*\.?$", sentence.strip()) and "?" not in sentence
     ]
     return {
         "visible_lengths": visible_lengths,
@@ -172,7 +201,21 @@ def review_flow(
         review = {}
     if not isinstance(review, dict):
         review = {}
-    llm_passed = bool(review.get("passed"))
+    issue_fields = (
+        review.get("question_answer_issues"),
+        review.get("repetition_issues"),
+        review.get("ending_issue"),
+        review.get("transition_issues"),
+        review.get("rhythm_issues"),
+    )
+    has_semantic_issue = any(bool(value) for value in issue_fields)
+    # Claude가 ``passed:false``를 반환하면서 모든 실패 목록과 수정 지시를
+    # 비우는 모순 응답을 낼 수 있다. 명시적 passed 키가 있고 실제 사유가
+    # 하나도 없을 때만 이를 통과로 정규화한다. 파싱 실패로 빈 객체가 된
+    # 응답은 명시적 키가 없으므로 계속 실패한다.
+    llm_passed = bool(review.get("passed")) or (
+        "passed" in review and not has_semantic_issue
+    )
     critical_repeat = bool(deterministic["repetitions"])
     rhythm_passed = bool(deterministic["rhetorical_rhythm"]["passed"])
     spoken_pacing_passed = bool(deterministic["spoken_pacing"]["passed"])

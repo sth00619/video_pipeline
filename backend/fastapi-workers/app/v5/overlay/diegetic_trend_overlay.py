@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -26,7 +27,16 @@ class MapTrendAnnotation:
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", size=size)
+    candidates = (
+        "C:/Windows/Fonts/arialbd.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf",
+        "/app/assets/fonts/BlackHanSans-Regular.ttf",
+    )
+    for candidate in candidates:
+        if Path(candidate).is_file():
+            return ImageFont.truetype(candidate, size=size)
+    raise OSError("지도 수치 표면에 사용할 굵은 글꼴이 없습니다.")
 
 
 def annotations_from_visual_data_pack(pack: dict[str, Any]) -> tuple[MapTrendAnnotation, ...]:

@@ -6,7 +6,7 @@ window; every later scene remains a static, jitter-free image.
 """
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Callable, Iterable
 
 
 MAX_MOTION_SECONDS_PER_CLIP = 5.0
@@ -71,12 +71,13 @@ def select_intro_motion_scene_indices(
     short_threshold: float,
     max_clips: int,
     clip_seconds: float = MAX_MOTION_SECONDS_PER_CLIP,
+    scene_eligible: Callable[[dict], bool] | None = None,
 ) -> tuple[set[int], float, float]:
-    """Select only the earliest complete scenes that fit the configured Fal budget.
+    """Select the earliest safe scenes inside the configured opening window.
 
-    A scene is never partially animated just to fill a remaining fraction.  This
-    avoids provider-duration ambiguity and prevents a motion/freeze seam inside
-    an otherwise short hook scene.
+    문자·수치·기사 장면을 건너뛴 뒤에도 영상 전체의 초반 시간창을 넘겨
+    뒤쪽 장면을 억지로 움직이지 않는다. 한 장면을 남은 시간에 맞춰 부분
+    애니메이션하지도 않아 motion/freeze 이음새를 만들지 않는다.
     """
     scene_list = list(scenes)
     target = intro_motion_budget_seconds(
@@ -90,13 +91,23 @@ def select_intro_motion_scene_indices(
 
     selected: set[int] = set()
     actual = 0.0
+    timeline = 0.0
     for index, scene in enumerate(scene_list):
         if len(selected) >= int(max_clips):
             break
+        scene_seconds = scene_duration_seconds(scene)
+        if timeline >= target - 1e-6:
+            break
         slice_seconds = min(
             max(1.0, min(float(clip_seconds), 5.0)),
-            scene_duration_seconds(scene),
+            scene_seconds,
         )
+        # 초반 시간창은 실제 Fal 클립이 차지할 길이를 기준으로 계산한다.
+        # 보호 프레임도 같은 길이만큼 시간창을 소비하므로, 이를 건너뛰기
+        # 위해 영상 중후반의 장면까지 끌어오는 일은 없다.
+        timeline += slice_seconds
+        if scene_eligible is not None and not scene_eligible(scene):
+            continue
         if slice_seconds <= 0 or actual + slice_seconds > target + 1e-6:
             break
         selected.add(index)

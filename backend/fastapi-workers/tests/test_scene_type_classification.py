@@ -80,5 +80,6 @@ def test_longform_diagram_scenes_are_rebalanced_into_general_situations():
 
 def test_short_dialogue_requests_a_length_rewrite_before_tts():
     assert _needs_dialogue_length_rewrite("가" * 900, 1_000) is True
-    assert _needs_dialogue_length_rewrite("가" * 920, 1_000) is False
+    assert _needs_dialogue_length_rewrite("가" * 920, 1_000) is True
+    assert _needs_dialogue_length_rewrite("가" * 950, 1_000) is False
     assert _needs_dialogue_length_rewrite("가" * 1_151, 1_000) is True

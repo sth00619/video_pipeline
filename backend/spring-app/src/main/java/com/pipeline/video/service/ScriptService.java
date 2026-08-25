@@ -25,11 +25,29 @@ public class ScriptService {
             "verified_facts",
             "suspect_facts",
             "fact_check_summary",
+            "fact_check_log",
+            "fact_check_rounds",
             "news_articles",
             "news_cross_check_status",
             "used_real_llm",
+            "requires_manual_review",
             "source_ref",
-            "source_videos"
+            "source_videos",
+            "flow_qa",
+            "keyword_validation",
+            "unit_validation",
+            "length_contract",
+            "quality_report",
+            "narrative_plan",
+            "narration_contract",
+            "synopsis",
+            "market_snapshot",
+            "market_snapshot_used",
+            "llm_call_count",
+            "llm_provider_log",
+            "job_id",
+            "keyword",
+            "estimated_minutes"
     );
 
     private final VideoJobRepository jobRepository;
@@ -195,6 +213,77 @@ public class ScriptService {
     @Transactional
     public void confirm(Long jobId, String finalScript, String username) {
         confirm(jobId, finalScript, null, username);
+    }
+
+    /**
+     * 대본 문구나 사실을 다시 생성하지 않고 최신 문장·리듬 계약으로 재검증한다.
+     * 이전 Claude 의미 검토가 존재하고 나머지 하드 게이트도 통과한 자산만
+     * 수동 검토 플래그를 해제한다.
+     */
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> revalidate(Long jobId, String username) {
+        VideoJob job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+        if (job.getStatus() != JobStatus.SCRIPT_PENDING) {
+            throw new IllegalStateException("스크립트 대기 상태에서만 재검증할 수 있습니다. 현재: " + job.getStatus());
+        }
+        Asset latest = assetRepository.findTopByJobIdAndAssetTypeOrderByCreatedAtDesc(jobId, AssetType.SCRIPT)
+                .orElseThrow(() -> new IllegalStateException("재검증할 SCRIPT 자산이 없습니다."));
+        try {
+            Map<String, Object> previous = objectMapper.readValue(latest.getMetaJson(), Map.class);
+            String script = String.valueOf(previous.getOrDefault("script", "")).trim();
+            if (script.isBlank() || !Boolean.TRUE.equals(previous.get("used_real_llm"))) {
+                throw new IllegalStateException("실제 Claude 대본이 아니므로 재검증할 수 없습니다.");
+            }
+            Map<String, Object> unitValidation = previous.get("unit_validation") instanceof Map<?, ?> value
+                    ? (Map<String, Object>) value : Map.of();
+            Map<String, Object> keywordValidation = previous.get("keyword_validation") instanceof Map<?, ?> value
+                    ? (Map<String, Object>) value : Map.of();
+            Map<String, Object> qualityReport = previous.get("quality_report") instanceof Map<?, ?> value
+                    ? new LinkedHashMap<>((Map<String, Object>) value) : new LinkedHashMap<>();
+            Map<String, Object> screenText = qualityReport.get("screen_text") instanceof Map<?, ?> value
+                    ? (Map<String, Object>) value : Map.of();
+            if (!Boolean.TRUE.equals(unitValidation.get("passed"))
+                    || !Boolean.TRUE.equals(keywordValidation.get("passed"))
+                    || !Boolean.TRUE.equals(screenText.get("passed"))) {
+                throw new IllegalStateException("숫자 단위·키워드·화면 문구 하드 게이트가 통과되지 않았습니다.");
+            }
+            Object providerLog = previous.get("llm_provider_log");
+            if (providerLog instanceof List<?> entries && entries.stream()
+                    .filter(Map.class::isInstance)
+                    .map(Map.class::cast)
+                    .anyMatch(entry -> Boolean.TRUE.equals(entry.get("fallback")))) {
+                throw new IllegalStateException("LLM 폴백 호출이 포함되어 재검증만으로 승인할 수 없습니다.");
+            }
+            Map<String, Object> previousFlow = previous.get("flow_qa") instanceof Map<?, ?> value
+                    ? (Map<String, Object>) value : Map.of();
+            Map<String, Object> narrativePlan = previous.get("narrative_plan") instanceof Map<?, ?> value
+                    ? (Map<String, Object>) value : Map.of();
+            Map<String, Object> flow = fastApiClient.revalidateScriptFlow(script, narrativePlan, previousFlow);
+            if (!Boolean.TRUE.equals(flow.get("passed"))) {
+                throw new IllegalStateException("최신 문장·리듬 계약 재검증 실패: " + flow.get("revision_instruction"));
+            }
+            Map<String, Object> refreshed = new LinkedHashMap<>(previous);
+            refreshed.put("flow_qa", flow);
+            qualityReport.put("flow", flow);
+            refreshed.put("quality_report", qualityReport);
+            refreshed.put("requires_manual_review", false);
+            refreshed.put("revalidated_by", username != null ? username : "system");
+            refreshed.put("revalidation_reason", "최신 한국어 문장 글자·단어·리듬 계약 적용");
+            assetRepository.save(Asset.builder()
+                    .jobId(jobId)
+                    .assetType(AssetType.SCRIPT)
+                    .metaJson(safeJson(refreshed))
+                    .build());
+            return Map.of(
+                    "status", "READY_FOR_APPROVAL",
+                    "flow_passed", true,
+                    "char_count", previous.getOrDefault("char_count", script.length())
+            );
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("SCRIPT 자산 JSON 재검증 실패: " + e.getMessage(), e);
+        }
     }
 
     @Transactional

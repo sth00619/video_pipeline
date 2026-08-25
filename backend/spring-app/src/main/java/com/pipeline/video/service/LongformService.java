@@ -102,6 +102,11 @@ public class LongformService {
 
     @Transactional
     public LongformGenerateResponse generate(Long jobId, String username) {
+        return generate(jobId, username, true);
+    }
+
+    @Transactional
+    public LongformGenerateResponse generate(Long jobId, String username, boolean extractShortsScenario) {
         VideoJob job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
@@ -206,34 +211,38 @@ public class LongformService {
             log.error("유튜브 패키지 자동 생성 실패: {}", e.getMessage());
         }
 
-        // 7. 쇼츠 시나리오 자동 추출
-        try {
-            log.info("자동 쇼츠 시나리오 추출 시작: jobId={}", jobId);
+        // 영상 조립까지만 승인된 실행에서는 쇼츠용 LLM 호출을 시작하지 않는다.
+        if (extractShortsScenario) {
+            try {
+                log.info("자동 쇼츠 시나리오 추출 시작: jobId={}", jobId);
             
-            // 최신 업데이트된 sceneAsset을 가져옵니다.
-            List<Asset> latestSceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
-            List<Map<String, Object>> parsedScenes = latestSceneAssets.stream()
-                .map(a -> {
-                    try {
-                        return (Map<String, Object>) objectMapper.readValue(a.getMetaJson(), Map.class);
-                    } catch(Exception e) {
-                        return null;
-                    }
-                }).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toList());
+                // 최신 업데이트된 sceneAsset을 가져옵니다.
+                List<Asset> latestSceneAssets = assetRepository.findByJobIdAndAssetType(jobId, AssetType.SCENE_IMAGE);
+                List<Map<String, Object>> parsedScenes = latestSceneAssets.stream()
+                    .map(a -> {
+                        try {
+                            return (Map<String, Object>) objectMapper.readValue(a.getMetaJson(), Map.class);
+                        } catch(Exception e) {
+                            return null;
+                        }
+                    }).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toList());
 
-            if (!parsedScenes.isEmpty()) {
-                Object scenarios = fastApiClient.extractShortsScenarios(jobId, parsedScenes);
+                if (!parsedScenes.isEmpty()) {
+                    Object scenarios = fastApiClient.extractShortsScenarios(jobId, parsedScenes);
                 
-                Asset scenarioAsset = Asset.builder()
-                        .jobId(jobId)
-                        .assetType(AssetType.SHORTS_SCENARIO)
-                        .metaJson(objectMapper.writeValueAsString(scenarios))
-                        .build();
-                assetRepository.save(scenarioAsset);
-                log.info("자동 쇼츠 시나리오 추출 완료 및 저장 성공: jobId={}", jobId);
+                    Asset scenarioAsset = Asset.builder()
+                            .jobId(jobId)
+                            .assetType(AssetType.SHORTS_SCENARIO)
+                            .metaJson(objectMapper.writeValueAsString(scenarios))
+                            .build();
+                    assetRepository.save(scenarioAsset);
+                    log.info("자동 쇼츠 시나리오 추출 완료 및 저장 성공: jobId={}", jobId);
+                }
+            } catch(Exception e) {
+                log.error("쇼츠 시나리오 자동 추출 실패: {}", e.getMessage());
             }
-        } catch(Exception e) {
-            log.error("쇼츠 시나리오 자동 추출 실패: {}", e.getMessage());
+        } else {
+            log.info("영상 조립 전용 실행 — 쇼츠 시나리오 추출 건너뜀: jobId={}", jobId);
         }
 
         // AUTO 모드: 자동 confirm

@@ -50,6 +50,7 @@ from app.services.overlay.watermark import render_channel_watermark_layer
 from app.utils.budget import ProviderRequestAudit, load_preflight, record_cost
 from app.utils.intro_motion import scene_duration_seconds, select_intro_motion_scene_indices
 from app.utils.narration_contract import (
+    bind_caption_chunks_to_scenes,
     build_script_contract,
     narration_from_sections,
     verify_tts_against_script_contract,
@@ -62,6 +63,7 @@ from app.services.fal_motion_safety import (
     fal_motion_metadata_block_reasons,
     fal_motion_safety_is_current,
 )
+from app.services.motion_locality import assess_video_motion_locality, compact_motion_failure
 from app.services.annotate import render_annotations
 from app.services.verbatim_guard import validate as validate_verbatim
 from datetime import datetime, timezone
@@ -157,6 +159,26 @@ class LongformWorker:
         try:
             scene_contract = build_script_contract(narration_from_sections(scenes), scenes)
             tts_subtitle_sync = verify_tts_against_script_contract(tts_meta, scene_contract)
+            caption_scene_sync = bind_caption_chunks_to_scenes(scenes, chunks)
+            for scene, mapping in zip(scenes, caption_scene_sync["mappings"]):
+                stored = scene.get("caption_chunk_contract")
+                if isinstance(stored, dict):
+                    compared_fields = (
+                        "scene_text_sha256",
+                        "caption_compact_sha256",
+                        "chunk_start_index",
+                        "chunk_end_index",
+                    )
+                    if any(stored.get(field) != mapping.get(field) for field in compared_fields):
+                        raise RuntimeError(
+                            f"이미지 장면 {mapping['scene_index'] + 1}의 자막 청크 계약이 현재 TTS와 다릅니다."
+                        )
+                scene["caption_chunk_contract"] = mapping
+            tts_subtitle_sync.update({
+                "caption_scene_contract_version": caption_scene_sync["version"],
+                "scene_count": caption_scene_sync["scene_count"],
+                "all_scene_boundaries_on_caption_boundaries": True,
+            })
         except Exception as exc:
             raise RuntimeError(f"조립 전 대본·TTS·자막·장면 계보 검증 실패: {exc}") from exc
 
@@ -187,7 +209,7 @@ class LongformWorker:
                 return {"path": path, "missing": True}
 
         assembly_fingerprint = hashlib.sha256(json.dumps({
-            "assembly_contract": "integrated-data-motion-v5",
+            "assembly_contract": "integrated-data-motion-v6",
             "tts": tts_meta_json,
             "scenes": scenes_meta_json,
             "gifs": gifs_meta_json,
@@ -295,6 +317,36 @@ class LongformWorker:
             scenes, total_duration, max_clips_cap
         )
         candidate_intro_kling_indices = set(intro_kling_indices)
+        previously_rejected_motion = _rejected_global_motion_indices(job_id)
+        rejected_selected: set[int] = set()
+        if previously_rejected_motion:
+            rejected_selected = intro_kling_indices & previously_rejected_motion
+            intro_kling_indices -= rejected_selected
+            candidate_intro_kling_indices |= rejected_selected
+            for index in sorted(rejected_selected):
+                motion_reason = "previous_global_motion_rejection"
+                logger.info("씬 %s 이전 전역 흔들림 감사 결과로 Fal 재요청 차단", index)
+                # 아래 안전 게이트 감사 구조에 동일한 원인으로 합류시킨다.
+                motion_contract = scenes[index].get("motion_contract")
+                if not isinstance(motion_contract, dict):
+                    motion_contract = {}
+                    scenes[index]["motion_contract"] = motion_contract
+                motion_contract["previous_rejection"] = motion_reason
+            # 이미지 단계가 미리 표시한 다음 안전 후보로 빈 자리를 채운다.
+            elapsed = 0.0
+            for index, scene in enumerate(scenes):
+                starts_in_opening = elapsed < intro_motion_target
+                elapsed += scene_duration_seconds(scene, float(runtime_config.value("scene_duration_sec")))
+                if len(intro_kling_indices) >= max_clips_cap:
+                    break
+                if not starts_in_opening or index in intro_kling_indices or index in previously_rejected_motion:
+                    continue
+                if scene.get("use_kling") is not True:
+                    continue
+                safety = _ensure_fal_motion_safety(scene, _article_image_path(scene))
+                if safety["eligible"]:
+                    intro_kling_indices.add(index)
+                    candidate_intro_kling_indices.add(index)
         # 프롬프트의 금지문만으로는 이미지 속 숫자·글자를 보존할 수 없다.
         # 최종 PNG와 메타데이터를 모두 통과한 씬만 Fal 후보로 남긴다.
         protected_fact_indices = {
@@ -302,7 +354,9 @@ class LongformWorker:
             if _has_v5_verified_fact_overlay(scene)
         }
         motion_block_reasons: dict[int, list[str]] = {}
-        protected_motion_indices: set[int] = set()
+        protected_motion_indices: set[int] = set(rejected_selected)
+        for index in rejected_selected:
+            motion_block_reasons[index] = ["previous_global_motion_rejection"]
         for index in sorted(intro_kling_indices):
             safety = _ensure_fal_motion_safety(
                 scenes[index],
@@ -405,6 +459,52 @@ class LongformWorker:
             1 for i in requested_motion_indices if clip_modes.get(i) == "kling"
         )
         minimum_kling_count = _minimum_motion_delivery(len(requested_motion_indices))
+        if actual_kling_count < minimum_kling_count and video_provider:
+            # 생성 후 국소 동작 검사를 실패한 경우, 같은 오프닝 구간의 다음
+            # 안전 후보 한 장만 보충한다. 실패 장면을 그대로 쓰거나 전체 화면
+            # 흔들림을 조용히 허용하지 않는다.
+            elapsed = 0.0
+            backfill_candidates: list[int] = []
+            for index, scene in enumerate(scenes):
+                starts_in_opening = elapsed < intro_motion_target
+                elapsed += scene_duration_seconds(scene, float(runtime_config.value("scene_duration_sec")))
+                if (
+                    not starts_in_opening
+                    or index in requested_motion_indices
+                    or index in previously_rejected_motion
+                ):
+                    continue
+                if scene.get("use_kling") is not True:
+                    continue
+                safety = _ensure_fal_motion_safety(scene, _article_image_path(scene))
+                if safety["eligible"]:
+                    backfill_candidates.append(index)
+            for index in backfill_candidates[:1]:
+                logger.info("Fal 국소 동작 실패 보충 생성: scene=%s", index)
+                idx, clip_path, clip_mode, failure_reason = self._process_scene(
+                    index, scenes[index], video_provider, True, temp_dir, job_id,
+                )
+                clip_paths_map[idx] = clip_path
+                clip_modes[idx] = clip_mode
+                requested_motion_indices.add(idx)
+                candidate_intro_kling_indices.add(idx)
+                if failure_reason:
+                    clip_failures[idx] = failure_reason
+                if clip_mode == "kling":
+                    actual_kling_count += 1
+                    break
+            if actual_kling_count >= minimum_kling_count:
+                intro_kling_indices = {
+                    index for index in requested_motion_indices if clip_modes.get(index) == "kling"
+                }
+                intro_motion_actual = sum(
+                    min(
+                        float(runtime_config.value("intro_motion_clip_seconds")),
+                        5.0,
+                        scene_duration_seconds(scenes[index]),
+                    )
+                    for index in intro_kling_indices
+                )
         if actual_kling_count < minimum_kling_count:
             raise RuntimeError(
                 "Fal/Kling opening-motion delivery gate failed: "
@@ -658,6 +758,7 @@ class LongformWorker:
             planned_kling=len(requested_motion_indices),
             actual_kling=actual_kling_count,
             fal_failures=clip_failures,
+            kling_motion_plan=kling_motion_plan,
         )
         quality_report["output_qc"] = output_qc
         logger.info(
@@ -884,6 +985,17 @@ class LongformWorker:
                                     pass
 
                         if _verify_video(clip_path) and abs(_probe_duration(clip_path) - duration) <= 0.15:
+                            motion_locality = assess_video_motion_locality(clip_path)
+                            if not motion_locality.get("passed"):
+                                _write_kling_audit(job_id, i, {
+                                    "status": "REJECTED_GLOBAL_MOTION",
+                                    "motion_locality": motion_locality,
+                                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                                })
+                                raise RuntimeError(
+                                    "Fal 결과가 피사체 국소 동작이 아니라 전역 흔들림으로 판정됨: "
+                                    + compact_motion_failure(motion_locality)
+                                )
                             if not _apply_editorial_overlays(scene, clip_path, temp_dir, i, duration, job_id):
                                 raise RuntimeError(f"scene {i} editorial overlay failed")
                             record_cost(job_id, "kling", scene_key=f"kling:{i}")
@@ -921,11 +1033,12 @@ class LongformWorker:
                         except Exception as fallback_err:
                             logger.error(f"씬 {i} 페이드 폴백 실패, 일반 정적 복구 시도: {fallback_err}")
 
-            # Plan B Ken Burns asset reuse check: 동일 문맥 씬 이미지 재활용 및 Ken Burns FX 연출
+            # 전 화면 zoompan은 피사체가 움직이지 않고 화면만 지글거리는 인상을
+            # 만들므로 재사용 장면도 흔들림 없는 정지+페이드로 처리한다.
             is_ken_burns_reuse = bool(scene.get("reuse_previous_image")) or bool(scene.get("ken_burns_effect"))
             if is_ken_burns_reuse and os.path.exists(img_path):
-                logger.info(f"[KEN_BURNS_REUSE] Scene {i} reused image with Ken Burns zoompan effect: job_id={job_id}")
-                _ffmpeg_ken_burns_image(img_path, clip_path, duration, zoom_type="in", bg_color=bg_color, job_id=job_id)
+                logger.info(f"[STATIC_REUSE] Scene {i} reused image without whole-frame zoompan: job_id={job_id}")
+                _ffmpeg_static_image_with_fade(img_path, clip_path, duration, bg_color, job_id)
             elif os.path.exists(img_path):
                 reveal = scene.get("reveal_assets") if isinstance(scene.get("reveal_assets"), dict) else {}
                 if bool(runtime_config.value("scene_reveal_enabled")) and reveal.get("plain_path") and reveal.get("emphasized_path"):
@@ -1118,7 +1231,16 @@ def _upload_image_for_fal(img_path: str) -> str | None:
 def _select_intro_kling_scenes(
     scenes: list[dict], total_duration: float, max_clips_cap: int
 ) -> tuple[set[int], float, float]:
-    """Allocate Fal clips to a contiguous opening window in real seconds."""
+    """실제 초반 시간창 안에서 최종 PNG까지 안전한 Fal 장면을 채운다."""
+
+    def eligible(scene: dict) -> bool:
+        if fal_motion_metadata_block_reasons(scene) or not _motion_contract_allows_scene(scene):
+            return False
+        image_path = _article_image_path(scene)
+        if not _verify_image(image_path):
+            return False
+        return bool(_ensure_fal_motion_safety(scene, image_path).get("eligible"))
+
     return select_intro_motion_scene_indices(
         scenes,
         total_duration,
@@ -1127,6 +1249,7 @@ def _select_intro_kling_scenes(
         short_threshold=float(runtime_config.value("intro_motion_short_threshold")),
         max_clips=max(0, int(max_clips_cap)),
         clip_seconds=float(runtime_config.value("intro_motion_clip_seconds")),
+        scene_eligible=eligible,
     )
 
 
@@ -1480,6 +1603,22 @@ def _write_kling_audit(job_id: int, scene_idx: int, params: dict):
             f.write(line + "\n")
     except Exception as ex:
         logger.warning(f"Failed to write Kling audit log: {ex}")
+
+
+def _rejected_global_motion_indices(job_id: int) -> set[int]:
+    """이미 전역 흔들림으로 거절된 장면을 같은 Job 재개에서 재과금하지 않는다."""
+    audit_file = Path(f"/app/data/jobs/{job_id}/kling_audit.jsonl")
+    rejected: set[int] = set()
+    try:
+        for line in audit_file.read_text(encoding="utf-8").splitlines():
+            row = json.loads(line)
+            if row.get("status") == "REJECTED_GLOBAL_MOTION":
+                rejected.add(int(row["scene_idx"]))
+    except FileNotFoundError:
+        return set()
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        logger.warning("Kling 전역 흔들림 감사 로그를 읽지 못함: %s", exc)
+    return rejected
 
 
 def _ffmpeg_static_image_with_fade(img_path: str, clip_path: str, duration: float, bg_color: str = "0x0d1b2a", job_id: int = 0):
@@ -2087,6 +2226,47 @@ def _assign_scene_durations_from_chunks(scenes: list, chunks: list, total_durati
                 else total_duration / len(scenes),
                 3,
             )
+        return
+
+    # 신규 자산은 이미지 생성 전에 각 장면이 소유하는 완전한 자막 청크
+    # 범위를 고정한다. 이 계약이 있으면 글자 수 비율을 전혀 사용하지 않고
+    # 실제 청크 끝 시각만으로 이미지 전환을 결정한다.
+    caption_contracts = [scene.get("caption_chunk_contract") for scene in scenes]
+    if caption_contracts and all(isinstance(contract, dict) for contract in caption_contracts):
+        expected_chunk_start = 0
+        previous_scene_end = 0.0
+        for scene_index, (scene, contract) in enumerate(zip(scenes, caption_contracts)):
+            chunk_start = int(contract.get("chunk_start_index", -1))
+            chunk_end = int(contract.get("chunk_end_index", -1))
+            if chunk_start != expected_chunk_start or chunk_end < chunk_start or chunk_end >= len(chunks):
+                raise RuntimeError(
+                    f"장면 {scene_index + 1}의 자막 청크 범위가 연속적이지 않습니다: "
+                    f"start={chunk_start}, end={chunk_end}, expected={expected_chunk_start}"
+                )
+            final_chunk = chunks[chunk_end]
+            chunk_end_time = float(
+                final_chunk.get("end")
+                if final_chunk.get("end") is not None
+                else float(final_chunk.get("start") or 0.0) + float(final_chunk.get("duration") or 0.0)
+            )
+            if chunk_end_time <= previous_scene_end:
+                raise RuntimeError(
+                    f"장면 {scene_index + 1}의 자막 종료 시각이 이전 이미지 전환보다 빠릅니다."
+                )
+            scene["start_time"] = round(previous_scene_end, 3)
+            scene["end_time"] = round(chunk_end_time, 3)
+            scene["duration"] = round(chunk_end_time - previous_scene_end, 3)
+            scene["image_transition_after_caption_chunk"] = chunk_end
+            previous_scene_end = chunk_end_time
+            expected_chunk_start = chunk_end + 1
+
+        if expected_chunk_start != len(chunks):
+            raise RuntimeError("마지막 이미지 뒤에 연결되지 않은 자막 청크가 남았습니다.")
+        # 오디오 꼬리의 무음은 마지막 이미지가 유지한다. 앞선 장면 경계는
+        # 이미 실제 자막 청크 끝에 고정됐으므로 절대 이동하지 않는다.
+        if total_duration > previous_scene_end:
+            scenes[-1]["end_time"] = round(total_duration, 3)
+            scenes[-1]["duration"] = round(total_duration - float(scenes[-1]["start_time"]), 3)
         return
 
     # ── 청크 경계 사전 빌드 ──────────────────────────────────────

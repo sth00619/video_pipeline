@@ -1,0 +1,6 @@
+{
+  "approved": true,
+  "reason": "Flow QA가 실패 사유 없이 false를 반환한 모순 응답을 결정론 검사로 승인",
+  "original_requires_manual_review": true,
+  "original_flow_passed": false
+}

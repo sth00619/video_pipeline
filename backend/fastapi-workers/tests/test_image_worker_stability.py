@@ -1,10 +1,18 @@
 import inspect
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
 from app import runtime_config
 from app.utils.retry_policy import classify_image_error
-from app.workers.images_worker import ImagesWorker
+from app.workers.images_worker import (
+    ImagesWorker,
+    _bounded_text_generation_prompt,
+    _image_prompt_cache_key,
+    _requires_full_scene_regeneration,
+    _sanitize_unplanned_prompt_structure,
+)
 
 
 class _Provider:
@@ -55,6 +63,141 @@ class ImageWorkerStabilityTests(unittest.TestCase):
     def test_parallel_renderer_accepts_preflight_from_generate_scope(self):
         params = inspect.signature(ImagesWorker._generate_parallel_scenes).parameters
         self.assertIn("budget_preflight", params)
+
+    def test_cached_blank_panel_and_unplanned_speech_bubble_are_sanitized(self):
+        prompt = (
+            "A market chart falls despite a looming speech bubble with empty claims. "
+            "One large blank presentation board stands reserved for post-production values."
+        )
+        cleaned = _sanitize_unplanned_prompt_structure(
+            prompt,
+            {"bubble_allowed": False, "deterministic_texts": ["6696포인트"]},
+        )
+        self.assertNotIn("speech bubble", cleaned.lower())
+        self.assertNotIn("blank", cleaned.lower())
+        self.assertIn("opaque scene-integrated", cleaned)
+        self.assertIn("exact deterministic typography", cleaned)
+
+    def test_detached_numeric_placard_sentence_is_removed_from_cached_prompt(self):
+        prompt = (
+            "A large display labeled 코스닥 shows a falling graph. "
+            "One blank placard panel reserved below the screen awaits exact figures. "
+            "A cracked silver coin rests on the podium."
+        )
+        cleaned = _sanitize_unplanned_prompt_structure(
+            prompt,
+            {"bubble_allowed": False, "deterministic_texts": ["800.75포인트", "12.58포인트"]},
+        )
+        self.assertIn("display labeled 코스닥", cleaned)
+        self.assertIn("cracked silver coin", cleaned)
+        self.assertNotIn("placard", cleaned.lower())
+        self.assertNotIn("awaits exact figures", cleaned.lower())
+
+    def test_blur_or_smear_rejection_requires_fresh_scene_candidate(self):
+        self.assertTrue(_requires_full_scene_regeneration({
+            "failure_categories": ["text_surface_detached_translucent_card", "local_edit_blur_smear_artifact"],
+        }))
+        self.assertFalse(_requires_full_scene_regeneration({
+            "failure_categories": ["text_unexpected_or_malformed"],
+        }))
+        self.assertTrue(_requires_full_scene_regeneration({
+            "failure_categories": ["text_generated_deterministic_numeric"],
+        }))
+
+    def test_screen_text_contract_does_not_invalidate_content_prompt_cache(self):
+        common = {
+            "index": 0,
+            "narration": "삼성전자가 110조 원 규모의 주주환원을 발표했습니다.",
+            "scene_type": "metric",
+            "visual_mode": "archetype_explainer",
+            "character_required": True,
+            "core_entities": ["삼성전자"],
+            "core_figures": [{"raw": "110조 원"}],
+        }
+        old_key = _image_prompt_cache_key(**common, screen_texts=[])
+        new_key = _image_prompt_cache_key(**common, screen_texts=["삼성전자", "110조 원"])
+        self.assertEqual(old_key, new_key)
+
+    def test_latest_screen_text_contract_is_combined_at_render_boundary(self):
+        scene = {"screen_texts": ["삼성전자", "110조 원"]}
+        prompt = _bounded_text_generation_prompt(
+            "A semiconductor ceremony with one blank board reserved for post-production values.",
+            audit_target=scene,
+        )
+        self.assertIn("삼성전자", prompt)
+        self.assertIn("110조 원", prompt)
+        self.assertNotIn("blank", prompt.lower())
+
+    def test_single_worker_circuit_breaker_does_not_start_the_next_scene(self):
+        class AlwaysUnavailable:
+            def __init__(self):
+                self.sections = []
+
+            def generate_image(self, **kwargs):
+                self.sections.append(kwargs["section"])
+                raise RuntimeError("HTTP 503 high demand")
+
+        class SequentialPressure:
+            def acquire(self):
+                return None
+
+            def outcome(self, _error=None):
+                return None
+
+            def recommended_concurrency(self, _configured):
+                return 1
+
+        provider = AlwaysUnavailable()
+        scenes = [
+            {
+                "title": f"장면 {index + 1}",
+                "section": f"scene_{index}",
+                "narration": f"승인 내레이션 {index}",
+                "prompt_en": f"editorial finance scene {index}",
+                "scene_type": "general",
+                "visual_mode": "general",
+                "art_direction": {"character_required": True},
+                "image_profile": {"tier": "pro", "model": "gemini-3-pro-image", "image_size": "2K"},
+            }
+            for index in range(3)
+        ]
+        original_value = runtime_config.value
+        values = {
+            "gemini_retry_max": 3,
+            "gemini_pro_retry_base_seconds": 0.5,
+            "gemini_max_concurrency": 1,
+            "image_same_error_break_count": 1,
+            "image_provider": "gemini",
+            "gemini_service_tier": "standard",
+        }
+
+        def configured_value(key):
+            return values[key] if key in values else original_value(key)
+
+        with self.subTest("첫 씬 실패 뒤 다음 씬을 제출하지 않음"):
+            with tempfile.TemporaryDirectory() as temp_dir, \
+                 patch("app.workers.images_worker.gemini_pressure", SequentialPressure()), \
+                 patch("app.workers.images_worker.runtime_config.value", side_effect=configured_value), \
+                 patch("app.workers.images_worker.time.sleep", return_value=None):
+                    with self.assertRaisesRegex(
+                        RuntimeError,
+                        "IMAGE_PROVIDER_TEMPORARILY_UNAVAILABLE",
+                    ):
+                        ImagesWorker()._generate_parallel_scenes(
+                            scenes_meta=scenes,
+                            directed_specs={},
+                            market_snapshot={},
+                            character_reference_paths=[],
+                            character_style_prompt="none",
+                            lora_model_id=None,
+                            lora_trigger_word=None,
+                            lora_scale=None,
+                            ai_provider=provider,
+                            job_dir=Path(temp_dir),
+                            job_id=9001,
+                        )
+
+        self.assertEqual(provider.sections, ["scene_0", "scene_0", "scene_0"])
 
 
 if __name__ == "__main__":

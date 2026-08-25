@@ -1,0 +1,224 @@
+{
+  "status": "preflight_passed_no_api_call",
+  "scene": {
+    "scene_id": "job52_root_cause_korean_text_character",
+    "index": 0,
+    "scene_type": "diagram",
+    "title": "실적의 구조를 확인하는 장면",
+    "content": "코스피 영업이익이 늘어도 두 반도체 기업을 제외한 전체 흐름이 함께 좋아졌는지 확인해야 합니다.",
+    "text": "코스피 영업이익이 늘어도 두 반도체 기업을 제외한 전체 흐름이 함께 좋아졌는지 확인해야 합니다.",
+    "screen_texts": [
+      "영업이익"
+    ],
+    "screen_text_validation": {
+      "passed": true,
+      "reasons": []
+    },
+    "visual_intent": "A lively, saturated semiconductor analysis scene in the visual range of the Job 52 laboratory references. Two visually distinct microchip modules are being lifted away from a busy conveyor carrying many other chips, so the viewer can read the difference between two dominant firms and the rest of the market without company names or numbers. The production mechanism, chip groups, analytical arrows, and mascot share the frame; no headline board is the focal idea. The mascot acts as a semiconductor researcher for this scene; its lab costume and expression belong only to this scene, not to every video frame.",
+    "art_direction": {
+      "character_required": true,
+      "setting": "Korean semiconductor analysis room and wafer production line",
+      "props": [
+        "two highlighted chip modules being separated from a larger group of chips",
+        "diagonal wafer-and-chip production conveyor",
+        "integrated non-numeric analytical arrows"
+      ],
+      "composition": "layered diagonal production-line composition; medium mascot at lower left, machinery and chip groups carry most of the visual weight",
+      "character_position": "left",
+      "character_occupancy": 0.28
+    },
+    "scene_spec": {
+      "character_costume": "white semiconductor laboratory coat with optional goggles suited to this scene",
+      "character_action": "using one inspection tool to separate two highlighted chips from a larger moving group in one coherent action",
+      "camera": "dynamic wide three-quarter laboratory view looking along the diagonal production conveyor"
+    },
+    "verified_facts": [],
+    "visual_mode": "archetype_explainer",
+    "motion_contract": {
+      "eligible": false,
+      "requires_explicit_selection": true,
+      "character_required": true,
+      "default_motion_type": "pointing_explain",
+      "blocked_reasons": [
+        "article_capture_or_script_caption_or_information_surface"
+      ]
+    },
+    "v5_render_contract": {
+      "scene_id": "job52_root_cause_korean_text_character",
+      "scene_type": "diagram",
+      "visual_mode": "archetype_explainer",
+      "visual_mode_contract": {
+        "asset_source": "v5_gemini_scene",
+        "text_policy": "scene_local_approved_text",
+        "overlay_policy": "approved_nonnumeric_source_and_deterministic_numeric_surface",
+        "numeric_visual_policy": "verified_facts_deterministic_only",
+        "character_policy": "contextual_channel_reference_range"
+      },
+      "selection": {
+        "scene_type": "diagram",
+        "archetype": "data_lab",
+        "alternatives": [
+          "classroom",
+          "trade_calculator"
+        ],
+        "selection_reason": "네트워크·홀로그램·추세 흐름이므로 넓은 물리 그래프 벽이 있는 data_lab을 추천",
+        "physical_surfaces": [
+          "the storyboard-planned laboratory, production-line, control-room, or analysis surface",
+          "scene-specific equipment surfaces",
+          "contextual chart or diagram props"
+        ],
+        "primary_physical_surface": "the storyboard-planned laboratory, production-line, control-room, or analysis surface"
+      },
+      "scene_spec": {
+        "scene_id": "job52_root_cause_korean_text_character",
+        "archetype": "data_lab",
+        "emotion": "explain",
+        "costume": "reporter",
+        "pose": "present",
+        "frame_occupancy": 0.28,
+        "character_position": "left",
+        "character_required": true,
+        "wardrobe_description": "white semiconductor laboratory coat with optional goggles suited to this scene",
+        "action_description": "using one inspection tool to separate two highlighted chips from a larger moving group in one coherent action",
+        "composition_description": "layered diagonal production-line composition; medium mascot at lower left, machinery and chip groups carry most of the visual weight Place the mascot on the left side. Keep the mascot near 28 percent of the frame area, subordinate to the scene mechanism.",
+        "camera_description": "dynamic wide three-quarter laboratory view looking along the diagonal production conveyor"
+      },
+      "scene_wardrobe": "white semiconductor laboratory coat with optional goggles suited to this scene",
+      "prompt_en": "<character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, expressive cartoon eyes and a readable scene-appropriate expression. Keep it recognizably within the same channel mascot family and ink language while allowing face expression, eye openness, brows, mouth, costume, headwear, pose, and frame size to vary. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, CHARACTER CONTINUITY RANGE: use the shared round gold-coin species, rim motif, compact cartoon limbs, and channel ink style visible across the scene references. Do not copy one reference's eyelashes, neutral smile, navy suit, hat, body ratio, white cutout outline, or foreground scale into every scene. A worried, confident, comic, scientific, formal, or investigative version may look different while remaining recognizably in the same channel character family., calm friendly explaining expression, gentle smile, white semiconductor laboratory coat with optional goggles suited to this scene, using one inspection tool to separate two highlighted chips from a larger moving group in one coherent action </character> <composition> Premium economic-explainer cartoon illustration. Follow this scene's own visual hierarchy. The mascot may be left, center, right, small within a large environment, medium beside data, or dominant for a reaction beat. Full body, waist-up, or action framing is allowed when compositionally justified. Do not automatically place a giant board on the left or force the character into the right foreground. BINDING SCENE-SPECIFIC COMPOSITION: layered diagonal production-line composition; medium mascot at lower left, machinery and chip groups carry most of the visual weight Place the mascot on the left side. Keep the mascot near 28 percent of the frame area, subordinate to the scene mechanism. This binding direction overrides generic placement examples; do not swap the specified side, scale, or object hierarchy. Keep readable foreground, midground, and background relationships appropriate to this scene. </composition> <scene> Use this scene's camera direction: dynamic wide three-quarter laboratory view looking along the diagonal production conveyor. STAGE: a narration-specific financial analysis environment: semiconductor laboratory, production-line observation room, brokerage control room, or research workspace as the content requires. KEY PROPS: scene-specific analytical equipment, physical market or industry objects, and only the information surfaces needed by this narration. LIGHTING: scene-dependent laboratory, market-room, industrial, or presentation lighting derived from the intended mood. DECORATIVE DETAIL: layered equipment, chart forms, physical industry detail, and approved typography arranged in the Job 52 editorial-comic visual range. LOCAL CONTEXT: Use a recognizably Korean business setting: Seoul-like office towers, Korean brokerage dealing-room proportions, local street and harbor details, or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, unapproved Korean wording, or numeric signage Featured entities for semantic grounding only; do not render their names or logos: KOSPI, Operating Profit.. Choose a scene-specific balance of character, objects, charts, text surfaces, and environment. Do not impose a fixed prop count or studio layout. </scene> <art_direction> CHANNEL VISUAL RANGE: polished 2D Korean editorial-finance cartoon with clean dark ink outlines, cel shading, and layered foreground, midground, and background storytelling. Focal characters and key props use stronger outlines; background detail may use finer lines. Color, lighting, density, camera, and character scale follow each scene's mood, ranging from bright laboratory greens and golds to cool control-room blues and urgent reds. The frame remains one coherent hand-illustrated medium. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. Readable words are permitted only when the scene-local text contract lists their exact spelling; never invent, translate, duplicate, abbreviate, or decorate them with pseudo-text. NO image-model-generated financial numbers; financial numbers remain reserved for deterministic rendering. NO unapproved captions, logo, or watermark anywhere in the generated image. Dialogue balloons, split comparison, board, chart, sign, or multiple information surfaces may be used only when the scene storyboard requests them; they are not mandatory defaults and must share the scene's material, perspective, lighting, and illustration style. Never create accidental floating UI cards, pasted-on rectangles, empty title cards, or layout-guide frames. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame. When the gold-coin mascot appears, keep it recognizably within the channel's round coin-character family: embossed rim, expressive cartoon eyes, compact limbs, and clean dark outlines. Expression, eye openness, eyebrow shape, mouth, costume, headwear, pose, visibility, and frame size may vary substantially with the scene. Preserve character species and drawing language, not one frozen face or one finance-presenter outfit. DATA-LAB RANGE: use the Job 52 laboratory and market-analysis references for line language and information density. The actual room, palette, camera, number of displays, costume, and character scale must follow this scene's semiconductor or market meaning; do not default to a broadcast studio with cameras and one curved wall. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use this script-meaning visual brief: SCENE-SPECIFIC MEANING, SETTING, AND PROP OPTIONS: A lively, saturated semiconductor analysis scene in the visual range of the Job 52 laboratory references. Two visually distinct microchip modules are being lifted away from a busy conveyor carrying many other chips, so the viewer can read the difference between two dominant firms and the rest of the market without company names or numbers. The production mechanism, chip groups, analytical arrows, and mascot share the frame; no headline board is the focal idea. The mascot acts as a semiconductor researcher for this scene; its lab costume and expression belong only to this scene, not to every video frame.; Korean semiconductor analysis room and wafer production line; two highlighted chip modules being separated from a larger group of chips, diagonal wafer-and-chip production conveyor, integrated non-numeric analytical arrows. Supporting direction grammar: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart. Prioritize the scene-local meaning and relationship; do not replace it with a generic rising or falling chart. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. The number and placement of information-bearing props follow this scene's text-surface plan. </background_information_density> <script_meaning_visuals> SCENE-SPECIFIC MEANING, SETTING, AND PROP OPTIONS: A lively, saturated semiconductor analysis scene in the visual range of the Job 52 laboratory references. Two visually distinct microchip modules are being lifted away from a busy conveyor carrying many other chips, so the viewer can read the difference between two dominant firms and the rest of the market without company names or numbers. The production mechanism, chip groups, analytical arrows, and mascot share the frame; no headline board is the focal idea. The mascot acts as a semiconductor researcher for this scene; its lab costume and expression belong only to this scene, not to every video frame.; Korean semiconductor analysis room and wafer production line; two highlighted chip modules being separated from a larger group of chips, diagonal wafer-and-chip production conveyor, integrated non-numeric analytical arrows. Supporting direction grammar: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart </script_meaning_visuals> <scene_local_typography> SCENE-LOCAL TYPOGRAPHY: approved exact text items are ['영업이익']. No text-surface layout was explicitly storyboarded. If the approved wording is useful, place it once as a supporting, small-to-moderate typographic detail on an existing scene-native prop that already serves the narration. Never create a new board, floating panel, title card, or oversized display merely to hold the wording. The script-specific character action, physical objects, and their causal relationship must dominate the frame; the wording remains visually subordinate. Render every used item verbatim and integrate its typography into the prop's material, perspective, lighting, and ink style. Use a balanced amber sideways trend line with connecting concept arrows where it helps the scene rather than automatically placing it below the words. SCRIPT MEANING VISUALS: SCENE-SPECIFIC MEANING, SETTING, AND PROP OPTIONS: A lively, saturated semiconductor analysis scene in the visual range of the Job 52 laboratory references. Two visually distinct microchip modules are being lifted away from a busy conveyor carrying many other chips, so the viewer can read the difference between two dominant firms and the rest of the market without company names or numbers. The production mechanism, chip groups, analytical arrows, and mascot share the frame; no headline board is the focal idea. The mascot acts as a semiconductor researcher for this scene; its lab costume and expression belong only to this scene, not to every video frame.; Korean semiconductor analysis room and wafer production line; two highlighted chip modules being separated from a larger group of chips, diagonal wafer-and-chip production conveyor, integrated non-numeric analytical arrows. Supporting direction grammar: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart. Do not make the typography, one board, or one giant word the whole visual idea unless the storyboard explicitly requests that hierarchy. No numerals or other unapproved Korean or English words. </scene_local_typography>   <reserve> Reserve space only for overlays explicitly listed by this scene. Otherwise use the full frame and do not create generic empty safe zones. </reserve>  <exclusions> DO NOT INCLUDE any Korean or English text other than the exact approved caption, any numeral, factual value, channel logo, watermark, generic floating dashboard card, or an accidental detached UI widget. A split, comic panel, inset, or multiple surface layout is allowed only when the scene storyboard plans it. Never add a second coin mascot. </exclusions>",
+      "provider": "gemini_pro",
+      "tier": "hero",
+      "visual_text_policy": "approved_generated_surface_text",
+      "source_visual_text_policy": "script_captioned",
+      "motion_contract": {
+        "eligible": false,
+        "requires_explicit_selection": true,
+        "character_required": true,
+        "default_motion_type": "pointing_explain",
+        "blocked_reasons": [
+          "article_capture_or_script_caption_or_information_surface"
+        ]
+      },
+      "style_contract_version": "2026-08-24-r6-job52-content-first-range-v1",
+      "primary_surface_region": [
+        0.12,
+        0.12,
+        0.47,
+        0.48
+      ],
+      "surface_caption": {
+        "english": "영업이익",
+        "korean": "",
+        "texts": [],
+        "approved_texts": [
+          "영업이익"
+        ],
+        "generated_texts": [
+          "영업이익"
+        ],
+        "deterministic_texts": [],
+        "surface_plan": [],
+        "placement_mode": "contextual_supporting",
+        "direction": "neutral",
+        "target": "the storyboard-planned laboratory, production-line, control-room, or analysis surface"
+      },
+      "semantic_visual_plan": {
+        "caption": "SEMICONDUCTOR OUTLOOK",
+        "direction": "neutral",
+        "prop_visuals": "a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart",
+        "background_visuals": "an electronics-factory mural, chip trays, and circuit-board patterns integrated into the same studio set"
+      },
+      "verified_overlay_mode": "scene_local_approved_generated_text",
+      "verified_overlay_present": false
+    },
+    "v5_scene_type_selection": {
+      "scene_type": "diagram",
+      "archetype": "data_lab",
+      "alternatives": [
+        "classroom",
+        "trade_calculator"
+      ],
+      "selection_reason": "네트워크·홀로그램·추세 흐름이므로 넓은 물리 그래프 벽이 있는 data_lab을 추천",
+      "physical_surfaces": [
+        "the storyboard-planned laboratory, production-line, control-room, or analysis surface",
+        "scene-specific equipment surfaces",
+        "contextual chart or diagram props"
+      ],
+      "primary_physical_surface": "the storyboard-planned laboratory, production-line, control-room, or analysis surface"
+    },
+    "v5_scene_spec": {
+      "scene_id": "job52_root_cause_korean_text_character",
+      "archetype": "data_lab",
+      "emotion": "explain",
+      "costume": "reporter",
+      "pose": "present",
+      "frame_occupancy": 0.28,
+      "character_position": "left",
+      "character_required": true,
+      "wardrobe_description": "white semiconductor laboratory coat with optional goggles suited to this scene",
+      "action_description": "using one inspection tool to separate two highlighted chips from a larger moving group in one coherent action",
+      "composition_description": "layered diagonal production-line composition; medium mascot at lower left, machinery and chip groups carry most of the visual weight Place the mascot on the left side. Keep the mascot near 28 percent of the frame area, subordinate to the scene mechanism.",
+      "camera_description": "dynamic wide three-quarter laboratory view looking along the diagonal production conveyor"
+    },
+    "image_profile": {
+      "tier": "pro",
+      "model": "gemini-3-pro-image",
+      "image_size": "2K",
+      "v5_final_lane": true
+    },
+    "image_text_contract": {
+      "version": "scene-local-text-contract-v4-content-first-layout",
+      "approved_texts": [
+        "영업이익"
+      ],
+      "generated_texts": [
+        "영업이익"
+      ],
+      "deterministic_texts": [],
+      "surface_plan": [],
+      "surface_count": 0,
+      "placement_mode": "contextual_supporting",
+      "hierarchy_policy": "script_objects_and_action_above_supporting_text",
+      "bubble_policy": "unplanned",
+      "bubble_allowed": false,
+      "bubble_text": "",
+      "sources": [
+        "scene.screen_texts",
+        "scene.screen_text_plan"
+      ]
+    },
+    "image_prompt_text_contract": {
+      "version": "scene-local-text-contract-v4-content-first-layout",
+      "changed": true,
+      "allowed_generated_texts": [
+        "영업이익"
+      ],
+      "violations_before": [],
+      "violations_after": [],
+      "retry_contract": false
+    },
+    "character_integrity_contract": {
+      "version": "character-integrity-v2-contextual",
+      "changes": [],
+      "scene_wardrobe": "white semiconductor laboratory coat with optional goggles suited to this scene",
+      "bubble_policy": "unplanned",
+      "bubble_allowed": false
+    }
+  },
+  "model": "gemini-3-pro-image",
+  "estimated_usd": 0.14,
+  "estimated_krw": 254,
+  "prompt": "<character> a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, expressive cartoon eyes and a readable scene-appropriate expression. Keep it recognizably within the same channel mascot family and ink language while allowing face expression, eye openness, brows, mouth, costume, headwear, pose, and frame size to vary. Never restyle the mascot as a flat token, a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, or a different illustration medium, CHARACTER CONTINUITY RANGE: use the shared round gold-coin species, rim motif, compact cartoon limbs, and channel ink style visible across the scene references. Do not copy one reference's eyelashes, neutral smile, navy suit, hat, body ratio, white cutout outline, or foreground scale into every scene. A worried, confident, comic, scientific, formal, or investigative version may look different while remaining recognizably in the same channel character family., calm friendly explaining expression, gentle smile, white semiconductor laboratory coat with optional goggles suited to this scene, using one inspection tool to separate two highlighted chips from a larger moving group in one coherent action </character> <composition> Premium economic-explainer cartoon illustration. Follow this scene's own visual hierarchy. The mascot may be left, center, right, small within a large environment, medium beside data, or dominant for a reaction beat. Full body, waist-up, or action framing is allowed when compositionally justified. Do not automatically place a giant board on the left or force the character into the right foreground. BINDING SCENE-SPECIFIC COMPOSITION: layered diagonal production-line composition; medium mascot at lower left, machinery and chip groups carry most of the visual weight Place the mascot on the left side. Keep the mascot near 28 percent of the frame area, subordinate to the scene mechanism. This binding direction overrides generic placement examples; do not swap the specified side, scale, or object hierarchy. Keep readable foreground, midground, and background relationships appropriate to this scene. </composition> <scene> Use this scene's camera direction: dynamic wide three-quarter laboratory view looking along the diagonal production conveyor. STAGE: a narration-specific financial analysis environment: semiconductor laboratory, production-line observation room, brokerage control room, or research workspace as the content requires. KEY PROPS: scene-specific analytical equipment, physical market or industry objects, and only the information surfaces needed by this narration. LIGHTING: scene-dependent laboratory, market-room, industrial, or presentation lighting derived from the intended mood. DECORATIVE DETAIL: layered equipment, chart forms, physical industry detail, and approved typography arranged in the Job 52 editorial-comic visual range. LOCAL CONTEXT: Use a recognizably Korean business setting: Seoul-like office towers, Korean brokerage dealing-room proportions, local street and harbor details, or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, unapproved Korean wording, or numeric signage Featured entities for semantic grounding only; do not render their names or logos: KOSPI, Operating Profit.. Choose a scene-specific balance of character, objects, charts, text surfaces, and environment. Do not impose a fixed prop count or studio layout. </scene> <art_direction> CHANNEL VISUAL RANGE: polished 2D Korean editorial-finance cartoon with clean dark ink outlines, cel shading, and layered foreground, midground, and background storytelling. Focal characters and key props use stronger outlines; background detail may use finer lines. Color, lighting, density, camera, and character scale follow each scene's mood, ranging from bright laboratory greens and golds to cool control-room blues and urgent reds. The frame remains one coherent hand-illustrated medium. STRICTLY NO photorealism, NO 3D render, NO photographic background, NO photo compositing, NO glossy toy material. Readable words are permitted only when the scene-local text contract lists their exact spelling; never invent, translate, duplicate, abbreviate, or decorate them with pseudo-text. NO image-model-generated financial numbers; financial numbers remain reserved for deterministic rendering. NO unapproved captions, logo, or watermark anywhere in the generated image. Dialogue balloons, split comparison, board, chart, sign, or multiple information surfaces may be used only when the scene storyboard requests them; they are not mandatory defaults and must share the scene's material, perspective, lighting, and illustration style. Never create accidental floating UI cards, pasted-on rectangles, empty title cards, or layout-guide frames. Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame. When the gold-coin mascot appears, keep it recognizably within the channel's round coin-character family: embossed rim, expressive cartoon eyes, compact limbs, and clean dark outlines. Expression, eye openness, eyebrow shape, mouth, costume, headwear, pose, visibility, and frame size may vary substantially with the scene. Preserve character species and drawing language, not one frozen face or one finance-presenter outfit. DATA-LAB RANGE: use the Job 52 laboratory and market-analysis references for line language and information density. The actual room, palette, camera, number of displays, costume, and character scale must follow this scene's semiconductor or market meaning; do not default to a broadcast studio with cameras and one curved wall. </art_direction> <background_information_density> BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. Use this script-meaning visual brief: SCENE-SPECIFIC MEANING, SETTING, AND PROP OPTIONS: A lively, saturated semiconductor analysis scene in the visual range of the Job 52 laboratory references. Two visually distinct microchip modules are being lifted away from a busy conveyor carrying many other chips, so the viewer can read the difference between two dominant firms and the rest of the market without company names or numbers. The production mechanism, chip groups, analytical arrows, and mascot share the frame; no headline board is the focal idea. The mascot acts as a semiconductor researcher for this scene; its lab costume and expression belong only to this scene, not to every video frame.; Korean semiconductor analysis room and wafer production line; two highlighted chip modules being separated from a larger group of chips, diagonal wafer-and-chip production conveyor, integrated non-numeric analytical arrows. Supporting direction grammar: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart. Prioritize the scene-local meaning and relationship; do not replace it with a generic rising or falling chart. Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. The number and placement of information-bearing props follow this scene's text-surface plan. </background_information_density> <script_meaning_visuals> SCENE-SPECIFIC MEANING, SETTING, AND PROP OPTIONS: A lively, saturated semiconductor analysis scene in the visual range of the Job 52 laboratory references. Two visually distinct microchip modules are being lifted away from a busy conveyor carrying many other chips, so the viewer can read the difference between two dominant firms and the rest of the market without company names or numbers. The production mechanism, chip groups, analytical arrows, and mascot share the frame; no headline board is the focal idea. The mascot acts as a semiconductor researcher for this scene; its lab costume and expression belong only to this scene, not to every video frame.; Korean semiconductor analysis room and wafer production line; two highlighted chip modules being separated from a larger group of chips, diagonal wafer-and-chip production conveyor, integrated non-numeric analytical arrows. Supporting direction grammar: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart </script_meaning_visuals> <scene_local_typography> SCENE-LOCAL TYPOGRAPHY: approved exact text items are ['영업이익']. No text-surface layout was explicitly storyboarded. If the approved wording is useful, place it once as a supporting, small-to-moderate typographic detail on an existing scene-native prop that already serves the narration. Never create a new board, floating panel, title card, or oversized display merely to hold the wording. The script-specific character action, physical objects, and their causal relationship must dominate the frame; the wording remains visually subordinate. Render every used item verbatim and integrate its typography into the prop's material, perspective, lighting, and ink style. Use a balanced amber sideways trend line with connecting concept arrows where it helps the scene rather than automatically placing it below the words. SCRIPT MEANING VISUALS: SCENE-SPECIFIC MEANING, SETTING, AND PROP OPTIONS: A lively, saturated semiconductor analysis scene in the visual range of the Job 52 laboratory references. Two visually distinct microchip modules are being lifted away from a busy conveyor carrying many other chips, so the viewer can read the difference between two dominant firms and the rest of the market without company names or numbers. The production mechanism, chip groups, analytical arrows, and mascot share the frame; no headline board is the focal idea. The mascot acts as a semiconductor researcher for this scene; its lab costume and expression belong only to this scene, not to every video frame.; Korean semiconductor analysis room and wafer production line; two highlighted chip modules being separated from a larger group of chips, diagonal wafer-and-chip production conveyor, integrated non-numeric analytical arrows. Supporting direction grammar: a large unlabelled silicon wafer, microchip silhouettes, circuit traces, and a descending non-numeric chart. Do not make the typography, one board, or one giant word the whole visual idea unless the storyboard explicitly requests that hierarchy. No numerals or other unapproved Korean or English words. </scene_local_typography> <reserve> Reserve space only for overlays explicitly listed by this scene. Otherwise use the full frame and do not create generic empty safe zones. </reserve> <exclusions> DO NOT INCLUDE any Korean or English text other than the exact approved caption, any numeral, factual value, channel logo, watermark, generic floating dashboard card, or an accidental detached UI widget. A split, comic panel, inset, or multiple surface layout is allowed only when the scene storyboard plans it. Never add a second coin mascot. </exclusions> FINAL SCENE-LOCAL TEXT CONTRACT: the only readable text that may appear is the following exact case-sensitive string list: [영업이익]. Copy each selected string exactly without translation, abbreviation, missing characters, extra characters, or pseudo-text. No text-surface layout was explicitly planned: keep each used string visually subordinate and place it once on an existing scene-native prop only when it helps the narration. Do not create a new board, panel, title card, oversized sign, or safe zone for it. The script-specific physical objects, action, and causal relationship determine the visual hierarchy. Do not force all scenes into one giant board or one fixed typography layout. No unapproved fake ticker, invented company, logo, watermark, or secondary number. FINAL CHARACTER QUALITY BOUNDARY: keep the figure recognizably in the same round gold-coin mascot design family and 2D drawing language as the channel references. Do not freeze one reference face: expression, eye openness, brows, mouth, costume, headwear, pose, and scale may change with this scene. Use natural connected anatomy with no extra, duplicated, detached, or fused limb or hand. Resolve the pose as one physically coherent action. The scene-specific costume direction is: white semiconductor laboratory coat with optional goggles suited to this scene. Do not replace it with a generic finance-presenter uniform. Do not replace it with an unrelated police or law-enforcement costume. ",
+  "prompt_sha256": "f8b313e65bffb2baef259bfa5013a518230f0e57a3cf7901b0f6ea8ebf6d28a4",
+  "references": [
+    {
+      "role": "channel_style_range",
+      "path": "/Users/songtaeho/Documents/GitHub/video_pipeline/backend/fastapi-workers/out/references/channel_style_job52_semiconductor.png",
+      "sha256": "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d"
+    },
+    {
+      "role": "channel_style_range",
+      "path": "/Users/songtaeho/Documents/GitHub/video_pipeline/backend/fastapi-workers/out/references/channel_style_job52_data_lab.png",
+      "sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6"
+    }
+  ]
+}

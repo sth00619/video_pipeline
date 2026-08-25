@@ -1,5 +1,4 @@
-"""8종 의상 확장: 신규 의상이 실제 아키타입에 배선됐는지, 프롬프트에 헤드웨어
-겹침 없이 반영되는지 검증한다."""
+"""8종 역할은 유지하되 한 모자·의상을 전 장면에 고정하지 않는지 검증한다."""
 from __future__ import annotations
 
 from app.v5.scene.prompt_builder import COSTUME_MAP, SceneSpec, build_prompt
@@ -26,37 +25,39 @@ def _selection(archetype: str) -> ArchetypeSelection:
     )
 
 
-def test_tuxedo_host_prompt_has_no_fedora_and_no_stacked_headwear():
+def test_tuxedo_host_prompt_keeps_event_specific_formal_range():
     prompt = build_prompt(
         SceneSpec("host-01", "briefing_podium", "confidence", "tuxedo_host", "present"),
         scene_type_selection=_selection("briefing_podium"),
     ).lower()
-    assert "bare-headed" in prompt
-    assert "no fedora" in prompt
-    assert "brown fedora hat as its only headwear" not in prompt
+    assert "formal stage-host outfit" in prompt
+    assert "this particular event" in prompt
+    assert "exactly one brown fedora" not in prompt
 
 
-def test_architect_planner_prompt_uses_hard_hat_not_fedora():
+def test_architect_planner_prompt_requires_context_before_engineering_costume():
     prompt = build_prompt(
         SceneSpec("architect-01", "real_estate_office", "explain", "architect_planner", "calculator_hold"),
         scene_type_selection=_selection("real_estate_office"),
     ).lower()
-    assert "yellow hard hat" in prompt
-    assert "no fedora" in prompt
+    assert "only when blueprints, construction, or physical design is central" in prompt
+    assert "exactly one yellow hard hat" not in prompt
 
 
-def test_professor_prompt_uses_mortarboard_not_fedora():
+def test_professor_prompt_allows_scene_specific_academic_variation():
     prompt = build_prompt(
         SceneSpec("prof-01", "classroom", "explain", "professor", "point_left"),
         scene_type_selection=_selection("classroom"),
     ).lower()
-    assert "graduation mortarboard cap" in prompt
-    assert "no fedora" in prompt
+    assert "academic explainer outfit suited to this scene" in prompt
+    assert "mortarboard, jacket, glasses, or pointer may be used" in prompt
 
 
-def test_reporter_prompt_still_keeps_the_fedora():
+def test_reporter_prompt_does_not_keep_one_fedora_or_navy_uniform():
     prompt = build_prompt(
         SceneSpec("reporter-01", "weather_map", "explain", "reporter", "present"),
         scene_type_selection=_selection("weather_map"),
     ).lower()
-    assert "brown fedora hat as its only headwear" in prompt
+    assert "location-appropriate reporter or presenter outfit" in prompt
+    assert "formal suit, cap, weather gear, or no hat" in prompt
+    assert "brown fedora hat as its only headwear" not in prompt

@@ -9,12 +9,14 @@ from dataclasses import asdict
 from typing import Any
 import re
 
-from app.postprocess.text_overlay import script_caption, script_visual_plan
+from app.postprocess.text_overlay import script_visual_plan
 from app.utils.entity_english_map import ENTITY_REGISTRY, get_entity_english_name
+from app.utils.image_text_contract import contains_financial_number
 
 from app.v5.providers.router import RENDER_BLOCKED_ARCHETYPES
 from app.v5.scene.layout_sketcher import LayoutSketcher
 from app.v5.scene.prompt_builder import (
+    COSTUME_MAP,
     V5_STYLE_CONTRACT_VERSION,
     SceneSpec,
     build_prompt,
@@ -92,14 +94,14 @@ VISUAL_MODE_CONTRACTS: dict[str, dict[str, str]] = {
         "text_policy": "strict_textless",
         "overlay_policy": "ass_subtitle_only",
         "numeric_visual_policy": "prohibited",
-        "character_policy": "fixed_reference_when_character_required",
+        "character_policy": "contextual_channel_reference_range",
     },
     "archetype_explainer": {
         "asset_source": "v5_gemini_scene",
-        "text_policy": "single_script_caption_on_primary_prop",
-        "overlay_policy": "ass_subtitle_only",
-        "numeric_visual_policy": "prohibited",
-        "character_policy": "fixed_reference_when_character_required",
+        "text_policy": "scene_local_approved_text",
+        "overlay_policy": "approved_nonnumeric_source_and_deterministic_numeric_surface",
+        "numeric_visual_policy": "verified_facts_deterministic_only",
+        "character_policy": "contextual_channel_reference_range",
     },
 }
 
@@ -108,6 +110,8 @@ def _build_v5_verified_overlays(
     verified_facts: list | None,
     archetype: str,
     primary_region: tuple[float, float, float, float],
+    *,
+    scene: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]] | None:
     """verified_facts에서 diegetic_surface_fact overlay를 자동 생성한다.
 
@@ -116,7 +120,9 @@ def _build_v5_verified_overlays(
       이는 downstream facts_from_verified_scene()와 동일한 조건이다.
     - primary_surface_region 좌표를 anchor로 사용하므로 V5 표면 범위 검증을
       자동으로 통과한다.
-    - primary 표면 하나에 사실 하나(첫 번째 통과 사실만 사용).
+    - 현재 장면 대사 또는 승인 화면 문구에 값이 실제 등장하는 사실만 사용한다.
+      전체 영상의 첫 번째 검증 사실을 모든 장면에 복제하지 않는다.
+    - primary 표면 하나에 장면 로컬 사실 하나(첫 번째 통과 사실만 사용).
     - 어느 사실도 조건을 만족하지 않으면 None을 반환한다.
 
     이 함수는 숫자를 생성하거나 변형하지 않는다. verified_facts 원문 값만
@@ -131,13 +137,28 @@ def _build_v5_verified_overlays(
 
     # downstream facts_from_verified_scene()과 동일한 normalise 로직
     def _norm(s: str) -> str:
-        return "".join(s.split()).casefold()
+        return re.sub(r"[^0-9a-z가-힣]", "", str(s or "").casefold())
+
+    scene = scene or {}
+    scene_source = " ".join(
+        str(scene.get(key) or "")
+        for key in (
+            "narration", "script", "narration_text", "text_for_tts",
+            "content", "text", "title",
+        )
+    )
+    approved_texts = " ".join(str(value) for value in (scene.get("screen_texts") or []))
+    local_source = _norm(f"{scene_source} {approved_texts}")
+    if not local_source:
+        return None
 
     for i, fact in enumerate(verified_facts):
         if not isinstance(fact, dict):
             continue
         value = str(fact.get("value") or "").strip()
         if not value:
+            continue
+        if _norm(value) not in local_source:
             continue
         # value가 figure·fact 원문에 그대로 있어야 downstream 검증을 통과한다
         evidence = " ".join(str(fact.get(k) or "") for k in ("figure", "fact"))
@@ -216,17 +237,17 @@ def _korean_context_visual_brief(scene: dict[str, Any]) -> str:
     if any(token in source for token in ("홈플러스", "하림", "마트", "슈퍼", "유통", "소비")):
         brief = (
             "When this scene is Korean retail, use a recognizably Korean hypermarket exterior or interior: Korean-style storefront proportions, "
-            "produce crates, delivery carts, and local urban streets, but no real brand logo, readable Korean text, or price labels"
+            "produce crates, delivery carts, and local urban streets, but no real brand logo, unapproved Korean wording, or price figures"
         )
     elif any(token in source for token in ("코스피", "코스닥", "삼성", "하이닉스", "국내", "한국", "원·달러", "원달러")):
         brief = (
             "Use a recognizably Korean business setting: Seoul-like office towers, Korean brokerage dealing-room proportions, local street and harbor details, "
-            "or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, readable Korean text, or numeric signage"
+            "or a Korean semiconductor industrial landscape; never use a generic Western storefront, real company logo, unapproved Korean wording, or numeric signage"
         )
     else:
         brief = (
             "Use a Korean editorial-economic visual sensibility with locally familiar urban, retail, office, port, or factory details whenever the script has a Korea connection; "
-            "do not use logos, readable Korean text, or numeric signage"
+            "do not use logos, unapproved Korean wording, or numeric signage"
         )
 
     # 바인더 결과가 이미 있으면 재사용하고, V5 계약이 바인더보다 먼저 만들어지는
@@ -299,39 +320,108 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         _direction = script_visual_direction(scene)
         emotion = _DIRECTION_EMOTION_OVERRIDE.get(_direction, {}).get(emotion, emotion)
 
+    directed_spec = scene.get("scene_spec") or {}
+    direction = scene.get("art_direction") or {}
+    try:
+        frame_occupancy = float(direction.get("character_occupancy") or directed_spec.get("frame_occupancy") or 0.35)
+    except (TypeError, ValueError):
+        frame_occupancy = 0.35
+    frame_occupancy = min(0.65, max(0.15, frame_occupancy))
+    directed_position = str(direction.get("character_position") or directed_spec.get("character_position") or character_position)
+    if directed_position not in {"left", "center", "right"}:
+        directed_position = character_position
+    composition_description = str(direction.get("composition") or directed_spec.get("composition") or "").strip()
+    if "character_position" in direction or "character_position" in directed_spec:
+        composition_description += f" Place the mascot on the {directed_position} side."
+    if "character_occupancy" in direction or "frame_occupancy" in directed_spec:
+        composition_description += f" Keep the mascot near {round(frame_occupancy * 100)} percent of the frame area, subordinate to the scene mechanism."
     spec = SceneSpec(
         scene_id=_scene_identifier(scene, index),
         archetype=selection.archetype,
         emotion=emotion,
         costume=costume,
         pose=pose,
-        character_position=character_position,
+        frame_occupancy=frame_occupancy,
+        character_position=directed_position,
         character_required=bool(scene.get("character_required", True)),
+        wardrobe_description=str(directed_spec.get("character_costume") or direction.get("wardrobe") or "").strip(),
+        action_description=str(directed_spec.get("character_action") or direction.get("character_action") or "").strip(),
+        composition_description=composition_description.strip(),
+        camera_description=str(directed_spec.get("camera") or direction.get("camera") or "").strip(),
     )
     visual_mode = _visual_mode(scene, scene_type)
     is_general_selection = bool(selection and selection.scene_type == "general")
     information_scene = (visual_mode == "archetype_explainer") and not is_general_selection
+    approved_surface_texts = [
+        str(value).strip()
+        for value in (scene.get("screen_texts") or [])
+        if str(value).strip()
+    ][:6]
+    approved_generated_texts = [
+        value for value in approved_surface_texts if not contains_financial_number(value)
+    ]
+    approved_deterministic_texts = [
+        value for value in approved_surface_texts if contains_financial_number(value)
+    ]
+    has_existing_verified_overlay = bool(scene.get("v5_verified_overlays"))
     visual_mode_contract = VISUAL_MODE_CONTRACTS[visual_mode]
     has_verified_surface_content = False
-    policy = "script_captioned" if information_scene else "strict_textless"
+    # 승인된 비수치 한국어·영어는 생성 모델이 물리 표면에 직접 쓸 수 있다.
+    # 금융 수치만 프로젝트 안전 규칙에 따라 결정론 렌더러에 남긴다.
+    # 장면 타입은 정확한 승인 문구를 화면에 쓸 수 있는지 여부를 결정하지 않는다.
+    # 일반형 장면도 대본에서 승인된 라벨·수치가 핵심이면 Job 52처럼 장면 안의
+    # 실제 모니터/표지판에 표시해야 한다. 과거 information_scene 조건 때문에
+    # 코스피·코스닥 수치가 검수에서 누락되어도 후처리 경로가 열리지 않았다.
+    source_policy = (
+        "script_captioned"
+        if approved_generated_texts
+        else "strict_textless"
+    )
+    policy = (
+        "deterministic_surface_text"
+        if approved_deterministic_texts or has_existing_verified_overlay
+        else "approved_generated_surface_text"
+        if approved_generated_texts
+        else "strict_textless"
+    )
     semantic_plan = script_visual_plan(scene)
     semantic_direction = semantic_plan["direction"]
-    semantic_caption = semantic_plan["caption"] if information_scene else ""
+    semantic_caption = "\n".join(approved_generated_texts)
+    text_surface_plan = list(
+        (scene.get("image_text_contract") or {}).get("surface_plan")
+        or scene.get("screen_text_plan")
+        or []
+    )
     semantic_visual_brief = semantic_plan["prop_visuals"] if information_scene else semantic_plan["background_visuals"]
+    local_visual_parts = [
+        str(scene.get("visual_intent") or "").strip(),
+        str(direction.get("setting") or "").strip(),
+        ", ".join(str(value).strip() for value in (direction.get("props") or []) if str(value).strip()),
+    ]
+    local_visual_brief = "; ".join(value for value in local_visual_parts if value)
+    if local_visual_brief:
+        semantic_visual_brief = (
+            f"SCENE-SPECIFIC MEANING, SETTING, AND PROP OPTIONS: {local_visual_brief}. "
+            f"Supporting direction grammar: {semantic_visual_brief}"
+        )
+    # 과거 자동 레이아웃은 모든 장면을 같은 캐릭터 위치와 빈 안전 영역으로
+    # 수렴시켰다. 명시적 레이아웃 요청이 있을 때만 사용한다.
+    use_layout_lock = bool(scene.get("layout_lock_required") or direction.get("layout_lock_required"))
     layout = LayoutSketcher.for_mascot_position(
         spec.scene_id,
         occupancy=spec.frame_occupancy,
         position=spec.character_position,
-    ) if spec.character_required else None
+    ) if spec.character_required and use_layout_lock else None
     prompt = build_prompt(
         spec,
         scene_type_selection=selection,
-        visual_text_policy=policy,
+        visual_text_policy=source_policy,
         layout_instruction=layout.prompt_instruction() if layout else None,
         semantic_direction=semantic_direction,
         semantic_caption=semantic_caption,
         semantic_visual_brief=semantic_visual_brief,
         locale_visual_brief=_korean_context_visual_brief(scene),
+        text_surface_plan=text_surface_plan,
     )
     visual_constraints = str(scene.get("visual_constraints") or "").strip()
     if visual_constraints:
@@ -351,10 +441,12 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
             "alternatives": list(selection.alternatives),
         },
         "scene_spec": asdict(spec),
+        "scene_wardrobe": spec.wardrobe_description or COSTUME_MAP[spec.costume],
         "prompt_en": prompt,
         "provider": "gemini_pro",
         "tier": tier,
         "visual_text_policy": policy,
+        "source_visual_text_policy": source_policy,
         "motion_contract": _motion_contract(
             visual_mode,
             policy,
@@ -364,12 +456,26 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         "primary_surface_region": primary_surface_region(selection.archetype),
         "surface_caption": {
             "english": semantic_caption,
-            "korean": script_caption(scene),
+            # 숫자는 결정론 합성 대상으로, 비수치 문구는 생성 모델 직접
+            # 표기 대상으로 분리한다. 어느 쪽도 승인 문자열을 바꾸지 않는다.
+            "korean": "\n".join(approved_deterministic_texts),
+            "texts": approved_deterministic_texts,
+            "approved_texts": approved_surface_texts,
+            "generated_texts": approved_generated_texts,
+            "deterministic_texts": approved_deterministic_texts,
+            "surface_plan": text_surface_plan,
+            "placement_mode": "explicit_plan" if text_surface_plan else "contextual_supporting",
             "direction": semantic_direction,
             "target": selection.primary_physical_surface,
-        } if information_scene else None,
+        } if approved_surface_texts else None,
         "semantic_visual_plan": semantic_plan,
-        "verified_overlay_mode": "non_numeric_prompt_embedded_script_caption" if information_scene else "not_applicable",
+        "verified_overlay_mode": (
+            "deterministic_surface_caption_or_verified_fact"
+            if policy == "deterministic_surface_text"
+            else "scene_local_approved_generated_text"
+            if policy == "approved_generated_surface_text"
+            else "not_applicable"
+        ),
         "verified_overlay_present": has_verified_surface_content,
     }
 
@@ -379,6 +485,8 @@ def attach_v5_scene_contracts(scenes: list[dict[str, Any]]) -> list[dict[str, An
     planned: list[dict[str, Any]] = []
     previous_archetype = ""
     for index, source in enumerate(scenes):
+        # 첫 두 장면도 원래 선택된 일반형·정보형 계약을 보존한다. 특정 위치의
+        # 장면을 전역적으로 무문자 일반형으로 바꾸면 스타일·구성이 퇴행한다.
         scene = _distinct_archetype_input(source, previous_archetype)
         contract = plan_v5_scene_contract(scene, index)
         scene["visual_mode"] = contract["visual_mode"]
@@ -400,11 +508,19 @@ def attach_v5_scene_contracts(scenes: list[dict[str, Any]]) -> list[dict[str, An
                 scene.get("verified_facts"),
                 contract["selection"]["archetype"],
                 tuple(contract["primary_surface_region"]),
+                scene=scene,
             )
             if _injected:
                 scene["v5_verified_overlays"] = _injected
                 contract["verified_overlay_present"] = True
                 contract["verified_overlay_mode"] = "diegetic_surface_fact"
+                contract["visual_text_policy"] = "deterministic_surface_text"
+                contract["motion_contract"] = _motion_contract(
+                    contract["visual_mode"],
+                    contract["visual_text_policy"],
+                    bool(contract["scene_spec"].get("character_required", True)),
+                )
+                scene["motion_contract"] = contract["motion_contract"]
                 scene["v5_render_contract"] = contract
 
         image_profile = dict(scene.get("image_profile") or {})

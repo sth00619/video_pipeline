@@ -195,7 +195,7 @@ class NanaBananaProvider(ImageProvider):
         # (Gemini)을 얻지 못하는 문제가 있었다.
         provider_preference = str(kwargs.get("image_provider", "gemini")).lower()
         if provider_preference != "gemini":
-            raise GeminiImageGenerationError("이미지 생성 공급자는 Gemini Nano Banana Pro만 허용합니다.")
+            raise GeminiImageGenerationError("이미지 생성 공급자는 Gemini만 허용합니다.")
 
         fal_key = os.getenv("FAL_KEY") or os.getenv("FAL_API_KEY")
         gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -247,8 +247,11 @@ class NanaBananaProvider(ImageProvider):
                     logger.info(f"공식 Gemini API 이미지 생성 성공: model={gemini_model}, size={gemini_image_size}, path={output_path}")
                     return True
             except GeminiImageGenerationError as e:
-                # Preserve the upstream response detail for all-Pro jobs.
-                if provider_preference == "gemini" and gemini_model == "gemini-3-pro-image":
+                # 승인된 Gemini 모델은 공급자 오류를 숨기거나 무료 모델로
+                # 우회하지 않고 호출자에게 그대로 전달한다.
+                if provider_preference == "gemini" and gemini_model in {
+                    "gemini-3-pro-image", "gemini-3.1-flash-image",
+                }:
                     raise
                 logger.warning(f"공식 Gemini API 호출 실패 (GeminiImageGenerationError): {e}")
             except ProviderRequestBudgetExceeded:
@@ -264,12 +267,14 @@ class NanaBananaProvider(ImageProvider):
         # A Pro-quality run must not silently downgrade to a different model.
         # The caller will fail the job instead of rendering blank/text fallback
         # scenes when Gemini Pro cannot return an image.
-        if provider_preference == "gemini" and gemini_model == "gemini-3-pro-image":
+        if provider_preference == "gemini" and gemini_model in {
+            "gemini-3-pro-image", "gemini-3.1-flash-image",
+        }:
             if try_gemini():
                 return output_path
             raise RuntimeError(
-                "Gemini Pro image generation returned no image after retries; "
-                "refusing lower-quality fallback"
+                f"Gemini image generation returned no image after retries: {gemini_model}; "
+                "refusing untracked fallback"
             )
 
         order = ("fal", "gemini") if provider_preference == "fal" else ("gemini", "fal")
@@ -506,7 +511,7 @@ class NanaBananaProvider(ImageProvider):
         import requests
         import time
 
-        if model != "gemini-3-pro-image":
+        if model not in {"gemini-3-pro-image", "gemini-3.1-flash-image"}:
             raise ValueError(f"Unsupported Gemini image model: {model}")
         if image_size not in {"1K", "2K", "4K"}:
             image_size = "1K"
@@ -543,7 +548,10 @@ class NanaBananaProvider(ImageProvider):
         # Priority is an explicit caller choice for urgent Pro renders. Keep
         # standard as the default because it carries a premium price.
         if service_tier in {"priority", "flex"}:
-            payload["generationConfig"]["serviceTier"] = service_tier
+            # GenerateContent의 serviceTier는 generationConfig 내부가 아니라
+            # 요청 본문의 최상위 필드다. 잘못 중첩하면 우선 처리 요청이 조용히
+            # 무시되거나 잘못된 요청으로 거절될 수 있다.
+            payload["serviceTier"] = service_tier
         headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
         is_pro = model == "gemini-3-pro-image"
         if max_attempts is None:
@@ -558,6 +566,31 @@ class NanaBananaProvider(ImageProvider):
                 "10" if is_pro else "5",
             ))
         retry_base_seconds = max(1.0, float(retry_base_seconds))
+        timeout_name = "GEMINI_PRO_REQUEST_TIMEOUT_SECONDS" if is_pro else "GEMINI_IMAGE_REQUEST_TIMEOUT_SECONDS"
+        try:
+            request_timeout_seconds = float(os.getenv(timeout_name, "300" if is_pro else "180"))
+        except ValueError as exc:
+            raise ValueError(f"{timeout_name}는 초 단위 양의 숫자여야 합니다.") from exc
+        request_timeout_seconds = min(900.0, max(30.0, request_timeout_seconds))
+        server_timeout_name = (
+            "GEMINI_PRO_SERVER_TIMEOUT_SECONDS"
+            if is_pro else "GEMINI_IMAGE_SERVER_TIMEOUT_SECONDS"
+        )
+        try:
+            # Pro 2K 요청은 참조 이미지와 장면 계약을 함께 보낼 때 240초를
+            # 넘겨 완료되는 사례가 있다. 클라이언트 기본 제한(300초)보다
+            # 15초만 짧게 두어 서버가 정상 결과를 만들 시간을 보장한다.
+            server_timeout_seconds = float(os.getenv(server_timeout_name, "285" if is_pro else "150"))
+        except ValueError as exc:
+            raise ValueError(f"{server_timeout_name}는 초 단위 양의 숫자여야 합니다.") from exc
+        server_timeout_seconds = min(
+            max(30.0, server_timeout_seconds),
+            max(30.0, request_timeout_seconds - 5.0),
+        )
+        # 서버 기본 대기 시간보다 클라이언트 제한이 먼저 끝나면 응답 코드와
+        # 요청 ID 없이 ReadTimeout만 남는다. 공식 REST 계약의 서버 제한 힌트를
+        # 함께 보내 504/503을 구조적으로 분류하고 중첩 재시도를 막는다.
+        headers["X-Server-Timeout"] = str(int(server_timeout_seconds))
         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         last_failure = "unknown Gemini image failure"
 
@@ -575,7 +608,14 @@ class NanaBananaProvider(ImageProvider):
                 # 응답 대기 중 프로세스가 종료돼도 비용 추적이 끊기지 않는다.
                 if request_audit is not None:
                     audit_token = request_audit.before_attempt(attempt=attempt, model=model)
-                response = requests.post(endpoint, json=payload, headers=headers, timeout=120)
+                # 연결 장애는 20초 안에 구분하되, 참조 이미지 3장을 쓰는 Pro 2K
+                # 생성 응답은 120초를 넘을 수 있으므로 별도의 읽기 제한을 쓴다.
+                response = requests.post(
+                    endpoint,
+                    json=payload,
+                    headers=headers,
+                    timeout=(20.0, request_timeout_seconds),
+                )
             except requests.RequestException as exc:
                 if request_audit is not None and audit_token is not None:
                     request_audit.after_attempt(audit_token, outcome="network_error")

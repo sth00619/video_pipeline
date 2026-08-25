@@ -1,0 +1,577 @@
+{
+  "job_id": 520822,
+  "audio_path": "/app/data/jobs/520822/tts/full.mp3",
+  "voice_id": "dlKJ5VptCbYxal4doUO5",
+  "total_duration": 57.0,
+  "chunks": [
+    {
+      "index": 1,
+      "text": "삼성전자와 SK하이닉스,",
+      "start": 0.366667,
+      "end": 1.7,
+      "duration": 1.333333
+    },
+    {
+      "index": 2,
+      "text": "PER 4배라고요.",
+      "start": 2.0,
+      "end": 2.666667,
+      "duration": 0.666667
+    },
+    {
+      "index": 3,
+      "text": "정말 싸다는 말이 맞는 걸까요?",
+      "start": 3.0,
+      "end": 4.333333,
+      "duration": 1.333333
+    },
+    {
+      "index": 4,
+      "text": "그 수치를 믿기 전에",
+      "start": 4.633333,
+      "end": 5.566667,
+      "duration": 0.933333
+    },
+    {
+      "index": 5,
+      "text": "확인할 게 있습니다.",
+      "start": 5.7,
+      "end": 6.466667,
+      "duration": 0.766667
+    },
+    {
+      "index": 6,
+      "text": "코스피는 8월 21일",
+      "start": 6.733333,
+      "end": 7.866667,
+      "duration": 1.133333
+    },
+    {
+      "index": 7,
+      "text": "6912포인트였습니다.",
+      "start": 8.033333,
+      "end": 9.566667,
+      "duration": 1.533333
+    },
+    {
+      "index": 8,
+      "text": "7월 말 저점에서 빠르게",
+      "start": 9.766667,
+      "end": 10.9,
+      "duration": 1.133333
+    },
+    {
+      "index": 9,
+      "text": "반등한 수치죠.",
+      "start": 11.066667,
+      "end": 11.666667,
+      "duration": 0.6
+    },
+    {
+      "index": 10,
+      "text": "이 흐름 속에서 지금이",
+      "start": 11.933333,
+      "end": 13.0,
+      "duration": 1.066667
+    },
+    {
+      "index": 11,
+      "text": "싸다는 믿음이 퍼졌습니다.",
+      "start": 13.1,
+      "end": 14.266667,
+      "duration": 1.166667
+    },
+    {
+      "index": 12,
+      "text": "삼성전자는 코스피 시총",
+      "start": 14.633333,
+      "end": 15.866667,
+      "duration": 1.233333
+    },
+    {
+      "index": 13,
+      "text": "1위 종목입니다.",
+      "start": 15.966667,
+      "end": 16.6,
+      "duration": 0.633333
+    },
+    {
+      "index": 14,
+      "text": "SK하이닉스는 바로",
+      "start": 16.866667,
+      "end": 17.9,
+      "duration": 1.033333
+    },
+    {
+      "index": 15,
+      "text": "뒤를 잇는 2위죠.",
+      "start": 17.966667,
+      "end": 18.8,
+      "duration": 0.833333
+    },
+    {
+      "index": 16,
+      "text": "두 종목 밸류에이션이",
+      "start": 19.066667,
+      "end": 20.0,
+      "duration": 0.933333
+    },
+    {
+      "index": 17,
+      "text": "흔들리면 코스피 해석도 달라집니다.",
+      "start": 20.066667,
+      "end": 21.8,
+      "duration": 1.733333
+    },
+    {
+      "index": 18,
+      "text": "그런데 PER 4배, 어디서",
+      "start": 22.033333,
+      "end": 23.4,
+      "duration": 1.366667
+    },
+    {
+      "index": 19,
+      "text": "나온 수치일까요?",
+      "start": 23.466667,
+      "end": 24.1,
+      "duration": 0.633333
+    },
+    {
+      "index": 20,
+      "text": "검증 가능한 EPS",
+      "start": 24.466667,
+      "end": 25.4,
+      "duration": 0.933333
+    },
+    {
+      "index": 21,
+      "text": "추정치가 없습니다.",
+      "start": 25.466667,
+      "end": 26.3,
+      "duration": 0.833333
+    },
+    {
+      "index": 22,
+      "text": "컨센서스 데이터도 확인되지 않죠.",
+      "start": 26.633333,
+      "end": 28.266667,
+      "duration": 1.633333
+    },
+    {
+      "index": 23,
+      "text": "근거 자체가 없는 겁니다.",
+      "start": 28.566667,
+      "end": 29.6,
+      "duration": 1.033333
+    },
+    {
+      "index": 24,
+      "text": "PER은 주가를 이익으로",
+      "start": 29.733333,
+      "end": 31.0,
+      "duration": 1.266667
+    },
+    {
+      "index": 25,
+      "text": "나눈 값입니다.",
+      "start": 31.1,
+      "end": 31.7,
+      "duration": 0.6
+    },
+    {
+      "index": 26,
+      "text": "분모인 이익 추정치를",
+      "start": 32.066667,
+      "end": 33.133333,
+      "duration": 1.066667
+    },
+    {
+      "index": 27,
+      "text": "어떻게 잡느냐가 핵심이죠.",
+      "start": 33.233333,
+      "end": 34.466667,
+      "duration": 1.233333
+    },
+    {
+      "index": 28,
+      "text": "추정치에 따라 결과가",
+      "start": 34.733333,
+      "end": 35.766667,
+      "duration": 1.033333
+    },
+    {
+      "index": 29,
+      "text": "완전히 달라집니다.",
+      "start": 35.9,
+      "end": 36.633333,
+      "duration": 0.733333
+    },
+    {
+      "index": 30,
+      "text": "낙관적 전망을 쓰면 주가가",
+      "start": 36.866667,
+      "end": 38.166667,
+      "duration": 1.3
+    },
+    {
+      "index": 31,
+      "text": "싸 보이거든요.",
+      "start": 38.3,
+      "end": 38.866667,
+      "duration": 0.566667
+    },
+    {
+      "index": 32,
+      "text": "보수적으로 잡으면 달라질 수 있죠.",
+      "start": 39.166667,
+      "end": 40.666667,
+      "duration": 1.5
+    },
+    {
+      "index": 33,
+      "text": "하반기 이익 추정치는",
+      "start": 40.966667,
+      "end": 41.9,
+      "duration": 0.933333
+    },
+    {
+      "index": 34,
+      "text": "아직 불확실하죠.",
+      "start": 42.0,
+      "end": 42.733333,
+      "duration": 0.733333
+    },
+    {
+      "index": 35,
+      "text": "같은 주가도 분모에 따라",
+      "start": 43.066667,
+      "end": 44.166667,
+      "duration": 1.1
+    },
+    {
+      "index": 36,
+      "text": "다르게 읽힙니다.",
+      "start": 44.266667,
+      "end": 44.9,
+      "duration": 0.633333
+    },
+    {
+      "index": 37,
+      "text": "검증 안 된 수치로 판단해도 될까요?",
+      "start": 45.266667,
+      "end": 46.8,
+      "duration": 1.533333
+    },
+    {
+      "index": 38,
+      "text": "하나의 기준만 기억해 두세요.",
+      "start": 47.1,
+      "end": 48.333333,
+      "duration": 1.233333
+    },
+    {
+      "index": 39,
+      "text": "분모가 어떤 이익 추정치인지",
+      "start": 48.666667,
+      "end": 50.1,
+      "duration": 1.433333
+    },
+    {
+      "index": 40,
+      "text": "직접 확인하세요.",
+      "start": 50.233333,
+      "end": 50.866667,
+      "duration": 0.633333
+    },
+    {
+      "index": 41,
+      "text": "낙관치인지 보수치인지가",
+      "start": 51.133333,
+      "end": 52.466667,
+      "duration": 1.333333
+    },
+    {
+      "index": 42,
+      "text": "먼저인 겁니다.",
+      "start": 52.6,
+      "end": 53.133333,
+      "duration": 0.533333
+    },
+    {
+      "index": 43,
+      "text": "그 확인이 판단의 시작이니까요.",
+      "start": 53.4,
+      "end": 54.9,
+      "duration": 1.5
+    },
+    {
+      "index": 44,
+      "text": "PER 숫자 하나보다 근거가",
+      "start": 55.166667,
+      "end": 56.366667,
+      "duration": 1.2
+    },
+    {
+      "index": 45,
+      "text": "더 중요합니다.",
+      "start": 56.433333,
+      "end": 56.933333,
+      "duration": 0.5
+    }
+  ],
+  "used_gtts": false,
+  "used_elevenlabs": true,
+  "duration_validation": {
+    "target_seconds": 60.0,
+    "actual_seconds": 57.0,
+    "delta_seconds": -3.0,
+    "within_tolerance": true,
+    "probe_grace_seconds": 1.0,
+    "allowed_delta_seconds": 4.0,
+    "configured_tolerance_pct": 25.0,
+    "effective_tolerance_pct": 5.0,
+    "spoken_char_count": 457,
+    "calibration": {
+      "observed_cpm": 481.06,
+      "calibrated_cpm": 475.31,
+      "samples": 2
+    }
+  },
+  "provider_request": {
+    "model_id": "eleven_v3",
+    "mode": "natural",
+    "has_audio_tag": false,
+    "first_sentence": "삼성전자와 SK하이닉스, 퍼 사 배라고요.",
+    "first_30_chars": "삼성전자와 SK하이닉스, 퍼 사 배라고요. 정말 싸다는",
+    "pause_boundary_policy": "next_spoken_character",
+    "cadence_policy": "native_question_intonation_with_micro_breaths"
+  },
+  "leading_silence_seconds": 0.2,
+  "quality_report": {
+    "subtitles": {
+      "score": 80,
+      "passed": true,
+      "warnings": [
+        "subtitle_reading_speed_over_12cps:9"
+      ],
+      "cue_count": 45,
+      "coverage": 0.9988,
+      "max_reading_speed_cps": 14.0
+    },
+    "tts_verification": {
+      "passed": true,
+      "cer": 0.0516,
+      "attempts": 1,
+      "transcript": "삼성전자와 SK 하이닉스의 퍼 4배라고요? 정말 싸다는 말이 맞는 걸까요? 그 수치를 믿기 전에 확인할 게 있습니다. 코스피는 8월 20일 이후 6,912포인트였습니다. 7월 말 저점에서 빠르게 반등한 수치죠. 이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다. 삼성전자는 코스피 시총 1위 종목입니다. SK 하이닉스는 바로 뒤를 있는 이 위죠. 두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다. 그런데 퍼 4배 어디서 나온 수치일까요? 검증 가능한 EPS 추정치가 없습니다. 컨센서스 데이터도 확인되지 않죠. 근거 자체가 없는 겁니다. B-E-R은 주가를 EG로 나는 값입니다. 분모인 E추정치를 어떻게 잡느냐가 핵심이죠. 추정치에 따라 결과가 완전히 달라집니다. 낙관적 전망을 쓰면 주가가 싸 보이거든요. 보수적으로 사보면 달라질 수 있죠. 하반기 E추정치는 아직 불확실하죠. 같은 주가도 분모에 따라 다르게 있깁니다. 검증 안 된 수치로 판단해도 될까요? 하나의 기준만 기억해 주세요",
+      "unit_sequence_match": true,
+      "reference_units": [
+        "포인트",
+        "억"
+      ],
+      "transcript_units": [
+        "포인트",
+        "억"
+      ],
+      "provider_text_exact": true,
+      "provider_cer": 0.0,
+      "provider_unit_sequence_match": true,
+      "whisper_passed": false,
+      "audio_review_required": true
+    },
+    "splice_artifacts": {
+      "passed": true,
+      "candidate_count": 21,
+      "suspect_count": 0,
+      "noise_db": -40,
+      "min_silence_seconds": 0.1,
+      "edge_sharpness_threshold": 500.0,
+      "candidates": [
+        {
+          "start": 0.0,
+          "end": 0.232,
+          "duration": 0.232,
+          "is_flat_zero": false,
+          "edge_sharpness": 3093,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 2.776,
+          "end": 2.9,
+          "duration": 0.123,
+          "is_flat_zero": false,
+          "edge_sharpness": 18073,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 4.375,
+          "end": 4.557,
+          "duration": 0.182,
+          "is_flat_zero": false,
+          "edge_sharpness": 18778,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 6.451,
+          "end": 6.633,
+          "duration": 0.183,
+          "is_flat_zero": false,
+          "edge_sharpness": 7664,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 11.702,
+          "end": 11.866,
+          "duration": 0.164,
+          "is_flat_zero": false,
+          "edge_sharpness": 16378,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 14.338,
+          "end": 14.459,
+          "duration": 0.121,
+          "is_flat_zero": false,
+          "edge_sharpness": 11129,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 18.787,
+          "end": 18.959,
+          "duration": 0.172,
+          "is_flat_zero": false,
+          "edge_sharpness": 14187,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 21.806,
+          "end": 21.982,
+          "duration": 0.177,
+          "is_flat_zero": false,
+          "edge_sharpness": 21343,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 24.163,
+          "end": 24.281,
+          "duration": 0.118,
+          "is_flat_zero": false,
+          "edge_sharpness": 26247,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 26.319,
+          "end": 26.492,
+          "duration": 0.173,
+          "is_flat_zero": false,
+          "edge_sharpness": 3956,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 28.303,
+          "end": 28.422,
+          "duration": 0.119,
+          "is_flat_zero": false,
+          "edge_sharpness": 19149,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 31.774,
+          "end": 31.893,
+          "duration": 0.119,
+          "is_flat_zero": false,
+          "edge_sharpness": 19326,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 34.443,
+          "end": 34.616,
+          "duration": 0.173,
+          "is_flat_zero": false,
+          "edge_sharpness": 5225,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 38.859,
+          "end": 39.019,
+          "duration": 0.16,
+          "is_flat_zero": false,
+          "edge_sharpness": 5587,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 40.645,
+          "end": 40.811,
+          "duration": 0.165,
+          "is_flat_zero": false,
+          "edge_sharpness": 4773,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 42.736,
+          "end": 42.92,
+          "duration": 0.184,
+          "is_flat_zero": false,
+          "edge_sharpness": 16939,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 44.878,
+          "end": 45.082,
+          "duration": 0.204,
+          "is_flat_zero": false,
+          "edge_sharpness": 22393,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 46.808,
+          "end": 46.977,
+          "duration": 0.169,
+          "is_flat_zero": false,
+          "edge_sharpness": 3688,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 48.333,
+          "end": 48.515,
+          "duration": 0.182,
+          "is_flat_zero": false,
+          "edge_sharpness": 17079,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 53.116,
+          "end": 53.315,
+          "duration": 0.199,
+          "is_flat_zero": false,
+          "edge_sharpness": 18091,
+          "verdict": "자연스러운 저음량 구간입니다."
+        },
+        {
+          "start": 54.922,
+          "end": 55.043,
+          "duration": 0.121,
+          "is_flat_zero": false,
+          "edge_sharpness": 7533,
+          "verdict": "자연스러운 저음량 구간입니다."
+        }
+      ]
+    },
+    "subtitle_alignment_mode": "character",
+    "canonical_text_match": true,
+    "canonical_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894",
+    "leading_silence": {
+      "applied": true
+    },
+    "delivery_profile": {
+      "speed": 0.9,
+      "stability": 0.5,
+      "sentence_micro_breath_ms": 110,
+      "subtitle_target_chars": 18,
+      "question_mark_count": 3,
+      "caption_timing_source": "elevenlabs_character_timestamps"
+    }
+  },
+  "canonical_text": "삼성전자와 SK하이닉스, PER 4배라고요. 정말 싸다는 말이 맞는 걸까요? 그 수치를 믿기 전에 확인할 게 있습니다. 코스피는 8월 21일 6912포인트였습니다. 7월 말 저점에서 빠르게 반등한 수치죠. 이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다. 삼성전자는 코스피 시총 1위 종목입니다. SK하이닉스는 바로 뒤를 잇는 2위죠. 두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다. 그런데 PER 4배, 어디서 나온 수치일까요? 검증 가능한 EPS 추정치가 없습니다. 컨센서스 데이터도 확인되지 않죠. 근거 자체가 없는 겁니다. PER은 주가를 이익으로 나눈 값입니다. 분모인 이익 추정치를 어떻게 잡느냐가 핵심이죠. 추정치에 따라 결과가 완전히 달라집니다. 낙관적 전망을 쓰면 주가가 싸 보이거든요. 보수적으로 잡으면 달라질 수 있죠. 하반기 이익 추정치는 아직 불확실하죠. 같은 주가도 분모에 따라 다르게 읽힙니다. 검증 안 된 수치로 판단해도 될까요? 하나의 기준만 기억해 두세요. 분모가 어떤 이익 추정치인지 직접 확인하세요. 낙관치인지 보수치인지가 먼저인 겁니다. 그 확인이 판단의 시작이니까요. PER 숫자 하나보다 근거가 더 중요합니다.",
+  "canonical_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+}

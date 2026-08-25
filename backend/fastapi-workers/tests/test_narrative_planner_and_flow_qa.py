@@ -46,9 +46,9 @@ def test_flow_qa_surfaces_semantic_review_without_rewriting_facts():
         }, ensure_ascii=False)
 
     result = review_flow(fake_call, script=(
-        "여러분, 금리 목표 범위는 3.5퍼센트에서 3.75퍼센트입니다. 이번에도 그대로입니다. "
-        "그렇다면 아무 일도 없는 걸까요? 꼭 그렇지는 않은 겁니다. 물가는 2퍼센트 목표보다 높습니다. "
-        "그래서 다음 발표에서는 금리와 물가 설명을 함께 봐야 합니다."
+        "여러분, 금리 목표는 그대로입니다. 이번에도 동결됐죠. "
+        "그렇다면 아무 일도 없는 걸까요? 꼭 그렇지는 않은 겁니다. "
+        "물가는 목표보다 높습니다. 그래서 금리와 물가를 함께 봐야 합니다."
     ), narrative_plan={"plan_id": "test", "story_beats": []})
 
     assert result["passed"]
@@ -56,7 +56,7 @@ def test_flow_qa_surfaces_semantic_review_without_rewriting_facts():
     assert result["deterministic"]["repetitions"] == []
 
 
-def test_flow_qa_rejects_three_plain_declarative_sentences_in_a_row():
+def test_flow_qa_allows_three_plain_sentences_but_rejects_five():
     def fake_call(_system, _messages, _max_tokens):
         return json.dumps({
             "passed": True,
@@ -68,17 +68,23 @@ def test_flow_qa_rejects_three_plain_declarative_sentences_in_a_row():
             "revision_instruction": "문장 역할을 섞으세요.",
         }, ensure_ascii=False)
 
-    result = review_flow(fake_call, script=(
+    three = review_flow(fake_call, script=(
         "금리는 그대로입니다. 경제는 버티고 있습니다. 물가는 아직 높습니다."
     ), narrative_plan={"plan_id": "test", "story_beats": []})
 
+    result = review_flow(fake_call, script=(
+        "금리는 그대로입니다. 경제는 버티고 있습니다. 물가는 아직 높습니다. "
+        "수요도 이어지고 있습니다. 시장은 이를 반영하고 있습니다."
+    ), narrative_plan={"plan_id": "test", "story_beats": []})
+
+    assert three["passed"]
     assert not result["passed"]
     assert result["deterministic"]["rhetorical_rhythm"]["plain_declarative_runs"] == [
-        {"role": "description", "sentence_indexes": [1, 2, 3], "length": 3}
+        {"role": "description", "sentence_indexes": [1, 2, 3, 4, 5], "length": 5}
     ]
 
 
-def test_flow_qa_rejects_repeated_formal_endings_even_when_sentence_roles_differ():
+def test_flow_qa_rejects_five_repeated_formal_endings_even_when_sentence_roles_differ():
     def fake_call(_system, _messages, _max_tokens):
         return json.dumps({
             "passed": True,
@@ -92,12 +98,13 @@ def test_flow_qa_rejects_repeated_formal_endings_even_when_sentence_roles_differ
 
     result = review_flow(fake_call, script=(
         "에너지 가격도 영향을 줬습니다. 좋은 신호만 있는 건 아닙니다. "
-        "그래서 동결만 보면 안 됩니다. 왜 동결했는지도 봐야 합니다."
+        "그래서 동결만 보면 안 됩니다. 왜 동결했는지도 봐야 합니다. "
+        "조건을 함께 확인해야 합니다."
     ), narrative_plan={"plan_id": "test", "story_beats": []})
 
     assert not result["passed"]
     assert result["deterministic"]["rhetorical_rhythm"]["formal_ending_runs"] == [
-        {"ending": "formal_declarative", "sentence_indexes": [1, 2, 3, 4], "length": 4}
+        {"ending": "formal_declarative", "sentence_indexes": [1, 2, 3, 4, 5], "length": 5}
     ]
 
 
@@ -120,3 +127,85 @@ def test_flow_qa_requires_question_mark_for_spoken_korean_question():
 
     assert not result["passed"]
     assert result["deterministic"]["spoken_pacing"]["question_punctuation_issues"] == [1]
+
+
+def test_flow_qa_does_not_treat_explanatory_nikkayo_as_question():
+    result = review_flow(
+        lambda *args: json.dumps({"passed": True}),
+        script="코스피 비금융 상장사 실적의 중심이니까요.",
+        narrative_plan={"story_beats": []},
+    )
+
+    assert result["deterministic"]["spoken_pacing"]["question_punctuation_issues"] == []
+
+
+def test_flow_qa_treats_listener_direction_as_emphasis_not_plain_description():
+    result = review_flow(
+        lambda *args: json.dumps({"passed": True}),
+        script=(
+            "시장은 이미 다음 장을 기다리고 있습니다. "
+            "발표 하나로 끝나는 이야기가 아닌 겁니다. "
+            "그날의 시장 반응을 기억하세요."
+        ),
+        narrative_plan={"story_beats": []},
+    )
+
+    rhythm = result["deterministic"]["rhetorical_rhythm"]
+    assert rhythm["roles"] == ["description", "description", "emphasis"]
+    assert rhythm["plain_declarative_runs"] == []
+    assert result["passed"] is True
+
+
+def test_flow_qa_rejects_sentence_over_generation_hard_cap():
+    result = review_flow(
+        lambda *args: json.dumps({"passed": True}),
+        script=("삼성전자와 SK하이닉스의 반도체 실적과 주주환원 정책이 생산 설비 투자, "
+                "수급 변화, 밸류에이션과 향후 주가 판단에 어떤 영향을 주는지 아주 자세히 확인합니다."),
+        narrative_plan={"story_beats": []},
+    )
+
+    overlong = result["deterministic"]["spoken_pacing"]["overlong_sentences"]
+    assert result["passed"] is False
+    assert overlong[0]["sentence_index"] == 1
+    assert overlong[0]["length"] > 52
+
+
+def test_flow_qa_rejects_more_than_twenty_spaced_words_even_when_chars_are_short():
+    sentence = " ".join(["값"] * 21) + "."
+    result = review_flow(
+        lambda *args: json.dumps({"passed": True}),
+        script=sentence,
+        narrative_plan={"story_beats": []},
+    )
+
+    issue = result["deterministic"]["spoken_pacing"]["overlong_sentences"][0]
+    assert result["passed"] is False
+    assert issue["word_count"] == 21
+
+
+def test_flow_qa_normalizes_false_without_any_failure_reason():
+    result = review_flow(
+        lambda *args: json.dumps({
+            "passed": False,
+            "question_answer_issues": [],
+            "repetition_issues": [],
+            "ending_issue": None,
+            "transition_issues": [],
+            "rhythm_issues": [],
+            "revision_instruction": "",
+        }),
+        script="PER보다 이익 추정 근거를 먼저 확인해 볼까요? 근거가 판단의 시작인 겁니다.",
+        narrative_plan={"story_beats": []},
+    )
+
+    assert result["passed"] is True
+
+
+def test_flow_qa_does_not_pass_a_malformed_empty_response():
+    result = review_flow(
+        lambda *args: "응답 형식 오류",
+        script="PER보다 이익 추정 근거를 먼저 확인해 볼까요? 근거가 판단의 시작인 겁니다.",
+        narrative_plan={"story_beats": []},
+    )
+
+    assert result["passed"] is False

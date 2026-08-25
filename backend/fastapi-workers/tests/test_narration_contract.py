@@ -3,13 +3,16 @@ import json
 
 from app.utils.narration_contract import (
     NarrationContractError,
+    bind_caption_chunks_to_scenes,
     build_script_contract,
     canonical_narration_text,
+    compact_text,
+    normalize_scene_sentence_boundaries,
     text_sha256,
     verify_tts_against_script_contract,
 )
 from app.workers.images_worker import ImagesWorker
-from app.workers.longform_worker import LongformWorker
+from app.workers.longform_worker import LongformWorker, _assign_scene_durations_from_chunks
 
 
 def test_script_contract_keeps_tts_and_scene_source_identical():
@@ -33,6 +36,110 @@ def test_script_contract_keeps_tts_and_scene_source_identical():
 
     assert result["passed"] is True
     assert [item["scene_id"] for item in contract["scene_sources"]] == ["article_001", "semantic_002"]
+
+
+def test_caption_chunks_are_bound_to_complete_image_scene_units():
+    sections = [
+        {"scene_id": "scene_001", "content": "첫 문장입니다. 둘째 설명입니다."},
+        {"scene_id": "scene_002", "content": "마지막 문장입니다."},
+    ]
+    chunks = [
+        {"index": 1, "text": "첫 문장입니다.", "start": 0.0, "end": 1.4},
+        {"index": 2, "text": "둘째 설명입니다.", "start": 1.4, "end": 3.7},
+        {"index": 3, "text": "마지막 문장입니다.", "start": 3.7, "end": 6.0},
+    ]
+
+    result = bind_caption_chunks_to_scenes(sections, chunks)
+
+    assert result["all_scene_boundaries_on_caption_boundaries"] is True
+    assert result["mappings"][0]["chunk_indexes"] == [1, 2]
+    assert result["mappings"][0]["chunk_end_index"] == 1
+    assert result["mappings"][1]["chunk_start_index"] == 2
+
+
+def test_caption_chunk_must_not_straddle_two_image_scenes():
+    sections = [
+        {"content": "첫 문장입니다."},
+        {"content": "둘째 문장입니다."},
+    ]
+    chunks = [
+        {"text": "첫 문장입니다. 둘째", "start": 0.0, "end": 2.0},
+        {"text": "문장입니다.", "start": 2.0, "end": 3.0},
+    ]
+
+    with pytest.raises(NarrationContractError, match="자막 청크 1 중간"):
+        bind_caption_chunks_to_scenes(sections, chunks)
+
+
+def test_incomplete_scene_tail_moves_to_next_scene_without_rewriting_narration():
+    sections = [
+        {"scene_id": "scene_001", "content": "첫 문장입니다. 반대로 실망스러운 가이던스가 나오면", "prompt": "stale"},
+        {"scene_id": "scene_002", "content": "하락 압력이 더 이어질 수 있습니다."},
+    ]
+
+    normalized, audit = normalize_scene_sentence_boundaries(sections)
+
+    assert [scene["content"] for scene in normalized] == [
+        "첫 문장입니다.",
+        "반대로 실망스러운 가이던스가 나오면 하락 압력이 더 이어질 수 있습니다.",
+    ]
+    assert "prompt" not in normalized[0]
+    assert audit["repair_count"] == 1
+    assert compact_text("".join(scene["content"] for scene in normalized)) == compact_text(
+        "".join(scene["content"] for scene in sections)
+    )
+
+
+def test_normalized_scene_boundaries_bind_to_complete_caption_chunks():
+    sections = [
+        {"content": "첫 문장입니다. 두 회사가 같은 방향을 향하면서도"},
+        {"content": "서로 다른 경로를 선택한 셈이죠."},
+    ]
+    chunks = [
+        {"index": 1, "text": "첫 문장입니다.", "start": 0.0, "end": 1.0},
+        {"index": 2, "text": "두 회사가 같은 방향을 향하면서도", "start": 1.0, "end": 2.0},
+        {"index": 3, "text": "서로 다른 경로를 선택한 셈이죠.", "start": 2.0, "end": 3.0},
+    ]
+
+    normalized, _ = normalize_scene_sentence_boundaries(sections)
+    binding = bind_caption_chunks_to_scenes(normalized, chunks)
+
+    assert binding["passed"] is True
+    assert binding["mappings"][0]["chunk_indexes"] == [1]
+    assert binding["mappings"][1]["chunk_indexes"] == [2, 3]
+
+
+def test_scene_with_multiple_complete_sentences_is_not_merged():
+    sections = [
+        {"content": "첫 문장입니다. 둘째 문장입니다."},
+        {"content": "마지막 문장입니다."},
+    ]
+
+    normalized, audit = normalize_scene_sentence_boundaries(sections)
+
+    assert normalized == sections
+    assert audit["repair_count"] == 0
+
+
+def test_longform_image_transition_uses_bound_caption_end_not_character_ratio():
+    scenes = [
+        {"scene_id": "scene_001", "content": "첫 문장입니다. 둘째 설명입니다."},
+        {"scene_id": "scene_002", "content": "마지막 문장입니다."},
+    ]
+    chunks = [
+        {"index": 1, "text": "첫 문장입니다.", "start": 0.0, "end": 1.4},
+        {"index": 2, "text": "둘째 설명입니다.", "start": 1.4, "end": 3.7},
+        {"index": 3, "text": "마지막 문장입니다.", "start": 3.7, "end": 10.0},
+    ]
+    binding = bind_caption_chunks_to_scenes(scenes, chunks)
+    for scene, mapping in zip(scenes, binding["mappings"]):
+        scene["caption_chunk_contract"] = mapping
+
+    _assign_scene_durations_from_chunks(scenes, chunks, total_duration=10.0)
+
+    assert scenes[0]["end_time"] == 3.7
+    assert scenes[0]["image_transition_after_caption_chunk"] == 1
+    assert scenes[1]["start_time"] == 3.7
 
 
 def test_script_contract_uses_text_for_tts_when_a_scene_has_an_editorial_content_field():

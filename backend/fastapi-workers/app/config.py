@@ -41,7 +41,7 @@ if NAVER_API_HUB_ENABLED and (not NAVER_API_HUB_CLIENT_ID or not NAVER_API_HUB_C
 # (keyword_worker.py에 "claude-sonnet-5"라는 오타가 있었고,
 #  providers/real/llm.py에는 구형 모델이 하드코딩되어 있었던 것을
 #  이 상수로 통일해서 재발을 방지합니다.)
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+CLAUDE_MODEL = "claude-sonnet-4-6"
 ANTHROPIC_PROMPT_CACHE_ENABLED = os.getenv("ANTHROPIC_PROMPT_CACHE_ENABLED", "true").lower() in {"1", "true", "yes"}
 ANTHROPIC_PROMPT_CACHE_TTL = os.getenv("ANTHROPIC_PROMPT_CACHE_TTL", "5m")
 
@@ -126,7 +126,7 @@ LONGFORM_SCENE_MAX_WORKERS = int(os.getenv("LONGFORM_SCENE_MAX_WORKERS", "2"))
 VISUAL_QA_ENABLED = os.getenv("VISUAL_QA_ENABLED", "true").lower() in {"1", "true", "yes"}
 # Vision QA is an anchor-sample review, not a second API call for every one
 # of 240 scenes. File/codec validation still covers every scene.
-VISUAL_QA_MAX_SCENES = int(os.getenv("VISUAL_QA_MAX_SCENES", "24"))
+VISUAL_QA_MAX_SCENES = int(os.getenv("VISUAL_QA_MAX_SCENES", "64"))
 
 # Article evidence overlays are post-production assets. They never become
 # Gemini/Kling prompt text and can be toggled without a redeploy.
@@ -190,6 +190,7 @@ MAX_IMAGE_HOLD_SECONDS = int(os.getenv("MAX_IMAGE_HOLD_SECONDS", "8"))
 # Budget values are placeholders: replace them with the current AI Studio/Fal
 # console rates before production.  The preflight never hard-codes a price.
 IMG_COST_FLASH_1K_USD = float(os.getenv("IMG_COST_FLASH_1K_USD", "0.045"))
+IMG_COST_FLASH_2K_USD = float(os.getenv("IMG_COST_FLASH_2K_USD", "0.101"))
 IMG_COST_PRO_2K_USD = float(os.getenv("IMG_COST_PRO_2K_USD", "0.134"))
 KLING_COST_PER_CLIP_USD = float(os.getenv("KLING_COST_PER_CLIP_USD", "0.35"))  # 5 sec × $0.07/sec, audio off
 USD_KRW = float(os.getenv("USD_KRW", "1400"))

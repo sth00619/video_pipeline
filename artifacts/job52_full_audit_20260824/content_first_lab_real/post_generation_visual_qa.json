@@ -1,0 +1,27 @@
+{
+  "status": "review_required",
+  "image_path": "/Users/songtaeho/Documents/GitHub/video_pipeline/artifacts/job52_full_audit_20260824/content_first_lab_real/job52_root_cause_korean_text_character.png",
+  "ocr_status": "unavailable",
+  "multimodal_score": 68,
+  "retry_recommended": true,
+  "failure_categories": [
+    "text_approved_duplicate",
+    "scene_composition_plan_mismatch"
+  ],
+  "visible_texts": [
+    "영업이익"
+  ],
+  "approved_text_occurrence_counts": {
+    "영업이익": 2
+  },
+  "unexpected_or_malformed_texts": [],
+  "missing_approved_texts": [],
+  "speech_bubble_present": false,
+  "anatomy_pass": true,
+  "extra_limbs_or_hands": false,
+  "wardrobe_match": true,
+  "face_identity_match": true,
+  "number_panel_only": false,
+  "composition_plan_match": false,
+  "reason": "캐릭터가 지정된 좌측이 아닌 우측에 배치되었고, 승인된 텍스트가 화면 내에 중복 노출되었습니다."
+}

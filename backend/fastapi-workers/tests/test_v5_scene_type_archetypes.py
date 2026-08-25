@@ -86,7 +86,7 @@ def test_v5_kospi_pilot_three_scenes_have_expected_stage_recommendations():
     ]
     assert all(result.selection_reason for result in recommendations)
     assert [result.primary_physical_surface for result in recommendations] == [
-        "one broad curved presentation wall",
+        "the storyboard-planned laboratory, production-line, control-room, or analysis surface",
         "the broad engraved front plinth directly beneath the scale's central pillar",
         "the single large central analog gauge dial face embedded at eye level in the curved operations wall",
     ]

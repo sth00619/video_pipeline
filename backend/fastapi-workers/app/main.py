@@ -22,7 +22,11 @@ from app.workers.shorts_worker import ShortsWorker
 from app.workers.keyword_worker import KeywordWorker
 from app.workers.script_worker import ScriptWorker, ScriptResearchRequiredError
 from app.workers.tts_worker import TtsWorker
-from app.workers.images_worker import ImagesWorker, ImageProviderCreditRequiredError
+from app.workers.images_worker import (
+    ImagesWorker,
+    ImageProviderCreditRequiredError,
+    ImageProviderTemporarilyUnavailableError,
+)
 from app.workers.longform_worker import LongformWorker
 from app.workers.sfx_worker import SfxWorker
 from app.workers.bgm_worker import BgmWorker
@@ -210,6 +214,7 @@ class PipelineConfigUpdate(BaseModel):
     intro_motion_short_threshold: Optional[float] = None
     intro_kling_max_clips: Optional[int] = None
     img_cost_flash_1k_usd: Optional[float] = None
+    img_cost_flash_2k_usd: Optional[float] = None
     img_cost_pro_2k_usd: Optional[float] = None
     kling_cost_per_clip_usd: Optional[float] = None
     usd_krw: Optional[float] = None
@@ -803,6 +808,12 @@ class ScriptQualityGateRequest(BaseModel):
     verified_facts: list[dict] = Field(default_factory=list)
     reference_texts: list[str] = Field(default_factory=list)
 
+
+class ScriptFlowRevalidateRequest(BaseModel):
+    script: str
+    narrative_plan: dict = Field(default_factory=dict)
+    previous_flow: dict = Field(default_factory=dict)
+
 @app.post("/workers/script/generate")
 def script_generate(request: ScriptGenerateRequest):
     try:
@@ -843,6 +854,37 @@ def script_quality_gate(request: ScriptQualityGateRequest):
         llm_labeling_enabled=bool(runtime_config.value("script_pattern_llm_labeling_enabled")),
         number_traceability_required=bool(runtime_config.value("script_pattern_numbers_enabled")),
     )
+
+
+@app.post("/workers/script/flow-revalidate")
+def script_flow_revalidate(request: ScriptFlowRevalidateRequest):
+    """기존 Claude 의미 검토를 보존하고 현재 결정론 계약만 다시 검사한다."""
+    import json
+    from app.utils.flow_qa import review_flow
+
+    previous = request.previous_flow or {}
+    if not str(previous.get("method") or "").startswith("claude"):
+        raise HTTPException(409, "이전 Claude 흐름 검토가 없어 결정론 재검증만으로 승인할 수 없습니다.")
+    semantic = {
+        "passed": not any(bool(previous.get(field)) for field in (
+            "question_answer_issues", "repetition_issues", "ending_issue",
+            "transition_issues", "rhythm_issues",
+        )),
+        "question_answer_issues": previous.get("question_answer_issues") or [],
+        "repetition_issues": previous.get("repetition_issues") or [],
+        "ending_issue": previous.get("ending_issue"),
+        "transition_issues": previous.get("transition_issues") or [],
+        "rhythm_issues": previous.get("rhythm_issues") or [],
+        "revision_instruction": previous.get("revision_instruction") or "",
+    }
+    result = review_flow(
+        lambda *_args: json.dumps(semantic, ensure_ascii=False),
+        script=request.script,
+        narrative_plan=request.narrative_plan or {},
+    )
+    result["revalidated_from"] = previous.get("method")
+    result["revalidation_method"] = "previous_claude_semantics_plus_current_deterministic"
+    return result
 
 
 # ============================
@@ -1045,6 +1087,16 @@ def images_generate(request: ImagesGenerateRequest):
                 "error_code": "IMAGE_PROVIDER_CREDIT_REQUIRED",
                 "message": str(e),
                 "retryable": False,
+            },
+        )
+    except ImageProviderTemporarilyUnavailableError as e:
+        logger.warning("이미지 생성 일시 중단: 공급자 과부하: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error_code": "IMAGE_PROVIDER_TEMPORARILY_UNAVAILABLE",
+                "message": str(e),
+                "retryable": True,
             },
         )
     except Exception as e:

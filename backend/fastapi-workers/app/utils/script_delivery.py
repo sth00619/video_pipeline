@@ -11,6 +11,8 @@ from collections import Counter
 from typing import Any
 
 from app.utils.sentence_splitter import split_sentences
+from app.utils.caption_segmentation import split_script_into_caption_chunks
+from app.utils.narration_contract import normalize_scene_sentence_boundaries, text_sha256
 
 PHASES = (
     ("hook", "Hook & Question", 0.08),
@@ -99,6 +101,7 @@ def _edit_marker(text: str, emotion: str) -> str:
 def pace_sections_for_runtime(
     sections: list[dict[str, Any]], target_seconds: int, *, min_seconds: float = 4.5,
     target_seconds_per_scene: float = 5.5, max_seconds: float = 6.5,
+    subtitle_max_chars: int = 18,
 ) -> list[dict[str, Any]]:
     """짧은 대사 조각을 5~6초 체류 장면으로 다시 묶는다.
 
@@ -109,6 +112,9 @@ def pace_sections_for_runtime(
     """
     if not sections or target_seconds <= 0:
         return [dict(section) for section in sections]
+    # LLM이 장면 수를 맞추며 문장 중간에서 블록을 나눈 경우,
+    # 시간 버킷을 계산하기 전에 완결문을 복원한다. 발화 원문은 불변이다.
+    sections, _ = normalize_scene_sentence_boundaries(sections)
     visible = [len(re.sub(r"\s+", "", str(item.get("content") or item.get("text") or ""))) for item in sections]
     total_chars = sum(visible)
     if total_chars <= 0:
@@ -148,6 +154,23 @@ def pace_sections_for_runtime(
         first["content"] = merged
         first["text"] = merged
         first["text_for_tts"] = merged
+        planned_caption_chunks = split_script_into_caption_chunks(
+            merged,
+            max_chars=subtitle_max_chars,
+        )
+        first["caption_chunk_plan"] = {
+            "version": "caption-plan-v1",
+            "subtitle_max_chars": subtitle_max_chars,
+            "scene_text_sha256": text_sha256(merged),
+            "chunks": [
+                {
+                    "local_index": chunk_index,
+                    "text": chunk_text,
+                    "text_sha256": text_sha256(chunk_text),
+                }
+                for chunk_index, chunk_text in enumerate(planned_caption_chunks)
+            ],
+        }
         first["source_section_indexes"] = [
             index for item in bucket for index in (item.get("source_section_indexes") or [item.get("scene_id")])
         ]
@@ -155,6 +178,7 @@ def pace_sections_for_runtime(
             "target_seconds_per_scene": target_seconds_per_scene,
             "source_fragment_count": len(bucket),
             "visible_char_count": bucket_chars,
+            "caption_chunk_count": len(planned_caption_chunks),
         }
         paced.append(first)
         bucket = []

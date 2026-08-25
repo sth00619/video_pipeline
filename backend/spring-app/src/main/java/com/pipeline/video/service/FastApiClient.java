@@ -280,6 +280,23 @@ public class FastApiClient {
         }
     }
 
+    /** 기존 Claude 의미 검토는 보존하고 배포된 최신 문장·리듬 계약만 재검증한다. */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> revalidateScriptFlow(String script,
+                                                     Map<String, Object> narrativePlan,
+                                                     Map<String, Object> previousFlow) {
+        try {
+            Map<String, Object> bodyMap = new HashMap<>();
+            bodyMap.put("script", script != null ? script : "");
+            bodyMap.put("narrative_plan", narrativePlan != null ? narrativePlan : Map.of());
+            bodyMap.put("previous_flow", previousFlow != null ? previousFlow : Map.of());
+            return objectMapper.readValue(
+                    postJson(fastApiUrl + "/workers/script/flow-revalidate", bodyMap), Map.class);
+        } catch (Exception e) {
+            throw new RuntimeException("스크립트 흐름 재검증 오류: " + e.getMessage(), e);
+        }
+    }
+
     // Phase 3-3 — TTS
     public TtsGenerateResponse generateTts(Long jobId, String script, String voiceId) {
         return generateTts(jobId, script, voiceId, null, null, null);

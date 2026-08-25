@@ -1,8 +1,10 @@
 import pytest
 
 from app.utils.narration_contract import compact_text
+from app.utils.caption_segmentation import split_script_into_caption_chunks
 from app.utils.script_delivery import pace_sections_for_runtime
 from app.workers.script_worker import (
+    _caption_chunk_issues,
     _minimum_scene_count,
     _parse_dialogue_sentence_array,
     _split_sections_for_visual_pacing,
@@ -32,35 +34,74 @@ def test_runtime_pacing_preserves_narration_and_targets_five_to_six_seconds():
     )
     assert 45 <= len(paced) <= 60
     assert all(scene["runtime_pacing"]["visible_char_count"] > 0 for scene in paced)
+    planned = [
+        chunk["text"]
+        for scene in paced
+        for chunk in scene["caption_chunk_plan"]["chunks"]
+    ]
+    assert planned == split_script_into_caption_chunks(
+        " ".join(scene["content"] for scene in paced),
+        max_chars=18,
+    )
+    assert all(scene["runtime_pacing"]["caption_chunk_count"] >= 1 for scene in paced)
 
 
 def test_visual_pacing_never_splits_a_sentence_at_a_word_boundary():
-    source = [_scene(0, "이 문장은 공백을 제외하면 매우 길지만 마침표 하나로 끝나는 완결 문장이어서 중간을 자르면 안 됩니다.")]
+    source = [_scene(0, "이 문장은 공백을 제외하면 매우 길지만 마침표 하나로 끝나는 완결 문장이어서 이미지 수를 맞추려고 중간을 잘라서는 안 되는 하나의 온전한 생각 단위입니다.")]
     scenes = _split_sections_for_visual_pacing(source)
 
     assert len(scenes) == 1
     assert scenes[0]["content"] == source[0]["content"]
-    with pytest.raises(ValueError, match="26자"):
+    with pytest.raises(ValueError, match="52자"):
         _validate_scene_delivery(scenes, target_scene_count=1)
+
+
+def test_caption_contract_rejects_only_short_trailing_fragments():
+    issues = _caption_chunk_issues([
+        "오늘 코스피가 6860포인트를 기록했습니다.",
+        "안녕.",
+    ], max_chars=18)
+
+    assert len(issues) == 1
+    assert issues[0]["short_chunks"] == ["기록했습니다."]
+
+
+def test_scene_delivery_keeps_short_trailing_caption_fragment_in_same_image(caplog):
+    scene = _scene(0, "오늘 코스피가 6860포인트를 기록했습니다.")
+    with caplog.at_level("WARNING"):
+        _validate_scene_delivery(
+            [scene], target_scene_count=1, subtitle_max_chars=18,
+        )
+
+    paced = pace_sections_for_runtime([scene], 6, subtitle_max_chars=18)
+    planned = [chunk["text"] for chunk in paced[0]["caption_chunk_plan"]["chunks"]]
+    assert planned == ["오늘 코스피가 6860포인트를", "기록했습니다."]
+    assert len(paced) == 1
+    assert any("동일 이미지 안에 묶어" in record.message for record in caplog.records)
 
 
 def test_minimum_scene_count_tolerates_the_undershoot_observed_in_job_147():
     # job 147 (2026-08-04): target=55 scenes for a 5-minute video, Claude
     # repeatedly wrote 49-52 complete sentences. The old flat "target-2"
     # tolerance (53) rejected all of these and failed the whole job after
-    # 3 retries. The 90%-of-target floor accepts 52 while still requiring a
-    # real majority of the target, and keeps average scene length at the
-    # 5~6-second contract's own upper bound (300s / 50 scenes = 6.0s).
-    assert _minimum_scene_count(55) == 50
-    assert 50 <= 52  # the actual undershoot that kept failing
+    # 3 retries. The floor follows the current total-length lower bound and the
+    # 52-char absolute cap, so it accepts 52 without
+    # imposing an unrelated image-count rule at SCRIPT time.
+    assert _minimum_scene_count(55) == 37
+    assert 46 <= 52  # the actual undershoot that kept failing
 
 
 def test_minimum_scene_count_scales_with_target_instead_of_a_flat_offset():
     # A flat "-2" tolerance is far tighter, relatively, for a long video
     # (216/218 = 99%) than a short one (53/55 = 96%) -- backwards from what
     # sampling noise would suggest. A percentage floor treats both the same.
-    assert _minimum_scene_count(11) == 10
-    assert _minimum_scene_count(218) == 196
+    assert _minimum_scene_count(11) == 8
+    assert _minimum_scene_count(218) == 144
+
+
+def test_minimum_sentence_count_matches_total_length_lower_bound():
+    # 목표 문장 수와 총분량 하한을 52자 절대 상한으로 함께 환산한다.
+    assert _minimum_scene_count(100) == 66
 
 
 def test_structured_dialogue_rewrite_requires_json_array_and_preserves_lines():
@@ -99,6 +140,7 @@ def test_longform_mix_preserves_article_evidence_and_assigns_other_two_modes():
         for scene in contracted if scene["visual_mode"] == "semantic_illustration"
     )
     assert all(
-        scene["v5_render_contract"]["visual_text_policy"] == "script_captioned"
-        for scene in contracted if scene["visual_mode"] == "archetype_explainer"
+        scene["v5_render_contract"]["visual_text_policy"] == "strict_textless"
+        for scene in contracted
+        if scene["visual_mode"] == "archetype_explainer" and not scene.get("screen_texts")
     )

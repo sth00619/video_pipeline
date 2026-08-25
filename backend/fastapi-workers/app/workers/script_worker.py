@@ -17,6 +17,7 @@ Claude 설정:
 import os
 import re
 import json
+import math
 import logging
 from typing import Optional
 
@@ -39,14 +40,17 @@ from app.utils.script_style import (
     get_script_style_guide,
 )
 from app.utils.script_content_depth_analyzer import assess_script_content_depth
-from app.utils.script_length import make_length_contract, spoken_char_count
+from app.utils.script_length import get_tolerance, make_length_contract, spoken_char_count
 from app.utils.narration_contract import build_script_contract
 from app.utils.sentence_splitter import split_sentences
+from app.utils.caption_segmentation import split_script_into_caption_chunks
+from app.utils.image_text_contract import contains_financial_number, prompt_text_contract_violations
 from app.workers.news_keyword_extractor import NewsKeywordExtractor
 from app.utils.keyword_aliases import normalise_terms
 from app.utils.script_delivery import annotate_sections, default_style_mix, pace_sections_for_runtime, validate_delivery
 from app.utils.narrative_planner import fallback_plan, plan_narrative
-from app.utils.flow_qa import review_flow
+from app.utils.flow_qa import review_flow, sentence_role
+from app.utils.scene_screen_text_planner import attach_scene_screen_texts
 from app.utils.elevenlabs_mapper import map_emotion_to_elevenlabs
 from app.utils.topic_evidence import is_market_level_forecast
 from app.services.verbatim_guard import validate as validate_verbatim
@@ -463,6 +467,11 @@ def _requires_script_manual_review(
 
 
 _TOPIC_SCOPE_MIN_RATIO = 0.15
+_TOPIC_BOUNDARY_RATIO = 0.10
+_TOPIC_BOUNDARY_STOPWORDS = {
+    "전망", "실적", "주가", "분석", "핵심", "쟁점", "관련", "시장", "상황",
+    "정보", "투자", "전략", "흐름", "요약",
+}
 _KEYWORD_ALIAS_MAP: dict[str, list[str]] = {
     "삼성전자": ["삼성", "SAMSUNG", "SEC"],
     "SK하이닉스": ["하이닉스", "SK Hynix", "HYNIX"],
@@ -521,6 +530,17 @@ def _all_search_terms(keyword: str) -> set[str]:
     return {term for term in terms if term}
 
 
+def _topic_boundary_terms(keyword: str) -> set[str]:
+    """도입·결말에는 ``전망`` 같은 일반어가 아닌 선택 주체를 요구한다."""
+    normalized = str(keyword or "").strip()
+    terms = {
+        part for part in normalized.split()
+        if len(part) >= 2 and part.casefold() not in _TOPIC_BOUNDARY_STOPWORDS
+    }
+    terms.update(_keyword_aliases(normalized))
+    return terms or _all_search_terms(normalized)
+
+
 def _validate_topic_scope(script_text: str, keyword: str) -> dict:
     """복합 키워드와 별칭을 포함해 주제 연결 문단이 15% 이상인지 검사한다."""
     search_terms = _all_search_terms(keyword)
@@ -552,20 +572,323 @@ def _validate_topic_scope(script_text: str, keyword: str) -> dict:
     }
 
 
+def _validate_topic_boundaries(script_text: str, keyword: str) -> dict:
+    """도입·결말 10%에 선택 주체가 직접 등장하는지 별도 검사한다."""
+    paragraphs = [paragraph.strip() for paragraph in str(script_text or "").splitlines() if paragraph.strip()]
+    if not paragraphs:
+        return {
+            "passed": False,
+            "opening_topic_connected": False,
+            "ending_topic_connected": False,
+            "boundary_window_paragraphs": 0,
+        }
+    boundary_window = max(1, round(len(paragraphs) * _TOPIC_BOUNDARY_RATIO))
+    boundary_needles = [term.casefold() for term in _topic_boundary_terms(keyword)]
+    opening_topic_connected = any(
+        needle in paragraph.casefold()
+        for paragraph in paragraphs[:boundary_window]
+        for needle in boundary_needles
+    )
+    ending_topic_connected = any(
+        needle in paragraph.casefold()
+        for paragraph in paragraphs[-boundary_window:]
+        for needle in boundary_needles
+    )
+    return {
+        "passed": opening_topic_connected and ending_topic_connected,
+        "opening_topic_connected": opening_topic_connected,
+        "ending_topic_connected": ending_topic_connected,
+        "boundary_window_paragraphs": boundary_window,
+    }
+
+
+def _topic_anchor_label(keyword: str) -> str:
+    """낭독 한 문장에 들어갈 짧은 선택 주체 표기를 만든다."""
+    parts = [
+        part for part in str(keyword or "").split()
+        if len(part) >= 2 and part.casefold() not in _TOPIC_BOUNDARY_STOPWORDS
+    ]
+    if not parts:
+        parts = [str(keyword or "주제").strip()]
+    label = "·".join(parts[:2])
+    return label if len(re.sub(r"\s+", "", label)) <= 16 else parts[0]
+
+
+def _anchor_topic_boundaries(sections: list[dict], keyword: str) -> tuple[list[dict], list[str]]:
+    """선택 주체가 빠진 도입·결말에 비수치 범위 표지만 추가한다.
+
+    기존 금융 문장과 검증 사실은 삭제·수정하지 않는다. 승인 전 대본에
+    짧은 주제 표지 문장만 붙여 일반 시장 이야기로 시작하거나 끝나는 것을
+    막고, 그 결과가 이후 TTS·자막의 동일 원문이 되도록 한다.
+    """
+    anchored = [dict(section) for section in sections]
+    if not anchored or not str(keyword or "").strip():
+        return anchored, []
+    boundaries = _validate_topic_boundaries(_narration_from_sections(anchored), keyword)
+    label = _topic_anchor_label(keyword)
+    applied: list[str] = []
+
+    if not boundaries.get("opening_topic_connected"):
+        first = anchored[0]
+        original = str(first.get("content") or first.get("text") or "").strip()
+        text = f"{label}, 오늘 핵심이죠. {original}".strip()
+        first["content"] = text
+        first["text"] = text
+        first["char_count"] = len(text)
+        applied.append("opening")
+    if not boundaries.get("ending_topic_connected"):
+        last = anchored[-1]
+        original = str(last.get("content") or last.get("text") or "").strip()
+        text = f"{original} {label}, 계속 확인하죠.".strip()
+        last["content"] = text
+        last["text"] = text
+        last["char_count"] = len(text)
+        applied.append("ending")
+    return anchored, applied
+
+
+def _coalesce_repetition_groups(repetitions: list) -> list[dict]:
+    """반복 문장 쌍을 실제 반복 그룹과 횟수로 합친다.
+
+    Flow QA는 가까운 문장끼리 비교한 1-based 인덱스 쌍을 반환한다. 같은
+    문장이 세 번 나오면 ``[1, 2]``, ``[1, 3]``, ``[2, 3]``처럼 여러 쌍이
+    생길 수 있으므로, 수정 지시에는 이를 한 번의 3회 반복으로 보여준다.
+    """
+    groups: list[set[int]] = []
+    legacy_samples: list[str] = []
+    for repetition in repetitions or []:
+        if not isinstance(repetition, dict):
+            sample = str(repetition or "").strip()
+            if sample:
+                legacy_samples.append(sample[:80])
+            continue
+        indexes = {
+            int(index)
+            for index in repetition.get("sentence_indexes") or []
+            if str(index).isdigit() and int(index) > 0
+        }
+        if len(indexes) < 2:
+            continue
+        overlapping = [group for group in groups if group & indexes]
+        if overlapping:
+            merged = set(indexes)
+            for group in overlapping:
+                merged.update(group)
+                groups.remove(group)
+            groups.append(merged)
+        else:
+            groups.append(set(indexes))
+
+    result = [
+        {"sentence_indexes": sorted(group), "count": len(group)}
+        for group in sorted(groups, key=lambda item: min(item))
+    ]
+    result.extend({"sentence_indexes": [], "count": None, "sample": sample} for sample in legacy_samples)
+    return result
+
+
+def _delete_exact_repetition_occurrences(
+    sections: list[dict], repetition_groups: list[dict]
+) -> tuple[list[dict], list[int]]:
+    """본문이 같은 반복 문장만 마지막 1회를 남기고 결정론적으로 삭제한다.
+
+    유사도 판정만으로 서로 다른 금융 사실을 지우지 않는다. 문장 전체가 같거나,
+    바로 인접한 문장의 본문이 같고 ``인 겁니다``/``인 거죠`` 종결만 다른 경우만
+    처리한다. 숫자·날짜·회사명도 마지막 문장에 원문 그대로 남으므로 이 삭제는
+    사실 삭제가 아니라 중복 구조 정리다.
+    """
+    cloned = [dict(section) for section in sections]
+    sentence_rows: list[dict] = []
+    for section_index, section in enumerate(cloned):
+        text = str(section.get("content") or section.get("text") or "").strip()
+        sentences = [sentence.strip() for sentence in split_sentences(text) if sentence.strip()]
+        if not sentences and text:
+            sentences = [text]
+        for sentence_index, sentence in enumerate(sentences):
+            sentence_rows.append({
+                "global_index": len(sentence_rows) + 1,
+                "section_index": section_index,
+                "sentence_index": sentence_index,
+                "text": sentence,
+            })
+
+    rows_by_index = {row["global_index"]: row for row in sentence_rows}
+    delete_indexes: set[int] = set()
+    for group in repetition_groups or []:
+        indexes = sorted({
+            int(index)
+            for index in group.get("sentence_indexes") or []
+            if str(index).isdigit() and int(index) > 0
+        })
+        rows = [rows_by_index.get(index) for index in indexes]
+        if len(indexes) < 2 or any(row is None for row in rows):
+            continue
+        normalized = [re.sub(r"[^0-9A-Za-z가-힣]", "", row["text"]).casefold() for row in rows]
+        # 준구어체 종결 보정이 같은 결론을 ``…인 겁니다``와
+        # ``…인 거죠``로 한 번씩 만들 수 있다. 본문은 그대로이고 이 종결만
+        # 다를 때 두 문장을 같은 반복 키로 본다.
+        ending_canonical = [
+            re.sub(r"(?:인겁니다|인거죠|인것입니다|인것이죠)$", "인것", value)
+            for value in normalized
+        ]
+        adjacent = all(right == left + 1 for left, right in zip(indexes, indexes[1:]))
+        exact_or_ending_only = len(set(normalized)) == 1 or (
+            adjacent and bool(ending_canonical[0]) and len(set(ending_canonical)) == 1
+        )
+        if not normalized[0] or not exact_or_ending_only:
+            logger.warning(
+                "유사 반복 그룹은 사실 차이를 배제할 수 없어 자동 삭제하지 않음: indexes=%s",
+                indexes,
+            )
+            continue
+        delete_indexes.update(indexes[:-1])
+
+    if not delete_indexes:
+        return cloned, []
+
+    rows_by_section: dict[int, list[dict]] = {}
+    for row in sentence_rows:
+        rows_by_section.setdefault(row["section_index"], []).append(row)
+
+    repaired: list[dict] = []
+    for section_index, section in enumerate(cloned):
+        rows = rows_by_section.get(section_index, [])
+        if not any(row["global_index"] in delete_indexes for row in rows):
+            repaired.append(section)
+            continue
+        remaining = [row["text"] for row in rows if row["global_index"] not in delete_indexes]
+        if not remaining:
+            continue
+        text = " ".join(remaining).strip()
+        section["content"] = text
+        section["text"] = text
+        section["char_count"] = len(text)
+        repaired.append(section)
+    return repaired, sorted(delete_indexes)
+
+
+def _conversationalize_formal_ending(sentence: str) -> str:
+    """금융 사실은 그대로 두고 정형 종결만 ``~죠`` 계열로 바꾼다."""
+    text = str(sentence or "").strip()
+    match = re.fullmatch(r"(.*?)([.!…]?)", text)
+    if not match:
+        return text
+    body, punctuation = match.groups()
+    punctuation = punctuation or "."
+
+    # ``입니다``를 단순히 ``이죠``로 바꾸는 것보다 ``인 겁니다``가 서술어
+    # 관계를 더 명확히 보존한다. 나머지 ``습니다``형은 어간을 그대로 둔다.
+    if body.endswith("아닙니다"):
+        return body[:-4] + "아닌 겁니다" + punctuation
+    if body.endswith("입니다"):
+        return body[:-3] + "인 겁니다" + punctuation
+    if body.endswith("습니다"):
+        return body[:-3] + "죠" + punctuation
+
+    # 모음 어간 뒤의 격식 종결 ``ㅂ니다``는 마지막 음절의 받침 ㅂ을
+    # 제거하면 같은 어간의 ``~죠``가 된다(합니다→하죠, 됩니다→되죠).
+    if body.endswith("니다") and len(body) >= 3:
+        stem = body[:-2]
+        last = ord(stem[-1])
+        if 0xAC00 <= last <= 0xD7A3 and (last - 0xAC00) % 28 == 17:
+            without_bieup = chr(last - 17)
+            return stem[:-1] + without_bieup + "죠" + punctuation
+    return text
+
+
+def _stabilize_formal_rhythm(sections: list[dict]) -> tuple[list[dict], list[int]]:
+    """세 번째 정형·설명형 문장만 준구어체로 바꿔 연속 리듬을 끊는다.
+
+    Claude가 긴 JSON 배열의 일부 종결을 그대로 두더라도 숫자·날짜·회사명
+    및 문장 순서는 건드리지 않는다. 각 정형 종결 연속 구간에서 세 번째
+    문장만 바꾸므로 ``~습니다``와 설명형 역할 모두 최대 두 문장만 이어진다.
+    """
+    cloned = [dict(section) for section in sections]
+    converted_indexes: list[int] = []
+    global_index = 0
+    formal_run = 0
+    description_run = 0
+
+    for section in cloned:
+        text = str(section.get("content") or section.get("text") or "").strip()
+        sentences = [sentence.strip() for sentence in split_sentences(text) if sentence.strip()]
+        if not sentences and text:
+            sentences = [text]
+        changed = False
+        for local_index, sentence in enumerate(sentences):
+            global_index += 1
+            if re.search(r"니다[.!…]?$", sentence):
+                formal_run += 1
+            else:
+                formal_run = 0
+            if sentence_role(sentence) == "description":
+                description_run += 1
+            else:
+                description_run = 0
+            if formal_run < 3 and description_run < 3:
+                continue
+            replacement = _conversationalize_formal_ending(sentence)
+            if replacement == sentence:
+                continue
+            sentences[local_index] = replacement
+            converted_indexes.append(global_index)
+            formal_run = 0
+            description_run = 0
+            changed = True
+        if changed:
+            rewritten = " ".join(sentences).strip()
+            section["content"] = rewritten
+            section["text"] = rewritten
+            section["char_count"] = len(rewritten)
+    return cloned, converted_indexes
+
+
+def _section_sentences_within_hard_cap(text: str) -> bool:
+    """씬 전체가 아니라 씬 안의 *각 문장*에 낭독 길이 상한을 적용한다.
+
+    이미지 한 장은 한 문장 또는 같은 의미 흐름의 짧은 문장을 묶는다. 이전 구현은 Claude가
+    반환한 씬 문자열 전체를 상한과 비교해, 문장들은 모두 정상이어도 씬이
+    29자를 넘으면 리듬 수정 전체를 버렸다. 그 결과 5분 대본처럼 씬당 문장이
+    둘 이상인 작업에서는 리듬 복구가 사실상 한 번도 반영되지 않았다.
+    """
+    source = str(text or "").strip()
+    if not source:
+        return False
+    sentences = [sentence.strip() for sentence in split_sentences(source) if sentence.strip()]
+    if not sentences:
+        sentences = [source]
+    return all(
+        _visible_char_count(sentence) <= _SENTENCE_HARD_CAP_CHARS
+        and len(sentence.split()) <= _SENTENCE_HARD_CAP_WORDS
+        for sentence in sentences
+    )
+
+
 def _synthesize_revision_instruction(deterministic: dict, keyword: str) -> str:
     """Claude가 비운 수정 지시를 결정론 실패 원인으로 합성한다."""
     parts: list[str] = []
     repetitions = deterministic.get("repetitions") or []
     if repetitions:
-        samples: list[str] = []
-        for repetition in repetitions[:3]:
-            if isinstance(repetition, dict):
-                indexes = repetition.get("sentence_indexes") or []
+        instructions: list[str] = []
+        for group in _coalesce_repetition_groups(repetitions)[:3]:
+            indexes = group.get("sentence_indexes") or []
+            count = group.get("count")
+            if indexes and count:
                 label = "·".join(str(index) for index in indexes)
-                samples.append(f"문장 {label}" if label else str(repetition)[:40])
-            else:
-                samples.append(str(repetition)[:40])
-        parts.append(f"다음 반복 표현을 제거하거나 다르게 표현하세요: {'; '.join(samples)}")
+                instructions.append(
+                    f"문장 {label}의 동일 표현 {count}회 중 마지막 1회만 남기고 "
+                    f"나머지 {count - 1}회는 삭제하세요"
+                )
+            elif group.get("sample"):
+                instructions.append(
+                    f"반복 표현 '{group['sample']}'은 마지막 1회만 남기고 이전 중복을 삭제하세요"
+                )
+        if instructions:
+            parts.append(
+                "반복 문장 정리: " + "; ".join(instructions) + ". "
+                "이 삭제는 금융 사실 삭제가 아니라 동일한 중복 구조 정리입니다. "
+                "숫자·날짜·회사명·검증 사실은 추가·삭제·변경하지 마세요."
+            )
 
     rhythm = deterministic.get("rhetorical_rhythm") or {}
     if rhythm and not rhythm.get("passed", True):
@@ -573,7 +896,13 @@ def _synthesize_revision_instruction(deterministic: dict, keyword: str) -> str:
 
     spoken_pacing = deterministic.get("spoken_pacing") or {}
     if spoken_pacing and not spoken_pacing.get("passed", True):
-        parts.append("한 문장이 너무 길어 청취자가 따라가기 어렵습니다. 문장을 분리하세요.")
+        if spoken_pacing.get("overlong_sentences"):
+            parts.append("한 문장이 너무 길어 청취자가 따라가기 어렵습니다. 문장을 분리하세요.")
+        if spoken_pacing.get("short_sentence_runs"):
+            parts.append("지나치게 짧은 문장 조각이 연속됩니다. 인접 문장과 자연스럽게 연결하세요.")
+        if spoken_pacing.get("question_punctuation_issues"):
+            indexes = "·".join(str(index) for index in spoken_pacing["question_punctuation_issues"][:8])
+            parts.append(f"문장 {indexes}의 실제 질문 종결에는 물음표를 사용하세요.")
 
     topic_scope = deterministic.get("topic_scope") or {}
     if topic_scope and not topic_scope.get("passed", True):
@@ -582,6 +911,12 @@ def _synthesize_revision_instruction(deterministic: dict, keyword: str) -> str:
             f"대본의 {(1 - ratio) * 100:.0f}%가 '{keyword}'와 직접 연결되지 않습니다. "
             f"관련 없는 항목을 '{keyword}'의 인과관계로 연결하거나 제거하세요."
         )
+    topic_boundaries = deterministic.get("topic_boundaries") or {}
+    if topic_boundaries and not topic_boundaries.get("passed", True):
+        if not topic_boundaries.get("opening_topic_connected", True):
+            parts.append(f"도입부를 선택 주체 '{keyword}'와 직접 연결하세요.")
+        if not topic_boundaries.get("ending_topic_connected", True):
+            parts.append(f"결말을 선택 주체 '{keyword}'로 마무리하세요.")
     return " / ".join(parts)
 
 
@@ -590,7 +925,9 @@ def _apply_flow_qa_contract(flow_qa: dict, script_text: str, keyword: str) -> di
     result = dict(flow_qa or {})
     deterministic = dict(result.get("deterministic") or {})
     topic_scope = _validate_topic_scope(script_text, keyword)
+    topic_boundaries = _validate_topic_boundaries(script_text, keyword)
     deterministic["topic_scope"] = topic_scope
+    deterministic["topic_boundaries"] = topic_boundaries
     result["deterministic"] = deterministic
     repetitions_passed = not bool(deterministic.get("repetitions") or [])
     rhythm_passed = bool((deterministic.get("rhetorical_rhythm") or {}).get("passed", True))
@@ -601,12 +938,16 @@ def _apply_flow_qa_contract(flow_qa: dict, script_text: str, keyword: str) -> di
         and rhythm_passed
         and spoken_pacing_passed
         and topic_scope["passed"]
+        and topic_boundaries["passed"]
     )
 
     revision_instruction = str(result.get("revision_instruction") or "").strip()
-    if not result["passed"] and not revision_instruction:
-        revision_instruction = _synthesize_revision_instruction(deterministic, keyword)
-        if revision_instruction:
+    if not result["passed"]:
+        deterministic_instruction = _synthesize_revision_instruction(deterministic, keyword)
+        if deterministic_instruction:
+            revision_instruction = " / ".join(
+                item for item in (deterministic_instruction, revision_instruction) if item
+            )
             logger.info(
                 "revision_instruction 자동 합성 (결정론 실패 원인): %s",
                 revision_instruction[:100],
@@ -615,19 +956,17 @@ def _apply_flow_qa_contract(flow_qa: dict, script_text: str, keyword: str) -> di
     return result
 
 
-# 2026-08-05, 사용자 명시 지시: 문장 단위를 짧게(15~20자) 끊어 TTS에 맞는
-# 대본을 구상한 뒤, 5~6초 화면 단위 묶기는 별도 단계(pace_sections_for_runtime)
-# 에 맡긴다. 예전 26~38자 목표는 "문장 하나 = 화면 하나(5~6초)"를 생성
-# 단계에서부터 강제해 검증 실패가 잦았다 — 문장이 조금만 길어져도(예:
-# 45자) 재작성까지 다 써버리고 job 전체가 죽었다. 문장을 짧게 만들면
-# 목표 글자 수 범위를 맞추기 쉽고, 상한을 살짝 넘겨도 자막 한 장의 표시
-# 시간이 조금 늘어나는 정도라 안전하다. pace_sections_for_runtime은 입력
-# 문장 길이와 무관하게 실제 총 글자수/목표 초 비율로 5~6초 단위를 다시
-# 묶으므로, 여기서 문장을 짧게 만드는 것이 그 단계를 깨지 않는다.
-_SENTENCE_TARGET_MIN_CHARS = 15
-_SENTENCE_TARGET_MAX_CHARS = 20
-_SENTENCE_AVG_CHARS_FOR_COUNT = 18
-_SENTENCE_HARD_CAP_CHARS = 26
+# 레퍼런스 대본은 5~6초의 하나의 생각 단위 안에서 24~42자 정도의 자연스러운
+# 한국어 문장을 사용한다. 사용자가 지적한 "38단어" 문제를 28글자 문제로
+# 오해해 15~20자로 잘게 쪼개면 TTS가 끊기고 장면 계획도 파편화된다. 따라서
+# 글자 수와 띄어쓰기 단어 수를 함께 제한하고, 실제 화면 체류 시간은
+# pace_sections_for_runtime이 승인 대본의 읽기 속도로 결정한다.
+_SENTENCE_TARGET_MIN_CHARS = 24
+_SENTENCE_TARGET_MAX_CHARS = 42
+_SENTENCE_AVG_CHARS_FOR_COUNT = 36
+_SENTENCE_HARD_CAP_CHARS = 52
+_SENTENCE_HARD_CAP_WORDS = 20
+_NARRATION_REWRITE_ATTEMPTS = 5
 
 CATEGORY_LABELS = {
     "KOSPI": "코스피(한국 종합주가지수)",
@@ -688,7 +1027,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
 - 한국어 맞춤법과 표준 띄어쓰기 규정을 철저히 준수하여 가독성이 높고 자연스러운 문장이 되도록 하세요. (조사나 어미의 잘못된 띄어쓰기 금지)
 
 🎯 낭독·자막 최적화 (가장 중요):
-- 대본 문장은 자막 줄 수가 아니라 실제 낭독 호흡을 기준으로 공백 제외 12~32자 안팎으로 작성하세요. 단, 뜻이 완결된 짧은 강조 문장은 억지로 늘리지 마세요.
+- 대본 문장은 자막 줄 수가 아니라 실제 낭독 호흡을 기준으로 대부분 공백 제외 15~20자로 작성하고, 어떤 문장도 28자를 넘기지 마세요. 단, 뜻이 완결된 짧은 강조 문장은 억지로 늘리지 마세요.
 - 긴 설명은 의미가 완결되는 문장으로 나누되, 짧은 문장을 세 개 이상 연속 배치하지 마세요.
   좋은 예: "이번에도 금리는 그대로입니다. 그렇다면 달라진 게 없는 걸까요? 꼭 그렇지는 않습니다."
   나쁜 예: "금리는 그대로입니다. 경제도 버티고 있습니다. 물가도 높습니다."
@@ -712,7 +1051,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
   * (예시) 물가 상승 / 인플레이션 ➡️ 뜨거운 태양 아래 아이스크림처럼 녹아내리는 지폐 다발
   * (예시) 복잡한 거시경제 / 불확실성 ➡️ 빛나는 문이 여러 개 있는 짙은 안개 속의 미로
 - [비주얼 프롬프트 (영어)]에는 캐릭터 묘사를 절대 포함하지 마세요(별도의 캐릭터가 합성됩니다). 배경과 상황만 묘사하세요.
-- 모든 장면은 "original 2D Korean finance editorial comic, bold ink outlines, cel shading, no text, no letters, no words, no UI elements"로 통일하세요. 3D 렌더와 실사 표현을 섞지 마세요.
+- 모든 장면은 "original 2D Korean finance editorial comic, bold ink outlines, cel shading"로 통일하세요. 3D 렌더와 실사 표현을 섞지 마세요.
 - 각 헤더 아래에는 다음 여섯 개의 태그를 사용해 내용을 채우세요:
   1. [대사] : 실제 한국어로 낭독할 대사 텍스트
   2. [비주얼 설명 (한국어)] : 화면에 보여줄 구체적인 상황과 은유적 배경에 대한 설명 (한국어)
@@ -737,10 +1076,15 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
      - 50단어 이내.
   4. [감정] : 상황에 맞는 캐릭터 표정/포즈 (happy / worried / surprised / pointing / thinking / explaining / neutral 중 하나)
   5. [모션] : 인트로 구간(처음 약 13개 씬)인 경우에만 chart_shock, pointing_explain, thinking_desk, walking_intro, celebration 중 하나를 반드시 선택해 기술하세요. 본문 씬은 비워두거나 제외합니다.
+  6. [화면 문구] : 이미지의 물리적 소품 표면에 필요한 정확 문자열을 JSON 문자열 배열로 0~3개 출력하세요.
+     - 기업명·지수명·핵심 수치·양쪽 비교 문구가 장면 이해의 핵심이면 반드시 1~3개를 출력하세요. 무조건 []로 피하지 마세요.
+     - 각 문자열은 반드시 바로 그 씬의 [대사]에 글자 그대로 존재해야 합니다. 번역·요약·새 표현·다른 씬의 사실 사용 금지.
+     - 숫자·단위는 <verified_facts>의 원문과 정확히 같아야 합니다.
+     - 불필요하면 []를 출력하세요. 비수치 문구는 이미지 모델이 정확히 쓸 수 있고, 금융 수치는 결정론 렌더러가 씁니다.
 
 화면 텍스트 안전 규칙:
-- [말풍선], [오버레이], UI 카드, 자막용 문구를 절대 출력하지 마세요. 대사는 TTS·ASS 자막의 유일한 문자 원본입니다.
-- 이미지 안의 문자 배치는 V5 이미지 계약이 별도로 결정합니다. 대본 작성 단계에서 공중 말풍선, 검은 패널, 요약 박스, 수치 카드를 계획하지 마세요.
+- [말풍선], [오버레이], UI 카드, 자막용 문구를 절대 출력하지 마세요. 대사는 TTS·ASS 자막의 유일한 원본입니다.
+- 이미지 안의 문자는 현재 씬의 검증된 [화면 문구]만 허용합니다. 공중 말풍선, 검은 패널, 요약 박스, 수치 카드를 계획하지 마세요.
 
 예시:
 ## 씬 1: 실적 발표와 주가 하락
@@ -749,7 +1093,7 @@ SCRIPT_SYSTEM_PROMPT = """당신은 한국 금융 콘텐츠를 위한 오리지�
 실적이 사상 최대인데도 주가는 떨어집니다. 투자자들은 당황스럽죠.
 
 [비주얼 설명 (한국어)]
-'사상 최대 실적'이라 적힌 모니터 화면 밖으로 붉은색 하락 화살표가 모니터를 깨고 튀어나오는 상황. 
+실적 호조를 상징하는 금빛 막대 구조물을 붉은색 하락 화살표가 깨고 튀어나오는 상황.
 
 [비주얼 프롬프트 (영어)]
 giant red downward arrow emerging from an unlabeled trading-room display, dramatic editorial composition, original 2D Korean finance comic, bold ink outlines, cel shading
@@ -760,8 +1104,8 @@ surprised
 [모션]
 chart_shock
 
-[말풍선]
-당황스럽네!
+[화면 문구]
+["사상 최대"]
 
 절대 금지사항:
 - 확정적 미래 예측 ("반드시 오릅니다" 등) 금지
@@ -869,6 +1213,15 @@ class ScriptWorker:
                     changed[index]["content"] = replacement
                     changed[index]["text"] = replacement
                     changed[index]["char_count"] = len(replacement)
+            source_chars = spoken_char_count(_narration_from_sections(sections))
+            changed_chars = spoken_char_count(_narration_from_sections(changed))
+            allowed_delta = max(8, round(source_chars * 0.08))
+            if source_chars and abs(changed_chars - source_chars) > allowed_delta:
+                logger.warning(
+                    "하우스 스타일 %s 보강이 총분량을 훼손해 원문을 유지함: %s -> %s자",
+                    device, source_chars, changed_chars,
+                )
+                return sections
             self._llm_provider_log.append({"provider": "claude-sonnet-4-6", "fallback": False, "purpose": f"house_style_{device}"})
             return changed
         except Exception as exc:
@@ -882,6 +1235,9 @@ class ScriptWorker:
         *,
         revision_instruction: str,
         format_name: str,
+        repetition_groups: list[dict] | None = None,
+        min_total_chars: int | None = None,
+        max_total_chars: int | None = None,
     ) -> list[dict]:
         """flow_qa가 지적한 리듬 문제를 사실은 그대로 두고 문장 형태만 고쳐 푼다.
 
@@ -895,33 +1251,59 @@ class ScriptWorker:
         메서드는 그 지시를 실제로 소비해, `_rewrite_sections_for_device`와
         같은 인덱스 치환 계약으로 사실을 바꾸지 않고 문장 리듬만 고친다.
         """
+        working_sections = [dict(section) for section in sections]
+        if "삭제하세요" in revision_instruction and repetition_groups:
+            working_sections, deleted_indexes = _delete_exact_repetition_occurrences(
+                working_sections, repetition_groups,
+            )
+            if deleted_indexes:
+                logger.info(
+                    "Flow QA 동일 반복 문장을 마지막 1회만 남기고 삭제함: sentence_indexes=%s",
+                    deleted_indexes,
+                )
+
         source_rows = [
             {"index": index, "text": str(section.get("content") or section.get("text") or "")}
-            for index, section in enumerate(sections)
+            for index, section in enumerate(working_sections)
         ]
         facts = json.dumps(verified_facts, ensure_ascii=False)
         system = f"""당신은 한국 금융 대본의 리듬 편집자입니다.
 사실·숫자·날짜·회사명·인과관계를 절대 추가·삭제·변경하지 마세요. 문장의 종결 어미와 역할
 (설명/질문/전환/강조/이유)만 다시 섞어 리듬을 만드세요. 같은 평서문(~습니다/입니다) 종결을
 세 문장 이상 연속 배치하지 마세요. 특정 창작자·채널의 문장이나 시그니처를 흉내 내지 마세요.
-각 문장은 공백을 제외하고 반드시 {_SENTENCE_HARD_CAP_CHARS}자 이하여야 합니다 — 리듬을 살리려고 절이나 수식어를
-덧붙여 문장을 늘리지 말고, 필요하면 문장을 둘로 나누기보다 더 짧게 다듬으세요.
+단, 편집 지시에 '삭제하세요'가 명시된 경우에는 지정된 동일 반복 문장만 마지막 1회를 남기고
+제거할 수 있습니다. 이는 금융 사실 삭제가 아니라 중복 구조 정리이며, 숫자·날짜·회사명·검증
+사실을 없애거나 바꾸는 데 이 예외를 사용할 수 없습니다. 이미 삭제된 반복 문장을 다시 만들지 마세요.
+각 문장은 공백을 제외하고 반드시 {_SENTENCE_HARD_CAP_CHARS}자, 띄어쓰기 단위 {_SENTENCE_HARD_CAP_WORDS}단어 이하여야 합니다. 한 씬에는 짧은 문장이
+둘 이상 들어갈 수 있으며, 이때도 씬을 한 문장으로 합치지 마세요. 리듬을 살리려고 새로운 사실이나
+수식어를 덧붙이지 말고, 기존 문장의 종결과 연결 방식만 다듬으세요.
 JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정된 한국어 문장"}}이어야 합니다."""
+        source_chars = spoken_char_count(_narration_from_sections(working_sections))
+        length_instruction = ""
+        if min_total_chars is not None and max_total_chars is not None:
+            length_instruction = (
+                f"\n전체 낭독 분량은 공백 제외 {min_total_chars}~{max_total_chars}자를 유지하세요. "
+                f"현재 분량은 {source_chars}자입니다."
+            )
         prompt = f"""형식: {format_name}
 검증 사실 묶음: {facts}
 편집 지시: {revision_instruction or '같은 평서문 종결이 세 문장 이상 이어지지 않게, 질문·전환·강조·이유 문장을 사실에 맞는 곳에 자연스럽게 섞으세요.'}
+{length_instruction}
 씬: {json.dumps(source_rows, ensure_ascii=False)}"""
         try:
             raw = self._call_llm_with_fallback(system, [{"role": "user", "content": prompt}], max_tokens=6000)
             match = re.search(r"\[[\s\S]*\]", raw)
             edited = json.loads(match.group(0) if match else raw)
             if not isinstance(edited, list):
-                return sections
+                repaired, converted = _stabilize_formal_rhythm(working_sections)
+                if converted:
+                    logger.info("결정론 종결 리듬 보정 적용: sentence_indexes=%s", converted)
+                return repaired
             replacements = {
                 int(item.get("index")): str(item.get("text") or "").strip()
                 for item in edited if isinstance(item, dict) and str(item.get("index", "")).isdigit()
             }
-            changed = [dict(section) for section in sections]
+            changed = [dict(section) for section in working_sections]
             skipped_overlong = []
             for index, replacement in replacements.items():
                 if not (0 <= index < len(changed) and replacement):
@@ -931,7 +1313,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 # 실패시켜 리듬 복구 시도 2회를 모두 소진시켰다. 리듬 하나를
                 # 고치며 다른 계약(문장 길이)을 조용히 깨는 치환은 받아들이지
                 # 않고 원문을 유지한다.
-                if _visible_char_count(replacement) > _SENTENCE_HARD_CAP_CHARS:
+                if not _section_sentences_within_hard_cap(replacement):
                     skipped_overlong.append(index)
                     continue
                 changed[index]["content"] = replacement
@@ -942,11 +1324,30 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                     "리듬 재편집이 %s자 상한을 넘긴 문장 %s개를 반환해 원문을 유지함: indexes=%s",
                     _SENTENCE_HARD_CAP_CHARS, len(skipped_overlong), skipped_overlong,
                 )
+            changed_chars = spoken_char_count(_narration_from_sections(changed))
+            allowed_delta = max(8, round(source_chars * 0.08))
+            outside_explicit_range = (
+                min_total_chars is not None
+                and max_total_chars is not None
+                and not (min_total_chars <= changed_chars <= max_total_chars)
+            )
+            if outside_explicit_range or (source_chars and abs(changed_chars - source_chars) > allowed_delta):
+                logger.warning(
+                    "리듬 재편집이 총분량 계약을 벗어나 결정론 보정만 적용함: %s -> %s자 (범위=%s~%s)",
+                    source_chars, changed_chars, min_total_chars, max_total_chars,
+                )
+                changed = working_sections
             self._llm_provider_log.append({"provider": "claude-sonnet-4-6", "fallback": False, "purpose": "flow_qa_rhythm_repair"})
-            return changed
+            repaired, converted = _stabilize_formal_rhythm(changed)
+            if converted:
+                logger.info("결정론 종결 리듬 보정 적용: sentence_indexes=%s", converted)
+            return repaired
         except Exception as exc:
             logger.warning("리듬 재편집 실패: %s", exc)
-            return sections
+            repaired, converted = _stabilize_formal_rhythm(working_sections)
+            if converted:
+                logger.info("결정론 종결 리듬 보정 적용: sentence_indexes=%s", converted)
+            return repaired
 
     def generate(self, keyword: str, category: str, target_minutes: int,
                  market_data: Optional[dict] = None, job_id: int = 0,
@@ -1046,6 +1447,12 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 selected_terms, keyword_news, length_contract, narrative_plan,
                 source_videos,
             )
+            pre_edit_spoken_chars = spoken_char_count(_narration_from_sections(sections))
+            pre_edit_length_ready = (
+                int(length_contract["min_chars"])
+                <= pre_edit_spoken_chars
+                <= int(length_contract["max_chars"])
+            )
             # P2/P3은 사실 생성이 아닌 수사 장치 보강만 하며, 각각 최대 한 번의
             # Claude 호출만 사용한다. 비활성화하면 기존 생성 결과를 그대로 둔다.
             if house_style_enabled and runtime_config.value("script_pattern_analogy_enabled"):
@@ -1055,6 +1462,27 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             if house_style_enabled and runtime_config.value("script_pattern_fake_question_enabled"):
                 sections = self._rewrite_sections_for_device(
                     sections, verified_facts, device="fake_reader_question", format_name=format_name,
+                )
+            source_sections_before_anchor = sections
+            anchored_sections, topic_anchors = _anchor_topic_boundaries(sections, keyword)
+            anchored_chars = spoken_char_count(_narration_from_sections(anchored_sections))
+            if not (
+                int(length_contract["min_chars"])
+                <= anchored_chars
+                <= int(length_contract["max_chars"])
+            ):
+                logger.warning(
+                    "선택 주체 앵커가 시간 보정 범위를 벗어나 원문을 유지함: actual=%s, expected=%s~%s",
+                    anchored_chars, length_contract["min_chars"], length_contract["max_chars"],
+                )
+                sections = source_sections_before_anchor
+                topic_anchors = []
+            else:
+                sections = anchored_sections
+            if topic_anchors:
+                logger.info(
+                    "선택 주체 도입·결말 앵커 적용: job_id=%s, boundaries=%s",
+                    job_id, topic_anchors,
                 )
             # 장면은 이후 이미지와 타이밍의 기준이므로, 대본에서만 문단을 제거해
             # 두 계보가 달라지는 일을 허용하지 않는다.
@@ -1086,9 +1514,31 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                         "Flow QA 리듬 문제 발견(repair %s/2): %s",
                         rhythm_repair_attempt + 1, instruction or "(revision_instruction 없음)",
                     )
-                    sections = self._rewrite_sections_for_rhythm(
-                        sections, verified_facts, revision_instruction=instruction, format_name=format_name,
+                    source_sections_before_rhythm = sections
+                    rhythm_sections = self._rewrite_sections_for_rhythm(
+                        sections,
+                        verified_facts,
+                        revision_instruction=instruction,
+                        format_name=format_name,
+                        repetition_groups=_coalesce_repetition_groups(
+                            (flow_qa.get("deterministic") or {}).get("repetitions") or []
+                        ),
+                        min_total_chars=int(length_contract["min_chars"]),
+                        max_total_chars=int(length_contract["max_chars"]),
                     )
+                    rhythm_chars = spoken_char_count(_narration_from_sections(rhythm_sections))
+                    if not (
+                        int(length_contract["min_chars"])
+                        <= rhythm_chars
+                        <= int(length_contract["max_chars"])
+                    ):
+                        logger.warning(
+                            "리듬 후처리가 시간 보정 범위를 벗어나 직전 대본을 유지함: actual=%s, expected=%s~%s",
+                            rhythm_chars, length_contract["min_chars"], length_contract["max_chars"],
+                        )
+                        sections = source_sections_before_rhythm
+                    else:
+                        sections = rhythm_sections
                     full_script = _narration_from_sections(sections)
                     try:
                         flow_qa = review_flow(
@@ -1103,14 +1553,56 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 if flow_qa.get("passed"):
                     logger.info("Flow QA 리듬 문제가 재편집으로 해결됨 (job_id=%s)", job_id)
 
+            # 모든 수사 장치·리듬 편집이 끝난 실제 승인 후보를 다시 검사한다.
+            # 후처리에서 분량이 줄어도 통과하던 Job 52 회귀를 이 경계에서 막는다.
+            # 리듬 편집이 검증 사실의 ``%``나 천단위 콤마 표기를 다시 가져올
+            # 수 있으므로, 승인 *전에* 낭독 표기를 확정한다. 이 결과가 이후
+            # TTS와 자막의 단일 원문이며 TTS 단계에서는 다시 문자를 바꾸지 않는다.
+            normalized_sections: list[dict] = []
+            for source_section in sections:
+                normalized = dict(source_section)
+                normalized_text = clean_script_commas_and_pct(
+                    str(source_section.get("content") or source_section.get("text") or "")
+                )
+                normalized["content"] = normalized_text
+                normalized["text"] = normalized_text
+                normalized["char_count"] = len(normalized_text)
+                normalized_sections.append(normalized)
+            sections = normalized_sections
+            full_script = _narration_from_sections(sections)
+            final_spoken_chars = spoken_char_count(full_script)
+            has_explicit_length_range = isinstance(length_contract, dict) and {
+                "min_chars", "max_chars"
+            }.issubset(length_contract)
+            if has_explicit_length_range and pre_edit_length_ready and not (
+                int(length_contract["min_chars"]) <= final_spoken_chars <= int(length_contract["max_chars"])
+            ):
+                raise ValueError(
+                    "후처리 대본이 시간 보정 범위를 벗어남: "
+                    f"actual={final_spoken_chars}, expected={length_contract['min_chars']}~{length_contract['max_chars']}"
+                )
+
             # 팩트 JSON이 유효하게 비어 있을 수는 있지만, 그 상태에서 금융
             # 단위가 붙은 수치를 Claude 대본에 허용하면 Job 184가 재발한다.
             # 이미지·TTS 계보가 만들어지기 전에 SCRIPT 단계에서 즉시 차단한다.
             _ensure_no_unverified_financial_numbers(full_script, verified_facts)
             # 대본 원문은 그대로 두고, 짧은 문장 조각만 5~6초 화면 체류 단위로
             # 묶는다. 이후 이미지·TTS·ASS가 모두 이 동일한 장면 계보를 사용한다.
-            sections = pace_sections_for_runtime(sections, int(length_contract["target_seconds"]))
-            sections = direct_scenes(enrich_scene_plans(sections))
+            sections = pace_sections_for_runtime(
+                sections,
+                int(length_contract["target_seconds"]),
+                subtitle_max_chars=int(runtime_config.value("subtitle_max_chars")),
+            )
+            # 무문자화를 강제하지 않는다. 승인 대본에 실제로 있는 회사명·지수명·
+            # 핵심 용어와 수치만 장면 로컬 허용 목록으로 만든다. 수치는 이미지
+            # 모델이 아니라 후속 결정론 표면 렌더러가 사용한다.
+            sections = attach_scene_screen_texts(sections)
+            sections = direct_scenes(
+                enrich_scene_plans(sections),
+                llm_call=lambda system, messages, max_tokens: self._call_llm_with_fallback(
+                    system, messages, max_tokens,
+                ),
+            )
             if data_visuals_enabled:
                 for scene in sections:
                     scene["market_snapshot"] = market_data
@@ -1172,7 +1664,10 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             {
                 "index": index,
                 "title": scene.get("title", ""),
-                "reason": (scene.get("bubble_validation") or {}).get("reasons", []),
+                "reason": list(dict.fromkeys(
+                    list((scene.get("bubble_validation") or {}).get("reasons", []))
+                    + list((scene.get("screen_text_validation") or {}).get("reasons", []))
+                )),
             }
             for index, scene in enumerate(sections)
             if scene.get("scene_rejected")
@@ -1347,6 +1842,11 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
         keyword_news = keyword_news or []
         source_videos = source_videos or []
         narrative_plan = narrative_plan or {"plan_id": "adaptive_plan", "story_beats": []}
+        # Claude는 한국어 장문에서 요청 글자 수를 대체로 10~20% 밑도는 경향이
+        # 있다. 5분 목표를 그대로 쓰면 매번 1,800~2,100자에서 멈춘 뒤 짧은
+        # 원문을 억지로 늘리는 재작성 루프가 반복된다. 초안 요청만 15% 높여
+        # 받고, 실제 승인 범위는 아래 length_contract(±5%)로 그대로 제한한다.
+        draft_target_chars = round(target_chars * 1.15)
         style_instruction = (
             "정보 공개 간격과 전환 횟수는 내러티브 플랜의 선택 근거와 검증 사실의 밀도에 맞춰 정한다. "
             "정해진 질문 수나 반전 횟수를 채우기 위해 문장을 추가하지 않는다."
@@ -1365,7 +1865,7 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 <narrative_plan>{json.dumps(narrative_plan, ensure_ascii=False)}</narrative_plan>
 작성 규칙:
 - [대사], [비주얼 설명 (한국어)], [비주얼 프롬프트 (영어)], [감정] 포함
-- [대사] 블록만 합산해 공백 제외 약 {target_chars}자(±8%)로 작성. 비주얼 설명·영문 프롬프트·메타데이터는 이 분량에 포함하지 않음
+- [대사] 블록만 합산해 공백 제외 약 {draft_target_chars}자로 작성. 비주얼 설명·영문 프롬프트·메타데이터는 이 분량에 포함하지 않음. 후단에서 실제 5분 승인 범위 {int((length_contract or {}).get('min_chars', target_chars))}~{int((length_contract or {}).get('max_chars', target_chars))}자로 정밀 보정하므로 짧게 쓰지 마세요.
 - The selected keywords are mandatory subjects, not optional context. Every section must directly explain a selected keyword, its verified impact, or the relationship between the selected keyword and the category. Do not replace this with a generic market crash, geopolitical event, or index recap unless the supplied evidence explicitly connects it.
 - Mention every distinctive entity, concept, and time qualifier contained in the selected topic naturally at least once. The category is the analytical lens, not a substitute for the selected topic.
 - Use unit-safe facts only: percentages use '퍼센트', index or price changes use '포인트'; never call a percentage a point value.
@@ -1374,8 +1874,9 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
 - 내러티브 플랜의 story_beats 순서·전환 목표를 따른다. 플랜은 고정 문구나 고정 비율이 아니라 소재에 맞춘 편집 의도다. 사실의 자연스러운 설명에 필요하면 인접 비트를 합치거나 짧게 조절할 수 있지만, 새 사실을 만들지 않는다. {style_instruction}
 - 앞 문장이 질문이면 바로 다음 문장 또는 다음 씬에서 검증 사실로 답한다. 같은 사실은 역할이 달라질 때만 다시 언급한다. 마지막은 도입을 반복하지 말고, 플랜의 체크포인트를 자연스럽게 정리한다.
 - 낭독 리듬을 검사하므로, 설명형 ``~습니다`` 문장을 세 개 이상 연속하지 마세요. 사실에 맞는 범위에서 질문·전환·이유·강조를 섞고, 질문에는 물음표를 사용한 뒤 곧바로 근거로 답하세요.
-- [대사]는 짧고 자연스러운 구어체 완결 문장 약 {max(1, round(target_chars / _SENTENCE_AVG_CHARS_FOR_COUNT))}개로 작성하세요(문장 수는 총 분량 {target_chars}자에 맞춰 자연스럽게 정해지는 목표치입니다). 각 문장은 공백 제외 {_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자 범위의 짧은 호흡이어야 하며, TTS가 한 호흡에 자연스럽게 읽을 수 있는 길이입니다.
+- [대사]는 짧고 자연스러운 구어체 완결 문장 약 {max(1, round(draft_target_chars / _SENTENCE_AVG_CHARS_FOR_COUNT))}개로 작성하세요(문장 수는 초안 분량 {draft_target_chars}자에 맞춘 목표치입니다). 각 문장은 공백 제외 {_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자, 최대 {_SENTENCE_HARD_CAP_CHARS}자·띄어쓰기 단위 {_SENTENCE_HARD_CAP_WORDS}단어 이내의 한 호흡이어야 합니다.
 - 한 문장이 길어질 경우 단어 중간이나 조사 앞에서 자르지 말고, 원인·전환·결론이 완결된 두 문장으로 자연스럽게 나누세요. 이미지 장면은 이후 여러 짧은 문장을 5~6초 단위로 자동으로 묶어 결정되므로, 지금은 문장 길이 계약만 지키면 됩니다.
+- 화면 자막은 공백 포함 18자 안팎에서 단어 경계로 나뉩니다. 긴 문장을 나눴을 때 마지막에 8자 미만의 짧은 자막 파편이 남지 않도록 문장 자체를 자연스럽게 다듬으세요.
 - 세 문장 이상을 단순 설명형으로 나열하지 마세요.
 - Improve only voice, pacing, transitions, and listener comprehension. You MUST add helpful background context, causal explanations, or market implications to meet the required length ({target_minutes} minutes, {target_chars} characters), but NEVER invent or substitute numerical facts, dates, or company names.
 - 마지막에 ## 메타데이터 섹션 추가 ([추천 제목], [추천 썸네일], [더보기 설명], [쇼츠 대본])
@@ -1416,26 +1917,26 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                     s_match = re.search(r'\[쇼츠 대본\]\s*:?\s*(.*?)(?=\[|$)', meta_text, re.DOTALL)
                     if s_match: meta_shorts = s_match.group(1).strip()
 
-                if _needs_dialogue_length_rewrite(script_body, target_chars):
+                if _dialogue_outside_length_contract(script_body, target_chars, length_contract):
                     script_body = self._rewrite_dialogue_to_target(script_body, target_chars)
 
-                if _needs_dialogue_length_rewrite(script_body, target_chars):
-                    # job 149(2026-08-05): 사용자 명시 지시 — 총 분량이
-                    # target_chars 허용폭(±8~15%)을 못 맞춘다고 작업 전체를
-                    # 실패시키지 말 것. TTS 싱크에 실제로 영향을 주는 건
-                    # 씬(문장) 단위 계약(_validate_scene_delivery: 문장 수,
-                    # 문장당 15~26자)이지 총 글자 수 총합이 아니다. 총 분량은
-                    # LLM 재작성 한 번과 결정론적 캡(문장 경계만 자르고 사실은
-                    # 절대 왜곡하지 않음)으로 최대한 근접시키되, 그래도
-                    # 못 맞추면 예외로 Anthropic API 호출만 낭비하며 작업
-                    # 전체를 죽이는 대신 최선의 결과로 계속 진행한다. 씬 단위
-                    # 계약은 바로 아래 _validate_scene_delivery가 별도로 계속
-                    # 강제하므로 자막 싱크 안전성은 그대로 유지된다.
+                if _dialogue_outside_length_contract(script_body, target_chars, length_contract):
+                    # Job 52는 이 경고를 통과한 뒤 5분 요청이 3분 25초로 끝났다.
+                    # 문장 단위 싱크가 맞아도 총분량이 틀리면 시간 계약은 실패다.
+                    # 짧은 대본으로 TTS·이미지 비용을 쓰지 않고 바깥 생성 재시도로
+                    # 넘겨, 목소리 속도를 바꾸지 않은 채 대본 분량으로 보정한다.
                     script_body = _cap_dialogue_to_target(script_body, target_chars)
-                    if _needs_dialogue_length_rewrite(script_body, target_chars):
+                    if _dialogue_outside_length_contract(script_body, target_chars, length_contract):
+                        if isinstance(length_contract, dict) and {
+                            "min_chars", "max_chars"
+                        }.issubset(length_contract):
+                            raise ValueError(
+                                "총 대사 분량이 시간 계약을 벗어남: "
+                                f"actual={_dialogue_char_count(script_body)}, target={target_chars}"
+                            )
                         logger.warning(
-                            "총 대사 분량이 목표 범위를 벗어났지만 씬 단위 계약은 유효해 그대로 진행: "
-                            "actual=%s, target=%s",
+                            "총 대사 분량이 목표 범위를 벗어났지만 레거시 호출에 분량 범위가 없어 "
+                            "씬 단위 계약으로 계속 검사함: actual=%s, target=%s",
                             _dialogue_char_count(script_body), target_chars,
                         )
 
@@ -1450,7 +1951,12 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 # 충분히 있는가"만 검증하면 된다.
                 target_scene_count = max(1, round(target_chars / _SENTENCE_AVG_CHARS_FOR_COUNT))
                 try:
-                    _validate_scene_delivery(sections, target_scene_count=target_scene_count, autonomy_mode=getattr(self, "_current_autonomy_mode", None))
+                    _validate_scene_delivery(
+                        sections,
+                        target_scene_count=target_scene_count,
+                        autonomy_mode=getattr(self, "_current_autonomy_mode", None),
+                        subtitle_max_chars=int(runtime_config.value("subtitle_max_chars")),
+                    )
                 except ValueError:
                     # 문장 수가 부족하거나 문장이 길면 같은 사실 범위에서만
                     # 재편집한다. 레거시 mock으로 대체하지 않는다.
@@ -1460,17 +1966,17 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                         evidence={"verified_facts": verified_facts, "market_snapshot": market_data},
                     ))
                     try:
-                        _validate_scene_delivery(sections, target_scene_count=target_scene_count, autonomy_mode=getattr(self, "_current_autonomy_mode", None))
+                        _validate_scene_delivery(
+                            sections,
+                            target_scene_count=target_scene_count,
+                            autonomy_mode=getattr(self, "_current_autonomy_mode", None),
+                            subtitle_max_chars=int(runtime_config.value("subtitle_max_chars")),
+                        )
                     except ValueError as delivery_err:
-                        # job 152(2026-08-05), 사용자 명시 지시: 재작성까지
-                        # 시도했는데도 문장 하나가 38자를 살짝 넘는다고 job
-                        # 전체를 실패시키지 않는다. 장면 수 부족(실제로 보여줄
-                        # 장면이 모자람)은 여전히 하드 실패로 남기지만, 완결
-                        # 문장 하나가 상한을 넘는 건 자막 한 장의 표시 시간이
-                        # 조금 늘어나는 정도라 씬 단위 재구성 없이 진행한다.
-                        if "장면 수가" in str(delivery_err):
-                            raise
-                        logger.warning("씬 길이 계약을 완전히 못 맞췄지만 그대로 진행: %s", delivery_err)
+                        # 2026-08-22 사용자 기준: 28자 상한은 단순 미관 경고가
+                        # 아니라 TTS 호흡과 자막 의미 단위의 계약이다. AUTO에서도
+                        # 완화하지 않고, 바깥 생성 재시도로 넘겨 새 대본을 만든다.
+                        raise
                 break
             except ValueError as val_err:
                 logger.warning(f"Script parsing validation failed (attempt {attempt+1}/3): {val_err}. Retrying LLM call...")
@@ -1537,7 +2043,9 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
         미달을 스스로 교정할 기회가 없었다. 최대 3회까지, 직전 결과의 실제
         문장 수를 알려주며 다시 요청한다 — 매번 새로 처음부터 요청하는 것보다
         "51개였다, 최소 53개 필요"라는 구체적 피드백이 한두 문장 추가로
-        수렴할 확률이 높다.
+        수렴할 확률이 높다. 총분량을 맞춘 직후 한 문장만 1~2자 초과하는
+        경우에도 원문으로 되돌아가지 않도록 제한된 다섯 번 안에서 다시
+        다듬는다.
         """
         try:
             current_chars = _dialogue_char_count(script_body)
@@ -1547,15 +2055,16 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
             source_narration = _narration_from_sections(source_sections)
 
             correction = ""
-            for rewrite_attempt in range(3):
+            for rewrite_attempt in range(_NARRATION_REWRITE_ATTEMPTS):
                 rewritten = self._call_llm_with_fallback(
                     "You are a Korean financial script editor.",
                     [{"role": "user", "content": f"""아래 한국어 내레이션을 같은 검증 사실 범위 안에서만 재편집하세요.
 새 숫자, 날짜, 회사명, 출처, 인과관계, 투자 권유를 만들지 마세요. 원문의 사실과 불확실성 표현을 보존하세요.
 
 반드시 JSON 문자열 배열만 반환하세요. 배열은 약 {target_scene_count}개의 짧고 자연스러운 구어체 문장입니다.
-각 원소는 완결된 한국어 문장 하나이며 공백 제외 {_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자입니다. 번호, 제목, 마크다운, 설명을 넣지 마세요.
+각 원소는 완결된 한국어 문장 하나이며 공백 제외 {_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자, 최대 {_SENTENCE_HARD_CAP_CHARS}자·띄어쓰기 단위 {_SENTENCE_HARD_CAP_WORDS}단어 이내입니다. 번호, 제목, 마크다운, 설명을 넣지 마세요.
 각 문장은 자연스럽게 독립적으로 들리고, 단어 중간이나 조사 앞에서 끝나면 안 됩니다.
+화면 자막은 공백 포함 18자 안팎에서 단어 경계로 나뉩니다. 두 청크로 나뉘는 문장은 어느 쪽도 8자 미만의 짧은 파편이 되지 않게 어순을 다듬으세요.
 총 대사 분량은 공백 제외 약 {target_chars}자여야 합니다. 현재 분량은 {current_chars}자입니다.
 {correction}
 원문:
@@ -1569,14 +2078,28 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 # 더 빡빡했다. 자체 검사를 실제 하류 계약과 동일한 허용치로
                 # 맞춘다.
                 too_few_scenes = len(lines) < minimum_scene_count
-                overlong_lines = [line for line in lines if _visible_char_count(line) > _SENTENCE_HARD_CAP_CHARS]
+                overlong_lines = [
+                    line for line in lines
+                    if _visible_char_count(line) > _SENTENCE_HARD_CAP_CHARS
+                    or len(line.split()) > _SENTENCE_HARD_CAP_WORDS
+                ]
+                caption_issues = _caption_chunk_issues(
+                    lines,
+                    max_chars=int(runtime_config.value("subtitle_max_chars")),
+                )
                 if not too_few_scenes and not overlong_lines:
+                    if caption_issues:
+                        logger.warning(
+                            "짧은 자막 종결부는 동일 이미지 청크 계획에서 함께 묶습니다: indexes=%s",
+                            ", ".join(str(issue["sentence_index"]) for issue in caption_issues[:12]),
+                        )
                     structured = _structured_script_from_dialogue_lines(lines)
                     structured_chars = _dialogue_char_count(structured)
                     if _needs_dialogue_length_rewrite(structured, target_chars) is False:
                         logger.info(
-                            "Narration sentence rewrite applied (rewrite attempt %s/3): %s -> %s chars, %s scenes",
-                            rewrite_attempt + 1, current_chars, structured_chars, len(lines),
+                            "Narration sentence rewrite applied (rewrite attempt %s/%s): %s -> %s chars, %s scenes",
+                            rewrite_attempt + 1, _NARRATION_REWRITE_ATTEMPTS,
+                            current_chars, structured_chars, len(lines),
                         )
                         return structured
                     # job 148 재현: 문장 수·문장당 길이는 계약을 통과했지만
@@ -1585,35 +2108,54 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                     # "scenes=11 (need >= 10)"이라며 실제로는 문제가 없는
                     # 장면 수를 원인으로 잘못 로그하고, 엉뚱한 "문장 수를
                     # 늘리라"는 교정 지시를 다음 시도에 보냈다.
+                    tolerance = get_tolerance()
+                    minimum_chars = round(target_chars * (1 - tolerance))
+                    maximum_chars = round(target_chars * (1 + tolerance))
                     logger.warning(
-                        "Narration sentence rewrite attempt %s/3 missed the total length contract: "
+                        "Narration sentence rewrite attempt %s/%s missed the total length contract: "
                         "chars=%s (target=%s, need %s~%s)",
-                        rewrite_attempt + 1, structured_chars, target_chars,
-                        round(target_chars * 0.92), round(target_chars * 1.15),
+                        rewrite_attempt + 1, _NARRATION_REWRITE_ATTEMPTS,
+                        structured_chars, target_chars,
+                        minimum_chars, maximum_chars,
                     )
-                    direction = "줄이세요" if structured_chars > target_chars else "늘리세요"
-                    correction = (
-                        f"직전 응답은 총 {structured_chars}자였고 목표는 약 {target_chars}자입니다. "
-                        f"문장 수({len(lines)}개)는 유지한 채 각 문장 길이를 조정해 총 분량을 {direction}.\n"
-                    )
+                    if structured_chars < minimum_chars:
+                        minimum_lines = max(
+                            target_scene_count,
+                            math.ceil(minimum_chars / _SENTENCE_AVG_CHARS_FOR_COUNT),
+                        )
+                        correction = (
+                            f"직전 응답은 총 {structured_chars}자, {len(lines)}개 문장이었고 "
+                            f"허용 하한은 {minimum_chars}자입니다. 각 문장을 "
+                            f"{_SENTENCE_TARGET_MIN_CHARS}~{_SENTENCE_TARGET_MAX_CHARS}자로 유지하면서 "
+                            f"문장 수를 반드시 최소 {minimum_lines}개로 늘려 "
+                            "총 분량을 채우세요. 같은 문장을 반복하지 말고 원문의 배경·원인·판단 기준을 "
+                            "각각 완결된 짧은 문장으로 나누세요.\n"
+                        )
+                    else:
+                        correction = (
+                            f"직전 응답은 총 {structured_chars}자였고 허용 상한은 {maximum_chars}자입니다. "
+                            f"문장 수({len(lines)}개)는 유지한 채 중복 수식만 줄여 총 분량을 줄이세요.\n"
+                        )
                     continue
                 if too_few_scenes:
                     logger.warning(
-                        "Narration sentence rewrite attempt %s/3 missed the scene-count contract: "
+                        "Narration sentence rewrite attempt %s/%s missed the scene-count contract: "
                         "scenes=%s (need >= %s)",
-                        rewrite_attempt + 1, len(lines), minimum_scene_count,
+                        rewrite_attempt + 1, _NARRATION_REWRITE_ATTEMPTS,
+                        len(lines), minimum_scene_count,
                     )
                     correction = (
                         f"직전 응답은 {len(lines)}개 문장이었고 최소 {minimum_scene_count}개가 필요합니다. "
                         f"이번에는 반드시 {target_scene_count}개(최소 {minimum_scene_count}개 이상)를 채우세요. "
                         "문장을 억지로 합치지 말고, 원문의 완결된 생각 단위를 더 잘게 나누어 문장 수를 늘리세요.\n"
                     )
-                else:
+                elif overlong_lines:
                     longest = max(_visible_char_count(line) for line in overlong_lines)
                     logger.warning(
-                        "Narration sentence rewrite attempt %s/3 missed the per-sentence length contract: "
+                        "Narration sentence rewrite attempt %s/%s missed the per-sentence length contract: "
                         "%s line(s) over %s chars, longest=%s",
-                        rewrite_attempt + 1, len(overlong_lines), _SENTENCE_HARD_CAP_CHARS, longest,
+                        rewrite_attempt + 1, _NARRATION_REWRITE_ATTEMPTS,
+                        len(overlong_lines), _SENTENCE_HARD_CAP_CHARS, longest,
                     )
                     correction = (
                         f"직전 응답 중 {len(overlong_lines)}개 문장이 공백 제외 {_SENTENCE_HARD_CAP_CHARS}자를 넘었습니다(최대 {longest}자). "
@@ -1866,9 +2408,22 @@ def _needs_dialogue_length_rewrite(script_body: str, target_chars: int) -> bool:
     if not script_body or target_chars <= 0:
         return False
     actual_chars = _dialogue_char_count(script_body)
-    minimum = round(target_chars * 0.92)
-    maximum = round(target_chars * 1.15)
+    tolerance = get_tolerance()
+    minimum = round(target_chars * (1 - tolerance))
+    maximum = round(target_chars * (1 + tolerance))
     return actual_chars < minimum or actual_chars > maximum
+
+
+def _dialogue_outside_length_contract(
+    script_body: str,
+    target_chars: int,
+    length_contract: dict | None,
+) -> bool:
+    """운영 호출은 명시적 시간 범위를, 레거시 호출은 기존 범위를 사용한다."""
+    if isinstance(length_contract, dict) and {"min_chars", "max_chars"}.issubset(length_contract):
+        actual_chars = _dialogue_char_count(script_body)
+        return not int(length_contract["min_chars"]) <= actual_chars <= int(length_contract["max_chars"])
+    return _needs_dialogue_length_rewrite(script_body, target_chars)
 
 
 def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
@@ -1933,8 +2488,9 @@ def _cap_dialogue_to_target(script_body: str, target_chars: int) -> str:
     # two medium sentences: one fits, two exceed the local share. Fill the
     # remaining *global* budget with whole next sentences while retaining at
     # least one sentence from every scene.
-    lower_bound = round(target_chars * 0.92)
-    upper_bound = round(target_chars * 1.08)
+    tolerance = get_tolerance()
+    lower_bound = round(target_chars * (1 - tolerance))
+    upper_bound = round(target_chars * (1 + tolerance))
     current_total = sum(_visible_char_count(value) for value in shortened_values)
     made_progress = True
     while current_total < lower_bound and made_progress:
@@ -2104,22 +2660,50 @@ def _split_sections_for_visual_pacing(sections: list, max_chars: int = _SENTENCE
 
 
 def _minimum_scene_count(target_scene_count: int) -> int:
-    """5~6초 장면 계약의 최소 허용 장면 수를 반환한다.
+    """목표 분량 하한을 절대 상한 내 완결 문장으로 채우는 최소 개수다.
 
-    2026-08-04, job 147에서 반복 재현: target=55일 때 Claude가 49, 52, 52로
-    거듭 undershoot했다. 이전에는 고정 "-2"(target 대비 96%)를 요구했는데,
-    이 고정치는 영상 길이가 길수록 상대적으로 훨씬 빡빡해진다(target=55일
-    때 -2=96%지만 target=218인 20분 영상에서는 -2=99%). 실측 undershoot가
-    관측된 지금, 목표치의 90%로 완화한다 — 이 최소치에서도 평균 장면 길이는
-    5~6초 계약의 상한(6.0초) 안에 머문다(300초/50장면=6.0초). 문장을 억지로
-    잘라 장면 수를 채우지 않는다는 규칙(_split_sections_for_visual_pacing)은
-    그대로 유지되며, 이 함수는 LLM이 실제로 써낸 완결 문장 수를 얼마나
-    관대하게 받아들일지만 조정한다.
+    ``target_scene_count``는 목표 글자수를 평균 18자로 나눈 값이다. 총 분량
+    허용 하한과 28자 절대 상한으로 실제 필요한 최소 문장 수를 계산한다.
+    15~20자는 계속 작문 권장 범위지만, 이미 총시간과 28자 상한을 통과한
+    대본을 권장 문장 수만으로 폐기하지 않는다. 이미지 장면은 후단에서 실제
+    읽기 속도 기준 5~6초로 다시 묶고 자막 꼬리 파편도 별도로 검사한다.
     """
-    return max(1, round(target_scene_count * 0.90))
+    ratio = _SENTENCE_AVG_CHARS_FOR_COUNT * (1 - get_tolerance()) / _SENTENCE_HARD_CAP_CHARS
+    return max(1, math.ceil(target_scene_count * ratio))
 
 
-def _validate_scene_delivery(sections: list[dict], target_scene_count: int, autonomy_mode: str | None = None) -> None:
+def _caption_chunk_issues(
+    sentences: list[str], *, max_chars: int = 18, min_chars: int = 8,
+) -> list[dict]:
+    """긴 문장을 분할한 결과 생기는 짧은 꼬리 자막을 진단한다.
+
+    ``안녕.`` 같은 의도적인 짧은 완결문은 한 청크이므로 제외한다. 이 진단은
+    작문 재시도 힌트로만 사용한다. 실제 이미지 전환은 후단의 자막-장면
+    계약이 해당 짧은 청크까지 같은 이미지에 묶은 뒤에만 허용하므로, 길이만
+    보고 SCRIPT를 폐기하지 않는다.
+    """
+    issues: list[dict] = []
+    for sentence_index, sentence in enumerate(sentences, start=1):
+        chunks = split_script_into_caption_chunks(
+            sentence,
+            max_chars=max_chars,
+            min_chars=min_chars,
+        )
+        short_chunks = [chunk for chunk in chunks if len(chunk) < min_chars]
+        if len(chunks) > 1 and short_chunks:
+            issues.append({
+                "sentence_index": sentence_index,
+                "sentence": sentence,
+                "chunks": chunks,
+                "short_chunks": short_chunks,
+            })
+    return issues
+
+
+def _validate_scene_delivery(
+    sections: list[dict], target_scene_count: int, autonomy_mode: str | None = None,
+    subtitle_max_chars: int = 18,
+) -> None:
     """짧은 완결 문장 기준의 목표 문장 수와 길이를 생성 단계에서 검사합니다 (제한 완화됨)."""
     minimum_scene_count = _minimum_scene_count(target_scene_count)
     if len(sections) < minimum_scene_count:
@@ -2133,13 +2717,22 @@ def _validate_scene_delivery(sections: list[dict], target_scene_count: int, auto
         len(re.sub(r"\s+", "", str(scene.get("content") or "")))
         for scene in sections
         if len(re.sub(r"\s+", "", str(scene.get("content") or ""))) > _SENTENCE_HARD_CAP_CHARS
+        or len(str(scene.get("content") or "").split()) > _SENTENCE_HARD_CAP_WORDS
     ]
     if overlong:
         msg = f"완결 문장 길이가 {_SENTENCE_HARD_CAP_CHARS}자를 초과합니다: max={max(overlong)}"
-        if autonomy_mode == "AUTO":
-            logger.warning(msg)
-        else:
-            raise ValueError(msg)
+        # 사용자가 지정한 호흡 상한은 AUTO에서도 낮춰 통과시키지 않는다.
+        raise ValueError(msg)
+    caption_issues = _caption_chunk_issues(
+        [str(scene.get("content") or scene.get("text") or "") for scene in sections],
+        max_chars=subtitle_max_chars,
+    )
+    if caption_issues:
+        indexes = ", ".join(str(issue["sentence_index"]) for issue in caption_issues[:12])
+        logger.warning(
+            "8자 미만 자막 종결부는 동일 이미지 안에 묶어 처리합니다: sentence_indexes=%s",
+            indexes,
+        )
 
 
 FALLBACK_PROMPT_PATTERN = re.compile(
@@ -2172,6 +2765,63 @@ def _dedupe_similar_consecutive_sentences(text: str) -> str:
     return " ".join(unique)
 
 
+def _parse_screen_text_values(raw: str) -> list[str]:
+    """[화면 문구]의 JSON 문자열 배열만 보수적으로 읽는다."""
+    value = str(raw or "").strip()
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+    if not isinstance(parsed, list) or not all(isinstance(item, str) for item in parsed):
+        return []
+    return list(dict.fromkeys(item.strip() for item in parsed if item.strip()))[:3]
+
+
+def _validate_screen_text_values(
+    values: list[str], narration: str, evidence: dict | None,
+) -> dict:
+    """화면 문구가 현재 장면의 승인 대사에 글자 그대로 존재하는지 확인한다.
+
+    전체 영상의 ``verified_facts``는 모든 장면에 공통으로 전달될 수 있으므로
+    다른 장면의 기업·수치를 현재 장면 허용 문자열로 승격하지 않는다.
+    """
+    narration_source = str(narration or "")
+    sources = [narration_source]
+    evidence = evidence or {}
+    article = evidence.get("article_capture")
+    if isinstance(article, dict):
+        sources.extend(str(value or "") for value in article.values())
+
+    def compact(text: str) -> str:
+        return re.sub(r"\s+", "", text)
+
+    reasons: list[str] = []
+    for value in values:
+        value_compact = compact(value)
+        in_approved_narration = bool(value_compact and value_compact in compact(narration_source))
+        in_article_capture = any(
+            value_compact in compact(source)
+            for source in sources[1:]
+            if source and value_compact
+        )
+        if not in_approved_narration and not in_article_capture:
+            reasons.append(f"screen_text_not_verbatim:{value}")
+            continue
+        # 승인 대사는 상류의 23개 언론사 교차검증·verified_facts·숫자
+        # hard-fail을 이미 통과한 SSOT다. ``15%``가 TTS용 ``15퍼센트``로
+        # 확정된 뒤 원 기사 표기와 다시 비교해 거부하지 않는다.
+        if not in_approved_narration:
+            numeric_validation = validate_verbatim(value, evidence)
+            reasons.extend(numeric_validation.reasons)
+    return {
+        "passed": not reasons,
+        "reasons": list(dict.fromkeys(reasons)),
+        "sources_checked": len([source for source in sources if source]),
+    }
+
+
 def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
     """## 씬 제목 또는 ## 섹션명 기준으로 분리하고, 대사/한국어 설명/영어 프롬프트/감정 포즈를 추출합니다."""
     parts = re.split(r'(?m)^##\s*(.+)$', full_text)
@@ -2185,7 +2835,7 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
             raw_content = parts[i + 1].strip()
             
             # [대사] 추출
-            content_match = re.search(r'\[대사\]\s*(.*?)(?=\[비주얼 설명|$|\[비주얼 프롬프트|\[감정)', raw_content, re.DOTALL)
+            content_match = re.search(r'\[대사\]\s*(.*?)(?=\[비주얼 설명|$|\[비주얼 프롬프트|\[감정|\[화면 문구)', raw_content, re.DOTALL)
             content = content_match.group(1).strip() if content_match else ""
             if not content:
                 content = re.sub(r'\[비주얼 설명.*$', '', raw_content, flags=re.DOTALL).strip()
@@ -2198,15 +2848,15 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
             content = _dedupe_similar_consecutive_sentences(content)
             
             # [비주얼 설명 (한국어)] 추출
-            prompt_ko_match = re.search(r'\[비주얼 설명\s*(?:\(한국어\))?\]\s*(.*?)(?=\[비주얼 프롬프트|$|\[감정|\[대사)', raw_content, re.DOTALL)
+            prompt_ko_match = re.search(r'\[비주얼 설명\s*(?:\(한국어\))?\]\s*(.*?)(?=\[비주얼 프롬프트|$|\[감정|\[대사|\[화면 문구)', raw_content, re.DOTALL)
             prompt_ko = prompt_ko_match.group(1).strip() if prompt_ko_match else ""
             
             # [비주얼 프롬프트 (영어)] 추출
-            prompt_en_match = re.search(r'\[비주얼 프롬프트\s*(?:\(영어\))?\]\s*(.*?)(?=\[감정|$|\[대사|\[비주얼 설명)', raw_content, re.DOTALL)
+            prompt_en_match = re.search(r'\[비주얼 프롬프트\s*(?:\(영어\))?\]\s*(.*?)(?=\[감정|$|\[대사|\[비주얼 설명|\[화면 문구)', raw_content, re.DOTALL)
             prompt_en = prompt_en_match.group(1).strip() if prompt_en_match else ""
             
             # [감정] 추출
-            pose_match = re.search(r'\[감정\]\s*(.*?)(?=\[대사|$|\[비주얼 설명|\[비주얼 프롬프트|\[모션|\[말풍선)', raw_content, re.DOTALL)
+            pose_match = re.search(r'\[감정\]\s*(.*?)(?=\[대사|$|\[비주얼 설명|\[비주얼 프롬프트|\[모션|\[말풍선|\[화면 문구)', raw_content, re.DOTALL)
             pose = pose_match.group(1).strip() if pose_match else "neutral"
             pose = re.sub(r'[^a-zA-Z]', '', pose).lower()
             if pose not in ["happy", "worried", "surprised", "pointing", "thinking", "explaining", "neutral"]:
@@ -2214,16 +2864,31 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
                 pose = get_character_pose_from_text(content)
 
             # [모션] 추출
-            motion_match = re.search(r'\[모션\]\s*(.*?)(?=\[대사|$|\[비주얼 설명|\[비주얼 프롬프트|\[감정|\[말풍선)', raw_content, re.DOTALL)
+            motion_match = re.search(r'\[모션\]\s*(.*?)(?=\[대사|$|\[비주얼 설명|\[비주얼 프롬프트|\[감정|\[말풍선|\[화면 문구)', raw_content, re.DOTALL)
             motion_type = motion_match.group(1).strip().lower() if motion_match else ""
             if motion_type not in ["chart_shock", "pointing_explain", "thinking_desk", "walking_intro", "celebration"]:
                 motion_type = ""
 
             # [말풍선] 추출
-            bubble_match = re.search(r'\[말풍선\]\s*(.*?)(?=\[대사|$|\[비주얼 설명|\[비주얼 프롬프트|\[감정|\[모션)', raw_content, re.DOTALL)
+            bubble_match = re.search(r'\[말풍선\]\s*(.*?)(?=\[대사|$|\[비주얼 설명|\[비주얼 프롬프트|\[감정|\[모션|\[화면 문구)', raw_content, re.DOTALL)
             bubble_text = bubble_match.group(1).strip() if bubble_match else ""
             bubble_validation = validate_verbatim(bubble_text, evidence)
-            scene_rejected = bool(bubble_text and not bubble_validation.passed)
+            screen_text_match = re.search(
+                r'\[화면 문구\]\s*(.*?)(?=\[대사|$|\[비주얼 설명|\[비주얼 프롬프트|\[감정|\[모션|\[말풍선)',
+                raw_content,
+                re.DOTALL,
+            )
+            screen_text_raw = screen_text_match.group(1).strip() if screen_text_match else "[]"
+            screen_texts = _parse_screen_text_values(screen_text_raw)
+            screen_text_validation = _validate_screen_text_values(screen_texts, content, evidence)
+            malformed_screen_text = bool(screen_text_raw and screen_text_raw != "[]" and not screen_texts)
+            if malformed_screen_text:
+                screen_text_validation["passed"] = False
+                screen_text_validation["reasons"].append("screen_text_invalid_json_array")
+            scene_rejected = bool(
+                (bubble_text and not bubble_validation.passed)
+                or not screen_text_validation["passed"]
+            )
             if scene_rejected:
                 logger.warning(
                     "scene '%s' rejected: bubble text is not evidence-grounded (%s)",
@@ -2244,6 +2909,8 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
                     "matched_sources": bubble_validation.matched_sources,
                     "numeric_tokens": bubble_validation.numeric_tokens,
                 },
+                "screen_texts": screen_texts,
+                "screen_text_validation": screen_text_validation,
                 "scene_rejected": scene_rejected,
             })
 
@@ -2257,6 +2924,8 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
             "motion_type": "walking_intro",
             "bubble_text": "",
             "bubble_validation": {"passed": True, "reasons": [], "matched_sources": [], "numeric_tokens": []},
+            "screen_texts": [],
+            "screen_text_validation": {"passed": True, "reasons": [], "sources_checked": 0},
             "scene_rejected": False,
         })
 
@@ -2274,6 +2943,10 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
             )
         else:
             prompt_needs_rebuild = False
+        prompt_text_violations = prompt_text_contract_violations(
+            prompt_en,
+            [value for value in s.get("screen_texts") or [] if not contains_financial_number(value)],
+        )
 
         section = {
             "title": s["title"],
@@ -2282,10 +2955,19 @@ def _parse_sections(full_text: str, evidence: dict | None = None) -> list:
             "prompt_en": prompt_en,
             "prompt": prompt_en,  # Backward compatibility
             "prompt_needs_rebuild": prompt_needs_rebuild,
+            # 장면 설계 자체는 보존하고 이미지 API 직전 공통 계약에서 문자
+            # 지시만 제거한다. 이 기록으로 대본→이미지 계보에서 모순을 감사한다.
+            "prompt_text_contract": {
+                "version": "scene-local-text-contract-v2",
+                "requires_sanitization": bool(prompt_text_violations),
+                "violations": prompt_text_violations,
+            },
             "pose": s["pose"],
             "motion_type": s["motion_type"],
             "bubble_text": s["bubble_text"],
             "bubble_validation": s.get("bubble_validation", {"passed": True}),
+            "screen_texts": list(s.get("screen_texts") or []),
+            "screen_text_validation": s.get("screen_text_validation", {"passed": True}),
             "scene_rejected": bool(s.get("scene_rejected")),
             "section": section_type,
             "char_count": len(s["content"]),

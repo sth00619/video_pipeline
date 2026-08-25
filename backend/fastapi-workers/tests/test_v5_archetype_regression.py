@@ -1,6 +1,6 @@
 import os
 import pytest
-from app.utils.art_direction import select_archetype_for_scene, keyword_fallback
+from app.utils.art_direction import direct_scenes, select_archetype_for_scene, keyword_fallback
 
 def test_regression_no_api_key(monkeypatch):
     """1. ANTHROPIC_API_KEY 미설정 환경에서 keyword_fallback 정상 동작 및 크래시 없음 증명."""
@@ -43,8 +43,6 @@ def test_pure_supply_chain_metaphor(monkeypatch):
 def test_classroom_cap_limit(monkeypatch):
     """5. 10개 씬 대본 시뮬레이션 시 classroom 선택 비율이 15% 캡(최대 1~2개)을 초과하지 않는지 검증."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    from app.utils.art_direction import direct_scenes
-
     # 10개 씬 모두 개념/설명 키워드가 들어간 대본 시뮬레이션
     sample_scenes = [
         {"content": f"개념과 용어 정의 설명 {i}"} for i in range(10)
@@ -56,3 +54,26 @@ def test_classroom_cap_limit(monkeypatch):
     # 10개 씬 15% cap = round(1.5) = 2개 이하
     assert classroom_count <= 2, f"classroom 갯수({classroom_count})가 캡(2)을 초과함: {archetypes}"
 
+
+def test_direct_scenes_batches_remote_art_direction_once(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "dummy_key")
+    calls = []
+
+    def fake_batch(_system, _messages, _max_tokens):
+        calls.append(1)
+        return """[
+          {"index": 0, "archetype": "data_lab", "reason": "실적 분석", "specific_props": "두 반도체 웨이퍼"},
+          {"index": 1, "archetype": "split_stage", "reason": "두 회사 비교", "specific_props": "두 생산 라인"},
+          {"index": 2, "archetype": "briefing_podium", "reason": "결론 설명", "specific_props": "발표대"}
+        ]"""
+
+    directed = direct_scenes([
+        {"content": "삼성전자 반도체 실적을 분석합니다."},
+        {"content": "두 회사의 주주환원을 비교합니다."},
+        {"content": "마지막으로 확인할 기준을 정리합니다."},
+    ], llm_call=fake_batch)
+
+    assert len(calls) == 1
+    assert [scene["archetype"] for scene in directed] == [
+        "data_lab", "split_stage", "briefing_podium",
+    ]

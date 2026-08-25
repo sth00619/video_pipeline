@@ -40,7 +40,8 @@ from app.config import ELEVENLABS_TTS_MODEL
 from app.utils.quality_gate import extract_narration, sanitize_narration, assess_subtitles, persist_quality_report
 from app.utils.korean_tts import normalize_korean_numbers_for_tts
 from app.utils.sentence_splitter import split_sentences
-from app.utils.script_length import spoken_char_count, update_calibration
+from app.utils.caption_segmentation import split_script_into_caption_chunks
+from app.utils.script_length import effective_duration_tolerance, spoken_char_count, update_calibration
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +285,8 @@ class TtsWorker:
                 runtime_config.value("tts_model_body"),
                 speed,
             )
-        duration_tolerance = float(runtime_config.value("tts_duration_tolerance"))
+        configured_duration_tolerance = float(runtime_config.value("tts_duration_tolerance"))
+        duration_tolerance = effective_duration_tolerance(configured_duration_tolerance)
         allowed_delta_seconds = (
             float(target_seconds) * duration_tolerance + DURATION_PROBE_GRACE_SECONDS
             if target_seconds else None
@@ -299,21 +301,22 @@ class TtsWorker:
             ),
             "probe_grace_seconds": DURATION_PROBE_GRACE_SECONDS if target_seconds else None,
             "allowed_delta_seconds": round(allowed_delta_seconds, 2) if allowed_delta_seconds else None,
+            "configured_tolerance_pct": round(configured_duration_tolerance * 100, 2),
+            "effective_tolerance_pct": round(duration_tolerance * 100, 2),
             "spoken_char_count": spoken_char_count(clean_script),
             "calibration": calibration,
         }
-        # A request for a five-minute video must never silently continue as a
-        # three-minute production.  The calling workflow treats this as a
-        # recoverable generation failure, before it spends image or motion
-        # credits on material that cannot fill the requested runtime.
+        # 5분 요청을 3분대 결과로 계속 진행하면 이후 이미지·모션 비용까지
+        # 모두 잘못 쓰게 된다. 실제 음성은 감사용으로 남기되 다음 단계로는
+        # 넘기지 않고 SCRIPT 분량 보정부터 다시 수행하게 한다.
         if target_seconds and not duration_validation["within_tolerance"]:
             message = (
                 f"TTS duration is outside the allowed {int(duration_tolerance * 100)}% range: "
                 f"requested={float(target_seconds):.1f}s, actual={actual_duration:.1f}s. "
-                "Non-blocking warning: continuing pipeline execution."
+                "Regenerate the script length before image generation."
             )
-            persist_quality_report(job_id, "tts_duration", {**duration_validation, "passed": True, "warning": message})
-            logger.warning(message)
+            persist_quality_report(job_id, "tts_duration", {**duration_validation, "passed": False, "error": message})
+            raise RuntimeError(message)
 
         # 3. 자막 타임스탬프 추출 (Forced Alignment → stable-ts → Whisper → 글자수 비례)
         chunks = []
@@ -824,7 +827,11 @@ class TtsWorker:
                     if time_left <= 0:
                         logger.warning("ElevenLabs request overall deadline exceeded")
                         break
-                    req_timeout = min(60, max(10, time_left))
+                    # timeout 숫자 하나는 연결과 응답 읽기에 같은 60초를 적용한다.
+                    # 긴 한국어 대본은 서버가 정상 렌더링 중이어도 60초를 넘길 수 있어
+                    # 동일한 유료 합성을 반복 요청하게 된다. 연결 제한은 짧게 유지하고,
+                    # 읽기는 전체 240초 마감 안에서 한 요청이 끝날 시간을 보장한다.
+                    req_timeout = self._elevenlabs_http_timeout(time_left)
                     resp = requests.post(req_url, json=req_payload, headers=req_headers, timeout=req_timeout)
                     if resp.status_code == 200:
                         return resp
@@ -1084,6 +1091,14 @@ class TtsWorker:
         """숫자 표기 차이는 흡수하되 금융 단위의 의미 변경은 허용하지 않는다."""
         normalized = self._preprocess_for_tts(text or "")
         return re.findall(r"퍼센트|포인트|달러|유로|엔|조|억|만원|원", normalized)
+
+    @staticmethod
+    def _elevenlabs_http_timeout(time_left: float) -> Tuple[float, float]:
+        """긴 합성은 한 번만 기다리되 연결 장애는 빠르게 판별한다."""
+        remaining = max(20.0, min(240.0, float(time_left)))
+        connect_timeout = min(10.0, remaining / 2.0)
+        read_timeout = max(10.0, remaining - connect_timeout)
+        return connect_timeout, read_timeout
 
     @staticmethod
     def _sentence_pause_points(
@@ -1592,129 +1607,8 @@ class TtsWorker:
     # ============================
     @staticmethod
     def _split_script_into_chunks(script: str, max_chars: int = 22, min_chars: int = 8) -> list[str]:
-        """원문을 읽기 좋은 길이와 자연스러운 구절 단위로 분할한다.
-
-        최대 글자 수만 기준으로 자르면 문장 끝에 ``많아`` 같은 짧은 조각이
-        남는다. 마지막 조각이 너무 짧으면 앞 조각의 단어를 옮겨 두 줄 모두가
-        읽을 수 있는 길이가 되게 하되, 단어 자체는 절대 자르지 않는다.
-        """
-        clean_script = re.sub(r'^##\s*.+$', '', script, flags=re.MULTILINE).strip()
-        
-        # 문장 종결 부호 및 어미, 쉼표 등 자연스러운 호흡 지점에서 분리 (파이썬 re 모듈의 고정폭 lookbehind 제한 준수)
-        raw_sentences = re.split(
-            r'(?<=[.!?。])\s+|'
-            r'(?<=다\.)\s+|(?<=다)\s+|'
-            r'(?<=요\.)\s+|(?<=요)\s+|'
-            r'(?<=죠\.)\s+|(?<=죠)\s+|'
-            r'(?<=네\.)\s+|(?<=네)\s+|'
-            r'(?<=까\.)\s+|(?<=까)\s+|'
-            r'(?<=며,)\s+|(?<=고,)\s+|'
-            r'(?<=으면서)\s+',
-            clean_script
-        )
-        raw_sentences = [s.strip() for s in raw_sentences if s.strip()]
-        # Keep decimal values (for example, 16.5 and 100.81) intact before
-        # applying caption-width wrapping. This shared segmentation is the
-        # source of truth for TTS chunking, captions, and timestamp mapping.
-        raw_sentences = split_sentences(clean_script)
-        
-        def has_modifier_ending(word: str) -> bool:
-            """관형형 어미(한·는·ㄴ·ㄹ)로 끝나는 단어인지 판별한다."""
-            if not word:
-                return False
-            if word.endswith("는"):
-                return True
-            last = ord(word[-1])
-            if not (0xAC00 <= last <= 0xD7A3):
-                return False
-            jongseong = (last - 0xAC00) % 28
-            return jongseong in {4, 8}  # ㄴ, ㄹ
-
-        def requires_left_context(word: str) -> bool:
-            """줄 첫머리에 단독으로 두면 어색한 조사·연결 표현을 찾는다."""
-            return bool(re.search(
-                r"(?:에서도|에서|에게|에도|으로|부터|까지|처럼|보다|만|은|는|이|가|을|를|와|과|의)$",
-                word,
-            ))
-
-        # 한 줄 자막은 15~20자 안팎을 목표로 한다. 조사·종결어미를 보존할 때만
-        # 최대 두 글자를 더 허용하며, 긴 문장을 통째로 화면에 올리지는 않는다.
-        natural_sentence_max = min(max_chars + 2, 20)
-        text_chunks = []
-        for sent in raw_sentences:
-            if len(sent) <= natural_sentence_max:
-                text_chunks.append(sent)
-                continue
-            # 전사본에는 "줄 만"처럼 조사가 띄어 쓰인 경우가 있다. 이 상태로
-            # 줄을 나누면 "줄 / 만 비교하면 됩니다"가 되어 의미 단위가 깨진다.
-            # 독립 조사는 앞 어절에 붙여 한 덩어리로 분할한다.
-            bound_particles = {
-                "은", "는", "이", "가", "을", "를", "와", "과", "의", "만", "도",
-                "에", "에서", "에게", "에도", "으로", "부터", "까지", "보다", "처럼",
-                "라도", "마저", "조차", "밖에",
-            }
-            source_words = sent.split()
-            words: list[str] = []
-            for word_index, raw_word in enumerate(source_words):
-                next_word = source_words[word_index + 1] if word_index + 1 < len(source_words) else ""
-                # ``이 세 가지``의 ``이``는 조사보다 지시 관형사로 쓰인다.
-                # 이를 앞 단어에 붙이면 화면 자막이 ``발표에서도이``처럼 훼손된다.
-                demonstrative_determiner = raw_word == "이" and bool(re.match(
-                    r"^(?:한|두|세|네|몇|모든|각|다음|이전|첫|마지막|같은|다른)",
-                    next_word,
-                ))
-                if raw_word in bound_particles and words and not demonstrative_determiner:
-                    words[-1] += raw_word
-                else:
-                    words.append(raw_word)
-            lines: list[list[str]] = []
-            current_line: list[str] = []
-            current_len = 0
-            for w in words:
-                new_len = current_len + len(w) + (1 if current_line else 0)
-                if new_len > max_chars and current_line:
-                    lines.append(current_line)
-                    current_line = [w]
-                    current_len = len(w)
-                else:
-                    current_line.append(w)
-                    current_len = new_len
-            if current_line:
-                lines.append(current_line)
-
-            # 문장 자체가 짧은 경우는 그대로 둔다. 다만 길이 제한 때문에 생긴
-            # 마지막 파편은 앞줄의 마지막 단어를 옮겨 자연스러운 호흡으로 만든다.
-            if len(lines) > 1 and len(" ".join(lines[-1])) < min_chars:
-                previous, trailing = lines[-2], lines[-1]
-                while len(" ".join(trailing)) < min_chars and len(previous) > 1:
-                    current_shortest = min(len(" ".join(previous)), len(" ".join(trailing)))
-                    moved_shortest = min(
-                        len(" ".join(previous[:-1])),
-                        len(" ".join([previous[-1], *trailing])),
-                    )
-                    if moved_shortest <= current_shortest:
-                        break
-                    trailing.insert(0, previous.pop())
-
-            # 최대 글자 수 때문에 관형어와 피수식어(예: "멈춘 / 발표처럼")나
-            # 명사와 조사(예: "불확실성 / 속에서도")가 갈라지지 않게 한다.
-            # 이 경우는 한 문장으로 읽을 수 있는 범위까지 여유를 둬 의미를 우선한다.
-            semantic_hard_max = natural_sentence_max
-            for line_index in range(len(lines) - 1):
-                previous, following = lines[line_index], lines[line_index + 1]
-                if len(previous) <= 1 or not following:
-                    continue
-                candidate = previous[-1]
-                if not (has_modifier_ending(candidate) or requires_left_context(following[0])):
-                    continue
-                remaining = " ".join(previous[:-1])
-                bound_following = " ".join([candidate, *following])
-                if len(remaining) < min_chars or len(bound_following) > semantic_hard_max:
-                    continue
-                following.insert(0, previous.pop())
-            text_chunks.extend(" ".join(line) for line in lines)
-                
-        return text_chunks
+        """공유 자막 분할기를 사용해 SCRIPT 예상 청크와 동일하게 만든다."""
+        return split_script_into_caption_chunks(script, max_chars=max_chars, min_chars=min_chars)
 
     # ============================
     # stable-ts (cross-attention 기반) → 정밀 자막 싱크

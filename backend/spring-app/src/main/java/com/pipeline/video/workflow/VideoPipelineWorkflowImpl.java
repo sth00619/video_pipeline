@@ -102,57 +102,67 @@ public class VideoPipelineWorkflowImpl implements VideoPipelineWorkflow {
             waitForGate("KEYWORD");
             if (isRejected()) return;
 
-            // 2. 스크립트 생성
-            log.info("스크립트 생성 Activity 시작: jobId={}", jobId);
-            int researchRetries = 0;
-            while (true) {
-                String scriptResult = activities.generateScriptV2(jobId);
-                if (!"RESEARCH_REQUIRED".equals(scriptResult)) {
-                    break;
+            // GUIDED/MANUAL의 생성 버튼은 사용자가 명시적으로 누른다. 워크플로가
+            // 같은 단계를 다시 호출하면 Claude·ElevenLabs·Gemini가 이중 과금되고
+            // 이미지 Redis 잠금 충돌까지 발생한다. AUTO에서만 생성 Activity를
+            // 실행하고, 사용자 주도 모드는 각 게이트 승인 신호만 기다린다.
+            // 이미 실행 중인 워크플로의 과거 이력에는 IsGuided Activity가 없다.
+            // 새 Activity를 곧바로 추가하면 재생 시 기존 GenerateScriptV2 이력과
+            // 명령이 어긋나 NonDeterministicException이 발생한다. Temporal 버전
+            // 마커로 과거 실행은 기존 AUTO 경로를 그대로 재생하고, 새 실행부터만
+            // 사용자 주도 라우팅을 적용한다.
+            int guidedRoutingVersion = Workflow.getVersion(
+                    "guided-user-driven-routing-v1",
+                    Workflow.DEFAULT_VERSION,
+                    1
+            );
+            boolean userDriven = guidedRoutingVersion == Workflow.DEFAULT_VERSION
+                    ? false
+                    : activities.isGuided(jobId);
+            if (!userDriven) {
+                log.info("스크립트 생성 Activity 시작: jobId={}", jobId);
+                int researchRetries = 0;
+                while (true) {
+                    String scriptResult = activities.generateScriptV2(jobId);
+                    if (!"RESEARCH_REQUIRED".equals(scriptResult)) {
+                        break;
+                    }
+                    if (++researchRetries > 5) {
+                        throw new RuntimeException("Keyword evidence retry limit exceeded: jobId=" + jobId);
+                    }
+                    approvedGates.remove("KEYWORD");
+                    log.info("Waiting for a replacement keyword: jobId={}, retry={}", jobId, researchRetries);
+                    waitForGate("KEYWORD");
+                    if (isRejected()) return;
                 }
-                if (++researchRetries > 5) {
-                    throw new RuntimeException("Keyword evidence retry limit exceeded: jobId=" + jobId);
-                }
-                // A replacement KEYWORD approval resumes the same workflow.
-                approvedGates.remove("KEYWORD");
-                log.info("Waiting for a replacement keyword: jobId={}, retry={}", jobId, researchRetries);
-                waitForGate("KEYWORD");
-                if (isRejected()) return;
             }
 
             // 3. 스크립트 게이트 승인 대기
             waitForGate("SCRIPT");
             if (isRejected()) return;
 
-            // GUIDED는 TTS 생성 전에 사용자가 voice를 고르고 TTS 게이트를
-            // 승인해야 합니다. AUTO의 기존 순서는 유지합니다.
-            boolean guidedTtsSelection = activities.isGuided(jobId);
-            if (guidedTtsSelection) {
-                waitForGate("TTS");
-                if (isRejected()) return;
+            // 4~5. 사용자 주도 모드는 UI/API에서 TTS를 생성한 뒤 승인한다.
+            if (!userDriven) {
+                log.info("TTS 생성 Activity 시작: jobId={}", jobId);
+                activities.generateTts(jobId);
             }
+            waitForGate("TTS");
+            if (isRejected()) return;
 
-            // 4. TTS 생성
-            log.info("TTS 생성 Activity 시작: jobId={}", jobId);
-            activities.generateTts(jobId);
-
-            // 5. TTS 게이트 승인 대기
-            if (!guidedTtsSelection) {
-                waitForGate("TTS");
-                if (isRejected()) return;
+            // 6~7. 이미지와 조립도 같은 원칙을 적용한다. 특히 사용자 검수 전
+            // FAL/Kling 또는 MP4 조립으로 넘어가는 자동 경로를 만들지 않는다.
+            if (!userDriven) {
+                log.info("이미지 생성 Activity 시작: jobId={}", jobId);
+                activities.generateImages(jobId);
             }
-
-            // 6. 이미지 생성
-            log.info("이미지 생성 Activity 시작: jobId={}", jobId);
-            activities.generateImages(jobId);
-
-            // 7. 이미지 게이트 승인 대기
             waitForGate("IMAGES");
             if (isRejected()) return;
 
             // 8. 롱폼 조립
-            log.info("롱폼 조립 Activity 시작: jobId={}", jobId);
-            assemblyActivities.assembleLongform(jobId);
+            if (!userDriven) {
+                log.info("롱폼 조립 Activity 시작: jobId={}", jobId);
+                assemblyActivities.assembleLongform(jobId);
+            }
 
             // 9. 미리보기 게이트 승인 대기
             waitForGate("PREVIEW");

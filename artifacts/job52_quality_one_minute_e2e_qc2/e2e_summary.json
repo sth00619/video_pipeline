@@ -1,0 +1,14 @@
+{
+  "status": "completed",
+  "job_id": 520822,
+  "keyword": "삼성전자와 SK하이닉스 PER 4배가 정말 싼가, 하반기 이익 전망 한 가지 기준",
+  "voice_id": "dlKJ5VptCbYxal4doUO5",
+  "scene_count": 11,
+  "fal_clip_count": 3,
+  "duration_seconds": 57.0,
+  "video_path": "/app/data/jobs/520822/longform/final.mp4",
+  "script_result": "/artifacts/job52_quality_one_minute_e2e_qc2/script_result.json",
+  "tts_result": "/artifacts/job52_quality_one_minute_e2e_qc2/tts_result.json",
+  "images_result": "/artifacts/job52_quality_one_minute_e2e_qc2/images_result.json",
+  "longform_result": "/artifacts/job52_quality_one_minute_e2e_qc2/longform_result.json"
+}

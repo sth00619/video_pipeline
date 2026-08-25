@@ -36,7 +36,7 @@ def test_actual_four_scene_pilot_uses_script_caption_contract_without_numeric_ov
     assert all(not scene.get("verified_facts") for scene in scenes)
     assert all(not scene.get("v5_verified_overlays") for scene in scenes)
     assert all(
-        scene["v5_render_contract"]["visual_text_policy"] in {"script_captioned", "strict_textless"}
+        scene["v5_render_contract"]["visual_text_policy"] in {"deterministic_surface_text", "strict_textless"}
         for scene in scenes
     )
 

@@ -8,7 +8,10 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 from typing import Any, Iterable
+
+from PIL import Image, ImageOps
 
 
 FAL_MOTION_SAFETY_POLICY_VERSION = 1
@@ -41,6 +44,12 @@ def fal_motion_metadata_block_reasons(scene: dict) -> list[str]:
         or ""
     ).strip().lower()
     motion_contract = scene.get("motion_contract")
+    visual_review = scene.get("visual_qa_review") or {}
+    visual_review_raw = visual_review.get("raw") if isinstance(visual_review, dict) else {}
+    visual_visible_texts = (
+        visual_review_raw.get("visible_texts")
+        if isinstance(visual_review_raw, dict) else []
+    ) or []
 
     if visual_mode == "article_evidence" or _has_payload(scene.get("article_capture")):
         reasons.append("article_evidence")
@@ -50,8 +59,14 @@ def fal_motion_metadata_block_reasons(scene: dict) -> list[str]:
         reasons.append(f"visual_text_policy:{visual_text_policy}")
     if isinstance(motion_contract, dict) and motion_contract.get("eligible") is False:
         reasons.append("motion_contract_ineligible")
+    # Tesseract가 만화 속 작은 영문·한글을 놓쳐도 Gemini 장면 검수에서 실제
+    # 문자를 읽었다면 영상 모델이 그 표면을 다시 그리지 못하도록 정지한다.
+    if any(str(value or "").strip() for value in visual_visible_texts):
+        reasons.append("visual_qa_visible_text")
 
     for field in (
+        "screen_texts",
+        "screen_text_plan",
         "core_figures",
         "market_chart",
         "index_data",
@@ -87,23 +102,158 @@ def _meaningful_ocr_tokens(rows: Iterable[dict[str, Any]]) -> list[str]:
     return list(dict.fromkeys(tokens))[:20]
 
 
-def _read_tesseract_rows(image_path: str) -> tuple[str, list[dict[str, str]]]:
+def _row_box(row: dict[str, Any]) -> tuple[int, int, int, int] | None:
+    """Tesseract 행 좌표를 정규화한다. 테스트 주입 행처럼 좌표가 없으면 None이다."""
+    try:
+        left = int(row.get("left"))
+        top = int(row.get("top"))
+        width = int(row.get("width"))
+        height = int(row.get("height"))
+    except (TypeError, ValueError):
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return left, top, left + width, top + height
+
+
+def _boxes_touch(first: tuple[int, int, int, int], second: tuple[int, int, int, int]) -> bool:
+    """서로 다른 PSM의 분할 차이를 감안해 소폭 확장한 상자 교차를 확인한다."""
+    margin = 8
+    ax1, ay1, ax2, ay2 = first
+    bx1, by1, bx2, by2 = second
+    return not (
+        ax2 + margin < bx1
+        or bx2 + margin < ax1
+        or ay2 + margin < by1
+        or by2 + margin < ay1
+    )
+
+
+def _confirmed_numeric_tokens(
+    primary_rows: Iterable[dict[str, Any]],
+    confirmation_rows: Iterable[dict[str, Any]],
+) -> set[str]:
+    """희소 문자 모드의 숫자를 단일 문단 모드가 같은 위치에서 재확인한다.
+
+    만화의 서버 슬롯·창문·회로선은 PSM 11에서 ``1111``처럼 읽히기 쉽다.
+    실제 화면 숫자는 PSM 6에서도 같은 위치에 숫자로 남으므로, 숫자 후보에만
+    공간 교차 이중 검증을 적용한다. 문자 토큰의 기존 엄격 검사는 유지한다.
+    """
+    confirmation = []
+    for row in confirmation_rows:
+        text = str(row.get("text") or "").strip()
+        if not _DIGIT_RE.search(text):
+            continue
+        try:
+            confidence = float(row.get("conf") or -1)
+        except (TypeError, ValueError):
+            confidence = -1
+        box = _row_box(row)
+        if confidence >= 35 and box is not None:
+            digits = "".join(_DIGIT_RE.findall(text))
+            if digits:
+                confirmation.append((digits, box))
+
+    confirmed: set[str] = set()
+    for row in primary_rows:
+        text = str(row.get("text") or "").strip()
+        if not _DIGIT_RE.search(text):
+            continue
+        box = _row_box(row)
+        if box is None:
+            continue
+        primary_digits = "".join(_DIGIT_RE.findall(text))
+        # 동전 테두리나 그래프 선을 서로 다른 숫자로 읽어도
+        # 위치만 겹치면 실제 숫자로 확정하던 결함을 막는다. 두 OCR
+        # 모드가 같은 숫자열과 같은 영역에 동의해야만 화면 숫자다.
+        if any(
+            primary_digits == other_digits and _boxes_touch(box, other_box)
+            for other_digits, other_box in confirmation
+        ):
+            confirmed.add(text)
+    return confirmed
+
+
+def _read_tesseract_rows(image_path: str, *, psm: int = 11) -> tuple[str, list[dict[str, str]]]:
     executable = shutil.which("tesseract")
     if not executable:
         return "unavailable", []
+    ocr_path = image_path
+    temp_path = ""
     try:
+        # 2K 만화 원본을 그대로 넣으면 촘촘한 선화를 문자 후보로 분할하느라
+        # 장면당 30초를 넘길 수 있다. 실제 화면 문구는 960px 폭에서도 충분히
+        # 남으므로 OCR 전용 축소본으로 일정한 실행 시간을 확보한다.
+        with Image.open(image_path) as source:
+            prepared = source.convert("L")
+            if prepared.width > 960:
+                ratio = 960 / prepared.width
+                prepared = prepared.resize(
+                    (960, max(1, round(prepared.height * ratio))),
+                    Image.Resampling.LANCZOS,
+                )
+            prepared = ImageOps.autocontrast(prepared)
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
+                temp_path = handle.name
+            prepared.save(temp_path, "PNG", optimize=True)
+            ocr_path = temp_path
         completed = subprocess.run(
-            [executable, image_path, "stdout", "-l", "kor+eng", "--psm", "11", "tsv"],
+            [executable, ocr_path, "stdout", "-l", "kor+eng", "--psm", str(psm), "tsv"],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=12,
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
         return "failed", []
+    finally:
+        if temp_path:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
     if completed.returncode != 0:
         return "failed", []
-    return "completed", list(csv.DictReader(io.StringIO(completed.stdout), delimiter="\t"))
+    # Tesseract가 장면의 선을 따옴표로 오인하면 기본 CSV 파서는 다음 TSV
+    # 행까지 하나의 text 필드로 삼킨다. TSV 출력에는 인용 규칙이 없으므로
+    # QUOTE_NONE으로 읽어 OCR 감사 행의 경계를 그대로 보존한다.
+    return "completed", list(csv.DictReader(
+        io.StringIO(completed.stdout), delimiter="\t", quoting=csv.QUOTE_NONE,
+    ))
+
+
+def inspect_visible_text(
+    image_path: str,
+    *,
+    ocr_rows: Iterable[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """최종 래스터에서 모델이 만든 읽을 수 있는 문자·숫자를 검사한다.
+
+    Fal 후보 검사와 생성 이미지 승인 검사가 같은 OCR 임계값을 사용해야 한
+    단계에서 허용한 글자를 다음 단계가 다르게 해석하지 않는다.
+    """
+    confirmation_status = "not_required"
+    if ocr_rows is None:
+        status, rows = _read_tesseract_rows(image_path)
+        tokens = _meaningful_ocr_tokens(rows) if status == "completed" else []
+        if status == "completed" and any(_DIGIT_RE.search(token) for token in tokens):
+            confirmation_status, confirmation_rows = _read_tesseract_rows(image_path, psm=6)
+            if confirmation_status == "completed":
+                confirmed = _confirmed_numeric_tokens(rows, confirmation_rows)
+                tokens = [
+                    token for token in tokens
+                    if not _DIGIT_RE.search(token) or token in confirmed
+                ]
+    else:
+        status, rows = "completed", list(ocr_rows)
+        # 단위 테스트와 외부 OCR 주입은 이미 한 번 검증된 행으로 취급한다.
+        tokens = _meaningful_ocr_tokens(rows)
+        confirmation_status = "provided_rows"
+    return {
+        "status": status,
+        "visible_tokens": tokens,
+        "numeric_confirmation_status": confirmation_status,
+    }
 
 
 def _image_identity(image_path: str) -> dict[str, int | str] | None:
@@ -150,16 +300,14 @@ def assess_fal_motion_safety(
         reasons.append("source_image_missing")
         ocr_status = "missing_image"
     elif not reasons and scan_image:
-        if ocr_rows is None:
-            ocr_status, rows = _read_tesseract_rows(image_path)
-        else:
-            ocr_status, rows = "completed", list(ocr_rows)
+        inspection = inspect_visible_text(image_path, ocr_rows=ocr_rows)
+        ocr_status = str(inspection["status"])
         if ocr_status == "unavailable":
             reasons.append("ocr_unavailable")
         elif ocr_status == "failed":
             reasons.append("ocr_failed")
         else:
-            visible_tokens = _meaningful_ocr_tokens(rows)
+            visible_tokens = list(inspection["visible_tokens"])
             if visible_tokens:
                 reasons.append("visible_text_or_number")
 

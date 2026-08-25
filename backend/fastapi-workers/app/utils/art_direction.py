@@ -40,32 +40,35 @@ V5_ARCHETYPES = {
 }
 
 SHARED_STYLE_LOCK_PROMPT = (
-    "NON-NEGOTIABLE ART DIRECTION: 2D digital cartoon illustration in an original Korean webtoon style. "
-    "BOLD THICK BLACK INK OUTLINES (3-5px equivalent) on EVERY element; cel shading with soft gradients; highly saturated, organized colors; "
-    "dramatic cinematic rim light and glow. The entire frame—background, character, props, blank data surfaces, and "
-    "future overlay-safe areas—uses exactly the same hand-illustrated cartoon medium. "
-    "A densely detailed themed background fills the frame edge-to-edge. STRICTLY NO photorealism, NO 3D render, "
-    "NO photographic background, NO photo compositing, NO glossy toy material. NO text, NO letters, NO words, "
-    "NO numbers, NO captions, NO logo, NO watermark anywhere in the generated image. "
-    "NO speech bubbles, comic balloons, caption chips, title cards, lower-thirds, or detached callout boxes. "
-    "Do not depict screens, dashboards, "
-    "charts, signboards, documents, labels, UI panels, blank white rectangles, empty title cards, empty frames, boards, "
-    "or presentation panels. Use unlabeled physical props and a continuous full-bleed illustrated background instead. "
+    "CHANNEL VISUAL RANGE: polished 2D Korean editorial-finance cartoon with clean dark ink outlines, cel shading, "
+    "and layered foreground, midground, and background storytelling. Focal characters and key props use stronger outlines; "
+    "background detail may use finer lines. Color, lighting, density, camera, and character scale follow each scene's mood, "
+    "ranging from bright laboratory greens and golds to cool control-room blues and urgent reds. "
+    "The frame remains one coherent hand-illustrated medium. STRICTLY NO photorealism, NO 3D render, "
+    "NO photographic background, NO photo compositing, NO glossy toy material. "
+    "Readable words are permitted only when the scene-local text contract lists their exact spelling; never invent, translate, "
+    "duplicate, abbreviate, or decorate them with pseudo-text. NO image-model-generated financial numbers; financial numbers remain reserved for deterministic rendering. "
+    "NO unapproved captions, logo, or watermark anywhere in the generated image. "
+    "Dialogue balloons, split comparison, board, chart, sign, or multiple information surfaces may be used only when the scene storyboard requests them; "
+    "they are not mandatory defaults and must share the scene's material, perspective, lighting, and illustration style. "
+    "Never create accidental floating UI cards, pasted-on rectangles, empty title cards, or layout-guide frames. "
     "Never mix a realistic photograph, realistic port, realistic studio, photographic texture, or a different art style into the frame."
 )
 
 SHARED_MASCOT_STYLE_LOCK_PROMPT = (
-    "The gold coin mascot character MUST be prominently sized, occupying at minimum 1/3 of the frame height. "
-    "The circular coin face is ALWAYS fully visible — never obscured by helmets, masks, or visors (any hat or hard hat sits on top of the coin, face remains 100% visible). "
-    "Perfectly round golden face, big expressive cartoon eyes with white highlights, rosy pink cheeks, warm smile or matching expression. "
-    "White cartoon gloves, brown cartoon shoes, full body visible, proportional cartoon body."
+    "When the gold-coin mascot appears, keep it recognizably within the channel's round coin-character family: embossed rim, "
+    "expressive cartoon eyes, compact limbs, and clean dark outlines. Expression, eye openness, eyebrow shape, mouth, costume, "
+    "headwear, pose, visibility, and frame size may vary substantially with the scene. Preserve character species and drawing language, "
+    "not one frozen face or one finance-presenter outfit."
 )
 
 ARCHETYPE_TO_COSTUME = {
     "port_emergency": "safety_vest",
     "retail_shock": "detective",
     "classroom": "professor",
-    "weather_map": "reporter",
+    # 레거시 캐릭터 자산에는 reporter_*가 없고 field_reporter_*만 있다.
+    # 존재하지 않는 pose 이름을 만들지 않도록 실제 자산 키를 사용한다.
+    "weather_map": "field_reporter",
     "split_stage": "formal",
     "trade_calculator": "detective",
     "data_lab": "analyst",
@@ -145,6 +148,8 @@ def select_archetype_for_scene(
     llm_call=None,
     *,
     total_scene_count: int | None = None,
+    prefetched: dict[str, Any] | None = None,
+    allow_remote: bool = True,
 ) -> dict:
     """
     대사(narration)를 읽고 11종 V5 아키타입 중 가장 적합한 무대를 선택한다.
@@ -168,6 +173,31 @@ def select_archetype_for_scene(
         if not rule:
             return True
         return any(kw in text for kw in rule["required_any"])
+
+    if isinstance(prefetched, dict):
+        chosen = str(prefetched.get("archetype") or "").strip()
+        if chosen in V5_ARCHETYPES and is_valid_choice(chosen, narration_txt):
+            if len(prev_list) >= 2 and prev_list[-1] == prev_list[-2] == chosen:
+                chosen = keyword_fallback(
+                    narration_txt,
+                    recent_prev,
+                    previous_archetypes=prev_list,
+                    total_scene_count=total_scene_count,
+                )
+            return {
+                "archetype": chosen,
+                "reason": str(prefetched.get("reason") or "배치 아트 디렉션 선택"),
+                "specific_props": str(prefetched.get("specific_props") or "scene props"),
+            }
+
+    if not allow_remote:
+        arch = keyword_fallback(
+            narration_txt,
+            recent_prev,
+            previous_archetypes=prev_list,
+            total_scene_count=total_scene_count,
+        )
+        return {"archetype": arch, "reason": "배치 결과 검증 폴백", "specific_props": "scene props"}
 
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
@@ -484,12 +514,80 @@ MOOD_CAMERA: dict[str, str] = {
 }
 
 
-def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _batch_archetype_proposals(
+    scenes: list[dict[str, Any]], llm_call=None,
+) -> dict[int, dict[str, Any]]:
+    """전체 장면의 무대와 핵심 소품을 한 번의 Claude 호출로 계획한다.
+
+    장면마다 별도 호출하던 경로는 5분 대본에서 50회가 넘는 직렬 호출을
+    만들었고, 비용 원장에는 그 횟수도 잡히지 않았다. 배치 결과는 아래의
+    순차 검증에서 전용 무대 제한과 3연속 중복 제한을 다시 적용한다.
+    """
+    if not scenes or (not callable(llm_call) and not os.getenv("ANTHROPIC_API_KEY")):
+        return {}
+    rows = [
+        {
+            "index": index,
+            "narration": str(scene.get("content") or scene.get("text") or "").strip(),
+        }
+        for index, scene in enumerate(scenes)
+    ]
+    system = (
+        "너는 한국 금융 영상의 수석 아트 디렉터다. 승인 대사의 의미를 장면별 물리적 소품과 "
+        "상황으로 설명하라. 새 금융 사실이나 숫자를 만들지 말고 JSON 배열만 반환하라."
+    )
+    prompt = f"""사용 가능한 무대:
+{json.dumps(V5_ARCHETYPES, ensure_ascii=False)}
+
+장면:
+{json.dumps(rows, ensure_ascii=False)}
+
+각 입력마다 정확히 하나를 반환하세요:
+[{{"index": 0, "archetype": "data_lab", "reason": "대사 의미와 무대의 연결", "specific_props": "대사에 직접 연결되는 구체적 사물"}}]
+real_estate_office는 부동산 대사에만, job_market_hall은 고용 대사에만 사용하세요.
+문자·숫자 패널이 아니라 사물·배경·행동으로 의미를 우선 표현하세요."""
+    try:
+        max_tokens = min(8000, max(1600, len(rows) * 150))
+        if callable(llm_call):
+            raw = llm_call(system, [{"role": "user", "content": prompt}], max_tokens)
+        else:
+            from anthropic import Anthropic
+            response = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"]).messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=max_tokens,
+                system=system,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = "".join(block.text for block in response.content if hasattr(block, "text"))
+        cleaned = re.sub(r"```json|```", "", str(raw or "")).strip()
+        match = re.search(r"\[[\s\S]*\]", cleaned)
+        parsed = json.loads(match.group(0) if match else cleaned)
+        if not isinstance(parsed, list):
+            return {}
+        result: dict[int, dict[str, Any]] = {}
+        for item in parsed:
+            if not isinstance(item, dict):
+                continue
+            try:
+                index = int(item.get("index"))
+            except (TypeError, ValueError):
+                continue
+            if 0 <= index < len(rows):
+                result[index] = item
+        logger.info("장면 아트 디렉션 배치 완료: %s/%s", len(result), len(rows))
+        return result
+    except Exception as exc:
+        logger.warning("장면 아트 디렉션 배치 실패 — 결정론 폴백 적용: %s", exc)
+        return {}
+
+
+def direct_scenes(scenes: list[dict[str, Any]], llm_call=None) -> list[dict[str, Any]]:
     """Add a unique visual brief to every scene while avoiding adjacent repeats."""
     directed: list[dict[str, Any]] = []
     previous_archetypes: list[str] = []
     previous_palettes: list[str] = []
     total_count = len(scenes)
+    batch_proposals = _batch_archetype_proposals(scenes, llm_call=llm_call)
     for index, original in enumerate(scenes):
         scene = dict(original)
         text = str(scene.get("content") or scene.get("text") or "")
@@ -500,6 +598,8 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             text,
             previous_archetypes=previous_archetypes,
             total_scene_count=total_count,
+            prefetched=batch_proposals.get(index),
+            allow_remote=False,
         )
         archetype = selected_info["archetype"]
         previous_archetypes.append(archetype)
@@ -609,7 +709,11 @@ def direct_scenes(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             # explanatory Korean directly as chalk instead of a floating card.
             "editorial_text_surface": {"x": .10, "y": .16, "width": .55, "height": .42} if family in {"history_classroom", "classroom_takeaway"} else None,
             "editorial_overlay_target": overlay_target,
-            "negative_constraints": ["no readable text", "no watermark", "no generic gold pile", "no unrelated fire or space scene", "no photorealism", "no mixed art styles"],
+            "negative_constraints": [
+                "only scene-local approved exact strings; otherwise no readable or pseudo-readable text",
+                "no watermark", "no generic gold pile", "no unrelated fire or space scene",
+                "no photorealism", "no mixed art styles",
+            ],
             "decorative_text_allowed": bool(scene.get(
                 "decorative_text_allowed",
                 family in {"news_headline", "news_context", "comparison_board", "factory_dashboard", "data_lab"},

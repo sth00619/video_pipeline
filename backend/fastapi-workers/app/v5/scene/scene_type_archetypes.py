@@ -59,7 +59,11 @@ ARCHETYPE_SURFACES: dict[str, tuple[str, ...]] = {
         "printed documents",
         "wall diagrams",
     ),
-    "data_lab": ("one broad curved presentation wall", "analog gauge faces", "console etchings"),
+    "data_lab": (
+        "the storyboard-planned laboratory, production-line, control-room, or analysis surface",
+        "scene-specific equipment surfaces",
+        "contextual chart or diagram props",
+    ),
     "briefing_podium": (
         "the single broad policy-briefing surface embedded flush into the center back wall immediately behind the central podium",
         "podium nameplates",
@@ -145,7 +149,8 @@ _METRIC_RISK_HINTS = ("하락", "급락", "낙폭", "위험", "경고", "손실"
 # 물리 그래프 벽이 있는 data_lab을 쓴다. 숫자는 여전히 후처리 사실층에서만 넣는다.
 _DIAGRAM_DATA_LAB_HINTS = (
     "네트워크", "노드", "연결망", "홀로그램", "상승 추세", "하락 추세",
-    "network", "node", "hologram", "trend",
+    "반도체", "웨이퍼", "칩", "영업이익", "생산 라인", "생산라인",
+    "network", "node", "hologram", "trend", "semiconductor", "wafer", "chip", "production line",
 )
 _GENERAL_CLASSROOM_HINTS = ("설명", "원리", "배경", "explain", "principle", "background")
 _TEXT_PORT_HINTS = ("항만", "물류", "컨테이너", "수출", "port", "logistics", "container", "shipping")

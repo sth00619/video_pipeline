@@ -1,6 +1,8 @@
 """V5 정보 장면의 무문자 이미지 프롬프트를 구성한다."""
 from __future__ import annotations
 
+import re
+
 from app.utils.art_direction import SHARED_STYLE_LOCK_PROMPT, SHARED_MASCOT_STYLE_LOCK_PROMPT, ARCHETYPE_TO_COSTUME
 
 from dataclasses import dataclass
@@ -12,30 +14,27 @@ if TYPE_CHECKING:
 
 MASCOT_STYLE_BIBLE = (
     "a friendly anthropomorphic GOLD COIN mascot character with a perfectly round golden face and embossed rim, "
-    "big expressive cartoon eyes with white highlights, rosy pink cheeks, and a warm smile or matching expression. "
-    "Keep the exact same round coin silhouette, rim thickness, face proportions, eye shape, iris style, eyebrows, "
-    "and thick black ink-line weight as the fixed channel mascot in every scene. Never restyle the mascot as a flat token, "
+    "expressive cartoon eyes and a readable scene-appropriate expression. Keep it recognizably within the same channel mascot family "
+    "and ink language while allowing face expression, eye openness, brows, mouth, costume, headwear, pose, and frame size to vary. "
+    "Never restyle the mascot as a flat token, "
     "a different cartoon character, a document, a card, a sheet of paper, a tablet, a phone, a monitor, a rectangle, "
     "or a different illustration medium"
 )
 
-# 첫 번째 참조 이미지는 화풍 참고가 아니라 캐릭터의 고정 모델시트다.
+# 참조 장면들은 캐릭터의 허용 범위를 보여 주며 한 얼굴을 복제하는 모델시트가 아니다.
 MASCOT_IDENTITY_LOCK = (
-    "CHARACTER IDENTITY LOCK: the first supplied character reference image is the authoritative model sheet. "
-    "Reproduce its exact round coin silhouette, embossed rim, warm gold material, thick dark outer contour, "
-    "large brown oval eyes with two white highlights each, thick curved eyebrows, small rounded nose, rosy circular cheeks, "
-    "and compact navy-suit body proportions. Keep these facial traits identical in every scene. "
-    "Do not add eyelashes, change the eye shape or iris style, make the face flatter or more 3D-rendered, "
-      "or reinterpret the mascot as a different character. Only the mouth, eyebrows, and arm pose may change to express scene emotion. "
-    "Both visible hands must wear the same white cartoon gloves from the character reference; never show bare golden hands. "
-    "Rosy circular cheeks remain visible even for worried or alarmed expressions. "
-    "The character perimeter uses only one dark brown or black ink outline: absolutely no white sticker-cutout border, white halo, or white stroke around the hat, coin, suit, limbs, or shoes."
+    "CHARACTER CONTINUITY RANGE: use the shared round gold-coin species, rim motif, compact cartoon limbs, and channel ink style visible across the scene references. "
+    "FACIAL CONTINUITY RANGE: preserve the same recognizable coin-character family without copying a single model-sheet face. Eye shape, pupil treatment, iris detail, "
+    "blush, nose, brows, and mouth may simplify or intensify for shock, comedy, confidence, or distance when the expression remains deliberately drawn and coherent. "
+    "Reject only a genuinely different character species, incompatible face design, or nearly featureless generic emoji. "
+    "Do not copy one reference's eyelashes, neutral smile, navy suit, hat, body ratio, white cutout outline, or foreground scale into every scene. "
+    "A worried, confident, comic, scientific, formal, or investigative version may look different while remaining recognizably in the same channel character family."
 )
 
 
 # 기존 8종 승인본의 미감을 현재 실전 경로에서도 명시적으로 고정한다. 이 계약은
 # 사실값·수치의 생성 지시가 아니라 선·명암·무대 밀도에 관한 그림체 계약이다.
-V5_STYLE_CONTRACT_VERSION = "2026-08-03-r4-korean-nonnumeric-three-mode-v1"
+V5_STYLE_CONTRACT_VERSION = "2026-08-25-r8-job52-range-scene-local-v1"
 BASE_STYLE_LOCK_PROMPT = SHARED_STYLE_LOCK_PROMPT
 
 # 2026-08-04: 헤드웨어 락을 "항상 갈색 페도라"에서 "의상별 헤드웨어 1개만,
@@ -49,36 +48,20 @@ MASCOT_STYLE_LOCK_PROMPT = SHARED_MASCOT_STYLE_LOCK_PROMPT
 STYLE_LOCK_PROMPT = f"{BASE_STYLE_LOCK_PROMPT} {MASCOT_STYLE_LOCK_PROMPT}"
 
 # 기존 상수 이름을 사용하는 호출부의 호환성을 유지한다.
-STYLE_LOCK_PROMPT += (
-    " Exactly one headwear item per scene, exactly as the costume describes it. Never stack two headwear "
-    "pieces, and never substitute a different headwear than the one the costume names."
-)
 V5_CINEMATIC_CARTOON_STYLE_CONTRACT = STYLE_LOCK_PROMPT
 
 CHARACTER_FRAME_CONTRACT = (
-    "Place the gold coin mascot in the right-side foreground, while the broad background prop "
-    "(chalkboard / screen / map / board) fills the left side of the frame. "
-    "Character is full-body visible from head to shoes and occupies no more than 35% of the total frame width; "
-    "the primary explanatory prop occupies at least 60% of the frame. Do not use a close portrait crop or an oversized mascot head. "
-    "The character wears exactly the single headwear item named in its costume description below — never a second hat, "
-    "never a mix of two headwear pieces, and never a different headwear than the one the costume names. "
-    "Character expression must match scene tone: down market = worried/sweating expression, "
-    "up market = confident/happy expression, neutral = calm/explaining expression."
+    "Follow this scene's own visual hierarchy. The mascot may be left, center, right, small within a large environment, medium beside data, "
+    "or dominant for a reaction beat. Full body, waist-up, or action framing is allowed when compositionally justified. "
+    "Do not automatically place a giant board on the left or force the character into the right foreground."
 )
 
 # 정보형 data_lab은 7/30 벤치마크의 짙고 촘촘한 무대 미감을 기준으로 삼는다.
 # 검증 수치의 위치·내용을 AI에게 맡기는 지시가 아니라, 배경의 재질과 밀도를 고정하는 계약이다.
-CHARACTER_FRAME_CONTRACT += (
-    " Exactly one headwear item total, matching the costume description exactly; no stacked or duplicate headwear."
-)
-
 DATA_LAB_BENCHMARK_VISUAL_TREATMENT = (
-    " DATA-LAB BENCHMARK VISUAL TREATMENT: render a tactile hand-drawn broadcast analysis studio with ceiling spotlights, "
-    "visible cameras, cables, analog console details, and one broad curved presentation wall physically built into the set. "
-    "Use warm amber key light balanced with restrained cool-blue fill, thick bold black ink outlines, hard shadow edges, and flat high-contrast cel shading. "
-    "The presentation wall remains the only clear information surface, while the surrounding set stays busy through physical studio "
-    "equipment and non-writing material detail. Do not turn this into a neon sci-fi control room, a glossy 3D fintech dashboard, "
-    "a minimal vector infographic, or broad empty wall space."
+    " DATA-LAB RANGE: use the supplied approved laboratory and market-analysis scene references for line language and information density. "
+    "The actual room, palette, camera, number of displays, costume, and character scale must follow this scene's semiconductor or market meaning; "
+    "do not default to a broadcast studio with cameras and one curved wall."
 )
 
 EMOTION_MAP = {
@@ -95,14 +78,14 @@ EMOTION_MAP = {
 # 위 CHARACTER_FRAME_CONTRACT/STYLE_LOCK_PROMPT의 "정확히 하나만" 규칙과
 # 결합해, 모델이 페도라와 새 헤드웨어를 동시에 그리는 것을 막는다.
 COSTUME_MAP = {
-    "analyst": "wearing exactly one brown fedora hat as its only headwear, and a navy blue suit with white shirt and tie, with an optional call-center headset",
-    "professor": "wearing exactly one black graduation mortarboard cap as its only headwear (no fedora), a brown tweed blazer, and round glasses, holding a wooden pointer stick",
-    "reporter": "wearing exactly one brown fedora hat as its only headwear, and a navy TV-anchor suit",
-    "formal": "wearing exactly one brown fedora hat as its only headwear, and a navy blue suit with white shirt and tie, holding a cane",
-    "safety_vest": "wearing exactly one yellow hard hat as its only headwear (no fedora), and a navy blue suit under a reflective yellow safety vest",
-    "vest": "wearing exactly one brown fedora hat as its only headwear, and a navy blue suit with white shirt and tie",
-    "tuxedo_host": "bare-headed with no hat of any kind (no fedora), wearing a black tuxedo jacket with a red bow tie, holding a golden cane",
-    "architect_planner": "wearing exactly one yellow hard hat as its only headwear (no fedora), a brown tool belt over the navy suit, and holding a drafting compass",
+    "analyst": "a scene-appropriate market analyst outfit selected from the channel reference range; hat, glasses, headset, or goggles are optional only when useful",
+    "professor": "an academic explainer outfit suited to this scene; a mortarboard, jacket, glasses, or pointer may be used without copying them into unrelated scenes",
+    "reporter": "a location-appropriate reporter or presenter outfit; formal suit, cap, weather gear, or no hat may be chosen for this scene",
+    "formal": "a scene-appropriate formal outfit chosen for the event rather than a mandatory fedora-and-navy uniform",
+    "safety_vest": "industrial safety clothing only when the setting genuinely involves machinery, construction, a port, or physical hazard",
+    "vest": "a practical investigative or analyst outfit suited to the scene's metaphor",
+    "tuxedo_host": "a formal stage-host outfit whose color and accessories fit this particular event",
+    "architect_planner": "a planning or engineering outfit only when blueprints, construction, or physical design is central to the narration",
 }
 POSE_MAP = {
     "point_left": "holding a wooden pointer, pointing to the left toward the visual explanation",
@@ -159,10 +142,10 @@ ARCHETYPES = {
         "engraved metal texture, balance-chain detail, and non-writing etched directional marks only on the scale setting",
     ),
     "data_lab": Archetype(
-        "a tactile broadcast analysis studio with one broad curved presentation wall, cameras, and an analog control console",
-        "a physical illuminated presentation mural with non-writing line and bar silhouettes, studio cameras on tripods, cable bundles, analog gauges, and a desk microphone",
-        "warm amber studio spotlights with restrained cool-blue fill light",
-        "painted chart strokes, practical studio equipment, cable lines, analog dials, and color-only explanatory marks",
+        "a narration-specific financial analysis environment: semiconductor laboratory, production-line observation room, brokerage control room, or research workspace as the content requires",
+        "scene-specific analytical equipment, physical market or industry objects, and only the information surfaces needed by this narration",
+        "scene-dependent laboratory, market-room, industrial, or presentation lighting derived from the intended mood",
+        "layered equipment, chart forms, physical industry detail, and approved typography arranged in the supplied channel scene references' editorial-comic visual range",
     ),
     "briefing_podium": Archetype(
         "a formal policy and CEO press briefing room with one broad briefing surface embedded flush into the center back wall behind a central podium",
@@ -203,6 +186,10 @@ class SceneSpec:
     frame_occupancy: float = 0.35
     character_position: Literal["left", "center", "right"] = "right"
     character_required: bool = True
+    wardrobe_description: str = ""
+    action_description: str = ""
+    composition_description: str = ""
+    camera_description: str = ""
 
     def validate(self) -> None:
         for value, mapping, name in (
@@ -213,8 +200,8 @@ class SceneSpec:
         ):
             if value not in mapping:
                 raise ValueError(f"지원하지 않는 {name}: {value}")
-        if not 0.25 <= self.frame_occupancy <= 0.50:
-            raise ValueError("frame_occupancy는 0.25~0.50만 허용")
+        if not 0.15 <= self.frame_occupancy <= 0.65:
+            raise ValueError("frame_occupancy는 0.15~0.65만 허용")
         if self.character_position not in OCCUPANCY_PHRASE:
             raise ValueError(f"지원하지 않는 캐릭터 위치: {self.character_position}")
 
@@ -235,7 +222,7 @@ PROP_SURFACE_MAP: dict[str, str] = {
     "port_emergency": "broad painted front face of the single largest foreground shipping container nearest the center dock",
     "briefing_podium": "broad curved presentation wall behind the podium",
     "trade_calculator": "broad engraved front plinth directly beneath the brass balance scale's central pillar",
-    "data_lab": "broad curved broadcast-analysis wall on the left side of the studio",
+    "data_lab": "the storyboard-planned laboratory, production-line, control-room, or analysis surface",
     "risk_control_room": "single large central analog gauge dial face embedded at eye level in the curved operations wall",
     "retail_shock": "large checkout price board built into the supermarket counter",
     "real_estate_office": "large market guidance board behind the consultation desk",
@@ -249,26 +236,60 @@ MANDATORY_TEXT_EMBED_SUFFIX = (
 )
 
 
-def _build_prop_prompt(archetype: str, caption_en: str, direction: str, script_visuals: str = "") -> str:
-    """대본 키워드가 소품 표면에 직접 생성되도록 프롬프트를 만든다."""
-    if not caption_en or any(character.isdigit() for character in caption_en):
-        raise ValueError("소품 문구는 숫자 없는 영어 대본 키워드여야 합니다.")
+def _build_prop_prompt(
+    archetype: str,
+    caption_en: str,
+    direction: str,
+    script_visuals: str = "",
+    *,
+    text_surface_plan: list[dict] | None = None,
+) -> str:
+    """승인 문구를 장면 의미보다 앞세우지 않고 물리 표면에 배치한다."""
+    captions = [value.strip() for value in str(caption_en or "").splitlines() if value.strip()]
+    if not captions or any(any(character.isdigit() for character in value) for value in captions):
+        raise ValueError("소품 문구는 숫자 없는 승인 대본 문구여야 합니다.")
     surface = PROP_SURFACE_MAP[archetype]
     direction_detail = {
         "down": "a bold BLUE downward trend arrow and descending non-numeric bar-and-line chart",
         "up": "a bold RED upward trend arrow and rising non-numeric bar-and-line chart",
         "neutral": "a balanced amber sideways trend line with connecting concept arrows",
     }[direction]
-    mandatory_suffix = MANDATORY_TEXT_EMBED_SUFFIX.format(caption=caption_en, surface=surface)
+    rendered = " | ".join(f"'{value}'" for value in captions)
+    has_explicit_surface_plan = bool(text_surface_plan)
+    holographic_planned = any(
+        str(item.get("surface_style") or item.get("material") or "").strip().lower()
+        in {"holographic", "transparent_hologram", "translucent_hologram"}
+        for item in (text_surface_plan or []) if isinstance(item, dict)
+    )
+    if has_explicit_surface_plan:
+        placement = (
+            f"Follow the explicit storyboard text-surface plan: {text_surface_plan}. {surface} is only one candidate when that plan names it; "
+            "multiple approved items may share a surface or occupy separate relevant props. "
+        )
+        hierarchy = "Use the size and hierarchy stated by that plan. "
+    else:
+        placement = (
+            "No text-surface layout was explicitly storyboarded. If the approved wording is useful, place it once as a supporting, "
+            "small-to-moderate typographic detail on an existing scene-native prop that already serves the narration. Never create a new board, "
+            "floating panel, title card, or oversized display merely to hold the wording. "
+        )
+        hierarchy = (
+            "The script-specific character action, physical objects, and their causal relationship must dominate the frame; "
+            "the wording remains visually subordinate. "
+        )
+    material = (
+        "A holographic or translucent treatment is permitted only for the plan item that explicitly requests it; all other text-bearing surfaces remain solid and set-mounted. "
+        if holographic_planned else
+        "Use a solid opaque scene-mounted monitor, opaque wall-mounted information board, machine gauge, or painted or engraved prop face. Never use a detached translucent glass card or floating hologram. "
+    )
     return (
-        f"PROP SURFACE — {surface}. The exact English words '{caption_en}' are written DIRECTLY ON THE {surface.upper()} surface. "
-        f"{mandatory_suffix} Put {direction_detail} directly below the words on that same surface. "
+        f"SCENE-LOCAL TYPOGRAPHY: approved exact text items are [{rendered}]. "
+        f"{placement}{hierarchy}{material}"
+        f"Render every used item verbatim and integrate its typography into the prop's material, perspective, lighting, and ink style. "
+        f"Use {direction_detail} where it helps the scene rather than automatically placing it below the words. "
         f"SCRIPT MEANING VISUALS: {script_visuals or 'use non-textual scene-native explanatory objects'}. "
-        "Render these as physical illustrations, object silhouettes, arrows, and non-numeric chart shapes integrated into this same archetype; "
-        "they explain the script without adding labels, values, or a second text-bearing prop. "
-        "Show the exact caption exactly ONCE, only on the named primary surface. All secondary consoles, screens, gauges, signs, containers, "
-        "and background props must contain no readable words and no partial repetition of any caption word. "
-        "The prop itself is the message. No Korean characters, no numerals, no other English words, no brand marks, and no floating text anywhere else in the image."
+        "Do not make the typography, one board, or one giant word the whole visual idea unless the storyboard explicitly requests that hierarchy. "
+        "No numerals or other unapproved Korean or English words."
     )
 
 
@@ -425,6 +446,8 @@ def _fact_surface_contract(
     spec: SceneSpec,
     scene_type_selection: "ArchetypeSelection | None",
     visual_text_policy: VisualTextPolicy,
+    *,
+    text_surface_plan: list[dict] | None = None,
 ) -> str:
     """검증 사실을 장면 속 물리 소품에만 배치하도록 프롬프트 계약을 만든다."""
     if scene_type_selection is None:
@@ -439,20 +462,27 @@ def _fact_surface_contract(
     if not scene_type_selection.physical_surfaces or not scene_type_selection.primary_physical_surface:
         raise ValueError("정보형 씬에는 최소 한 개의 물리 정보 표면이 필요합니다.")
 
+    # 비수치 문구만 있고 표면 계획이 없는 장면에 primary 표면 계약을 강제하면
+    # 모델이 대본의 사물 관계 대신 거대한 단일 보드를 만들었다. 결정론 수치나
+    # 명시된 표면 계획이 있을 때만 이 좌표/표면 계약을 활성화한다.
+    has_explicit_surface_plan = bool(text_surface_plan)
+    if visual_text_policy == "script_captioned" and not has_explicit_surface_plan:
+        return ""
+
     primary_surface = scene_type_selection.primary_physical_surface
-    substitute_ban = _primary_substitute_ban(scene_type_selection)
-    screenless_nonprimary_contract = _screenless_nonprimary_contract(scene_type_selection)
-    third_attempt_layout_ban = _third_attempt_layout_ban(scene_type_selection)
+    # 표면 종류는 후보이며, 과거 재시도용 단일 표면·보조 화면 금지 규칙을
+    # 모든 새 장면에 재사용하지 않는다.
+    substitute_ban = ""
+    screenless_nonprimary_contract = ""
+    third_attempt_layout_ban = ""
     nonprimary_surface_types = "gauge, map, placard, document, and console"
     if not screenless_nonprimary_contract:
         nonprimary_surface_types = "gauge, screen, map, placard, document, and console"
     base = (
         f"IN-SCENE FACT-SURFACE CONTRACT: this is a {scene_type_selection.scene_type} scene. "
-        f"The only permitted information-bearing prop is {primary_surface}. "
-        "Compose one substantial, unobstructed, perspective-correct information area inside that exact prop; it is part of the set, "
-        "not an overlay placed on top of the frame. "
-        f"Every other {nonprimary_surface_types} must show only needles, color blocks, abstract shapes, "
-        "or non-writing material texture: no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations. "
+        f"{primary_surface} is a preferred information anchor, not a mandatory single-board layout. "
+        "Any planned information surface must be a perspective-correct part of the illustrated set rather than a pasted overlay. "
+        f"Other {nonprimary_surface_types} may carry only scene-approved exact strings; otherwise use chart shapes, needles, color blocks, and material texture without pseudo-text. "
         f"{substitute_ban}{screenless_nonprimary_contract}{third_attempt_layout_ban}"
     )
     if visual_text_policy == "strict_textless":
@@ -464,16 +494,25 @@ def _fact_surface_contract(
             "Never create a blank monitor, detached UI card, floating panel, or separate number display."
         )
     if visual_text_policy == "script_captioned":
+        holographic_planned = any(
+            str(item.get("surface_style") or item.get("material") or "").strip().lower()
+            in {"holographic", "transparent_hologram", "translucent_hologram"}
+            for item in (text_surface_plan or []) if isinstance(item, dict)
+        )
+        material_contract = (
+            "A translucent or holographic treatment is allowed only on the exact plan item that explicitly requests it. "
+            if holographic_planned else
+            "Use only solid opaque scene-mounted displays, opaque wall-mounted information boards, machine gauges, or painted or engraved prop faces; never a detached translucent card or floating hologram. "
+        )
         return base + (
-            "Only the exact script-derived English caption named in the PROP SURFACE section may appear on this primary prop. "
-            "Do not add any other readable words, figures, labels, or values."
+            "Only the exact script-derived Korean or English items named in the typography section may be readable. "
+            "Their number, hierarchy, and surfaces follow the scene plan; do not add other words or figures. "
+            + material_contract
         )
     return base + (
-        "The designated primary prop MUST visibly include at least two or three short, clearly readable decorative English labels "
-        "or sample figures, engraved, painted, chalked, printed, or projected directly inside that same physical prop. "
-        "Those marks must inherit its material, outline, lighting, occlusion, and perspective. "
-        "Never place a number or text in a floating card, detached rectangular UI, separate LCD widget, or pasted-on panel. "
-        "AI-drawn marks are decorative only; exact verified facts are composited later by deterministic rendering."
+        "Do not invent decorative labels, sample figures, pseudo-text, or filler ticker symbols. Keep the primary prop visually rich through "
+        "material, lighting, non-linguistic diagrams, arrows, and color blocks. Never place a number or text in a floating card, detached "
+        "rectangular UI, separate LCD widget, or pasted-on panel."
     )
 
 
@@ -485,6 +524,7 @@ def build_prompt(
     semantic_caption: str = "",
     semantic_visual_brief: str = "",
     locale_visual_brief: str = "",
+    text_surface_plan: list[dict] | None = None,
 ) -> str:
     """검증 수치는 후처리로 유지하고, 장식 표기는 선택된 물리 표면에만 요청한다."""
     spec.validate()
@@ -492,25 +532,42 @@ def build_prompt(
         raise ValueError(f"Unsupported visual_text_policy: {visual_text_policy}")
     if semantic_direction not in {"down", "up", "neutral"}:
         raise ValueError(f"Unsupported semantic_direction: {semantic_direction}")
-    fact_surface_contract = _fact_surface_contract(spec, scene_type_selection, visual_text_policy)
+    has_explicit_surface_plan = bool(text_surface_plan)
+    fact_surface_contract = _fact_surface_contract(
+        spec,
+        scene_type_selection,
+        visual_text_policy,
+        text_surface_plan=text_surface_plan,
+    )
     is_general_scene = bool(scene_type_selection and scene_type_selection.scene_type == "general")
     is_selected_information_scene = bool(scene_type_selection and not is_general_scene)
     priority_prop_instruction = ""
     if visual_text_policy == "script_captioned":
         if is_selected_information_scene:
             priority_prop_instruction = _build_prop_prompt(
-                spec.archetype, semantic_caption, semantic_direction, semantic_visual_brief,
+                spec.archetype,
+                semantic_caption,
+                semantic_direction,
+                semantic_visual_brief,
+                text_surface_plan=text_surface_plan,
             )
         else:
             visual_text_policy = "strict_textless"
             priority_prop_instruction = ""
     archetype = ARCHETYPES[spec.archetype]
     if spec.character_required:
-        character = f"{MASCOT_STYLE_BIBLE}, {MASCOT_IDENTITY_LOCK}, {EMOTION_MAP[spec.emotion]}, {COSTUME_MAP[spec.costume]}, {POSE_MAP[spec.pose]}"
+        wardrobe = spec.wardrobe_description or COSTUME_MAP[spec.costume]
+        action = spec.action_description or POSE_MAP[spec.pose]
+        character = f"{MASCOT_STYLE_BIBLE}, {MASCOT_IDENTITY_LOCK}, {EMOTION_MAP[spec.emotion]}, {wardrobe}, {action}"
         composition = (
             "Premium economic-explainer cartoon illustration. "
             f"{CHARACTER_FRAME_CONTRACT} "
-            "Keep clear foreground, midground, and background depth around the one designated physical explanatory prop."
+            + (
+                f"BINDING SCENE-SPECIFIC COMPOSITION: {spec.composition_description} "
+                "This binding direction overrides generic placement examples; do not swap the specified side, scale, or object hierarchy. "
+                if spec.composition_description else ""
+            )
+            + "Keep readable foreground, midground, and background relationships appropriate to this scene."
         )
         art_direction = V5_CINEMATIC_CARTOON_STYLE_CONTRACT
     else:
@@ -525,23 +582,13 @@ def build_prompt(
         art_direction = (
             f"{BASE_STYLE_LOCK_PROMPT} NO mascot, no gold coin person, no face on any object, and no anthropomorphic props."
         )
-    if spec.archetype == "data_lab" and spec.character_required:
-        composition += (
-            " For this wide broadcast-analysis-studio view, show the mascot from hat to shoes at the same full-body scale as the other "
-            "economic-explainer scenes; keep the character within the right-side foreground and leave the curved presentation wall, "
-            "cameras, and console visibly spacious around it. Do not use a close portrait crop."
-        )
     scene = (
-        "Use a distinct camera angle, prop arrangement, and lighting balance for this scene. "
+        f"Use this scene's camera direction: {spec.camera_description or 'choose the framing that best explains this scene'}. "
         f"STAGE: {archetype.stage}. KEY PROPS: {archetype.props}. "
         f"LIGHTING: {archetype.lighting}. DECORATIVE DETAIL: {archetype.visual_detail}. "
-        f"LOCAL CONTEXT: {locale_visual_brief or 'use a contextually specific real-world setting rather than a generic Western storefront or office'}."
+        f"LOCAL CONTEXT: {locale_visual_brief or 'use a contextually specific setting'}. "
+        "Choose a scene-specific balance of character, objects, charts, text surfaces, and environment. Do not impose a fixed prop count or studio layout."
     )
-    if spec.archetype == "weather_map":
-        scene += (
-            " The one large curved map wall is the only map or information surface in this studio. "
-            "Do not add any small map screen, chart card, dashboard, control-panel display, inset forecast window, or mini infographic anywhere else."
-        )
     if spec.archetype == "data_lab" and is_selected_information_scene:
         art_direction += DATA_LAB_BENCHMARK_VISUAL_TREATMENT
     if visual_text_policy == "diegetic_decorative" and is_general_scene:
@@ -552,26 +599,21 @@ def build_prompt(
             "Do not leave an empty screen or a blank placeholder."
         )
         exclusions = (
-            "DO NOT INCLUDE Korean text, Korean subtitles, a channel logo, watermark, numbers, chart labels, metric displays, "
-            "or a generic floating dashboard card. Do not create a detached rectangular UI widget, free-floating data card, "
-            "isolated LCD panel, presentation slide, or separate POS-style number screen. "
-            "Do not make a split screen, comic panels, inset images, picture-in-picture windows, framing gutters, or a collage. "
-        "If a mascot is present it is the only anthropomorphic character; all props must be inanimate."
+            "Do not include unapproved readable or pseudo-readable text, a channel logo, watermark, or an accidental floating dashboard card. "
+            "Use a split, board, panel, or inset only when the scene-specific storyboard calls for it. Never add a second coin mascot."
         )
     elif visual_text_policy == "diegetic_decorative" and is_selected_information_scene:
         primary_surface = scene_type_selection.primary_physical_surface
-        substitute_ban = _primary_substitute_ban(scene_type_selection)
-        screenless_nonprimary_contract = _screenless_nonprimary_contract(scene_type_selection)
-        third_attempt_layout_ban = _third_attempt_layout_ban(scene_type_selection)
+        substitute_ban = ""
+        screenless_nonprimary_contract = ""
+        third_attempt_layout_ban = ""
         nonprimary_surface_types = "gauges, maps, placards, documents, signs, and consoles"
         if not screenless_nonprimary_contract:
             nonprimary_surface_types = "gauges, screens, maps, placards, documents, signs, and consoles"
         background_information_density = (
             "BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. "
-            f"Make {primary_surface} the single visual-information focal prop. "
-            f"Every surface OTHER THAN {primary_surface} must remain visually rich only through needles, color blocks, signal lights, "
-            "abstract geometry, maps without writing, and non-writing material texture. Do not distribute labels across multiple props. "
-            "All AI-drawn writing and values are atmospheric decoration only, never factual information. "
+            f"Use {primary_surface} when it serves the scene, while allowing other storyboard-planned surfaces and props. "
+            "Readable content must come from the scene-local approved text plan; all other detail uses charts, color, material, and objects without pseudo-text. "
             f"{screenless_nonprimary_contract}{third_attempt_layout_ban}"
             "Never leave an empty screen or a blank placeholder."
         )
@@ -580,25 +622,16 @@ def build_prompt(
             "Do not create a detached rectangular UI widget, free-floating data card, isolated LCD panel, presentation slide, "
             "or a separate POS-style number screen placed on top of the scene. "
             f"{substitute_ban}{screenless_nonprimary_contract}{third_attempt_layout_ban}"
-            f"All {nonprimary_surface_types} OTHER THAN {primary_surface} must show only needles, "
-            "color blocks, abstract shapes, or non-writing material texture: "
-            "no readable text, letters, numbers, formula fragments, labels, axis ticks, or chart annotations on them. "
             "Do not make empty monitors, empty boards, empty signboards, blank title cards, or layout-guide frames. "
-            "Do not make a split screen, comic panels, inset images, picture-in-picture windows, framing gutters, or a collage. "
-        "If a mascot is present it is the only anthropomorphic character: all calculators, robots, screens, products, "
-            "animals, and background props must be inanimate and must not have eyes, faces, limbs, or expressions. "
+            "Use split comparisons or multiple surfaces only when requested by the scene plan. Never add a second coin mascot. "
             "The scene must be complete, busy, and meaningful."
         )
     elif visual_text_policy == "diegetic_decorative":
         background_information_density = (
             "BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. "
-            "Include populated analog gauges, labeled control dials, signal lights, dense diagram lines, maps, charts, "
-            "stacked documents, warning placards, and integrated prop details. Use short English labels, sample figures, "
-            "simple equations, chart ticks, and diagram annotations as hand-drawn decorative scene material. "
-            f"DIEGETIC TEXT PLACEMENT: {DIEGETIC_TEXT_GUIDANCE[spec.archetype]} "
-            "All writing must be painted, chalked, engraved, printed, projected, or physically mounted onto an existing prop. "
-            "It must share that prop's material, outline, illumination, occlusion, and perspective; it must not look pasted on. "
-            "All AI-drawn writing and values are atmospheric decoration only, never factual information. "
+            "Include populated analog gauges, signal lights, dense non-linguistic diagram lines, maps, charts, "
+            "stacked sealed documents, warning-color physical props, and integrated scene detail. "
+            "Do not use filler English labels, sample figures, equations, ticker symbols, or pseudo-text as decoration. "
             "Every board, gauge, map, checkout prop, and signboard must already contain dense meaningful visual detail; "
             "never leave an empty screen or a blank placeholder."
         )
@@ -608,22 +641,21 @@ def build_prompt(
             "or a separate POS-style number screen placed on top of the scene. Typography may exist only as a naturally integrated "
             "part of a map, plaque, gauge, product package, sign, container, chalk wall, or other physical stage prop. "
             "Do not make empty monitors, empty boards, empty signboards, blank title cards, or layout-guide frames. "
-            "Do not make a split screen, comic panels, inset images, picture-in-picture windows, framing gutters, or a collage. "
-            "The gold coin mascot is the only anthropomorphic character: all calculators, robots, screens, products, "
-            "animals, and background props must be inanimate and must not have eyes, faces, limbs, or expressions. "
+            "Use split comparisons, comic framing, or inset evidence only when requested by the scene plan. Never add a second coin mascot. "
             "The scene must be complete, busy, and meaningful."
         )
     elif visual_text_policy == "script_captioned":
         background_information_density = (
             "BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. "
             f"Use this script-meaning visual brief: {semantic_visual_brief or 'physical charts, maps, analog gauges, arrows, and color blocks'}. "
+            "Prioritize the scene-local meaning and relationship; do not replace it with a generic rising or falling chart. "
             "Use physical charts, maps, analog gauges, arrows, color blocks, light signals, and layered scene-native props. "
-            "Do not add a second information-bearing prop or borrow objects from another archetype setting."
+            "The number and placement of information-bearing props follow this scene's text-surface plan."
         )
         exclusions = (
-            "DO NOT INCLUDE Korean text, Korean subtitles, any numeral, factual value, channel logo, watermark, generic floating dashboard card, "
-            "detached UI widget, isolated LCD card, presentation slide, split screen, comic panel, inset image, picture-in-picture window, or collage. "
-            "If a mascot is present it is the only anthropomorphic character; every other prop must be inanimate."
+            "DO NOT INCLUDE any Korean or English text other than the exact approved caption, any numeral, factual value, channel logo, watermark, generic floating dashboard card, "
+            "or an accidental detached UI widget. A split, comic panel, inset, or multiple surface layout is allowed only when the scene storyboard plans it. "
+            "Never add a second coin mascot."
         )
     else:
         primary_surface = scene_type_selection.primary_physical_surface if is_selected_information_scene else "the main stage prop"
@@ -636,8 +668,7 @@ def build_prompt(
             "BACKGROUND INFORMATION DENSITY: build a fully dressed explanatory set, not a simple backdrop. "
             "Include color-only control dials, clusters of signal lights, dense non-linguistic connection lines, "
             "abstract bar and curve silhouettes without axes, map markers, layered physical props, and colored light shapes. "
-            f"Make {primary_surface} visibly broad, flat, and unobstructed in the left-side set. On that same physical surface, compose {direction_visual} "
-            "and leave its upper-middle area visually calm for the deterministic caption compositor. "
+            f"Use {primary_surface} or another storyboard-planned scene-native zone for {direction_visual} and leave only the exact planned numeric typography area calm enough for deterministic compositing. "
             "Every visual surface must contain meaningful non-linguistic detail rather than an empty placeholder."
         )
         exclusions = (
@@ -646,20 +677,24 @@ def build_prompt(
             "Do not draw Roman letters such as X or x, variable symbols, equation fragments, equals signs, plus or minus signs, "
             "colons, axis labels, or any chart annotation that can be read as writing. "
             "The primary surface must remain a physical wall, board, map, gauge, container face, or console surface—never a floating UI card. "
-            "Do not make a split screen, comic panels, inset images, picture-in-picture windows, framing gutters, or a collage. "
+            "A split screen, comic panel, inset, or collage is allowed only when planned by this scene's composition. "
             "The scene must be complete, busy, and meaningful."
         )
     reserve = (
-        "Keep a slim lower band and a small upper-right corner free of foreground subjects and high-contrast details. "
-        "Show only continuous background texture in those areas. Do not place a mascot's face or hands there when a mascot is required."
+        "Reserve space only for overlays explicitly listed by this scene. Otherwise use the full frame and do not create generic empty safe zones."
     )
+    # 장면·구도·사물 관계를 먼저 전달한다. 텍스트 계약을 맨 앞에 두면 작은
+    # 승인 문구조차 거대한 헤드라인 보드로 승격되는 경향이 있었다.
     return " ".join((
-        f"<prop_surface_priority> {priority_prop_instruction} </prop_surface_priority>" if priority_prop_instruction else "",
         f"<character> {character} </character>", f"<composition> {composition} </composition>",
         f"<scene> {scene} </scene>", f"<art_direction> {art_direction} </art_direction>",
         f"<background_information_density> {background_information_density} </background_information_density>",
-        f"<semantic_surface> {semantic_caption or 'non-textual'} physical prop surface with {semantic_direction} direction </semantic_surface>",
         f"<script_meaning_visuals> {semantic_visual_brief or 'non-textual scene-native objects'} </script_meaning_visuals>",
+        f"<scene_local_typography> {priority_prop_instruction} </scene_local_typography>" if priority_prop_instruction else "",
+        (
+            f"<semantic_surface> {semantic_caption} follows the explicit scene text-surface plan with {semantic_direction} direction </semantic_surface>"
+            if semantic_caption and has_explicit_surface_plan else ""
+        ),
         f"<fact_surface_contract> {fact_surface_contract} </fact_surface_contract>" if fact_surface_contract else "",
         f"<reserve> {reserve} </reserve>",
         f"<layout_contract> {layout_instruction} </layout_contract>" if layout_instruction else "",

@@ -1,0 +1,4301 @@
+{
+  "job_id": 520822,
+  "keyword": "삼성전자와 SK하이닉스 PER 4배가 정말 싼가, 하반기 이익 전망 한 가지 기준",
+  "script": "삼성전자와 SK하이닉스, PER 4배라고요. 정말 싸다는 말이 맞는 걸까요?\n\n그 수치를 믿기 전에 확인할 게 있습니다. 코스피는 8월 21일 6912포인트였습니다.\n\n7월 말 저점에서 빠르게 반등한 수치죠. 이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다.\n\n삼성전자는 코스피 시총 1위 종목입니다. SK하이닉스는 바로 뒤를 잇는 2위죠.\n\n두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다. 그런데 PER 4배, 어디서 나온 수치일까요?\n\n검증 가능한 EPS 추정치가 없습니다. 컨센서스 데이터도 확인되지 않죠. 근거 자체가 없는 겁니다.\n\nPER은 주가를 이익으로 나눈 값입니다. 분모인 이익 추정치를 어떻게 잡느냐가 핵심이죠.\n\n추정치에 따라 결과가 완전히 달라집니다. 낙관적 전망을 쓰면 주가가 싸 보이거든요.\n\n보수적으로 잡으면 달라질 수 있죠. 하반기 이익 추정치는 아직 불확실하죠. 같은 주가도 분모에 따라 다르게 읽힙니다.\n\n검증 안 된 수치로 판단해도 될까요? 하나의 기준만 기억해 두세요. 분모가 어떤 이익 추정치인지 직접 확인하세요.\n\n낙관치인지 보수치인지가 먼저인 겁니다. 그 확인이 판단의 시작이니까요. PER 숫자 하나보다 근거가 더 중요합니다.",
+  "sections": [
+    {
+      "title": "장면 001",
+      "content": "삼성전자와 SK하이닉스, PER 4배라고요. 정말 싸다는 말이 맞는 걸까요?",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "intro",
+      "char_count": 24,
+      "text": "삼성전자와 SK하이닉스, PER 4배라고요. 정말 싸다는 말이 맞는 걸까요?",
+      "text_for_tts": "삼성전자와 SK하이닉스, PER 4배라고요. 정말 싸다는 말이 맞는 걸까요?",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "481392c59a74edd2e487fd53790c9c273468359a87bedaaa1ad1ce1e3dc28ad0",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "삼성전자와 SK하이닉스,",
+            "text_sha256": "213fc3c17cf2b3508ad9e466d09d46fbee5fbc8ffc1b202119d353fc4eb17296"
+          },
+          {
+            "local_index": 1,
+            "text": "PER 4배라고요.",
+            "text_sha256": "778f6eb1e885dfffb8884a4b5bdd56288974d92fe36789ff65c1bc216d795e9a"
+          },
+          {
+            "local_index": 2,
+            "text": "정말 싸다는 말이 맞는 걸까요?",
+            "text_sha256": "7673da4d55f9f2da1d5e3786fad542401addda2f093b8acac64533f3447e264c"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 2,
+        "visible_char_count": 34,
+        "caption_chunk_count": 3
+      },
+      "scene_id": "script_scene_001",
+      "visual_type": "character_hero",
+      "visual_plan": {
+        "objective": "hero character establishes the topic",
+        "visual_type": "character_hero",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 0,
+        "source_scene_count": 11
+      },
+      "archetype": "trade_calculator",
+      "archetype_reason": "PER 4배라는 밸류에이션 수치가 '정말 싸다'는 판단인지 의문을 제기하는 대사로, 가격 대비 가치의 균형을 따지는 저울 은유가 내러티브와 정확히 맞아떨어진다. 삼성전자·SK하이닉스의 주가 매력도를 수치로 가늠하는 장면이므로 황금 저울 무대가 가장 적합하다.",
+      "specific_props": "황금 저울 한쪽에 'PER 4x' 수치 패널, 반대쪽에 물음표(?) 아이콘과 '진짜 저평가?' 텍스트 배치; 저울 눈금이 미세하게 흔들리는 애니메이션으로 판단 불확실성 표현; 배경에 삼성전자·SK하이닉스 로고 실루엣과 반도체 웨이퍼 이미지 삽입",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "comparison_board",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "analyst suit with a presentation clicker",
+        "role_costume": "detective",
+        "costume_state": "worried",
+        "pose_asset": "detective_worried",
+        "fallback_pose": "explaining",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "dramatic rim light",
+        "reference_composition": {
+          "id": "comparison_board",
+          "character_placement": "right third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.42
+        },
+        "character_placement": "right third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "metric",
+      "selection_reason": "대본에 검증 대상 수치·등락·규모 표현이 있어 지표형으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "context",
+      "phase_name": "Context & Escalation",
+      "start_seconds": 0.0,
+      "end_seconds": 4.46,
+      "emotion_tag": "highlight",
+      "character_action": "pointer_up",
+      "edit_marker": "data_overlay",
+      "sentences": [
+        {
+          "sentence_id": "s001_1",
+          "text": "삼성전자와 SK하이닉스, PER 4배라고요.",
+          "text_for_tts": "삼성전자와 SK하이닉스, PER 4배라고요.",
+          "emotion_tag": "highlight",
+          "character_action": "pointer_up",
+          "edit_marker": "data_overlay",
+          "estimated_seconds": 2.55,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[emphatically]",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s001_2",
+          "text": "정말 싸다는 말이 맞는 걸까요?",
+          "text_for_tts": "정말 싸다는 말이 맞는 걸까요?",
+          "emotion_tag": "neutral",
+          "character_action": "pointer_up",
+          "edit_marker": "emphasis_zoom",
+          "estimated_seconds": 1.81,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_001",
+        "text_sha256": "481392c59a74edd2e487fd53790c9c273468359a87bedaaa1ad1ce1e3dc28ad0",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "[emphatically]",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 002",
+      "content": "그 수치를 믿기 전에 확인할 게 있습니다. 코스피는 8월 21일 6912포인트였습니다.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "intro",
+      "char_count": 23,
+      "text": "그 수치를 믿기 전에 확인할 게 있습니다. 코스피는 8월 21일 6912포인트였습니다.",
+      "text_for_tts": "그 수치를 믿기 전에 확인할 게 있습니다. 코스피는 8월 21일 6912포인트였습니다.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "30ee6711e99aae312f2e58beabc3af38a2840608cf3465f8c6d48effb13d30ed",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "그 수치를 믿기 전에",
+            "text_sha256": "4b24bb1f657a5d11a38d25d5db8f34e8e876d24c46389c868b92606d64dabc72"
+          },
+          {
+            "local_index": 1,
+            "text": "확인할 게 있습니다.",
+            "text_sha256": "4b06032b77e170699bf4b87d6c6899da1e01b92a51e66a3b8938286f76da5c5c"
+          },
+          {
+            "local_index": 2,
+            "text": "코스피는 8월 21일",
+            "text_sha256": "497dacacb0b3941c35868af11ffcf06cffeefeb2f7ebf324262d98b5f1a850aa"
+          },
+          {
+            "local_index": 3,
+            "text": "6912포인트였습니다.",
+            "text_sha256": "df778019a554cf273ed5d86ec5ef0cff81ef0190fce5645f420c1a227ab910c4"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 2,
+        "visible_char_count": 38,
+        "caption_chunk_count": 4
+      },
+      "scene_id": "script_scene_002",
+      "visual_type": "character_hero",
+      "visual_plan": {
+        "objective": "hero character establishes the topic",
+        "visual_type": "character_hero",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 1,
+        "source_scene_count": 11
+      },
+      "archetype": "data_lab",
+      "archetype_reason": "특정 날짜(8월 21일)와 구체적인 지수 수치(6912포인트)를 제시하며 데이터의 신뢰성을 검증하는 장면으로, 수치를 '믿기 전에 확인'하는 분석적 맥락이 홀로그램 데이터 랩의 지표 검증·대시보드 시각 은유와 정확히 부합한다.",
+      "specific_props": "홀로그램 스크린에 KOSPI 타임라인 차트 표시, 8월 21일 날짜 마커 강조 핀, 6912 수치를 크게 부각한 디지털 숫자 패널, 데이터 진위 확인을 상징하는 돋보기 또는 체크마크 오버레이",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "data_lab",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "industrial_navy",
+          "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+        },
+        "wardrobe": "white lab coat and data goggles",
+        "role_costume": "analyst",
+        "costume_state": "worried",
+        "pose_asset": "analyst_worried",
+        "fallback_pose": "scientist",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "bright editorial daylight",
+        "reference_composition": {
+          "id": "data_lab",
+          "character_placement": "right third",
+          "character_area_target": 0.44,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "context",
+      "phase_name": "Context & Escalation",
+      "start_seconds": 4.46,
+      "end_seconds": 9.45,
+      "emotion_tag": "highlight",
+      "character_action": "pointer_up",
+      "edit_marker": "data_overlay",
+      "sentences": [
+        {
+          "sentence_id": "s002_1",
+          "text": "그 수치를 믿기 전에 확인할 게 있습니다.",
+          "text_for_tts": "그 수치를 믿기 전에 확인할 게 있습니다.",
+          "emotion_tag": "neutral",
+          "character_action": "pointer_up",
+          "edit_marker": "emphasis_zoom",
+          "estimated_seconds": 2.39,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s002_2",
+          "text": "코스피는 8월 21일 6912포인트였습니다.",
+          "text_for_tts": "코스피는 8월 21일 6912포인트였습니다.",
+          "emotion_tag": "highlight",
+          "character_action": "pointer_up",
+          "edit_marker": "data_overlay",
+          "estimated_seconds": 2.49,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[emphatically]",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_002",
+        "text_sha256": "30ee6711e99aae312f2e58beabc3af38a2840608cf3465f8c6d48effb13d30ed",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "[emphatically]",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 003",
+      "content": "7월 말 저점에서 빠르게 반등한 수치죠. 이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "intro",
+      "char_count": 22,
+      "text": "7월 말 저점에서 빠르게 반등한 수치죠. 이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다.",
+      "text_for_tts": "7월 말 저점에서 빠르게 반등한 수치죠. 이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "76f60d15e802b075d571e682b484328346b372de4f36d314f2956ade03e2cdab",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "7월 말 저점에서 빠르게",
+            "text_sha256": "2d19132f0484b8509064761e5215d2f305c4c36df438d4fd7c20581fec36eded"
+          },
+          {
+            "local_index": 1,
+            "text": "반등한 수치죠.",
+            "text_sha256": "269915ecaa1294ad9debc5453b6673835bd9b50f717605bdb3b21947757a862c"
+          },
+          {
+            "local_index": 2,
+            "text": "이 흐름 속에서 지금이",
+            "text_sha256": "fb6f3972ce018b6af8a05354c45ead9ccfda7eae13f282a4d4e87abb3c641b86"
+          },
+          {
+            "local_index": 3,
+            "text": "싸다는 믿음이 퍼졌습니다.",
+            "text_sha256": "527b0154bd15e17799a033e6b74bf55696f0c79cb6af7624affdf2066e3a3446"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 2,
+        "visible_char_count": 38,
+        "caption_chunk_count": 4
+      },
+      "scene_id": "script_scene_003",
+      "visual_type": "character_hero",
+      "visual_plan": {
+        "objective": "hero character establishes the topic",
+        "visual_type": "character_hero",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 2,
+        "source_scene_count": 11
+      },
+      "archetype": "trade_calculator",
+      "archetype_reason": "7월 말 저점 반등 이후 '지금이 싸다'는 저가 매수 심리가 확산되는 장면으로, 현재 가격 수준의 밸류에이션 판단과 매력도 평가가 핵심 내러티브다. 황금 저울이 '싸다(저평가)'는 인식이 시장에 퍼지는 심리적 균형점 논의를 시각적으로 가장 강력하게 표현한다.",
+      "specific_props": "황금 저울 한쪽에 '7월 저점' 가격표, 반대쪽에 '현재 반등 지수' 수치 패널, 저울 눈금이 '저평가' 방향으로 기울어진 연출, 배경에 반등 곡선 차트 홀로그램",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "comparison_board",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "analyst suit with a presentation clicker",
+        "role_costume": "detective",
+        "costume_state": "worried",
+        "pose_asset": "detective_worried",
+        "fallback_pose": "explaining",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "cinematic practical lights",
+        "reference_composition": {
+          "id": "comparison_board",
+          "character_placement": "right third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "context",
+      "phase_name": "Context & Escalation",
+      "start_seconds": 9.45,
+      "end_seconds": 14.44,
+      "emotion_tag": "highlight",
+      "character_action": "pointer_up",
+      "edit_marker": "data_overlay",
+      "sentences": [
+        {
+          "sentence_id": "s003_1",
+          "text": "7월 말 저점에서 빠르게 반등한 수치죠.",
+          "text_for_tts": "7월 말 저점에서 빠르게 반등한 수치죠.",
+          "emotion_tag": "highlight",
+          "character_action": "pointer_up",
+          "edit_marker": "data_overlay",
+          "estimated_seconds": 2.2,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[emphatically]",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s003_2",
+          "text": "이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다.",
+          "text_for_tts": "이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다.",
+          "emotion_tag": "neutral",
+          "character_action": "pointer_up",
+          "edit_marker": "emphasis_zoom",
+          "estimated_seconds": 2.69,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_003",
+        "text_sha256": "76f60d15e802b075d571e682b484328346b372de4f36d314f2956ade03e2cdab",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "[emphatically]",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 004",
+      "content": "삼성전자는 코스피 시총 1위 종목입니다. SK하이닉스는 바로 뒤를 잇는 2위죠.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "background",
+      "char_count": 22,
+      "text": "삼성전자는 코스피 시총 1위 종목입니다. SK하이닉스는 바로 뒤를 잇는 2위죠.",
+      "text_for_tts": "삼성전자는 코스피 시총 1위 종목입니다. SK하이닉스는 바로 뒤를 잇는 2위죠.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "1bd3ccdd9875cb3bf0e3ef1fbe01dd5e167d16dbde31b9a7f7b30714f46deb18",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "삼성전자는 코스피 시총",
+            "text_sha256": "c5c3c623734c0cb4f94c374295dd477bec34b45d15deff59480a1fa908b58b17"
+          },
+          {
+            "local_index": 1,
+            "text": "1위 종목입니다.",
+            "text_sha256": "a9a3482fb8d5d60789651c20463b0c281d8a3e506536bcc349217d5a5cc6e3d1"
+          },
+          {
+            "local_index": 2,
+            "text": "SK하이닉스는 바로",
+            "text_sha256": "e5138a1856095ea4c55ca47cab72924cd12060b9f11743daf8f896ef67dbc435"
+          },
+          {
+            "local_index": 3,
+            "text": "뒤를 잇는 2위죠.",
+            "text_sha256": "0d472411fc64c9ead3ed7773dc4abb8fe1287a2a5b09fa33347261e09930b767"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 2,
+        "visible_char_count": 35,
+        "caption_chunk_count": 4
+      },
+      "scene_id": "script_scene_004",
+      "visual_type": "news_context",
+      "visual_plan": {
+        "objective": "newsroom or real-world business context",
+        "visual_type": "news_context",
+        "character_required": false,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 3,
+        "source_scene_count": 11
+      },
+      "archetype": "data_lab",
+      "archetype_reason": "삼성전자와 SK하이닉스의 코스피 시가총액 순위(1위·2위)를 객관적 수치로 제시하는 장면으로, 지수·랭킹 데이터를 한눈에 보여주는 홀로그램 대시보드 환경이 가장 적합하다.",
+      "specific_props": "코스피 시총 순위 홀로그램 랭킹 차트, 삼성전자·SK하이닉스 로고가 표시된 데이터 패널, 시총 규모를 시각화한 원형 버블 그래프",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "data_lab",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "industrial_navy",
+          "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+        },
+        "wardrobe": "white lab coat and data goggles",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "analyst_neutral",
+        "fallback_pose": "scientist",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "soft studio key light",
+        "reference_composition": {
+          "id": "data_lab",
+          "character_placement": "right third",
+          "character_area_target": 0.44,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "context",
+      "phase_name": "Context & Escalation",
+      "start_seconds": 14.44,
+      "end_seconds": 19.04,
+      "emotion_tag": "highlight",
+      "character_action": "pointer_up",
+      "edit_marker": "data_overlay",
+      "sentences": [
+        {
+          "sentence_id": "s004_1",
+          "text": "삼성전자는 코스피 시총 1위 종목입니다.",
+          "text_for_tts": "삼성전자는 코스피 시총 1위 종목입니다.",
+          "emotion_tag": "highlight",
+          "character_action": "pointer_up",
+          "edit_marker": "data_overlay",
+          "estimated_seconds": 2.3,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[emphatically]",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s004_2",
+          "text": "SK하이닉스는 바로 뒤를 잇는 2위죠.",
+          "text_for_tts": "SK하이닉스는 바로 뒤를 잇는 2위죠.",
+          "emotion_tag": "highlight",
+          "character_action": "pointer_up",
+          "edit_marker": "data_overlay",
+          "estimated_seconds": 2.19,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[emphatically]",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_004",
+        "text_sha256": "1bd3ccdd9875cb3bf0e3ef1fbe01dd5e167d16dbde31b9a7f7b30714f46deb18",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "[emphatically]",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 005",
+      "content": "두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다. 그런데 PER 4배, 어디서 나온 수치일까요?",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "background",
+      "char_count": 31,
+      "text": "두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다. 그런데 PER 4배, 어디서 나온 수치일까요?",
+      "text_for_tts": "두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다. 그런데 PER 4배, 어디서 나온 수치일까요?",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "49a6800fab643bb6f692e9e707feff9accb4b0de545ccc56c328c8f944b65579",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "두 종목 밸류에이션이",
+            "text_sha256": "a52709053ea22e774059f66f3f35e3cd7f4de02599aa9567b829655c4a45e1c7"
+          },
+          {
+            "local_index": 1,
+            "text": "흔들리면 코스피 해석도 달라집니다.",
+            "text_sha256": "e447de23f523e5b9b111693c24395702911e45d405c110f3ede25613e6cc84b0"
+          },
+          {
+            "local_index": 2,
+            "text": "그런데 PER 4배, 어디서",
+            "text_sha256": "91ef9f37bd2c641ac4c365260872a34492fcd8fcf899ef315e8d085facd7876e"
+          },
+          {
+            "local_index": 3,
+            "text": "나온 수치일까요?",
+            "text_sha256": "f6e68b0dc7364f12d4304497f761347c0984f784555f04b4925f89bd5848542b"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 2,
+        "visible_char_count": 45,
+        "caption_chunk_count": 4
+      },
+      "scene_id": "script_scene_005",
+      "visual_type": "news_context",
+      "visual_plan": {
+        "objective": "newsroom or real-world business context",
+        "visual_type": "news_context",
+        "character_required": false,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 4,
+        "source_scene_count": 11
+      },
+      "archetype": "trade_calculator",
+      "archetype_reason": "PER 4배라는 구체적인 밸류에이션 수치의 출처를 묻고, 두 종목의 밸류에이션이 코스피 전체 해석에 미치는 영향을 논하는 장면이다. '밸류에이션이 흔들린다'는 균형의 문제, 'PER 수치의 근거'는 저울질의 문제로 직결되어 황금 저울이라는 시각적 은유와 정확히 맞아떨어진다.",
+      "specific_props": "황금 저울 위에 두 종목 티커 플레이트를 올려놓고, 한쪽에 'PER 4x' 수치 카드가 기울어진 채 놓인 구도. 배경에 코스피 지수 바가 희미하게 반영되어 두 종목과 지수의 연결성을 암시. 저울 아래 물음표 조명으로 수치 출처에 대한 의문을 시각화.",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "comparison_board",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "analyst suit with a presentation clicker",
+        "role_costume": "detective",
+        "costume_state": "neutral",
+        "pose_asset": "detective_neutral",
+        "fallback_pose": "explaining",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "dramatic rim light",
+        "reference_composition": {
+          "id": "comparison_board",
+          "character_placement": "right third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "context",
+      "phase_name": "Context & Escalation",
+      "start_seconds": 19.04,
+      "end_seconds": 24.95,
+      "emotion_tag": "surprised",
+      "character_action": "hands_open",
+      "edit_marker": "data_overlay",
+      "sentences": [
+        {
+          "sentence_id": "s005_1",
+          "text": "두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다.",
+          "text_for_tts": "두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다.",
+          "emotion_tag": "neutral",
+          "character_action": "hands_open",
+          "edit_marker": "emphasis_zoom",
+          "estimated_seconds": 3.21,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s005_2",
+          "text": "그런데 PER 4배, 어디서 나온 수치일까요?",
+          "text_for_tts": "그런데 PER 4배, 어디서 나온 수치일까요?",
+          "emotion_tag": "surprised",
+          "character_action": "hands_open",
+          "edit_marker": "data_overlay",
+          "estimated_seconds": 2.59,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[surprised]",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_005",
+        "text_sha256": "49a6800fab643bb6f692e9e707feff9accb4b0de545ccc56c328c8f944b65579",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "[surprised]",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 006",
+      "content": "검증 가능한 EPS 추정치가 없습니다. 컨센서스 데이터도 확인되지 않죠. 근거 자체가 없는 겁니다.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "data",
+      "char_count": 21,
+      "text": "검증 가능한 EPS 추정치가 없습니다. 컨센서스 데이터도 확인되지 않죠. 근거 자체가 없는 겁니다.",
+      "text_for_tts": "검증 가능한 EPS 추정치가 없습니다. 컨센서스 데이터도 확인되지 않죠. 근거 자체가 없는 겁니다.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "383ef6656b4ab6b47cc5a50ecf4f2f3a15a4238d22324a68c8167ff2ecdfc4db",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "검증 가능한 EPS",
+            "text_sha256": "d9f0f66cfe12e9c468ae8b0f9e83652ccb86954b12c2f57d6e7052da76673b88"
+          },
+          {
+            "local_index": 1,
+            "text": "추정치가 없습니다.",
+            "text_sha256": "0055137b7c10c1a16bf747d647221ec119f1b48cb2b0c681032ec905c49500cb"
+          },
+          {
+            "local_index": 2,
+            "text": "컨센서스 데이터도 확인되지 않죠.",
+            "text_sha256": "ae2f554fa254ca26017fba814d90bc546ab8d4a8c50ff7835caabf7bb8279113"
+          },
+          {
+            "local_index": 3,
+            "text": "근거 자체가 없는 겁니다.",
+            "text_sha256": "5418b7c34a7a713cc935022dae27b6da7c02b66b560b2113e6a59092b48b7e86"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 3,
+        "visible_char_count": 43,
+        "caption_chunk_count": 4
+      },
+      "scene_id": "script_scene_006",
+      "visual_type": "data_visual",
+      "visual_plan": {
+        "objective": "chart-shaped data visual with no generated text",
+        "visual_type": "data_visual",
+        "character_required": false,
+        "overlay_type": "fact_card",
+        "no_generated_text": true,
+        "source_scene_index": 5,
+        "source_scene_count": 11
+      },
+      "archetype": "data_lab",
+      "archetype_reason": "EPS 추정치 부재, 컨센서스 데이터 미확인 등 핵심 분석 데이터의 결여를 강조하는 장면으로, 홀로그램 대시보드에 데이터가 비어 있거나 오류 표시가 뜨는 연출이 '근거 없음'이라는 메시지를 가장 강렬하게 시각화할 수 있다.",
+      "specific_props": "홀로그램 스크린에 EPS 항목이 공란·물음표로 표시된 데이터 테이블, 빨간 'NO DATA' 경고 레이블, 컨센서스 차트가 점선으로만 남아 있는 빈 그래프 패널",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "data_lab",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "industrial_navy",
+          "colors": "mostly steel gray and dark navy, one safety-yellow cue, white highlights"
+        },
+        "wardrobe": "white lab coat and data goggles",
+        "role_costume": "analyst",
+        "costume_state": "neutral",
+        "pose_asset": "analyst_neutral",
+        "fallback_pose": "scientist",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "bright editorial daylight",
+        "reference_composition": {
+          "id": "data_lab",
+          "character_placement": "right third",
+          "character_area_target": 0.44,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "integrated_market_surface",
+        "data_surface": {
+          "x": 1030,
+          "y": 115,
+          "width": 780,
+          "height": 525
+        },
+        "data_surface_kind": "monitor",
+        "data_surface_prompt": "a large blank wall monitor or desk terminal, with a matte non-glowing screen",
+        "surface_contract": {
+          "surface_kind": "monitor",
+          "geometry": "planar_quad",
+          "marker_rgb": [
+            65,
+            86,
+            102
+          ],
+          "border_rgb": [
+            15,
+            27,
+            42
+          ],
+          "preferred_side": "left",
+          "preferred_region": {
+            "x": 0.52,
+            "y": 0.1,
+            "width": 0.42,
+            "height": 0.6
+          },
+          "tilt_hint": "nearly front-facing matte monitor"
+        },
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "context",
+      "phase_name": "Context & Escalation",
+      "start_seconds": 24.95,
+      "end_seconds": 30.59,
+      "emotion_tag": "neutral",
+      "character_action": "neutral",
+      "edit_marker": "scene_change",
+      "sentences": [
+        {
+          "sentence_id": "s006_1",
+          "text": "검증 가능한 EPS 추정치가 없습니다.",
+          "text_for_tts": "검증 가능한 EPS 추정치가 없습니다.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.16,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s006_2",
+          "text": "컨센서스 데이터도 확인되지 않죠.",
+          "text_for_tts": "컨센서스 데이터도 확인되지 않죠.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 1.85,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s006_3",
+          "text": "근거 자체가 없는 겁니다.",
+          "text_for_tts": "근거 자체가 없는 겁니다.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 1.44,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_006",
+        "text_sha256": "383ef6656b4ab6b47cc5a50ecf4f2f3a15a4238d22324a68c8167ff2ecdfc4db",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 007",
+      "content": "PER은 주가를 이익으로 나눈 값입니다. 분모인 이익 추정치를 어떻게 잡느냐가 핵심이죠.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "scenario",
+      "char_count": 22,
+      "text": "PER은 주가를 이익으로 나눈 값입니다. 분모인 이익 추정치를 어떻게 잡느냐가 핵심이죠.",
+      "text_for_tts": "PER은 주가를 이익으로 나눈 값입니다. 분모인 이익 추정치를 어떻게 잡느냐가 핵심이죠.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "2502c16f682985866d33fd6add3e915dece8469028264f78760879a11186e5f1",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "PER은 주가를 이익으로",
+            "text_sha256": "c52279b7b9a16ac265b55782eadbd3af67bb475a8c8c2a51dfd5bd727d295c90"
+          },
+          {
+            "local_index": 1,
+            "text": "나눈 값입니다.",
+            "text_sha256": "d9f3d3eb911b7ae81be21dce947898e5b6bb3a213f090ac8fb201867fe367624"
+          },
+          {
+            "local_index": 2,
+            "text": "분모인 이익 추정치를",
+            "text_sha256": "1b4f924e8712f5fc04c2bca5a05c5705e65d8d552cc73f07259458931a236cda"
+          },
+          {
+            "local_index": 3,
+            "text": "어떻게 잡느냐가 핵심이죠.",
+            "text_sha256": "843a2acef2f1d8749043a327551214d1b12b6fff6bdbd40f3eee5e4ee228c406"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 2,
+        "visible_char_count": 39,
+        "caption_chunk_count": 4
+      },
+      "scene_id": "script_scene_007",
+      "visual_type": "character_explainer",
+      "visual_plan": {
+        "objective": "character explains a causal scenario",
+        "visual_type": "character_explainer",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 6,
+        "source_scene_count": 11
+      },
+      "archetype": "classroom",
+      "archetype_reason": "PER의 정의와 계산 구조(주가÷이익), 분모인 이익 추정치의 중요성을 설명하는 순수 개념·용어 해설 장면으로, classroom의 칠판·교실 은유가 가장 직관적으로 부합한다.",
+      "specific_props": "칠판에 'PER = 주가 ÷ 이익(EPS)' 수식을 크게 판서, 분모 '이익 추정치' 부분을 빨간 분필로 강조 표시, 교사 포인터로 해당 항목 지시",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "history_classroom",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "teacher cardigan with a pointer",
+        "role_costume": "professor",
+        "costume_state": "neutral",
+        "pose_asset": "professor_neutral",
+        "fallback_pose": "teacher",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "cinematic practical lights",
+        "reference_composition": {
+          "id": "chalkboard_lesson",
+          "character_placement": "right third",
+          "character_area_target": 0.43,
+          "information_area_target": 0.4
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.55,
+          "height": 0.42
+        },
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": false,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "twist",
+      "phase_name": "Twist & Insight",
+      "start_seconds": 30.59,
+      "end_seconds": 35.71,
+      "emotion_tag": "neutral",
+      "character_action": "neutral",
+      "edit_marker": "scene_change",
+      "sentences": [
+        {
+          "sentence_id": "s007_1",
+          "text": "PER은 주가를 이익으로 나눈 값입니다.",
+          "text_for_tts": "PER은 주가를 이익으로 나눈 값입니다.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.3,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s007_2",
+          "text": "분모인 이익 추정치를 어떻게 잡느냐가 핵심이죠.",
+          "text_for_tts": "분모인 이익 추정치를 어떻게 잡느냐가 핵심이죠.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.72,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_007",
+        "text_sha256": "2502c16f682985866d33fd6add3e915dece8469028264f78760879a11186e5f1",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 008",
+      "content": "추정치에 따라 결과가 완전히 달라집니다. 낙관적 전망을 쓰면 주가가 싸 보이거든요.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "scenario",
+      "char_count": 22,
+      "text": "추정치에 따라 결과가 완전히 달라집니다. 낙관적 전망을 쓰면 주가가 싸 보이거든요.",
+      "text_for_tts": "추정치에 따라 결과가 완전히 달라집니다. 낙관적 전망을 쓰면 주가가 싸 보이거든요.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "f1fb13cb6ab564c7757da2c6dd5b597810b72904eb01a6d4db3fd61a6b3f1c1b",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "추정치에 따라 결과가",
+            "text_sha256": "162abe7e57553f6680dce6b68272c610f6aef9205001bc088a7caec3ad29f174"
+          },
+          {
+            "local_index": 1,
+            "text": "완전히 달라집니다.",
+            "text_sha256": "0717624e80581fe2f137d3e87691d745b3e8e52787f8b667b3a9cfae3af31ff2"
+          },
+          {
+            "local_index": 2,
+            "text": "낙관적 전망을 쓰면 주가가",
+            "text_sha256": "cbce4ac3c28de93a39ce0a673726d56fff289c2a273a1ee810466b3a5d77e9bc"
+          },
+          {
+            "local_index": 3,
+            "text": "싸 보이거든요.",
+            "text_sha256": "eb7fb95a8c1f15dea1d9463eda27a92290fad9a438ee8949b7ef1e9fd44195c2"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 2,
+        "visible_char_count": 36,
+        "caption_chunk_count": 4
+      },
+      "scene_id": "script_scene_008",
+      "visual_type": "character_explainer",
+      "visual_plan": {
+        "objective": "character explains a causal scenario",
+        "visual_type": "character_explainer",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 7,
+        "source_scene_count": 11
+      },
+      "archetype": "trade_calculator",
+      "archetype_reason": "낙관적 추정치를 적용하면 주가가 싸 보인다는 대사는 밸류에이션의 핵심 — 가정값(추정치)에 따라 저평가·고평가 결론이 뒤바뀌는 균형의 문제를 다루고 있다. 황금 저울은 '어떤 추정치를 올리느냐에 따라 저울이 기우는' 시각적 은유로 이 맥락에 가장 직관적으로 부합한다.",
+      "specific_props": "황금 저울 양쪽에 '낙관적 EPS 추정치'와 '보수적 EPS 추정치' 카드 배치, 낙관 쪽 카드가 올라가면 반대편 'PER 과대평가 경고' 게이지가 내려가는 애니메이션, 배경에 반투명 숫자 스프레드시트와 형광 마커로 강조된 수익 추정 셀 표시",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "comparison_board",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "growth_gold",
+          "colors": "mostly deep navy and white, one warm yellow emphasis, muted gray"
+        },
+        "wardrobe": "analyst suit with a presentation clicker",
+        "role_costume": "detective",
+        "costume_state": "neutral",
+        "pose_asset": "detective_neutral",
+        "fallback_pose": "explaining",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "soft studio key light",
+        "reference_composition": {
+          "id": "comparison_board",
+          "character_placement": "right third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "twist",
+      "phase_name": "Twist & Insight",
+      "start_seconds": 35.71,
+      "end_seconds": 40.44,
+      "emotion_tag": "neutral",
+      "character_action": "neutral",
+      "edit_marker": "scene_change",
+      "sentences": [
+        {
+          "sentence_id": "s008_1",
+          "text": "추정치에 따라 결과가 완전히 달라집니다.",
+          "text_for_tts": "추정치에 따라 결과가 완전히 달라집니다.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.26,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s008_2",
+          "text": "낙관적 전망을 쓰면 주가가 싸 보이거든요.",
+          "text_for_tts": "낙관적 전망을 쓰면 주가가 싸 보이거든요.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.36,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_008",
+        "text_sha256": "f1fb13cb6ab564c7757da2c6dd5b597810b72904eb01a6d4db3fd61a6b3f1c1b",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 009",
+      "content": "보수적으로 잡으면 달라질 수 있죠. 하반기 이익 추정치는 아직 불확실하죠. 같은 주가도 분모에 따라 다르게 읽힙니다.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "action",
+      "char_count": 19,
+      "text": "보수적으로 잡으면 달라질 수 있죠. 하반기 이익 추정치는 아직 불확실하죠. 같은 주가도 분모에 따라 다르게 읽힙니다.",
+      "text_for_tts": "보수적으로 잡으면 달라질 수 있죠. 하반기 이익 추정치는 아직 불확실하죠. 같은 주가도 분모에 따라 다르게 읽힙니다.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "27eba8593d0260148dad9f0df36a23f62b69b6d1c0c8f0ebac8a177bc8787009",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "보수적으로 잡으면 달라질 수 있죠.",
+            "text_sha256": "2032dfebeaa878166ce225578614a5526466ce2b5c42b2ad1b043d0c236f39b6"
+          },
+          {
+            "local_index": 1,
+            "text": "하반기 이익 추정치는",
+            "text_sha256": "666b249f071725f66d69ff3e87bf3d39343366710800d95d060894404e349334"
+          },
+          {
+            "local_index": 2,
+            "text": "아직 불확실하죠.",
+            "text_sha256": "bad03eaa371ff8e4985ff02cb90e81f04c191dff04f9830c12cc8cc7578d120a"
+          },
+          {
+            "local_index": 3,
+            "text": "같은 주가도 분모에 따라",
+            "text_sha256": "fea1fb21acb48d7ec7cd91907b29b8afe5fa7738bb02e172f5c16fbd55df42a0"
+          },
+          {
+            "local_index": 4,
+            "text": "다르게 읽힙니다.",
+            "text_sha256": "e636bc2dde3233d070b67bb781ebb24564d7f6c8e819b1264e05e79dbf65384f"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 3,
+        "visible_char_count": 50,
+        "caption_chunk_count": 5
+      },
+      "scene_id": "script_scene_009",
+      "visual_type": "comparison",
+      "visual_plan": {
+        "objective": "clear comparison of two outcomes or choices",
+        "visual_type": "comparison",
+        "character_required": false,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 8,
+        "source_scene_count": 11
+      },
+      "archetype": "trade_calculator",
+      "archetype_reason": "'분모에 따라 다르게 읽힌다'는 대사는 PER·PBR 등 밸류에이션 지표의 보수적/공격적 해석 차이를 직접 언급하며, 같은 주가를 이익 추정치라는 분모로 달리 저울질하는 맥락이므로 황금 저울의 균형·비교 은유가 가장 적합하다.",
+      "specific_props": "황금 저울 한쪽에 '현재 주가', 반대쪽에 '하반기 이익 추정치(보수/공격 두 개의 추 교체 가능)'; 저울 눈금판에 PER 숫자 변화 표시; 배경에 흐릿한 이익 추정치 데이터 시트",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "comparison_board",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "analyst suit with a presentation clicker",
+        "role_costume": "detective",
+        "costume_state": "neutral",
+        "pose_asset": "detective_neutral",
+        "fallback_pose": "explaining",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "dramatic rim light",
+        "reference_composition": {
+          "id": "comparison_board",
+          "character_placement": "right third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "reuse_previous_image": true,
+      "ken_burns_effect": true,
+      "reuse_image_from_scene": 7,
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "twist",
+      "phase_name": "Twist & Insight",
+      "start_seconds": 40.44,
+      "end_seconds": 47.0,
+      "emotion_tag": "worried",
+      "character_action": "arms_crossed",
+      "edit_marker": "scene_change",
+      "sentences": [
+        {
+          "sentence_id": "s009_1",
+          "text": "보수적으로 잡으면 달라질 수 있죠.",
+          "text_for_tts": "보수적으로 잡으면 달라질 수 있죠.",
+          "emotion_tag": "neutral",
+          "character_action": "arms_crossed",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 1.92,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s009_2",
+          "text": "하반기 이익 추정치는 아직 불확실하죠.",
+          "text_for_tts": "하반기 이익 추정치는 아직 불확실하죠.",
+          "emotion_tag": "worried",
+          "character_action": "arms_crossed",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.12,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[worried]",
+            "stability_mode": "Robust"
+          }
+        },
+        {
+          "sentence_id": "s009_3",
+          "text": "같은 주가도 분모에 따라 다르게 읽힙니다.",
+          "text_for_tts": "같은 주가도 분모에 따라 다르게 읽힙니다.",
+          "emotion_tag": "neutral",
+          "character_action": "arms_crossed",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.32,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "",
+            "stability_mode": "Robust"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_009",
+        "text_sha256": "27eba8593d0260148dad9f0df36a23f62b69b6d1c0c8f0ebac8a177bc8787009",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "[worried]",
+        "stability_mode": "Robust"
+      }
+    },
+    {
+      "title": "장면 010",
+      "content": "검증 안 된 수치로 판단해도 될까요? 하나의 기준만 기억해 두세요. 분모가 어떤 이익 추정치인지 직접 확인하세요.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "action",
+      "char_count": 20,
+      "text": "검증 안 된 수치로 판단해도 될까요? 하나의 기준만 기억해 두세요. 분모가 어떤 이익 추정치인지 직접 확인하세요.",
+      "text_for_tts": "검증 안 된 수치로 판단해도 될까요? 하나의 기준만 기억해 두세요. 분모가 어떤 이익 추정치인지 직접 확인하세요.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "036a0b1e588c8b334c8bcac365baec81fa08e8397a0efe50d4f3faf9adc5a43b",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "검증 안 된 수치로 판단해도 될까요?",
+            "text_sha256": "8790b275114b2754a2d8922fb07b8ecaea5347288413c656e3ad57a33d08e2ca"
+          },
+          {
+            "local_index": 1,
+            "text": "하나의 기준만 기억해 두세요.",
+            "text_sha256": "bdcf363aeadefb0b18980fea4a28c050b39470f2b505aa1775f7e3799b787e1e"
+          },
+          {
+            "local_index": 2,
+            "text": "분모가 어떤 이익 추정치인지",
+            "text_sha256": "1b3a19e1502e0291de3387bbeef90edc03ad57c671e4d5715a385aeca26be198"
+          },
+          {
+            "local_index": 3,
+            "text": "직접 확인하세요.",
+            "text_sha256": "5abd28c23f9a82be622ef6889352311f15c66955ed9dc898b0306d948f6959bd"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 3,
+        "visible_char_count": 48,
+        "caption_chunk_count": 4
+      },
+      "scene_id": "script_scene_010",
+      "visual_type": "comparison",
+      "visual_plan": {
+        "objective": "clear comparison of two outcomes or choices",
+        "visual_type": "comparison",
+        "character_required": false,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 9,
+        "source_scene_count": 11
+      },
+      "archetype": "classroom",
+      "archetype_reason": "대사의 핵심은 '검증 안 된 수치', '분모', '이익 추정치 직접 확인'이라는 개념적 기준을 시청자에게 가르치는 교육적 맥락이다. 밸류에이션 지표(예: PER)의 분모가 어떤 이익 추정치인지 스스로 확인하라는 투자 판단의 기본 원칙을 설명하는 장면으로, 개념·용어 해설에 특화된 classroom이 가장 적합하다. trade_calculator 연속 사용 제한도 충족한다.",
+      "specific_props": "칠판에 'PER = 주가 ÷ EPS(?)' 수식을 크게 판서하고, 분모 부분에 빨간 분필로 물음표 또는 동그라미 강조 표시. 교사용 포인터로 '추정치 출처' 항목을 짚는 장면. 칠판 한쪽에 '컨센서스 EPS vs 자체 추정 EPS' 두 항목을 나란히 적어 비교 유도.",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "history_classroom",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "growth_gold",
+          "colors": "mostly deep navy and white, one warm yellow emphasis, muted gray"
+        },
+        "wardrobe": "teacher cardigan with a pointer",
+        "role_costume": "professor",
+        "costume_state": "neutral",
+        "pose_asset": "professor_neutral",
+        "fallback_pose": "teacher",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "bright editorial daylight",
+        "reference_composition": {
+          "id": "chalkboard_lesson",
+          "character_placement": "right third",
+          "character_area_target": 0.43,
+          "information_area_target": 0.4
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": {
+          "x": 0.1,
+          "y": 0.16,
+          "width": 0.55,
+          "height": 0.42
+        },
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": false,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "general",
+      "selection_reason": "수치가 포함돼 있으나 장문 지표형 비중 상한을 적용해 상황·비유 중심 일반 장면으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "resolution",
+      "phase_name": "Resolution & CTA",
+      "start_seconds": 47.0,
+      "end_seconds": 53.3,
+      "emotion_tag": "neutral",
+      "character_action": "neutral",
+      "edit_marker": "scene_change",
+      "sentences": [
+        {
+          "sentence_id": "s010_1",
+          "text": "검증 안 된 수치로 판단해도 될까요?",
+          "text_for_tts": "검증 안 된 수치로 판단해도 될까요?",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.0,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[warmly]",
+            "stability_mode": "Natural"
+          }
+        },
+        {
+          "sentence_id": "s010_2",
+          "text": "하나의 기준만 기억해 두세요.",
+          "text_for_tts": "하나의 기준만 기억해 두세요.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 1.6,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[warmly]",
+            "stability_mode": "Natural"
+          }
+        },
+        {
+          "sentence_id": "s010_3",
+          "text": "분모가 어떤 이익 추정치인지 직접 확인하세요.",
+          "text_for_tts": "분모가 어떤 이익 추정치인지 직접 확인하세요.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.5,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[warmly]",
+            "stability_mode": "Natural"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_010",
+        "text_sha256": "036a0b1e588c8b334c8bcac365baec81fa08e8397a0efe50d4f3faf9adc5a43b",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "[warmly]",
+        "stability_mode": "Natural"
+      }
+    },
+    {
+      "title": "장면 011",
+      "content": "낙관치인지 보수치인지가 먼저인 겁니다. 그 확인이 판단의 시작이니까요. PER 숫자 하나보다 근거가 더 중요합니다.",
+      "prompt_ko": "대사 의미를 설명하는 한국형 금융 상황 장면",
+      "prompt_en": "",
+      "prompt": "",
+      "prompt_needs_rebuild": true,
+      "prompt_text_contract": {
+        "version": "generated-text-contract-v1",
+        "requires_sanitization": false,
+        "violations": []
+      },
+      "pose": "neutral",
+      "motion_type": "",
+      "bubble_text": "",
+      "bubble_validation": {
+        "passed": true,
+        "reasons": [],
+        "matched_sources": [],
+        "numeric_tokens": []
+      },
+      "screen_texts": [],
+      "screen_text_validation": {
+        "passed": true,
+        "reasons": [],
+        "sources_checked": 11
+      },
+      "scene_rejected": false,
+      "section": "conclusion",
+      "char_count": 21,
+      "text": "낙관치인지 보수치인지가 먼저인 겁니다. 그 확인이 판단의 시작이니까요. PER 숫자 하나보다 근거가 더 중요합니다.",
+      "text_for_tts": "낙관치인지 보수치인지가 먼저인 겁니다. 그 확인이 판단의 시작이니까요. PER 숫자 하나보다 근거가 더 중요합니다.",
+      "caption_chunk_plan": {
+        "version": "caption-plan-v1",
+        "subtitle_max_chars": 18,
+        "scene_text_sha256": "3e81d72a148e6bbc9685ed8a600f04ee57eb299a9079e8871979bbae0257c0d5",
+        "chunks": [
+          {
+            "local_index": 0,
+            "text": "낙관치인지 보수치인지가",
+            "text_sha256": "d1210b4abd9ed8bc71dcc5e96e425c88ee950f37c04b1bdb169cec2bc03004e9"
+          },
+          {
+            "local_index": 1,
+            "text": "먼저인 겁니다.",
+            "text_sha256": "9f7c782ac67a771f0daf3466f7f2b59330f55ca0783cd0335afcaaf454e5b125"
+          },
+          {
+            "local_index": 2,
+            "text": "그 확인이 판단의 시작이니까요.",
+            "text_sha256": "318544268e591129dfa0febb6e550679e610f3ced52721677d06e59414878889"
+          },
+          {
+            "local_index": 3,
+            "text": "PER 숫자 하나보다 근거가",
+            "text_sha256": "c33e69d656b1befd6e98e696ef0658a7bd73f256a1f1af2042aa18a44bffbf7a"
+          },
+          {
+            "local_index": 4,
+            "text": "더 중요합니다.",
+            "text_sha256": "e593a49393f852163e6d1a0f1e52952aba7823319405edc9d139506e8ca5631c"
+          }
+        ]
+      },
+      "source_section_indexes": [
+        null,
+        null,
+        null
+      ],
+      "runtime_pacing": {
+        "target_seconds_per_scene": 5.5,
+        "source_fragment_count": 3,
+        "visible_char_count": 51,
+        "caption_chunk_count": 5
+      },
+      "scene_id": "script_scene_011",
+      "visual_type": "takeaway",
+      "visual_plan": {
+        "objective": "calm conclusion with a memorable takeaway",
+        "visual_type": "takeaway",
+        "character_required": true,
+        "overlay_type": null,
+        "no_generated_text": true,
+        "source_scene_index": 10,
+        "source_scene_count": 11
+      },
+      "archetype": "trade_calculator",
+      "archetype_reason": "낙관치/보수치의 구분, PER 숫자보다 근거의 중요성을 강조하는 대사는 밸류에이션 판단의 기준과 균형을 다루는 내러티브다. 황금 저울은 '어떤 가정값(낙관 vs 보수)을 올려놓느냐에 따라 판단이 달라진다'는 시각적 은유로 가장 적합하다.",
+      "specific_props": "황금 저울 양쪽에 '낙관치'·'보수치' 라벨이 붙은 추를 올려놓고, 저울 받침대 위에 'PER 근거 문서'가 펼쳐진 구성. 배경 스크린에는 동일한 PER 숫자가 두 가지 다른 가정 아래 서로 다른 결론으로 갈라지는 분기 다이어그램 표시.",
+      "visual_mode": "archetype_explainer",
+      "art_direction": {
+        "family": "comparison_board",
+        "topic": "finance",
+        "setting": "premium Korean finance editorial studio",
+        "props": [
+          "financial chart silhouette",
+          "briefing screen",
+          "document folder"
+        ],
+        "palette": {
+          "name": "editorial_blue",
+          "colors": "mostly deep navy, white, and muted blue-gray; at most one warm yellow emphasis"
+        },
+        "wardrobe": "analyst suit with a presentation clicker",
+        "role_costume": "detective",
+        "costume_state": "highlight",
+        "pose_asset": "detective_highlight",
+        "fallback_pose": "explaining",
+        "character_required": true,
+        "camera": "medium editorial shot",
+        "lighting": "cinematic practical lights",
+        "reference_composition": {
+          "id": "comparison_board",
+          "character_placement": "right third",
+          "character_area_target": 0.42,
+          "information_area_target": 0.42
+        },
+        "character_placement": "left third",
+        "layer_pipeline": {
+          "version": "3.0",
+          "render_clean_plate": true,
+          "canonical_character_required": true,
+          "z_order": [
+            "clean_background",
+            "verified_info_surface",
+            "character_foreground",
+            "editorial_text"
+          ]
+        },
+        "overlay_strategy": "none",
+        "data_surface": null,
+        "data_surface_kind": null,
+        "data_surface_prompt": null,
+        "surface_contract": null,
+        "editorial_text_surface": null,
+        "editorial_overlay_target": {
+          "x": 0.53,
+          "y": 0.16,
+          "width": 0.36,
+          "height": 0.25
+        },
+        "negative_constraints": [
+          "no readable text",
+          "no watermark",
+          "no generic gold pile",
+          "no unrelated fire or space scene",
+          "no photorealism",
+          "no mixed art styles"
+        ],
+        "decorative_text_allowed": true,
+        "mood_expression": "The gold coin character shows a COMPOSED PROFESSIONAL EXPRESSION: calm focused eyes, a slight knowing smile or a neutral analytical expression, upright confident posture with one hand gesturing toward an information surface or prop. Scene atmosphere: clean editorial studio lighting, organized and orderly environment. Color palette balanced between deep navy and warm gold with white accents."
+      },
+      "style_profile": "editorial_comic_2d",
+      "scene_type": "metric",
+      "selection_reason": "대본에 검증 대상 수치·등락·규모 표현이 있어 지표형으로 분류",
+      "verified_facts": [
+        {
+          "fact": "코스피 2026년 8월 21일 종가",
+          "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+          "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+          "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+          "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+          "source_ref": [
+            "kr.index.kospi",
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 1.0,
+          "cross_verified": true,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+          "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+          "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+          "source_ref": [
+            "kr.top_stocks"
+          ],
+          "confidence": 0.7,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+          "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+          "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+          "source_ref": [
+            "kr.chart_series.kospi"
+          ],
+          "confidence": 0.75,
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+          "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+          "source_field": "N/A",
+          "source_ref": [],
+          "confidence": 0.0,
+          "cross_verified": false,
+          "contradiction_detected": false
+        }
+      ],
+      "phase": "resolution",
+      "phase_name": "Resolution & CTA",
+      "start_seconds": 53.3,
+      "end_seconds": 60.0,
+      "emotion_tag": "neutral",
+      "character_action": "neutral",
+      "edit_marker": "scene_change",
+      "sentences": [
+        {
+          "sentence_id": "s011_1",
+          "text": "낙관치인지 보수치인지가 먼저인 겁니다.",
+          "text_for_tts": "낙관치인지 보수치인지가 먼저인 겁니다.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.2,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[warmly]",
+            "stability_mode": "Natural"
+          }
+        },
+        {
+          "sentence_id": "s011_2",
+          "text": "그 확인이 판단의 시작이니까요.",
+          "text_for_tts": "그 확인이 판단의 시작이니까요.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 1.78,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[warmly]",
+            "stability_mode": "Natural"
+          }
+        },
+        {
+          "sentence_id": "s011_3",
+          "text": "PER 숫자 하나보다 근거가 더 중요합니다.",
+          "text_for_tts": "PER 숫자 하나보다 근거가 더 중요합니다.",
+          "emotion_tag": "neutral",
+          "character_action": "neutral",
+          "edit_marker": "scene_change",
+          "estimated_seconds": 2.51,
+          "fact_refs": [],
+          "market_data_refs": [],
+          "elevenlabs_hint": {
+            "audio_tag": "[warmly]",
+            "stability_mode": "Natural"
+          }
+        }
+      ],
+      "narration_source": {
+        "scene_id": "script_scene_011",
+        "text_sha256": "3e81d72a148e6bbc9685ed8a600f04ee57eb299a9079e8871979bbae0257c0d5",
+        "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894"
+      },
+      "elevenlabs_hint": {
+        "audio_tag": "[warmly]",
+        "stability_mode": "Natural"
+      }
+    }
+  ],
+  "narration_contract": {
+    "version": "narration-source-v1",
+    "canonical_text_sha256": "2a2da3825ac187a8a3b1b47ae1f5841d70e11e845c21d0528b9475577ede2894",
+    "section_count": 11,
+    "scene_sources": [
+      {
+        "scene_id": "script_scene_001",
+        "text_sha256": "481392c59a74edd2e487fd53790c9c273468359a87bedaaa1ad1ce1e3dc28ad0"
+      },
+      {
+        "scene_id": "script_scene_002",
+        "text_sha256": "30ee6711e99aae312f2e58beabc3af38a2840608cf3465f8c6d48effb13d30ed"
+      },
+      {
+        "scene_id": "script_scene_003",
+        "text_sha256": "76f60d15e802b075d571e682b484328346b372de4f36d314f2956ade03e2cdab"
+      },
+      {
+        "scene_id": "script_scene_004",
+        "text_sha256": "1bd3ccdd9875cb3bf0e3ef1fbe01dd5e167d16dbde31b9a7f7b30714f46deb18"
+      },
+      {
+        "scene_id": "script_scene_005",
+        "text_sha256": "49a6800fab643bb6f692e9e707feff9accb4b0de545ccc56c328c8f944b65579"
+      },
+      {
+        "scene_id": "script_scene_006",
+        "text_sha256": "383ef6656b4ab6b47cc5a50ecf4f2f3a15a4238d22324a68c8167ff2ecdfc4db"
+      },
+      {
+        "scene_id": "script_scene_007",
+        "text_sha256": "2502c16f682985866d33fd6add3e915dece8469028264f78760879a11186e5f1"
+      },
+      {
+        "scene_id": "script_scene_008",
+        "text_sha256": "f1fb13cb6ab564c7757da2c6dd5b597810b72904eb01a6d4db3fd61a6b3f1c1b"
+      },
+      {
+        "scene_id": "script_scene_009",
+        "text_sha256": "27eba8593d0260148dad9f0df36a23f62b69b6d1c0c8f0ebac8a177bc8787009"
+      },
+      {
+        "scene_id": "script_scene_010",
+        "text_sha256": "036a0b1e588c8b334c8bcac365baec81fa08e8397a0efe50d4f3faf9adc5a43b"
+      },
+      {
+        "scene_id": "script_scene_011",
+        "text_sha256": "3e81d72a148e6bbc9685ed8a600f04ee57eb299a9079e8871979bbae0257c0d5"
+      }
+    ]
+  },
+  "char_count": 457,
+  "length_contract": {
+    "target_seconds": 60,
+    "base_cpm": 473.87,
+    "effective_cpm": 473.87,
+    "tts_speed": 0.9,
+    "target_chars": 474,
+    "min_chars": 450,
+    "max_chars": 498,
+    "tolerance_pct": 5,
+    "calibration_samples": 1,
+    "voice_id": "dlKJ5VptCbYxal4doUO5",
+    "model_id": "eleven_v3"
+  },
+  "keyword_validation": {
+    "passed": false,
+    "selected_terms": [
+      "삼성전자와 SK하이닉스 PER 4배가 정말 싼가",
+      "하반기 이익 전망 한 가지 기준"
+    ],
+    "missing_terms": [
+      "싼",
+      "가지"
+    ],
+    "related_sentence_ratio": 0.423,
+    "related_sentence_count": 11,
+    "sentence_count": 26
+  },
+  "unit_validation": {
+    "passed": true,
+    "errors": []
+  },
+  "verified_facts": [
+    {
+      "fact": "코스피 2026년 8월 21일 종가",
+      "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+      "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+      "source_ref": [
+        "kr.index.kospi",
+        "kr.chart_series.kospi"
+      ],
+      "confidence": 1.0,
+      "cross_verified": true,
+      "contradiction_detected": false
+    },
+    {
+      "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+      "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+      "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+      "source_ref": [
+        "kr.index.kospi",
+        "kr.chart_series.kospi"
+      ],
+      "confidence": 1.0,
+      "cross_verified": true,
+      "contradiction_detected": false
+    },
+    {
+      "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+      "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+      "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+      "source_ref": [
+        "kr.top_stocks"
+      ],
+      "confidence": 0.7,
+      "cross_verified": false,
+      "contradiction_detected": false
+    },
+    {
+      "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+      "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+      "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+      "source_ref": [
+        "kr.chart_series.kospi"
+      ],
+      "confidence": 0.75,
+      "cross_verified": false,
+      "contradiction_detected": false
+    },
+    {
+      "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+      "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+      "source_field": "N/A",
+      "source_ref": [],
+      "confidence": 0.0,
+      "cross_verified": false,
+      "contradiction_detected": false
+    }
+  ],
+  "suspect_facts": [],
+  "fact_check_summary": {
+    "total": 5,
+    "cross_verified": 2,
+    "single_source": 3,
+    "contradicted": 0
+  },
+  "news_articles": [],
+  "source_ref": [
+    "kr.index.kospi",
+    "kr.chart_series.kospi",
+    "kr.top_stocks",
+    "N/A"
+  ],
+  "source_videos": [],
+  "fact_check_rounds": 3,
+  "fact_check_log": [
+    "Round 1 완료: 791자",
+    "Round 2 완료: 2717자",
+    "Round 3 완료"
+  ],
+  "news_cross_check_status": "no_finance_outlet_articles",
+  "market_snapshot_used": true,
+  "market_snapshot": {
+    "category": "KOSPI",
+    "keyword": "삼성전자와 SK하이닉스 PER 4배가 정말 싼가, 하반기 이익 전망 한 가지 기준",
+    "collected_at": "2026-08-22T10:58:26.085162",
+    "kr": {
+      "index": {
+        "kospi": {
+          "close": 6912.95,
+          "change": 60.36999999999989,
+          "change_pct": 0.88,
+          "volume": 408037433,
+          "trading_value": 28897809870542
+        },
+        "kosdaq": {
+          "close": 801.94,
+          "change": -38.94999999999993,
+          "change_pct": -4.63,
+          "volume": 573177108
+        }
+      },
+      "chart_series": {
+        "kospi": [
+          {
+            "date": "2026-07-09",
+            "close": 7291.91
+          },
+          {
+            "date": "2026-07-10",
+            "close": 7475.94
+          },
+          {
+            "date": "2026-07-13",
+            "close": 6806.93
+          },
+          {
+            "date": "2026-07-14",
+            "close": 6856.83
+          },
+          {
+            "date": "2026-07-15",
+            "close": 7284.41
+          },
+          {
+            "date": "2026-07-16",
+            "close": 6820.6
+          },
+          {
+            "date": "2026-07-20",
+            "close": 6516.27
+          },
+          {
+            "date": "2026-07-21",
+            "close": 6747.95
+          },
+          {
+            "date": "2026-07-22",
+            "close": 6797.7
+          },
+          {
+            "date": "2026-07-23",
+            "close": 7096.89
+          },
+          {
+            "date": "2026-07-24",
+            "close": 6690.62
+          },
+          {
+            "date": "2026-07-27",
+            "close": 6755.75
+          },
+          {
+            "date": "2026-07-28",
+            "close": 6023.66
+          },
+          {
+            "date": "2026-07-29",
+            "close": 5663.24
+          },
+          {
+            "date": "2026-07-30",
+            "close": 5593.56
+          },
+          {
+            "date": "2026-07-31",
+            "close": 6595.45
+          },
+          {
+            "date": "2026-08-03",
+            "close": 6257.45
+          },
+          {
+            "date": "2026-08-04",
+            "close": 6358.95
+          },
+          {
+            "date": "2026-08-05",
+            "close": 6598.26
+          },
+          {
+            "date": "2026-08-06",
+            "close": 6296.38
+          },
+          {
+            "date": "2026-08-07",
+            "close": 6258.77
+          },
+          {
+            "date": "2026-08-10",
+            "close": 6299.66
+          },
+          {
+            "date": "2026-08-11",
+            "close": 6345.53
+          },
+          {
+            "date": "2026-08-12",
+            "close": 6579.04
+          },
+          {
+            "date": "2026-08-13",
+            "close": 6813.34
+          },
+          {
+            "date": "2026-08-14",
+            "close": 6977.94
+          },
+          {
+            "date": "2026-08-18",
+            "close": 6869.83
+          },
+          {
+            "date": "2026-08-19",
+            "close": 6471.17
+          },
+          {
+            "date": "2026-08-20",
+            "close": 6852.58
+          },
+          {
+            "date": "2026-08-21",
+            "close": 6912.95
+          }
+        ],
+        "kosdaq": [
+          {
+            "date": "2026-07-09",
+            "close": 794.0
+          },
+          {
+            "date": "2026-07-10",
+            "close": 837.43
+          },
+          {
+            "date": "2026-07-13",
+            "close": 799.36
+          },
+          {
+            "date": "2026-07-14",
+            "close": 783.98
+          },
+          {
+            "date": "2026-07-15",
+            "close": 829.43
+          },
+          {
+            "date": "2026-07-16",
+            "close": 791.84
+          },
+          {
+            "date": "2026-07-20",
+            "close": 749.64
+          },
+          {
+            "date": "2026-07-21",
+            "close": 753.34
+          },
+          {
+            "date": "2026-07-22",
+            "close": 751.09
+          },
+          {
+            "date": "2026-07-23",
+            "close": 790.28
+          },
+          {
+            "date": "2026-07-24",
+            "close": 748.22
+          },
+          {
+            "date": "2026-07-27",
+            "close": 764.86
+          },
+          {
+            "date": "2026-07-28",
+            "close": 705.85
+          },
+          {
+            "date": "2026-07-29",
+            "close": 662.68
+          },
+          {
+            "date": "2026-07-30",
+            "close": 644.78
+          },
+          {
+            "date": "2026-07-31",
+            "close": 719.76
+          },
+          {
+            "date": "2026-08-03",
+            "close": 737.35
+          },
+          {
+            "date": "2026-08-04",
+            "close": 780.72
+          },
+          {
+            "date": "2026-08-05",
+            "close": 799.59
+          },
+          {
+            "date": "2026-08-06",
+            "close": 801.67
+          },
+          {
+            "date": "2026-08-07",
+            "close": 798.81
+          },
+          {
+            "date": "2026-08-10",
+            "close": 854.47
+          },
+          {
+            "date": "2026-08-11",
+            "close": 857.84
+          },
+          {
+            "date": "2026-08-12",
+            "close": 858.91
+          },
+          {
+            "date": "2026-08-13",
+            "close": 861.37
+          },
+          {
+            "date": "2026-08-14",
+            "close": 864.65
+          },
+          {
+            "date": "2026-08-18",
+            "close": 834.2
+          },
+          {
+            "date": "2026-08-19",
+            "close": 824.46
+          },
+          {
+            "date": "2026-08-20",
+            "close": 840.89
+          },
+          {
+            "date": "2026-08-21",
+            "close": 801.94
+          }
+        ]
+      },
+      "supply_demand": {},
+      "top_stocks": [
+        {
+          "name": "삼성전자",
+          "symbol": "005930",
+          "market_cap": "+16,457,274억원",
+          "market_cap_value": 1645727428152000.0
+        },
+        {
+          "name": "SK하이닉스",
+          "symbol": "000660",
+          "market_cap": "+12,637,517억원",
+          "market_cap_value": 1263751791450000.0
+        },
+        {
+          "name": "삼성전자우",
+          "symbol": "005935",
+          "market_cap": "+1,660,908억원",
+          "market_cap_value": 166090839021000.0
+        },
+        {
+          "name": "SK스퀘어",
+          "symbol": "402340",
+          "market_cap": "+1,481,506억원",
+          "market_cap_value": 148150649754000.0
+        },
+        {
+          "name": "삼성전기",
+          "symbol": "009150",
+          "market_cap": "+982,969억원",
+          "market_cap_value": 98296903936000.0
+        },
+        {
+          "name": "현대차",
+          "symbol": "005380",
+          "market_cap": "+849,744억원",
+          "market_cap_value": 84974472890000.0
+        },
+        {
+          "name": "LG에너지솔루션",
+          "symbol": "373220",
+          "market_cap": "+803,790억원",
+          "market_cap_value": 80379000000000.0
+        },
+        {
+          "name": "삼성바이오로직스",
+          "symbol": "207940",
+          "market_cap": "+717,972억원",
+          "market_cap_value": 71797265001000.0
+        },
+        {
+          "name": "삼성생명",
+          "symbol": "032830",
+          "market_cap": "+657,000억원",
+          "market_cap_value": 65700000000000.0
+        },
+        {
+          "name": "삼성물산",
+          "symbol": "028260",
+          "market_cap": "+641,372억원",
+          "market_cap_value": 64137278285500.0
+        }
+      ],
+      "market_indicators": {
+        "usd_krw": 1383.9
+      },
+      "data_date": "2026-08-22"
+    },
+    "us": null,
+    "associated_data": null
+  },
+  "used_real_llm": true,
+  "llm_provider_log": [
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false,
+      "purpose": "flow_qa_rhythm_repair"
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false,
+      "purpose": "flow_qa_rhythm_repair"
+    },
+    {
+      "provider": "claude-sonnet-4-6",
+      "fallback": false
+    }
+  ],
+  "llm_call_count": 18,
+  "narrative_plan": {
+    "plan_id": "kospi_per_validity_shorts",
+    "hook_type": "belief_reversal",
+    "selection_reason": "PER 4배라는 수치가 '싸다'는 직관적 믿음을 시청자가 갖고 있을 때, 그 근거 데이터 자체가 검증 불가임을 드러내는 반전이 가장 강한 주목을 유발함. 또한 shorts 포맷에서 '당연한 것에 의문 제기' 구조는 이탈률을 낮추는 데 효과적임.",
+    "story_beats": [
+      {
+        "role": "믿음 제시",
+        "fact_ids": [],
+        "transition_goal": "시청자가 공유하는 전제('삼성·하이닉스 PER 4배면 싸다')를 먼저 표면에 꺼내 공감대를 형성한 뒤 즉시 균열을 예고함"
+      },
+      {
+        "role": "시장 회복 맥락",
+        "fact_ids": [
+          "F1",
+          "F4"
+        ],
+        "transition_goal": "코스피가 7월 저점 대비 빠르게 올라 8월 21일 6,912포인트를 기록했다는 사실로, '지금 이 가격이 싸다'는 믿음이 형성된 배경을 구체적 수치로 보여줌"
+      },
+      {
+        "role": "시총 무게감 제시",
+        "fact_ids": [
+          "F3"
+        ],
+        "transition_goal": "삼성전자·SK하이닉스가 코스피 1·2위 시총 종목임을 짚어, 이 두 종목의 밸류에이션 판단이 코스피 전체 해석과 직결된다는 맥락을 연결함"
+      },
+      {
+        "role": "핵심 반전 — 근거 부재 폭로",
+        "fact_ids": [
+          "F5"
+        ],
+        "transition_goal": "PER 4배 수치와 하반기 이익 전망 모두 현재 검증 가능한 데이터가 존재하지 않음을 명시해, 앞서 쌓인 '싸다' 믿음에 직접 균열을 냄"
+      },
+      {
+        "role": "판단 기준 제안",
+        "fact_ids": [
+          "F5"
+        ],
+        "transition_goal": "수치 자체보다 '어떤 이익 추정치를 분모로 쓰느냐'가 PER 해석을 바꾼다는 하나의 기준을 제시해, 시청자에게 스스로 확인할 행동 방향을 열어줌"
+      },
+      {
+        "role": "클로징 질문",
+        "fact_ids": [],
+        "transition_goal": "검증되지 않은 수치를 근거로 매수·매도 결정을 내리는 것이 괜찮은지 되묻는 질문으로 마무리해 저장·공유 동기를 유발함"
+      }
+    ],
+    "checkpoint_fact_ids": [
+      "F1",
+      "F3",
+      "F4",
+      "F5"
+    ],
+    "transition_rules": [
+      "믿음 제시 직후에는 반드시 검증 가능한 시장 수치(F1·F4)로 맥락을 잡은 뒤 반전으로 넘어간다",
+      "F5의 '데이터 부재' 사실은 수치를 새로 만들거나 추정하는 방식으로 우회하지 않는다",
+      "PER 4배 수치는 검증 불가 사실임을 명시한 뒤에만 언급할 수 있다",
+      "시총 수치(F3)는 단일 출처임을 영상 내 자막 또는 구두로 고지한다",
+      "같은 수치를 새 역할 없이 반복하지 않는다"
+    ],
+    "avoid": [
+      "PER 4배를 기정사실처럼 단정하는 표현",
+      "하반기 EPS·컨센서스 수치를 임의로 생성하는 행위",
+      "F4 저점 수치를 교차 검증 없이 단독 확정 사실로 제시하는 표현",
+      "같은 수치를 새 역할 없이 반복"
+    ],
+    "planner": "claude",
+    "format": "shorts"
+  },
+  "flow_qa": {
+    "passed": false,
+    "deterministic": {
+      "sentence_count": 26,
+      "repetitions": [],
+      "question_indexes": [
+        2,
+        10,
+        21
+      ],
+      "opening_ending_similarity": 0.099,
+      "rhetorical_rhythm": {
+        "roles": [
+          "conversational",
+          "question",
+          "description",
+          "description",
+          "conversational",
+          "description",
+          "description",
+          "conversational",
+          "description",
+          "question",
+          "description",
+          "conversational",
+          "conversational",
+          "description",
+          "conversational",
+          "description",
+          "description",
+          "conversational",
+          "conversational",
+          "description",
+          "question",
+          "description",
+          "description",
+          "conversational",
+          "question",
+          "description"
+        ],
+        "role_counts": {
+          "description": 13,
+          "question": 4,
+          "turn": 0,
+          "emphasis": 0,
+          "reason": 0
+        },
+        "plain_declarative_runs": [],
+        "ending_registers": [
+          "conversational_honorific",
+          "other",
+          "formal_declarative",
+          "formal_declarative",
+          "conversational_honorific",
+          "formal_declarative",
+          "formal_declarative",
+          "conversational_honorific",
+          "formal_declarative",
+          "other",
+          "formal_declarative",
+          "conversational_honorific",
+          "conversational_honorific",
+          "formal_declarative",
+          "conversational_honorific",
+          "formal_declarative",
+          "other",
+          "conversational_honorific",
+          "conversational_honorific",
+          "formal_declarative",
+          "other",
+          "other",
+          "other",
+          "conversational_honorific",
+          "other",
+          "formal_declarative"
+        ],
+        "formal_ending_runs": [],
+        "passed": true
+      },
+      "spoken_pacing": {
+        "visible_lengths": [
+          21,
+          13,
+          17,
+          22,
+          17,
+          21,
+          18,
+          17,
+          25,
+          20,
+          17,
+          15,
+          11,
+          18,
+          21,
+          18,
+          18,
+          15,
+          17,
+          18,
+          15,
+          13,
+          20,
+          18,
+          14,
+          19
+        ],
+        "overlong_sentences": [],
+        "short_sentence_runs": [],
+        "question_punctuation_issues": [],
+        "passed": true
+      },
+      "topic_scope": {
+        "passed": true,
+        "keyword_mention_ratio": 0.46,
+        "required_ratio": 0.15,
+        "total_paragraphs": 26,
+        "keyword_paragraphs": 12,
+        "search_terms_used": 19
+      },
+      "topic_boundaries": {
+        "passed": true,
+        "opening_topic_connected": true,
+        "ending_topic_connected": true,
+        "boundary_window_paragraphs": 3
+      }
+    },
+    "question_answer_issues": [],
+    "repetition_issues": [],
+    "ending_issue": null,
+    "transition_issues": [],
+    "rhythm_issues": [],
+    "revision_instruction": "",
+    "method": "claude_plus_deterministic"
+  },
+  "content_depth_quality": {
+    "score": 82,
+    "warnings": [
+      "Scene 1 (data) has 0 verified fact matches.",
+      "Scene 3 (data) has 0 verified fact matches.",
+      "Scene 6 (data) has 0 verified fact matches.",
+      "Scene 7 (data) has 0 verified fact matches.",
+      "Scene 8 (data) has 0 verified fact matches.",
+      "Scene 9 (data) has 0 verified fact matches.",
+      "Scene 10 (data) has 0 verified fact matches.",
+      "Scene 11 (data) has 0 verified fact matches.",
+      "Low causal explanation ratio: less than 15% of sentences contain causal connectives."
+    ],
+    "causal_ratio": 0.0,
+    "causal_sentence_count": 0,
+    "fact_density_by_scene": [
+      {
+        "scene_index": 1,
+        "scene_type": "data",
+        "matched_facts_count": 0
+      },
+      {
+        "scene_index": 2,
+        "scene_type": "data",
+        "matched_facts_count": 1
+      },
+      {
+        "scene_index": 3,
+        "scene_type": "data",
+        "matched_facts_count": 0
+      },
+      {
+        "scene_index": 4,
+        "scene_type": "data",
+        "matched_facts_count": 1
+      },
+      {
+        "scene_index": 5,
+        "scene_type": "data",
+        "matched_facts_count": 1
+      },
+      {
+        "scene_index": 6,
+        "scene_type": "data",
+        "matched_facts_count": 0
+      },
+      {
+        "scene_index": 7,
+        "scene_type": "data",
+        "matched_facts_count": 0
+      },
+      {
+        "scene_index": 8,
+        "scene_type": "data",
+        "matched_facts_count": 0
+      },
+      {
+        "scene_index": 9,
+        "scene_type": "data",
+        "matched_facts_count": 0
+      },
+      {
+        "scene_index": 10,
+        "scene_type": "data",
+        "matched_facts_count": 0
+      },
+      {
+        "scene_index": 11,
+        "scene_type": "data",
+        "matched_facts_count": 0
+      }
+    ],
+    "redundant_scene_pairs": [],
+    "cross_validation": {
+      "verified_facts_total": 5,
+      "cross_verified_count": 2,
+      "single_source_count": 3,
+      "contradictions": []
+    }
+  },
+  "requires_manual_review": true,
+  "storytelling_profile": "original_finance_storyteller_v1",
+  "style_mix_applied": {
+    "economic_hunter": 0.7,
+    "knowledge_bite": 0.3
+  },
+  "structure": "kospi_per_validity_shorts",
+  "quality_report": {
+    "scene_plan": {
+      "score": 100,
+      "warnings": [],
+      "scene_count": 11,
+      "visual_types": [
+        "character_hero",
+        "character_hero",
+        "character_hero",
+        "news_context",
+        "news_context",
+        "data_visual",
+        "character_explainer",
+        "character_explainer",
+        "comparison",
+        "comparison",
+        "takeaway"
+      ]
+    },
+    "art_direction": {
+      "score": 80,
+      "warnings": [
+        "low_scene_family_diversity"
+      ],
+      "families": [
+        "comparison_board",
+        "data_lab",
+        "comparison_board",
+        "data_lab",
+        "comparison_board",
+        "data_lab",
+        "history_classroom",
+        "comparison_board",
+        "comparison_board",
+        "history_classroom",
+        "comparison_board"
+      ],
+      "palettes": [
+        "editorial_blue",
+        "industrial_navy",
+        "editorial_blue",
+        "industrial_navy",
+        "editorial_blue",
+        "industrial_navy",
+        "editorial_blue",
+        "growth_gold",
+        "editorial_blue",
+        "growth_gold",
+        "editorial_blue"
+      ],
+      "pose_assets": [
+        "detective_worried",
+        "analyst_worried",
+        "detective_worried",
+        "analyst_neutral",
+        "detective_neutral",
+        "analyst_neutral",
+        "professor_neutral",
+        "detective_neutral",
+        "detective_neutral",
+        "professor_neutral",
+        "detective_highlight"
+      ]
+    },
+    "storytelling": {
+      "profile": "original_finance_storyteller_v1",
+      "score": 92,
+      "signals": {
+        "opening_hook": true,
+        "story_transitions": 1,
+        "viewer_connection": 1,
+        "evidence_translation": true,
+        "closing_monitoring_point": true
+      },
+      "metrics": {
+        "scene_count": 11,
+        "sentence_count": 26,
+        "avg_sentence_chars": 17.6,
+        "rhetorical_question_count": 3
+      },
+      "suggestions": [
+        "사실 나열 사이에 원인·반전·조건을 잇는 전환 문장을 보강하세요."
+      ]
+    },
+    "house_style": {
+      "enabled": false,
+      "passed": true,
+      "hard_failures": [],
+      "advisories": [],
+      "profile": null
+    },
+    "flow": {
+      "passed": false,
+      "deterministic": {
+        "sentence_count": 26,
+        "repetitions": [],
+        "question_indexes": [
+          2,
+          10,
+          21
+        ],
+        "opening_ending_similarity": 0.099,
+        "rhetorical_rhythm": {
+          "roles": [
+            "conversational",
+            "question",
+            "description",
+            "description",
+            "conversational",
+            "description",
+            "description",
+            "conversational",
+            "description",
+            "question",
+            "description",
+            "conversational",
+            "conversational",
+            "description",
+            "conversational",
+            "description",
+            "description",
+            "conversational",
+            "conversational",
+            "description",
+            "question",
+            "description",
+            "description",
+            "conversational",
+            "question",
+            "description"
+          ],
+          "role_counts": {
+            "description": 13,
+            "question": 4,
+            "turn": 0,
+            "emphasis": 0,
+            "reason": 0
+          },
+          "plain_declarative_runs": [],
+          "ending_registers": [
+            "conversational_honorific",
+            "other",
+            "formal_declarative",
+            "formal_declarative",
+            "conversational_honorific",
+            "formal_declarative",
+            "formal_declarative",
+            "conversational_honorific",
+            "formal_declarative",
+            "other",
+            "formal_declarative",
+            "conversational_honorific",
+            "conversational_honorific",
+            "formal_declarative",
+            "conversational_honorific",
+            "formal_declarative",
+            "other",
+            "conversational_honorific",
+            "conversational_honorific",
+            "formal_declarative",
+            "other",
+            "other",
+            "other",
+            "conversational_honorific",
+            "other",
+            "formal_declarative"
+          ],
+          "formal_ending_runs": [],
+          "passed": true
+        },
+        "spoken_pacing": {
+          "visible_lengths": [
+            21,
+            13,
+            17,
+            22,
+            17,
+            21,
+            18,
+            17,
+            25,
+            20,
+            17,
+            15,
+            11,
+            18,
+            21,
+            18,
+            18,
+            15,
+            17,
+            18,
+            15,
+            13,
+            20,
+            18,
+            14,
+            19
+          ],
+          "overlong_sentences": [],
+          "short_sentence_runs": [],
+          "question_punctuation_issues": [],
+          "passed": true
+        },
+        "topic_scope": {
+          "passed": true,
+          "keyword_mention_ratio": 0.46,
+          "required_ratio": 0.15,
+          "total_paragraphs": 26,
+          "keyword_paragraphs": 12,
+          "search_terms_used": 19
+        },
+        "topic_boundaries": {
+          "passed": true,
+          "opening_topic_connected": true,
+          "ending_topic_connected": true,
+          "boundary_window_paragraphs": 3
+        }
+      },
+      "question_answer_issues": [],
+      "repetition_issues": [],
+      "ending_issue": null,
+      "transition_issues": [],
+      "rhythm_issues": [],
+      "revision_instruction": "",
+      "method": "claude_plus_deterministic"
+    },
+    "content_depth": {
+      "score": 82,
+      "warnings": [
+        "Scene 1 (data) has 0 verified fact matches.",
+        "Scene 3 (data) has 0 verified fact matches.",
+        "Scene 6 (data) has 0 verified fact matches.",
+        "Scene 7 (data) has 0 verified fact matches.",
+        "Scene 8 (data) has 0 verified fact matches.",
+        "Scene 9 (data) has 0 verified fact matches.",
+        "Scene 10 (data) has 0 verified fact matches.",
+        "Scene 11 (data) has 0 verified fact matches.",
+        "Low causal explanation ratio: less than 15% of sentences contain causal connectives."
+      ],
+      "causal_ratio": 0.0,
+      "causal_sentence_count": 0,
+      "fact_density_by_scene": [
+        {
+          "scene_index": 1,
+          "scene_type": "data",
+          "matched_facts_count": 0
+        },
+        {
+          "scene_index": 2,
+          "scene_type": "data",
+          "matched_facts_count": 1
+        },
+        {
+          "scene_index": 3,
+          "scene_type": "data",
+          "matched_facts_count": 0
+        },
+        {
+          "scene_index": 4,
+          "scene_type": "data",
+          "matched_facts_count": 1
+        },
+        {
+          "scene_index": 5,
+          "scene_type": "data",
+          "matched_facts_count": 1
+        },
+        {
+          "scene_index": 6,
+          "scene_type": "data",
+          "matched_facts_count": 0
+        },
+        {
+          "scene_index": 7,
+          "scene_type": "data",
+          "matched_facts_count": 0
+        },
+        {
+          "scene_index": 8,
+          "scene_type": "data",
+          "matched_facts_count": 0
+        },
+        {
+          "scene_index": 9,
+          "scene_type": "data",
+          "matched_facts_count": 0
+        },
+        {
+          "scene_index": 10,
+          "scene_type": "data",
+          "matched_facts_count": 0
+        },
+        {
+          "scene_index": 11,
+          "scene_type": "data",
+          "matched_facts_count": 0
+        }
+      ],
+      "redundant_scene_pairs": [],
+      "cross_validation": {
+        "verified_facts_total": 5,
+        "cross_verified_count": 2,
+        "single_source_count": 3,
+        "contradictions": []
+      }
+    },
+    "delivery": {
+      "passed": true,
+      "violations": [],
+      "phase_counts": {
+        "context": 6,
+        "twist": 3,
+        "resolution": 2
+      },
+      "emotion_counts": {
+        "highlight": 4,
+        "surprised": 1,
+        "neutral": 5,
+        "worried": 1
+      }
+    },
+    "screen_text": {
+      "passed": true,
+      "rejected_scenes": []
+    }
+  },
+  "thumbnail_brief": {
+    "template": "chart_warning",
+    "language": "ko-KR",
+    "headline": [
+      {
+        "text": "삼성전자와 SK하이닉스 PER",
+        "spans": [
+          {
+            "text": "삼성전자와 SK하이닉스 PER",
+            "tone": "white"
+          }
+        ]
+      },
+      {
+        "text": "지금 확인할 핵심",
+        "spans": [
+          {
+            "text": "지금 확인할 ",
+            "tone": "white"
+          },
+          {
+            "text": "핵심",
+            "tone": "yellow",
+            "scale": 1.08
+          }
+        ]
+      }
+    ],
+    "primary_subject": {
+      "kind": "chart",
+      "asset_id": "manifest_chart",
+      "source_ref": "facts[0]"
+    },
+    "secondary_subject": {
+      "allowed": false
+    },
+    "badge": {
+      "label": "핵심 수치",
+      "value": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+      "source_ref": "facts[0]"
+    },
+    "source_scene_ids": [
+      "script_scene_001",
+      "script_scene_001"
+    ],
+    "editorial_overlays": [
+      {
+        "kind": "metaphor_label",
+        "text": "종가 6,912.95 / 전일 대비 +60.",
+        "claim_type": "verbatim_fact",
+        "source_refs": [
+          "facts[0]"
+        ],
+        "anchor": "target",
+        "target_bbox": [
+          0.48,
+          0.18,
+          0.28,
+          0.16
+        ],
+        "text_style": "outline",
+        "tone": "warning",
+        "max_area_ratio": 0.18,
+        "spans": []
+      }
+    ],
+    "pattern_id": "P2",
+    "narrative_plan": {
+      "schema_version": 1,
+      "pattern_id": "P2",
+      "candidate_kind": "fact",
+      "source_scene_ids": [
+        "script_scene_001"
+      ],
+      "decision_hook": {
+        "text": "삼성전자와 SK하이닉스 PER 4배가 정말 ",
+        "claim_type": "derived_hook",
+        "source_refs": [
+          "facts[0]"
+        ]
+      },
+      "fact_anchor": {
+        "text": "종가 6,912.95 / 전일 대비 +60.",
+        "claim_type": "verbatim_fact",
+        "source_refs": [
+          "facts[0]"
+        ]
+      },
+      "overlays": [
+        {
+          "kind": "metaphor_label",
+          "text": "종가 6,912.95 / 전일 대비 +60.",
+          "claim_type": "verbatim_fact",
+          "source_refs": [
+            "facts[0]"
+          ],
+          "anchor": "target",
+          "target_bbox": [
+            0.48,
+            0.18,
+            0.28,
+            0.16
+          ],
+          "text_style": "outline",
+          "tone": "warning",
+          "max_area_ratio": 0.18,
+          "spans": []
+        }
+      ],
+      "rationale": "검증된 수치를 장면의 데이터 표면에만 배치해 영상 근거와 추천 썸네일을 연결합니다."
+    },
+    "verified_facts": [
+      {
+        "fact": "코스피 2026년 8월 21일 종가",
+        "figure": "종가 6,912.95 / 전일 대비 +60.37포인트 / 등락률 +0.88%",
+        "source_field": "kr.index.kospi.close, kr.index.kospi.change, kr.index.kospi.change_pct, kr.chart_series.kospi[2026-08-21].close, kr.chart_series.kospi[2026-08-20].close",
+        "source_ref": [
+          "kr.index.kospi",
+          "kr.chart_series.kospi"
+        ],
+        "confidence": 1.0,
+        "cross_verified": true,
+        "contradiction_detected": false
+      },
+      {
+        "fact": "코스피 전일(8월 20일) 종가 기준 등락폭 수치 역산 정합성 확인 (60.37 ÷ 6,852.58 = +0.881%)",
+        "figure": "8월 20일 종가 6,852.58 → 8월 21일 종가 6,912.95, 차이 +60.37p, 역산 등락률 +0.881%로 공시값 +0.88%와 일치",
+        "source_field": "kr.chart_series.kospi[2026-08-20].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.change_pct",
+        "source_ref": [
+          "kr.index.kospi",
+          "kr.chart_series.kospi"
+        ],
+        "confidence": 1.0,
+        "cross_verified": true,
+        "contradiction_detected": false
+      },
+      {
+        "fact": "삼성전자·SK하이닉스 코스피 시가총액 1·2위 (단일 출처, 교차 검증 불가)",
+        "figure": "삼성전자 약 1,645조 7,274억원 / SK하이닉스 약 1,263조 7,517억원",
+        "source_field": "kr.top_stocks[0].market_cap_value, kr.top_stocks[1].market_cap_value",
+        "source_ref": [
+          "kr.top_stocks"
+        ],
+        "confidence": 0.7,
+        "cross_verified": false,
+        "contradiction_detected": false
+      },
+      {
+        "fact": "코스피 7월 말 급락 저점 및 8월 21일 회복 — 저점은 단일 출처, 회복 종가만 교차 검증됨",
+        "figure": "7월 29일 종가 5,663.24 / 7월 30일 종가 5,593.56 (저점) → 8월 21일 종가 6,912.95 (회복)",
+        "source_field": "kr.chart_series.kospi[2026-07-29].close, kr.chart_series.kospi[2026-07-30].close, kr.chart_series.kospi[2026-08-21].close, kr.index.kospi.close",
+        "source_ref": [
+          "kr.chart_series.kospi"
+        ],
+        "confidence": 0.75,
+        "cross_verified": false,
+        "contradiction_detected": false
+      },
+      {
+        "fact": "삼성전자·SK하이닉스 PER 4배 수치 및 하반기 이익 전망 — 제공 데이터 내 근거 전무, 사실 생성 불가",
+        "figure": "N/A — PER 수치, EPS 추정치, 컨센서스 이익 전망 데이터 부재",
+        "source_field": "N/A",
+        "source_ref": [],
+        "confidence": 0.0,
+        "cross_verified": false,
+        "contradiction_detected": false
+      }
+    ],
+    "narration": "삼성전자와 SK하이닉스, PER 4배라고요. 정말 싸다는 말이 맞는 걸까요?\n\n그 수치를 믿기 전에 확인할 게 있습니다. 코스피는 8월 21일 6912포인트였습니다.\n\n7월 말 저점에서 빠르게 반등한 수치죠. 이 흐름 속에서 지금이 싸다는 믿음이 퍼졌습니다.\n\n삼성전자는 코스피 시총 1위 종목입니다. SK하이닉스는 바로 뒤를 잇는 2위죠.\n\n두 종목 밸류에이션이 흔들리면 코스피 해석도 달라집니다. 그런데 PER 4배, 어디서 나온 수치일까요?\n\n검증 가능한 EPS 추정치가 없습니다. 컨센서스 데이터도 확인되지 않죠. 근거 자체가 없는 겁니다.\n\nPER은 주가를 이익으로 나눈 값입니다. 분모인 이익 추정치를 어떻게 잡느냐가 핵심이죠.\n\n추정치에 따라 결과가 완전히 달라집니다. 낙관적 전망을 쓰면 주가가 싸 보이거든요.\n\n보수적으로 잡으면 달라질 수 있죠. 하반기 이익 추정치는 아직 불확실하죠. 같은 주가도 분모에 따라 다르게 읽힙니다.\n\n검증 안 된 수치로 판단해도 될까요? 하나의 기준만 기억해 두세요. 분모가 어떤 이익 추정치인지 직접 확인하세요.\n\n낙관치인지 보수치인지가 먼저인 겁니다. 그 확인이 판단의 시작이니까요. PER 숫자 하나보다 근거가 더 중요합니다.",
+    "generated_from": "thumbnail_v2_contract",
+    "comparison_mode": false
+  },
+  "youtube_metadata": {
+    "title": "삼성·하이닉스 PER 4배, 정말 싼 걸까요?",
+    "thumbnail_prompt": "dramatic spotlight beam hitting an empty stone podium in a dark theater, giant question mark carved in stone beside it, golden balance scale tilted in background, eerie vacancy and tension, original 2D Korean finance editorial comic, bold ink outlines, cel shading",
+    "description": "코스피 6912포인트 회복 속에 퍼지는 \"삼성·하이닉스 PER 4배면 싸다\"는 믿음. 그런데 그 수치의 근거 데이터가 실제로 검증되는지 따져봤습니다. PER을 해석할 때 반드시 확인해야 할 한 가지 기준도 함께 정리했습니다.\n\n#코스피 #삼성전자 #SK하이닉스 #PER #반도체주 #주식투자 #밸류에이션 #코스피분석",
+    "shorts_script": "삼성전자, SK하이닉스 PER 4배면 싸다는 말, 들어보셨죠? 그런데 그 수치의 근거 데이터가 현재 검증이 안 됩니다. PER은 이익 추정치를 어떻게 잡느냐에 따라 결과가 완전히 달라집니다. 낙관적으로 잡으면 싸 보이고, 보수적으로 잡으면 전혀 다릅니다. 수치를 믿기 전에 분모를 먼저 확인하세요."
+  }
+}

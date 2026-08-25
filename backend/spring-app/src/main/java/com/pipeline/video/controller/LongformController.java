@@ -26,8 +26,9 @@ public class LongformController {
     @PostMapping("/generate")
     public ResponseEntity<LongformGenerateResponse> generate(
             @PathVariable Long jobId,
+            @RequestParam(defaultValue = "true") boolean extractShortsScenario,
             @AuthenticationPrincipal String username) {
-        return ResponseEntity.ok(longformService.generate(jobId, username));
+        return ResponseEntity.ok(longformService.generate(jobId, username, extractShortsScenario));
     }
 
     @PostMapping("/confirm")

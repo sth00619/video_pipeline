@@ -73,9 +73,9 @@ Spoken Korean craft:
 - Write for one continuous TTS performance, not for line-by-line reading.
   Keep periods and question marks in the narration text; never replace a
   sentence boundary with a comma merely to make the delivery faster.
-- Let most spoken sentences land in a natural 12-32 Korean-character range
-  excluding spaces. Use a short emphasis line only as an occasional beat, and
-  never stack three short lines in a row.
+- Let most spoken sentences land in a natural 15-20 Korean-character range
+  excluding spaces, and never exceed 26 characters. Use a short emphasis line
+  only as an occasional beat, and never stack three short lines in a row.
 - A real question must end in ``?`` and use a Korean interrogative ending such
   as ``~까요?`` or ``~습니까?`` so the narrator can lift the final intonation.
   Follow it immediately with a fact-based answer. Do not turn statements into

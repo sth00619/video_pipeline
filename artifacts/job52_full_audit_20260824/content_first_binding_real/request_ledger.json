@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "job52_root_cause_korean_text_character",
+      "attempt": 1,
+      "attempt_id": "d19912808c13434594b34e17aab50613",
+      "estimated_usd": 0.14,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "network_error",
+      "reserved_at": "2026-08-24T05:58:41.650823+00:00",
+      "request_metadata": {
+        "prompt_sha256": "f8b313e65bffb2baef259bfa5013a518230f0e57a3cf7901b0f6ea8ebf6d28a4",
+        "reference_sha256": [
+          "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+          "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6"
+        ],
+        "text_contract": {
+          "version": "scene-local-text-contract-v4-content-first-layout",
+          "approved_texts": [
+            "영업이익"
+          ],
+          "generated_texts": [
+            "영업이익"
+          ],
+          "deterministic_texts": [],
+          "surface_plan": [],
+          "surface_count": 0,
+          "placement_mode": "contextual_supporting",
+          "hierarchy_policy": "script_objects_and_action_above_supporting_text",
+          "bubble_policy": "unplanned",
+          "bubble_allowed": false,
+          "bubble_text": "",
+          "sources": [
+            "scene.screen_texts",
+            "scene.screen_text_plan"
+          ]
+        }
+      },
+      "completed_at": "2026-08-24T06:00:43.489111+00:00"
+    }
+  ],
+  "total_krw": 0,
+  "budget_overrun_krw": 0
+}

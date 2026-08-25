@@ -6,8 +6,8 @@
 장면 수 vs 문장당 길이)을 구분해 정확한 교정 지시를 보내는지 검증한다.
 
 2026-08-05, 사용자 명시 지시로 문장 길이 목표를 26~38자에서 15~20자로
-낮췄다(하드 상한 26자). target_chars=360이면 target_scene_count는
-round(360/18)=20, minimum_scene_count는 round(20*0.9)=18이므로, 아래
+낮췄다(긴 회사명을 위한 하드 상한 28자). target_chars=360이면 target_scene_count는
+round(360/18)=20, minimum_scene_count는 ceil(20*0.855)=18이므로, 아래
 테스트는 20개 문장으로 이 새 최소치를 만족시킨다."""
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def test_rewrite_reports_total_length_not_scene_count_when_only_length_fails(mon
     # 20개 문장이 만들어지면 minimum_scene_count(18) 이상이라 장면 수 조건은
     # 항상 통과하지만, 총 글자 수는 매번 target_chars(360)의 허용 범위를
     # 넘겨 실패하게 만든다. 3번째 시도에서야 범위 안으로 들어와 성공한다.
-    # 각 문장은 새 하드 상한(26자) 이내라 문장당 길이 조건도 항상 통과한다.
+    # 각 문장은 새 하드 상한(28자) 이내라 문장당 길이 조건도 항상 통과한다.
     worker = _worker()
     overshoot_lines = [f"이 문장은 목표보다 훨씬 길게 늘어난 문장입니다 {i:02d}" for i in range(1, 21)]
     ok_lines = [f"이 문장은 목표 분량에 맞춘 문장입니다 {i:02d}" for i in range(1, 21)]
@@ -72,3 +72,22 @@ def test_rewrite_reports_scene_count_when_too_few_lines_returned(monkeypatch, ca
     warnings = [record.message for record in caplog.records if record.levelname == "WARNING"]
     assert any("scene-count contract" in message for message in warnings)
     assert not any("total length contract" in message for message in warnings)
+
+
+def test_rewrite_accepts_short_caption_ending_that_stays_in_same_image(monkeypatch, caplog):
+    worker = _worker()
+    lines = ["오늘 코스피가 6860포인트를 기록했습니다."] * 18
+    calls = 0
+
+    def fake_llm(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return json.dumps(lines, ensure_ascii=False)
+
+    monkeypatch.setattr(worker, "_call_llm_with_fallback", fake_llm)
+    with caplog.at_level("WARNING"):
+        result = worker._rewrite_dialogue_to_target(_source_script_body(), target_chars=360)
+
+    assert calls == 1
+    assert result.count("오늘 코스피가 6860포인트를 기록했습니다.") == 18
+    assert any("동일 이미지 청크 계획" in record.message for record in caplog.records)

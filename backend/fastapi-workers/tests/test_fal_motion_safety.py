@@ -8,6 +8,7 @@ from PIL import Image
 from app.services.fal_motion_safety import (
     assess_fal_motion_safety,
     fal_motion_safety_is_current,
+    inspect_visible_text,
 )
 from app.workers.images_worker import _apply_fal_motion_safety_contract
 from app.workers.longform_worker import (
@@ -25,6 +26,8 @@ def _png(tmp_path: Path, name: str = "scene.png") -> Path:
 @pytest.mark.parametrize(
     ("field", "payload", "reason"),
     [
+        ("screen_texts", ["삼성전자", "110조 원"], "screen_texts"),
+        ("screen_text_plan", {"approved": ["코스피"]}, "screen_text_plan"),
         ("core_figures", [{"value": "6,813"}], "core_figures"),
         ("market_chart", {"series": [1, 2]}, "market_chart"),
         ("v5_verified_overlays", [{"value": "+3.56%"}], "v5_verified_overlays"),
@@ -85,6 +88,20 @@ def test_visible_text_or_number_blocks_fal(tmp_path, row):
     assert result["ocr"]["visible_tokens"] == [row["text"]]
 
 
+def test_visual_qa_text_blocks_fal_when_local_ocr_misses_it(tmp_path):
+    scene = {
+        "visual_qa_review": {
+            "raw": {"visible_texts": ["STOCK CERTIFICATE"]},
+        },
+    }
+
+    result = assess_fal_motion_safety(scene, str(_png(tmp_path)), ocr_rows=[])
+
+    assert result["eligible"] is False
+    assert "visual_qa_visible_text" in result["reasons"]
+    assert result["ocr"]["status"] == "skipped_metadata_block"
+
+
 def test_short_low_confidence_ocr_noise_is_ignored(tmp_path):
     result = assess_fal_motion_safety(
         {},
@@ -98,6 +115,58 @@ def test_short_low_confidence_ocr_noise_is_ignored(tmp_path):
     )
 
     assert result["eligible"] is True
+
+
+def test_digit_like_geometry_requires_second_ocr_mode_confirmation(tmp_path):
+    primary = ({
+        "text": "1111", "conf": "76", "left": "880", "top": "290",
+        "width": "55", "height": "24",
+    },)
+    with patch(
+        "app.services.fal_motion_safety._read_tesseract_rows",
+        side_effect=[("completed", list(primary)), ("completed", [])],
+    ):
+        result = inspect_visible_text(str(_png(tmp_path)))
+
+    assert result["visible_tokens"] == []
+    assert result["numeric_confirmation_status"] == "completed"
+
+
+def test_real_digit_is_kept_when_second_ocr_mode_confirms_same_location(tmp_path):
+    primary = [{
+        "text": "6813", "conf": "76", "left": "100", "top": "80",
+        "width": "80", "height": "30",
+    }]
+    confirmation = [{
+        "text": "6813", "conf": "88", "left": "96", "top": "76",
+        "width": "90", "height": "38",
+    }]
+    with patch(
+        "app.services.fal_motion_safety._read_tesseract_rows",
+        side_effect=[("completed", primary), ("completed", confirmation)],
+    ):
+        result = inspect_visible_text(str(_png(tmp_path)))
+
+    assert result["visible_tokens"] == ["6813"]
+
+
+def test_different_digits_at_same_location_are_not_numeric_confirmation(tmp_path):
+    primary = [{
+        "text": "09", "conf": "69", "left": "720", "top": "72",
+        "width": "32", "height": "16",
+    }]
+    confirmation = [{
+        "text": "7)", "conf": "44", "left": "730", "top": "53",
+        "width": "37", "height": "22",
+    }]
+    with patch(
+        "app.services.fal_motion_safety._read_tesseract_rows",
+        side_effect=[("completed", primary), ("completed", confirmation)],
+    ):
+        result = inspect_visible_text(str(_png(tmp_path)))
+
+    assert result["visible_tokens"] == []
+    assert result["numeric_confirmation_status"] == "completed"
 
 
 def test_ocr_unavailable_fails_closed(tmp_path):
