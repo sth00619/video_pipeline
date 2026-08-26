@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="0.339" timestamp="2026-08-26T18:53:13.659713+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_surface_text_contract_regression" name="test_semantic_policy_keeps_information_out_of_generator_without_erasing_text" time="0.000"><failure message="AssertionError: assert ['영업이익', 'KOSPI', '와!'] == []&#10;  &#10;  Left contains 3 more items, first extra item: '영업이익'&#10;  Use -v to get more diff">def test_semantic_policy_keeps_information_out_of_generator_without_erasing_text():
+        result = build_scene_text_contract({
+            "text_render_policy": "semantic_roles_v1",
+            "screen_texts": ["영업이익", "KOSPI", "와!"],
+            "screen_text_validation": {"passed": True},
+        })
+&gt;       assert result["generated_texts"] == []
+E       AssertionError: assert ['영업이익', 'KOSPI', '와!'] == []
+E         
+E         Left contains 3 more items, first extra item: '영업이익'
+E         Use -v to get more diff
+
+tests/test_surface_text_contract_regression.py:19: AssertionError</failure></testcase><testcase classname="tests.test_surface_text_contract_regression" name="test_renderer_emits_individual_trend_text_positions" time="0.033"><failure message="AssertionError: assert set() == {'end_value',...lue', 'value'}&#10;  &#10;  Extra items in the right set:&#10;  'label'&#10;  'end_value'&#10;  'start_value'&#10;  'value'&#10;  Use -v to get more diff">def test_renderer_emits_individual_trend_text_positions():
+        scene = trend_scene()
+        stream = io.BytesIO()
+        Image.new("RGB", (1280, 720), "#20354d").save(stream, "PNG")
+        apply_verified_scene_facts(stream.getvalue(), scene)
+&gt;       assert {cell["role"] for cell in scene.get("surface_text_manifest", {}).get("cells", [])} == {
+            "label", "value", "start_value", "end_value",
+        }
+E       AssertionError: assert set() == {'end_value',...lue', 'value'}
+E         
+E         Extra items in the right set:
+E         'label'
+E         'end_value'
+E         'start_value'
+E         'value'
+E         Use -v to get more diff
+
+tests/test_surface_text_contract_regression.py:40: AssertionError</failure></testcase><testcase classname="tests.test_surface_text_contract_regression" name="test_worker_renders_two_bound_surfaces_and_checks_separate_ocr" time="0.047"><failure message="AssertionError: assert 0 == 2&#10; +  where 0 = len([])&#10; +    where [] = &lt;built-in method get of dict object at 0xffff9e187980&gt;('cells', [])&#10; +      where &lt;built-in method get of dict object at 0xffff9e187980&gt; = {}.get&#10; +        where {} = &lt;built-in method get of dict object at 0xffff94dab280&gt;('surface_text_manifest', {})&#10; +          where &lt;built-in method get of dict object at 0xffff94dab280&gt; = {'screen_text_plan': [{'purpose': 'information', 'surface': 'left', 'text': '현재 전망'}, {'purpose': 'information', 'surf....4, 0.5], 'image_sha256': 'd1e2431b98c9fd65f95d6205201c7a7d54b5c1dd6ddbcfcb9f1ec25ac9bcbb96', 'validated': True}}, ...}.get">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-87/test_worker_renders_two_bound_0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff9e192a80&gt;
+
+    def test_worker_renders_two_bound_surfaces_and_checks_separate_ocr(tmp_path, monkeypatch):
+        path = tmp_path / "surfaces.png"
+        Image.new("RGB", (1280, 720), "#20354d").save(path)
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        scene = {
+            "text_render_policy": "semantic_roles_v1",
+            "screen_texts": ["현재 전망", "수정 전망"],
+            "screen_text_validation": {"passed": True},
+            "screen_text_plan": [{"text": "현재 전망", "surface": "left", "purpose": "information"},
+                                 {"text": "수정 전망", "surface": "right", "purpose": "information"}],
+            "surface_bindings": {
+                "left": {"bbox": [.05, .1, .4, .5], "image_sha256": digest, "validated": True},
+                "right": {"bbox": [.55, .1, .4, .5], "image_sha256": digest, "validated": True},
+            },
+        }
+        results = iter(["현재 전망", "현재 전망", "수정 전망", "수정 전망"])
+        monkeypatch.setattr(gate, "_read_tesseract_rows", lambda *a, **k: (
+            "completed", [{"text": next(results)}],
+        ))
+        ImagesWorker()._apply_image_overlays(scene, str(path))
+&gt;       assert len(scene.get("surface_text_manifest", {}).get("cells", [])) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = len([])
+E        +    where [] = &lt;built-in method get of dict object at 0xffff9e187980&gt;('cells', [])
+E        +      where &lt;built-in method get of dict object at 0xffff9e187980&gt; = {}.get
+E        +        where {} = &lt;built-in method get of dict object at 0xffff94dab280&gt;('surface_text_manifest', {})
+E        +          where &lt;built-in method get of dict object at 0xffff94dab280&gt; = {'screen_text_plan': [{'purpose': 'information', 'surface': 'left', 'text': '현재 전망'}, {'purpose': 'information', 'surf....4, 0.5], 'image_sha256': 'd1e2431b98c9fd65f95d6205201c7a7d54b5c1dd6ddbcfcb9f1ec25ac9bcbb96', 'validated': True}}, ...}.get
+
+tests/test_surface_text_contract_regression.py:65: AssertionError</failure></testcase></testsuite></testsuites>
