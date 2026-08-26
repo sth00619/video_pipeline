@@ -14,6 +14,10 @@ from app.utils.entity_english_map import ENTITY_REGISTRY, get_entity_english_nam
 from app.utils.image_text_contract import contains_financial_number
 
 from app.v5.providers.router import RENDER_BLOCKED_ARCHETYPES
+from app.v5.overlay.fact_value_contract import (
+    text_contains_complete_value,
+    verified_fact_contains_value,
+)
 from app.v5.scene.layout_sketcher import LayoutSketcher
 from app.v5.scene.prompt_builder import (
     COSTUME_MAP,
@@ -135,10 +139,6 @@ def _build_v5_verified_overlays(
 
     x, y, w, h = primary_region
 
-    # downstream facts_from_verified_scene()과 동일한 normalise 로직
-    def _norm(s: str) -> str:
-        return re.sub(r"[^0-9a-z가-힣]", "", str(s or "").casefold())
-
     scene = scene or {}
     scene_source = " ".join(
         str(scene.get(key) or "")
@@ -148,7 +148,7 @@ def _build_v5_verified_overlays(
         )
     )
     approved_texts = " ".join(str(value) for value in (scene.get("screen_texts") or []))
-    local_source = _norm(f"{scene_source} {approved_texts}")
+    local_source = f"{scene_source} {approved_texts}".strip()
     if not local_source:
         return None
 
@@ -158,11 +158,17 @@ def _build_v5_verified_overlays(
         value = str(fact.get("value") or "").strip()
         if not value:
             continue
-        if _norm(value) not in local_source:
+        structured_value = bool(str(fact.get("value") or "").strip())
+        if not text_contains_complete_value(
+            local_source,
+            value,
+            permit_structured_unit_suffix=structured_value,
+        ):
             continue
-        # value가 figure·fact 원문에 그대로 있어야 downstream 검증을 통과한다
-        evidence = " ".join(str(fact.get(k) or "") for k in ("figure", "fact"))
-        if _norm(value) not in _norm(evidence):
+        # 짧은 부분 문자열이 아니라 완전한 수치·단위 토큰이어야 한다.
+        if not verified_fact_contains_value(
+            fact, value, require_structured_value_match=True,
+        ):
             continue
         label = str(fact.get("indicator") or fact.get("label") or "").strip()
         return [

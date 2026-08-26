@@ -14,6 +14,7 @@ from typing import Any, Literal
 from PIL import Image, ImageDraw
 
 from .korean_overlay import _load_font
+from .fact_value_contract import verified_fact_contains_value
 
 
 # ``embedded_monitor``는 배경에 AI가 이미 그린 물리 모니터의 *내부 화면*만
@@ -201,10 +202,6 @@ def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...]) ->
 _FACT_REF = re.compile(r"^(?:facts|verified_facts)\[(\d+)]$")
 
 
-def _normalise(value: str) -> str:
-    return "".join(value.split()).casefold()
-
-
 def facts_from_verified_scene(scene: dict[str, Any]) -> tuple[VerifiedFact, ...]:
     """V5 씬 계약의 ``v5_verified_overlays``를 렌더 가능한 사실로 검증한다.
 
@@ -234,15 +231,18 @@ def facts_from_verified_scene(scene: dict[str, Any]) -> tuple[VerifiedFact, ...]
             raise ValueError("검증 수치 오버레이가 존재하지 않는 사실을 참조합니다.")
         value = str(raw.get("value") or "")
         fact = verified_facts[index]
-        evidence = " ".join(str(fact.get(key) or "") for key in ("figure", "fact"))
-        if not value.strip() or _normalise(value) not in _normalise(evidence):
+        if not verified_fact_contains_value(
+            fact, value, require_structured_value_match=True,
+        ):
             raise ValueError("오버레이 값은 참조한 verified_facts 원문에 그대로 있어야 합니다.")
         visualization = str(raw.get("visualization") or "text")
         start_value = str(raw.get("start_value") or "")
         end_value = str(raw.get("end_value") or "")
         if visualization == "upward_trend":
             for trend_value in (start_value, end_value):
-                if not trend_value.strip() or _normalise(trend_value) not in _normalise(evidence):
+                if not verified_fact_contains_value(
+                    fact, trend_value, require_structured_value_match=False,
+                ):
                     raise ValueError("상승 추세선의 시작·종료값은 참조한 verified_facts 원문에 그대로 있어야 합니다.")
         raw_anchor = raw.get("anchor")
         if not isinstance(raw_anchor, dict):
