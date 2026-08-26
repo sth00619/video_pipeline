@@ -9,6 +9,17 @@ from typing import Any
 SEMANTIC_TEXT_POLICY = "semantic_roles_v1"
 
 
+def text_psm_modes(text: str, role: str, *, isolated_label: bool = False) -> list[int]:
+    """역할과 줄 구조로 판독 모드를 렌더 전에 고정한다."""
+    if "\n" in text:
+        return [6]
+    # 실제 스윕에서 추세선 라벨은 PSM 7이 24/24 정확했고 PSM 6은
+    # 4/24만 정확했다. 결과를 본 뒤 고르는 대신 역할 계약으로 고정한다.
+    if role == "label" and isolated_label:
+        return [7]
+    return [6, 7]
+
+
 def contract_digest(scene: dict) -> str:
     keys = ("text_render_policy", "screen_texts", "screen_text_validation", "screen_text_plan",
             "surface_bindings", "v5_verified_overlays", "verified_facts")
@@ -46,7 +57,7 @@ def normalized_bbox(region, size) -> list[int]:
     return [round(x * size[0]), round(y * size[1]), round((x + w) * size[0]), round((y + h) * size[1])]
 
 
-def draw_text_cell(draw, xy, text, *, font, cells, cell_id, role, anchor_bbox, **kwargs):
+def draw_text_cell(draw, xy, text, *, font, cells, cell_id, role, anchor_bbox, psm_modes=None, **kwargs):
     """기존 글꼴·색·좌표는 그대로 쓰고 실제 잉크 bbox를 함께 기록한다."""
     draw.text(xy, text, font=font, **kwargs)
     if cells is None:
@@ -56,7 +67,7 @@ def draw_text_cell(draw, xy, text, *, font, cells, cell_id, role, anchor_bbox, *
                   "bbox": [math.floor(bbox[0]) - 2, math.floor(bbox[1]) - 2,
                            math.ceil(bbox[2]) + 2, math.ceil(bbox[3]) + 2],
                   "anchor_bbox": list(anchor_bbox), "font_size": getattr(font, "size", 0),
-                  "psm_modes": [6] if "\n" in text else [6, 7]})
+                  "psm_modes": list(psm_modes) if psm_modes is not None else text_psm_modes(text, role)})
 
 
 def set_manifest(scene: dict, size, cells: list[dict]) -> None:
@@ -100,7 +111,13 @@ def validate_manifest(scene: dict, size) -> list[dict[str, Any]]:
         l, t, r, b = bbox
         if not (anchor_bbox[0] <= l < r <= anchor_bbox[2] and anchor_bbox[1] <= t < b <= anchor_bbox[3]):
             raise ValueError("문자가 승인 표면 밖에 있거나 잘렸습니다.")
-        if cell.get("psm_modes") != ([6] if "\n" in expected[key] else [6, 7]):
+        isolated_label = False
+        if key.startswith("overlay:") and str(cell.get("role") or "") == "label":
+            overlay_index = int(key.split(":")[1])
+            isolated_label = scene["v5_verified_overlays"][overlay_index].get("visualization") == "upward_trend"
+        if cell.get("psm_modes") != text_psm_modes(
+            expected[key], str(cell.get("role") or ""), isolated_label=isolated_label,
+        ):
             raise ValueError("문자 판독 모드가 계약과 다릅니다.")
     for index, cell in enumerate(cells):
         a = cell["bbox"]

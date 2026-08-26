@@ -81,6 +81,19 @@ def test_single_line_overlay_label_uses_the_measured_line_mode(tmp_path):
     assert label["psm_modes"] == [7]
 
 
+def test_non_trend_label_keeps_both_existing_modes(tmp_path):
+    scene = {
+        "verified_facts": [{"figure": "PER 4배", "fact": "PER은 4배다."}],
+        "v5_verified_overlays": [{"label": "PER", "value": "4배", "source_ref": "facts[0]",
+                                  "anchor": {"x": .1, "y": .1, "width": .4, "height": .4, "kind": "monitor"}}],
+    }
+    stream = io.BytesIO()
+    Image.new("RGB", (1280, 720), "#20354d").save(stream, "PNG")
+    apply_verified_scene_facts(stream.getvalue(), scene)
+    label = next(cell for cell in scene["surface_text_manifest"]["cells"] if cell["role"] == "label")
+    assert label["psm_modes"] == [6, 7]
+
+
 def test_wrong_endpoint_is_rejected_even_when_label_delta_and_start_match(tmp_path, monkeypatch):
     scene, path = trend_file(tmp_path)
     mock_cells(monkeypatch, scene, {"overlay:0:end_value": "12.75%"})

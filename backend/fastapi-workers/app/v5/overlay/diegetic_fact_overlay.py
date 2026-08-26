@@ -125,6 +125,8 @@ def _draw_upward_trend(
 
     title_y = inner_top
     def write(xy, text, *, role, font, **style):
+        if role == "label":
+            style["psm_modes"] = [7]
         draw_text_cell(draw, xy, text, font=font, cells=text_cells, cell_id=f"{cell_prefix}:{role}",
                        role=role, anchor_bbox=(left, top, right, bottom), **style)
 
@@ -150,7 +152,12 @@ def _draw_upward_trend(
         )
     write((start[0] - dot_radius, min(inner_bottom - 14, start[1] + dot_radius + 2)), fact.start_value, role="start_value", font=point_font, fill=(222, 249, 255, 255))
     end_box = point_font.getbbox(fact.end_value)
-    write((end[0] - (end_box[2] - end_box[0]) / 2, end[1] + arrow + 8 - end_box[1]),
+    end_height = end_box[3] - end_box[1]
+    end_label_top = min(
+        inner_bottom - end_height,
+        chart_top + round((chart_bottom - chart_top) * 0.62),
+    )
+    write((end[0] - (end_box[2] - end_box[0]) / 2, end_label_top - end_box[1]),
           fact.end_value, role="end_value", font=point_font, fill=(255, 239, 168, 255))
     # 종료값은 화살표 아래, 변화량은 제목 우측으로 분리한다. 긴 문구가
     # 공간을 침범하면 문자별 위치 검증에서 거절하며 값을 잘라 맞추지 않는다.
