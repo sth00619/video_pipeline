@@ -1,0 +1,26 @@
+{
+  "observed_date_kst": "2026-08-26",
+  "method": "GET",
+  "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image",
+  "request_headers": {"x-goog-api-key": "[MASKED]"},
+  "status": 200,
+  "response": {
+    "name": "models/gemini-3-pro-image",
+    "version": "3.0",
+    "displayName": "Nano Banana Pro",
+    "description": "Gemini 3 Pro Image",
+    "inputTokenLimit": 131072,
+    "outputTokenLimit": 32768,
+    "supportedGenerationMethods": ["generateContent", "countTokens", "batchGenerateContent"],
+    "temperature": 1,
+    "topP": 0.95,
+    "topK": 64,
+    "maxTemperature": 1,
+    "thinking": true
+  },
+  "limitations": "현재 모델 조회 실제 응답. 이미지 생성 호출이나 Job 52/54의 과거 요청 원문은 아니다.",
+  "official_model_page": "https://ai.google.dev/gemini-api/docs/models/gemini-3-pro-image",
+  "official_page_version_label": "Stable: gemini-3-pro-image",
+  "official_page_last_updated_utc": "2026-08-18",
+  "note": "공식 문서의 입력 한도 65536과 현재 models.get 응답 131072는 다르다. 이 감사는 모델 ID와 generateContent 지원만 확인하며 한도 변경 근거로 사용하지 않는다."
+}

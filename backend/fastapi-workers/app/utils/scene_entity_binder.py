@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
+from functools import lru_cache
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -48,6 +50,41 @@ _KIND_MAP: list[tuple[re.Pattern, str]] = [
 # 방향 키워드 (부호 없는 수치에 방향 컨텍스트 부여)
 _DIRECTION_UP = re.compile(r"상승|급등|올라|반등|강세|호조|증가|올랐|높아|상향")
 _DIRECTION_DOWN = re.compile(r"하락|급락|떨어|빠졌|약세|감소|내려|낮아|하향|붕괴|폭락")
+
+# 공백을 없앤 뒤 부분 문자열로 비교하면 '기업은', '지금'이 은/금으로 바뀐다.
+# 형태소 분석기 의존성을 추가하지 않고, 독립 어절과 명시적인 조사만 허용한다.
+# 의미가 모호한 합성어를 추측하지 않는 보수적인 계약이며 대본은 수정하지 않는다.
+_ENTITY_PARTICLES = (
+    "으로부터", "에서부터", "에게서는", "에서는", "에서도", "으로는", "으로도",
+    "에게서", "한테서", "이랑", "이라면", "이라고", "이라는", "이란",
+    "로부터", "에게", "한테", "에서", "까지", "부터", "처럼", "보다",
+    "마다", "조차", "마저", "이라", "으로", "로는", "로도", "에도",
+    "에는", "에만", "와는", "과는", "라고", "라는", "란", "랑",
+    "입니다", "이었다", "였다", "이다", "이고", "이며", "인",
+    "은", "는", "이", "가", "을", "를", "의", "에", "와", "과", "도", "만", "로",
+)
+_COMMODITY_COMPOUNDS = {
+    "금": ("금값", "금가격", "금시세", "금선물", "금현물"),
+    "은": ("은값", "은가격", "은시세", "은선물", "은현물"),
+}
+
+
+@lru_cache(maxsize=2048)
+def _entity_pattern(entity: str) -> re.Pattern:
+    """회사명 내부 띄어쓰기는 허용하되 어절 경계·조사는 보존한다."""
+    canonical = unicodedata.normalize("NFKC", entity).strip().casefold()
+    aliases = (canonical, *_COMMODITY_COMPOUNDS.get(canonical, ()))
+    names = [r"\s*".join(re.escape(ch) for ch in name if not ch.isspace()) for name in aliases]
+    particles = "|".join(re.escape(p) for p in sorted(_ENTITY_PARTICLES, key=len, reverse=True))
+    return re.compile(r"(?<!\w)(?:" + "|".join(names) + r")(?:(?:" + particles + r"))?(?!\w)")
+
+
+def entity_is_mentioned(text: str, entity: str) -> bool:
+    """조사·부분 음절을 엔티티로 오인하지 않는 공통 대조 함수."""
+    if not str(entity).strip():
+        return False
+    normalized = unicodedata.normalize("NFKC", str(text)).casefold()
+    return bool(_entity_pattern(str(entity)).search(normalized))
 
 
 @dataclass
@@ -125,17 +162,14 @@ def _extract_entities(narration: str, verified_facts: list[dict]) -> list[str]:
                 candidates.add(item.strip())
 
     # 나레이션에 실제 등장하는 것만 필터
-    normalized_narration = re.sub(r"\s+", "", narration).lower()
     found = []
     for candidate in sorted(candidates):
-        compact = re.sub(r"\s+", "", candidate).lower()
-        if compact in normalized_narration:
+        if entity_is_mentioned(narration, candidate):
             found.append(candidate)
 
     # FICTIONALIZED_LABEL_MAP 키도 추가 탐색
     for entity in FICTIONALIZED_LABEL_MAP:
-        compact = re.sub(r"\s+", "", entity).lower()
-        if compact in normalized_narration and entity not in found:
+        if entity_is_mentioned(narration, entity) and entity not in found:
             found.append(entity)
 
     return found
@@ -170,7 +204,7 @@ def bind_scene_entities(
         # 뉴스 근거 교차 확인
         has_news = bool(
             core_entities and any(
-                re.sub(r"\s+", "", entity).lower() in news_corpus
+                entity_is_mentioned(news_corpus, entity)
                 for entity in core_entities
             )
         )
@@ -207,7 +241,7 @@ def compute_grounding_score(prompt_text: str, core_entities: list[str]) -> float
     text_lower = prompt_text.lower()
     matched = sum(
         1 for entity in core_entities
-        if re.sub(r"\s+", "", entity).lower() in re.sub(r"\s+", "", text_lower)
-        or _fictionalize(entity).lower() in text_lower
+        if entity_is_mentioned(text_lower, entity)
+        or entity_is_mentioned(text_lower, _fictionalize(entity))
     )
     return round(matched / len(core_entities), 3)

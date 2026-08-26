@@ -1,0 +1,50 @@
+........................................................................ [  8%]
+........................................................................ [ 16%]
+........................................................................ [ 24%]
+........................................................................ [ 33%]
+........................................................................ [ 41%]
+........................................................................ [ 49%]
+........................................................................ [ 58%]
+........................................................................ [ 66%]
+........................................................................ [ 74%]
+........................................................................ [ 83%]
+........................................................................ [ 91%]
+........................................................................ [ 99%]
+.                                                                        [100%]
+=============================== warnings summary ===============================
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+  /usr/local/lib/python3.12/site-packages/matplotlib/_fontconfig_pattern.py:64: PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'
+    prop = Group((name + Suppress("=") + comma_separated(value)) | oneOf(_CONSTANTS))
+
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+  /usr/local/lib/python3.12/site-packages/matplotlib/_fontconfig_pattern.py:85: PyparsingDeprecationWarning: 'parseString' deprecated - use 'parse_string'
+    parse = parser.parseString(pattern)
+
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+tests/test_data_graphics_and_motion.py::DataGraphicsAndMotionTests::test_chalkboard_explainer_is_a_full_opaque_cartoon_data_surface
+  /usr/local/lib/python3.12/site-packages/matplotlib/_fontconfig_pattern.py:89: PyparsingDeprecationWarning: 'resetCache' deprecated - use 'reset_cache'
+    parser.resetCache()
+
+tests/test_scene_frames.py::test_article_body_underline_does_not_add_highlight
+tests/test_scene_frames.py::test_highlight_then_underline_keeps_opaque_red
+tests/test_scene_frames.py::test_missing_key_bbox_downgrades_rect_to_highlight
+tests/test_scene_frames.py::test_rect_uses_only_key_phrase_geometry
+  /workspace/backend/fastapi-workers/tests/test_scene_frames.py:90: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+
+tests/test_scene_frames.py::test_highlight_then_underline_keeps_opaque_red
+  /workspace/backend/fastapi-workers/tests/test_scene_frames.py:125: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+
+tests/test_scene_layers.py::test_foreground_alpha_is_above_surface_and_emits_a_real_mask
+  /workspace/backend/fastapi-workers/tests/test_scene_layers.py:45: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+865 passed, 19 warnings in 94.22s (0:01:34)

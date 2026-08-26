@@ -1,0 +1,1701 @@
+{
+  "source_sha256": "57dbd5f48e38e2677c9d1787c25d9351b6670f6a9046c430ef6ee3fb8d3e7e0f",
+  "source_path": "/app/data/jobs/54/cost_ledger.json",
+  "scene_key": "image:21",
+  "request_count": 47,
+  "http_status_counts": {
+    "http_200": 2,
+    "http_504": 9,
+    "http_503": 35,
+    "reserved": 1
+  },
+  "qa_attempt_linkage": "unavailable",
+  "ledger_amount_krw": 564,
+  "billing_verified": false,
+  "ledger_excerpt": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "66c2e76ec6594bb8af23775574439ea9",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-25T08:54:33.969016+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T08:55:11.294027+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "f35c28f34c934974ba2b0a18598c48c5",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "http_200",
+      "reserved_at": "2026-08-25T12:28:50.747184+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T12:29:54.467464+00:00",
+      "status_code": 200
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "d5aa6528db204c768b7d62baf93c068d",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T12:59:38.893424+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:03:41.486948+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:03:41.489935751Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "cd9beb0c26914e6d9882d24408aa92b5",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T13:04:01.500169+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:08:02.873259+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:08:02.875917386Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "113cd65b74374f21a63ba593251a04d0",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T13:08:23.323818+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:12:24.714729+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:12:24.717619757Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "c8d0586e08dd44b287c41beb56cb7ad7",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T13:12:44.721915+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:16:48.777850+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:16:48.780710754Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "6986ccd408c94859ab68fab75a6154f0",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T13:17:29.510103+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:21:33.151379+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:21:33.154865094Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "3a13a47b11ae4461930dd9ac430a8b51",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T13:21:53.161040+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:25:54.479747+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:25:54.485075715Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "12d85d1e80124575a1c3bde18917c59b",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T13:26:54.518488+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:30:55.703039+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:30:55.706110841Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "d8d2a812f47a4b1ab4e051895cb0849d",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T13:31:15.707800+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:35:19.520826+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:35:19.523583713Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "3b77fed885794a37985b3466877c0b90",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:39:09.050206+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:41:37.123570+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:41:37.127602138Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "3863d1e174cc41cbb9e20b5df019a8e9",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_504",
+      "reserved_at": "2026-08-25T13:41:57.132510+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:46:42.432250+00:00",
+      "status_code": 504,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:46:42.435909168Z",
+        "error": {
+          "code": 504,
+          "status": "DEADLINE_EXCEEDED",
+          "message": "Deadline expired before operation could complete."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "d62a88cf0c104d0688d19132c901ecd7",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:47:03.295316+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:49:22.278600+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:49:22.281588464Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "2067beb8576045c586f591da006ff1fb",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:49:42.283800+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:53:06.391969+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:53:06.394853304Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "d5e1c82f0ffc4afcbf3832035b1daed9",
+      "estimated_usd": 0.134,
+      "amount_krw": 188,
+      "cost_status": "unverified_until_console_reconciliation",
+      "status": "reserved",
+      "reserved_at": "2026-08-25T13:53:46.728928+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      }
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "d30ac082a235411b8828a14135084860",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:55:56.940435+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:56:13.974006+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:56:13.976860377Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "f0910d8682914eecaddc0f250f208223",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:56:33.980501+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:56:40.824202+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:56:40.826938250Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "e35d11269adf42ad881eab071a790d9b",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:57:01.618779+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:57:09.259927+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:57:09.262777264Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "0a85c35b2b8f485a980b5fc905ef480b",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:57:29.268898+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:57:48.197935+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:57:48.200745254Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "cfe500dc23aa435181d4d5fdd604d38f",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:58:28.667815+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:58:38.302537+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:58:38.305819096Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "18edf5ac9eba403f9acd832490ab14d9",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T13:58:58.309313+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T13:59:02.864464+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T13:59:02.866816719Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "f2db563820cf4642ae9e090ab1ad92ca",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:00:02.890993+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:00:08.830479+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:00:08.833987555Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "335ef702ec0e49f995fd5189d9c3d382",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:00:28.842380+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:00:31.942182+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:00:31.943280677Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "8c965c7b67bf4815932a5b18f00c59bf",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:34:08.082407+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:34:17.699721+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:34:17.701935211Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "950f9264888a437f852ce2fa2296283e",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:34:37.704253+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:34:46.271038+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:34:46.273804169Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "a7da792fe9e84a2f8245c912dd317991",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:35:06.410590+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:35:12.895159+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:35:12.898648626Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "a9971a0795a945f49b59ffa866ce3203",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:35:32.905328+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:35:37.165607+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:35:37.167945596Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "a6d04285d1924a8790791b257eb2b898",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:36:17.679152+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:36:34.511747+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:36:34.514335428Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "aa6ff48a683e4a0eb8f11b046ec5486a",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:36:54.516875+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:36:58.678094+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:36:58.681377550Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "074a3419144e4974aab89be839641e98",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:37:58.710225+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:38:06.469812+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:38:06.472160095Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "82dbdce9f11c46fb884f8e4b54e16bd9",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:38:26.474713+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:38:33.813186+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:38:33.816029469Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "90abe914c1f84e499452921030f5f6ca",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:43:01.495210+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:43:08.594232+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:43:08.597163721Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "b39d89a0f6ec490e9488ee830f9b2219",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:43:28.600699+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:43:36.476674+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:43:36.480456804Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "b76d5ec35f4b419baa7d7f037fb9b383",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:43:56.930172+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:44:01.399345+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:44:01.402581135Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "128ecff4efaf4a65867ff2d5c8eb6a2e",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:44:21.404106+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:44:26.177403+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:44:26.180905924Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "0d0f77df51fd4f80b6417bb58d55aa98",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:45:07.201382+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:45:12.023622+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:45:12.026539125Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "29fa286e0c854133b043fd0ea973704e",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:45:32.030336+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:45:40.601680+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:45:40.605404666Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "8705cbae087b48e7a8c4ee22a66f2955",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:46:40.627582+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:46:44.831155+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:46:44.834289085Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "96afd537042b4da89cac3eb37d10f76e",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:47:04.838524+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:47:11.558676+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:47:11.561675458Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "a7e29eb4bb1b4a97af543ab14fd2cdd7",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:55:09.033120+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:55:14.706872+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:55:14.710423210Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "9c6c92d738e94f1eac0bd9c9e05f5db1",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:55:34.720500+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:55:39.764165+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:55:39.767396638Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "0496b3f0ac994620b338e64f096ca002",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:56:00.489150+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:56:06.822683+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:56:06.827190804Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "37c36496643e4238a0b179fbff32e3b5",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:56:26.829636+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:56:34.472604+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:56:34.476216386Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "f419ba7e93d8467a84a321febfaee128",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:57:15.308618+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:57:20.962593+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:57:20.966073504Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "4d34165a512043428e5c4e09892445fb",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:57:40.969766+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:57:45.128009+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:57:45.131555752Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 1,
+      "attempt_id": "04eec035d07941fe9e251ad1e0bd550f",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:58:45.153218+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:58:50.712525+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:58:50.716204629Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:21",
+      "attempt": 2,
+      "attempt_id": "ce955dc1f65741fb8c95d5f0e0327116",
+      "estimated_usd": 0.134,
+      "amount_krw": 0,
+      "cost_status": "cancelled_due_to_failure",
+      "status": "http_503",
+      "reserved_at": "2026-08-25T14:59:10.717779+00:00",
+      "request_metadata": {
+        "policy_version": "gemini-image-only-2026-08-04"
+      },
+      "completed_at": "2026-08-25T14:59:14.936899+00:00",
+      "status_code": 503,
+      "correlated_provider_log": {
+        "timestamp": "2026-08-25T14:59:14.940910293Z",
+        "error": {
+          "code": 503,
+          "status": "UNAVAILABLE",
+          "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+        }
+      },
+      "log_linkage": "same_status_and_completion_within_2s_not_request_id"
+    }
+  ],
+  "qa_snapshots": [
+    {
+      "source": "visual_qa_cache.json.policy13-pre-v2-backup",
+      "source_sha256": "e2800fb03299b812e4990c97208583df85c2c37d5a3bd8367414da174f31a592",
+      "record": {
+        "index": 21,
+        "score": 82,
+        "retry_recommended": false,
+        "failure_categories": [],
+        "reason": "승인된 텍스트('거래대금', '10조 2901억 원')가 모두 정확히 1회씩 표시되고, 금화 마스코트가 정장·모자 차림으로 돋보기를 들고 데이터 랩 배경 앞에 등장하여 내레이션의 거래대금 집중 테마를 잘 표현하고 있습니다. 스타일은 2D 셀 셰이딩 기반으로 허용 범위 내에 있으나, 지구본 중심의 금화 소용돌이 연출이 다소 일반적인 글로벌 이미지에 가까워 한국 주식시장 특정성이 약간 부족합니다. 전반적으로 수용 가능한 수준입니다.",
+        "raw": {
+          "scene_match": 82,
+          "finance_specificity": 78,
+          "composition": 80,
+          "style_adherence": 72,
+          "text_integrity": 92,
+          "character_identity": 85,
+          "repetition_risk": 10,
+          "visible_texts": [
+            "10조 2901억 원",
+            "거래대금"
+          ],
+          "unexpected_or_malformed_texts": [],
+          "missing_approved_texts": [],
+          "approved_text_occurrence_counts": {
+            "거래대금": 1,
+            "10조 2901억 원": 1
+          },
+          "composition_plan_match": true,
+          "speech_bubble_present": false,
+          "anatomy_pass": true,
+          "extra_limbs_or_hands": false,
+          "main_mascot_anatomy_pass": true,
+          "main_mascot_extra_limbs_or_hands": false,
+          "wardrobe_match": true,
+          "face_identity_match": true,
+          "minimal_dot_eye_face": false,
+          "detached_translucent_text_card_present": false,
+          "text_surface_integrated_with_set": true,
+          "visual_medium_violation": false,
+          "semantic_contradiction": false,
+          "obvious_localized_blur_or_smear_artifact_present": false,
+          "malformed_or_factual_text_error": false,
+          "unsupported_numeric_or_factual_values": [],
+          "unexpected_text_regions": [],
+          "white_sticker_halo_present": false,
+          "missing_required_props": [],
+          "number_panel_only": false,
+          "decision": "accept",
+          "reason": "승인된 텍스트('거래대금', '10조 2901억 원')가 모두 정확히 1회씩 표시되고, 금화 마스코트가 정장·모자 차림으로 돋보기를 들고 데이터 랩 배경 앞에 등장하여 내레이션의 거래대금 집중 테마를 잘 표현하고 있습니다. 스타일은 2D 셀 셰이딩 기반으로 허용 범위 내에 있으나, 지구본 중심의 금화 소용돌이 연출이 다소 일반적인 글로벌 이미지에 가까워 한국 주식시장 특정성이 약간 부족합니다. 전반적으로 수용 가능한 수준입니다."
+        },
+        "policy_version": 13,
+        "image_sha256": "abe9f44302fb36af67fb08988883fda96dae511f77d5e2beeebdafac6030081b"
+      }
+    }
+  ],
+  "provider_error_events": [
+    {
+      "timestamp": "2026-08-25T12:02:53.713574674Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:03:41.489935751Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:08:02.875917386Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:12:24.717619757Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:16:48.780710754Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:21:33.154865094Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:25:54.485075715Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:30:55.706110841Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:35:19.523583713Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:41:37.127602138Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:46:42.435909168Z",
+      "error": {
+        "code": 504,
+        "status": "DEADLINE_EXCEEDED",
+        "message": "Deadline expired before operation could complete."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:49:22.281588464Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:53:06.394853304Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:56:13.976860377Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:56:40.826938250Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:57:09.262777264Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:57:48.200745254Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:58:38.305819096Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T13:59:02.866816719Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:00:08.833987555Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:00:31.943280677Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:34:17.701935211Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:34:46.273804169Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:35:12.898648626Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:35:37.167945596Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:36:34.514335428Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:36:58.681377550Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:38:06.472160095Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:38:33.816029469Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:43:08.597163721Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:43:36.480456804Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:44:01.402581135Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:44:26.180905924Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:45:12.026539125Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:45:40.605404666Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:46:44.834289085Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:47:11.561675458Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:55:14.710423210Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:55:39.767396638Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:56:06.827190804Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:56:34.476216386Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:57:20.966073504Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:57:45.131555752Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:58:50.716204629Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    },
+    {
+      "timestamp": "2026-08-25T14:59:14.940910293Z",
+      "error": {
+        "code": 503,
+        "status": "UNAVAILABLE",
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    }
+  ],
+  "worker_retry_log_lines": [
+    "2026-08-25T08:55:15.098902958Z ERROR:app.workers.images_worker:Parallel image scene failed: job=54 scene=21 error=scene 21 stopped: non-retryable (unclassified FinalFrameTextIntegrityError): 최종 이미지의 합성 문구 OCR 대조 실패: status=completed, missing_or_altered=['10조 2901억 원']",
+    "2026-08-25T12:29:59.651426593Z ERROR:app.workers.images_worker:Parallel image scene failed: job=54 scene=21 error=Job 54 stopped by user.",
+    "2026-08-25T13:08:02.876412094Z WARNING:app.workers.images_worker:Image scene 21 attempt 1/4 failed; retrying in 20.4s: HTTP 504: {",
+    "2026-08-25T13:16:48.782688671Z WARNING:app.workers.images_worker:Image scene 21 attempt 2/4 failed; retrying in 40.7s: HTTP 504: {",
+    "2026-08-25T13:25:54.486636507Z WARNING:app.workers.images_worker:Image scene 21 attempt 3/4 failed; retrying in 60.0s: HTTP 504: {",
+    "2026-08-25T13:35:19.526669296Z ERROR:app.workers.images_worker:Parallel image scene failed: job=54 scene=21 error=scene 21 image generation failed after 4 attempts: HTTP 504: {",
+    "2026-08-25T13:46:42.436232584Z WARNING:app.workers.images_worker:Image scene 21 attempt 1/4 failed; retrying in 20.8s: HTTP 504: {",
+    "2026-08-25T13:53:06.396317721Z WARNING:app.workers.images_worker:Image scene 21 attempt 2/4 failed; retrying in 40.3s: HTTP 503: {",
+    "2026-08-25T13:56:40.827028250Z WARNING:app.workers.images_worker:Image scene 21 attempt 1/4 failed; retrying in 20.8s: HTTP 503: {",
+    "2026-08-25T13:57:48.201421254Z WARNING:app.workers.images_worker:Image scene 21 attempt 2/4 failed; retrying in 40.4s: HTTP 503: {",
+    "2026-08-25T13:59:02.867436011Z WARNING:app.workers.images_worker:Image scene 21 attempt 3/4 failed; retrying in 60.0s: HTTP 503: {",
+    "2026-08-25T14:00:31.943745718Z ERROR:app.workers.images_worker:Parallel image scene failed: job=54 scene=21 error=scene 21 image generation failed after 4 attempts: HTTP 503: {",
+    "2026-08-25T14:34:46.273994752Z WARNING:app.workers.images_worker:Image scene 21 attempt 1/4 failed; retrying in 20.1s: HTTP 503: {",
+    "2026-08-25T14:35:37.168450846Z WARNING:app.workers.images_worker:Image scene 21 attempt 2/4 failed; retrying in 40.5s: HTTP 503: {",
+    "2026-08-25T14:36:58.682455008Z WARNING:app.workers.images_worker:Image scene 21 attempt 3/4 failed; retrying in 60.0s: HTTP 503: {",
+    "2026-08-25T14:38:33.817655927Z ERROR:app.workers.images_worker:Parallel image scene failed: job=54 scene=21 error=scene 21 image generation failed after 4 attempts: HTTP 503: {",
+    "2026-08-25T14:43:36.480511095Z WARNING:app.workers.images_worker:Image scene 21 attempt 1/4 failed; retrying in 20.4s: HTTP 503: {",
+    "2026-08-25T14:44:26.182053132Z WARNING:app.workers.images_worker:Image scene 21 attempt 2/4 failed; retrying in 41.0s: HTTP 503: {",
+    "2026-08-25T14:45:40.606248666Z WARNING:app.workers.images_worker:Image scene 21 attempt 3/4 failed; retrying in 60.0s: HTTP 503: {",
+    "2026-08-25T14:47:11.563298625Z ERROR:app.workers.images_worker:Parallel image scene failed: job=54 scene=21 error=scene 21 image generation failed after 4 attempts: HTTP 503: {",
+    "2026-08-25T14:55:39.767450805Z WARNING:app.workers.images_worker:Image scene 21 attempt 1/4 failed; retrying in 20.7s: HTTP 503: {",
+    "2026-08-25T14:56:34.477593803Z WARNING:app.workers.images_worker:Image scene 21 attempt 2/4 failed; retrying in 40.8s: HTTP 503: {",
+    "2026-08-25T14:57:45.132304293Z WARNING:app.workers.images_worker:Image scene 21 attempt 3/4 failed; retrying in 60.0s: HTTP 503: {",
+    "2026-08-25T14:59:14.942284960Z ERROR:app.workers.images_worker:Parallel image scene failed: job=54 scene=21 error=scene 21 image generation failed after 4 attempts: HTTP 503: {"
+  ]
+}

@@ -5,6 +5,8 @@ _FIGURE_RE 버그 3개 케이스 포함.
 """
 from __future__ import annotations
 import sys
+import hashlib
+import pytest
 sys.path.insert(0, "backend/fastapi-workers")
 
 from app.utils.scene_entity_binder import (
@@ -14,6 +16,8 @@ from app.utils.scene_entity_binder import (
     bind_scene_entities,
     compute_grounding_score,
     FICTIONALIZED_LABEL_MAP,
+    _extract_entities,
+    entity_is_mentioned,
 )
 
 
@@ -132,3 +136,72 @@ class TestComputeGroundingScore:
     def test_partial_match(self):
         score = compute_grounding_score("SEMI CORP K mentioned", ["SK하이닉스", "테슬라"])
         assert 0.0 < score < 1.0, f"부분 매칭 오류: {score}"
+
+
+@pytest.mark.parametrize("narration", [
+    "기업은 성장합니다.", "수익은 늘었습니다.", "질문은 이것입니다.",
+    "전문가들은 경고합니다.", "코스닥은 반등했습니다.", "실적은 좋습니다.",
+    "현금 흐름을 봅시다.", "지금 투자할까요?", "금리는 높습니다.",
+    "은행 대출금과 연금", "백금 가격 상승", "조금 낮은 수익",
+])
+def test_particles_and_compound_syllables_are_not_commodities(narration):
+    entities = _extract_entities(narration, [])
+    assert "금" not in entities
+    assert "은" not in entities
+
+
+@pytest.mark.parametrize("narration,expected", [
+    ("금 가격과 은 가격을 비교합니다.", {"금", "은"}),
+    ("금은 상승하고 은은 하락했습니다.", {"금", "은"}),
+    ("금과 은을 매수했습니다.", {"금", "은"}),
+    ("은으로 만든 반지와 금의 가치", {"금", "은"}),
+    ("금값과 은값 상승", {"금", "은"}),
+    ("금선물은 상승, 은현물은 하락", {"금", "은"}),
+    ("금/은", {"금", "은"}),
+    ("백금은 상승했습니다.", set()),
+])
+def test_independent_commodity_nouns_and_explicit_compounds_survive(narration, expected):
+    assert set(_extract_entities(narration, [])) & {"금", "은"} == expected
+
+
+@pytest.mark.parametrize("text,entity,expected", [
+    ("SK 하이닉스의 실적", "SK하이닉스", True),
+    ("삼성전자는 성장했습니다.", "삼성전자", True),
+    ("코스피에서는 반등", "코스피", True),
+    ("코스닥에서도 상승", "코스닥", True),
+    ("ETF인 겁니다.", "ETF", True),
+    ("ＰＥＲ은 낮습니다.", "PER", True),
+    ("SUPER COMPUTER", "PER", False),
+    ("ETF가 성장", "ETF", True),
+    ("BANKS", "BANK", False),
+    ("삼성전자우는 상승", "삼성전자", False),
+    ("삼성전자 우선주", "삼성전자", True),
+])
+def test_entity_boundary_and_spacing(text, entity, expected):
+    assert entity_is_mentioned(text, entity) is expected
+
+
+def test_verified_candidate_also_requires_boundaries():
+    assert "PER" not in _extract_entities("SUPER COMPUTER", [{"entity": "PER"}])
+
+
+def test_news_evidence_cannot_match_particle_or_compound():
+    binding = bind_scene_entities([{"content": "은 가격 상승"}], [], [
+        {"title": "기업은 성장하고 은행은 대출을 늘립니다."}
+    ])[0]
+    assert binding.core_entities == ["은"]
+    assert not binding.has_news_evidence
+
+
+def test_grounding_score_uses_same_boundaries():
+    assert compute_grounding_score("지금 기업은 성장", ["금", "은"]) == 0
+
+
+def test_fixed_binding_preserves_narration_and_hash():
+    narration = "지금 기업은 현금 10조 원을 보유했습니다. SK 하이닉스의 실적은?"
+    binding = bind_scene_entities([{"content": narration}], [], [])[0]
+    assert binding.narration == narration
+    assert binding.narration_hash == hashlib.sha256(narration.encode()).hexdigest()
+    assert "금" not in binding.fictionalized_labels
+    assert "은" not in binding.fictionalized_labels
+    assert "SK하이닉스" in binding.core_entities
