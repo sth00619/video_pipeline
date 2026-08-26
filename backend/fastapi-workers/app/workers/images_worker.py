@@ -3320,6 +3320,13 @@ Rules:
         """
         from app.services.scene_layers import load_layer_manifest
 
+        if scene.get("text_render_policy") == "semantic_roles_v1":
+            from app.services.semantic_surface_text import render_semantic_surface_text
+            if scene.get("layered_scene") or load_layer_manifest(img_path):
+                raise ValueError("의미형 문자 계약의 레이어 원근 연결은 별도 검증이 필요합니다.")
+            render_semantic_surface_text(scene, img_path)
+            return
+
         # Resume must rebuild the final image from the prepared surface, not
         # write chart ink over an already-composited hand or finger.
         layered = scene.get("layered_scene") or load_layer_manifest(img_path)

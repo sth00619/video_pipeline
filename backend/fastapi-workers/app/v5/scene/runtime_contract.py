@@ -11,7 +11,7 @@ import re
 
 from app.postprocess.text_overlay import script_visual_plan
 from app.utils.entity_english_map import ENTITY_REGISTRY, get_entity_english_name
-from app.utils.image_text_contract import contains_financial_number
+from app.utils.image_text_contract import build_scene_text_contract, contains_financial_number
 
 from app.v5.providers.router import RENDER_BLOCKED_ARCHETYPES
 from app.v5.overlay.fact_value_contract import (
@@ -369,6 +369,11 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
     approved_deterministic_texts = [
         value for value in approved_surface_texts if contains_financial_number(value)
     ]
+    if scene.get("text_render_policy") == "semantic_roles_v1":
+        text_contract = build_scene_text_contract(scene)
+        approved_surface_texts = text_contract["approved_texts"]
+        approved_generated_texts = text_contract["generated_texts"]
+        approved_deterministic_texts = text_contract["deterministic_texts"]
     has_existing_verified_overlay = bool(scene.get("v5_verified_overlays"))
     visual_mode_contract = VISUAL_MODE_CONTRACTS[visual_mode]
     has_verified_surface_content = False
@@ -427,7 +432,11 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         semantic_caption=semantic_caption,
         semantic_visual_brief=semantic_visual_brief,
         locale_visual_brief=_korean_context_visual_brief(scene),
-        text_surface_plan=text_surface_plan,
+        # 후처리 전용 문구를 생성 모델에게 다시 쓰라고 지시하지 않는다.
+        text_surface_plan=(
+            [{key: value for key, value in item.items() if key != "text"} for item in text_surface_plan]
+            if scene.get("text_render_policy") == "semantic_roles_v1" else text_surface_plan
+        ),
     )
     visual_constraints = str(scene.get("visual_constraints") or "").strip()
     if visual_constraints:

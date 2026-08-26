@@ -15,6 +15,7 @@ from PIL import Image, ImageDraw
 
 from .korean_overlay import _load_font
 from .fact_value_contract import verified_fact_contains_value
+from app.services.surface_text_manifest import draw_text_cell, set_manifest
 
 
 # ``embedded_monitor``는 배경에 AI가 이미 그린 물리 모니터의 *내부 화면*만
@@ -96,6 +97,8 @@ def _draw_upward_trend(
     top: int,
     right: int,
     bottom: int,
+    text_cells: list[dict] | None = None,
+    cell_prefix: str = "",
 ) -> None:
     """새 UI 상자 없이 기존 벽면 위에 상승 의미를 직접 그린다.
 
@@ -121,7 +124,11 @@ def _draw_upward_trend(
         draw.line((inner_left, y, inner_right, y), fill=(72, 236, 240, 72), width=max(1, line_width // 3))
 
     title_y = inner_top
-    draw.text((inner_left, title_y), fact.label, font=label_font, fill=(225, 251, 255, 255))
+    def write(xy, text, *, role, font, **style):
+        draw_text_cell(draw, xy, text, font=font, cells=text_cells, cell_id=f"{cell_prefix}:{role}",
+                       role=role, anchor_bbox=(left, top, right, bottom), **style)
+
+    write((inner_left, title_y), fact.label, role="label", font=label_font, fill=(225, 251, 255, 255))
     chart_top = title_y + label_font.getbbox(fact.label)[3] + max(4, round(height * 0.04))
     chart_bottom = inner_bottom - max(16, round(height * 0.18))
     start = (inner_left + round((inner_right - inner_left) * 0.10), chart_bottom)
@@ -141,13 +148,17 @@ def _draw_upward_trend(
             (point[0] - dot_radius, point[1] - dot_radius, point[0] + dot_radius, point[1] + dot_radius),
             fill=(255, 244, 183, 255), outline=(7, 51, 68, 255), width=max(1, line_width // 3),
         )
-    draw.text((start[0] - dot_radius, min(inner_bottom - 14, start[1] + dot_radius + 2)), fact.start_value, font=point_font, fill=(222, 249, 255, 255))
-    draw.text((end[0] - dot_radius, max(chart_top, end[1] - point_font.getbbox(fact.end_value)[3] - 3)), fact.end_value, font=point_font, fill=(255, 239, 168, 255))
-    value_x = min(inner_right - value_font.getbbox(fact.value)[2], end[0] + arrow + 4)
-    draw.text((max(inner_left, value_x), chart_top), fact.value, font=value_font, fill=(255, 215, 86, 255), stroke_width=1, stroke_fill=(4, 27, 42, 220))
+    write((start[0] - dot_radius, min(inner_bottom - 14, start[1] + dot_radius + 2)), fact.start_value, role="start_value", font=point_font, fill=(222, 249, 255, 255))
+    end_box = point_font.getbbox(fact.end_value)
+    write((end[0] - (end_box[2] - end_box[0]) / 2, end[1] + arrow + 8 - end_box[1]),
+          fact.end_value, role="end_value", font=point_font, fill=(255, 239, 168, 255))
+    # 종료값은 화살표 아래, 변화량은 제목 우측으로 분리한다. 긴 문구가
+    # 공간을 침범하면 문자별 위치 검증에서 거절하며 값을 잘라 맞추지 않는다.
+    value_x = inner_right - value_font.getbbox(fact.value)[2]
+    write((value_x, title_y), fact.value, role="value", font=value_font, fill=(255, 215, 86, 255), stroke_width=1, stroke_fill=(4, 27, 42, 220))
 
 
-def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...]) -> bytes:
+def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...], *, text_cells: list[dict] | None = None) -> bytes:
     """검증 사실을 지정 소품 표면에만 합성한다.
 
     ``facts``의 각 항목은 명시적인 출처와 좌표를 가져야 한다. 따라서 빈 화면이나
@@ -159,14 +170,15 @@ def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...]) ->
     image = Image.open(io.BytesIO(base_png)).convert("RGBA")
     width, height = image.size
     draw = ImageDraw.Draw(image)
-    for fact in facts:
+    for index, fact in enumerate(facts):
         anchor = fact.anchor
         left = round(anchor.x * width)
         top = round(anchor.y * height)
         right = round((anchor.x + anchor.width) * width)
         bottom = round((anchor.y + anchor.height) * height)
         if fact.visualization == "upward_trend":
-            _draw_upward_trend(draw, fact, left=left, top=top, right=right, bottom=bottom)
+            _draw_upward_trend(draw, fact, left=left, top=top, right=right, bottom=bottom,
+                               text_cells=text_cells, cell_prefix=f"overlay:{index}")
             continue
         text_fill, stroke_fill = _surface_text_style(anchor.kind)
         stroke_width = max(2, round(min(width, height) * 0.003))
@@ -176,18 +188,20 @@ def apply_facts_to_surfaces(base_png: bytes, facts: tuple[VerifiedFact, ...]) ->
         
         # 2D 카툰 잉크 아웃라인 적용 (배경 그림과 자연스럽게 결합)
         dark_ink_stroke = (12, 18, 28, 240)
-        draw.text(
+        draw_text_cell(draw,
             (left + padding, top + round((bottom - top) * 0.05)),
             fact.label,
+            cells=text_cells, cell_id=f"overlay:{index}:label", role="label", anchor_bbox=(left, top, right, bottom),
             font=label_font,
             fill=text_fill,
             stroke_width=stroke_width,
             stroke_fill=dark_ink_stroke,
         )
         value_fill = (255, 224, 102, 255) if anchor.kind in {"monitor", "embedded_monitor"} else text_fill
-        draw.text(
+        draw_text_cell(draw,
             (left + padding, top + round((bottom - top) * 0.48)),
             fact.value,
+            cells=text_cells, cell_id=f"overlay:{index}:value", role="value", anchor_bbox=(left, top, right, bottom),
             font=value_font,
             fill=value_fill,
             stroke_width=stroke_width + 1,
@@ -323,4 +337,9 @@ def validated_facts_from_verified_scene(scene: dict[str, Any]) -> tuple[Verified
 def apply_verified_scene_facts(base_png: bytes, scene: dict[str, Any]) -> bytes:
     """검증 씬의 소품-표면 오버레이를 합성한다. 오버레이가 없으면 원본을 유지한다."""
     facts = validated_facts_from_verified_scene(scene)
-    return apply_facts_to_surfaces(base_png, facts)
+    cells: list[dict] = []
+    rendered = apply_facts_to_surfaces(base_png, facts, text_cells=cells)
+    if facts:
+        with Image.open(io.BytesIO(rendered)) as frame:
+            set_manifest(scene, frame.size, cells)
+    return rendered

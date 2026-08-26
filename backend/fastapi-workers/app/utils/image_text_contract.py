@@ -85,6 +85,32 @@ def build_scene_text_contract(scene: dict[str, Any] | None) -> dict[str, Any]:
 
     generated = [value for value in approved if not contains_financial_number(value)]
     deterministic = [value for value in approved if contains_financial_number(value)]
+    semantic_routing = []
+    if source.get("text_render_policy") == "semantic_roles_v1":
+        # 버전 명시 장면만 새 의미 계약을 사용한다. 기존 승인 장면을 소급 변환하지 않는다.
+        if validation.get("passed") is not True:
+            raise ValueError("의미형 문자 계약에는 장면 문구 승인이 필요합니다.")
+        if not isinstance(raw_plan, list) or len(raw_plan) != len(plan):
+            raise ValueError("표면 계획은 비어 있지 않은 문구 객체 목록이어야 합니다.")
+        if not isinstance(source.get("screen_texts", []), list):
+            raise ValueError("승인 문구는 목록이어야 합니다.")
+        approved = list(dict.fromkeys(str(v).strip() for v in (source.get("screen_texts") or []) if str(v).strip()))
+        for item in plan:
+            if item["text"].strip() not in approved:
+                raise ValueError("표면 계획의 문구가 장면 승인 목록에 없습니다.")
+            if item.get("purpose", "information") not in {"information", "decorative"}:
+                raise ValueError("문구 성격은 information/decorative만 허용합니다.")
+        generated = []
+        deterministic = approved.copy()
+        for value in approved:
+            uses = [item for item in plan if item["text"].strip() == value]
+            decorative = bool(uses) and all(item.get("purpose") == "decorative" for item in uses) and not re.search(r"\d", value)
+            semantic_routing.append({
+                "text": value, "purpose": "decorative" if decorative else "information",
+                "route": "deterministic",
+                "reason": "decoration_size_calibration_pending" if decorative else "informational_text_exact",
+                "measured_min_character_height_ratio": None,
+            })
     bubble_text = str(source.get("bubble_text") or "").strip()
     bubble_validation = source.get("bubble_validation") or {}
     bubble_allowed = bool(
@@ -124,6 +150,8 @@ def build_scene_text_contract(scene: dict[str, Any] | None) -> dict[str, Any]:
         "bubble_allowed": bubble_allowed,
         "bubble_text": bubble_text if bubble_allowed else "",
         "sources": ["scene.screen_texts", "scene.screen_text_plan"],
+        "text_render_policy": source.get("text_render_policy", "legacy"),
+        "semantic_routing": semantic_routing,
     }
 
 
