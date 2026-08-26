@@ -65,6 +65,22 @@ def test_trend_cells_do_not_overlap_and_all_four_roles_reach_gate(tmp_path, monk
     assert {r["cell_id"] for r in report["region_comparisons"]} == {c["id"] for c in cells}
 
 
+def test_trend_endpoint_ocr_cell_does_not_contain_graph_ink(tmp_path):
+    scene, path = trend_file(tmp_path)
+    end_cell = next(cell for cell in scene["surface_text_manifest"]["cells"] if cell["role"] == "end_value")
+    with Image.open(path) as image:
+        colors = set(image.convert("RGB").crop(end_cell["bbox"]).getdata())
+    assert (255, 204, 66) not in colors  # 추세선/화살표
+    assert (20, 176, 197) not in colors  # 추세선 외곽광
+    assert end_cell["psm_modes"] == [6, 7]
+
+
+def test_single_line_overlay_label_uses_the_measured_line_mode(tmp_path):
+    scene, _ = trend_file(tmp_path)
+    label = next(cell for cell in scene["surface_text_manifest"]["cells"] if cell["role"] == "label")
+    assert label["psm_modes"] == [7]
+
+
 def test_wrong_endpoint_is_rejected_even_when_label_delta_and_start_match(tmp_path, monkeypatch):
     scene, path = trend_file(tmp_path)
     mock_cells(monkeypatch, scene, {"overlay:0:end_value": "12.75%"})
