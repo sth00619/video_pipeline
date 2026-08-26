@@ -51,7 +51,8 @@ def expected_final_frame_texts(scene: dict[str, Any]) -> list[str]:
                     text = str(caption.get("korean") or "").strip()
                     if text:
                         expected.append(text)
-    return list(dict.fromkeys(expected))
+    # 반복 문구도 실제 출력 횟수만큼 대조한다. 중복 제거는 누락을 숨긴다.
+    return expected
 
 
 def inspect_final_frame_text_integrity(
@@ -72,9 +73,13 @@ def inspect_final_frame_text_integrity(
         }
 
     if ocr_rows is None:
-        status, rows = _read_expected_regions(image_path, scene)
+        status, regions = _read_expected_regions(image_path, scene)
     else:
-        status, rows = "completed", list(ocr_rows)
+        # 주입 행은 한 번의 관측이다. 실제 OCR/좌표 검증을 했다는 뜻은 아니다.
+        status, regions = "completed", [{
+            "region_index": 0, "expected": expected,
+            "attempts": [{"psm": None, "status": "completed", "rows": list(ocr_rows)}],
+        }]
     if status != "completed":
         return {
             "status": status,
@@ -84,22 +89,47 @@ def inspect_final_frame_text_integrity(
             "missing_or_altered": expected,
         }
 
-    recognized = [
-        str(row.get("text") or "").strip()
-        for row in rows
-        if str(row.get("text") or "").strip()
-    ]
-    joined = _normalise(" ".join(recognized))
-    missing = [text for text in expected if _normalise(text) not in joined]
+    comparisons = []
+    recognized = []
+    missing = []
+    for region in regions:
+        attempts = []
+        target = _normalise("\n".join(region["expected"]))
+        for attempt in region["attempts"]:
+            texts = [str(row.get("text") or "").strip() for row in attempt["rows"]
+                     if str(row.get("text") or "").strip()]
+            recognized.extend(texts)
+            attempts.append({
+                "psm": attempt["psm"], "status": attempt["status"],
+                "recognized": texts,
+                "exact_match": attempt["status"] == "completed"
+                and _normalise("\n".join(texts)) == target,
+            })
+        # 서로 다른 재독 결과의 일부를 이어 붙이거나, 불일치 관측을 버리고
+        # 일치한 관측만 고르지 않는다. 애매한 판독은 검토 대상으로 남긴다.
+        region_passed = bool(attempts) and all(item["exact_match"] for item in attempts)
+        comparisons.append({
+            "region_index": region["region_index"], "expected": region["expected"],
+            "passed": region_passed, "attempts": attempts,
+        })
+        if not region_passed:
+            missing.extend(region["expected"])
+    ocr_passed = bool(comparisons) and all(item["passed"] for item in comparisons)
     provenance = _inspect_deterministic_render_provenance(image_path, scene, expected)
     # Tesseract는 정자형 한글도 `억/열`처럼 오판할 수 있다. 승인 문자열과
     # 렌더 직후 픽셀 영역 해시가 모두 일치할 때만 OCR 오판을 보완한다.
     # 생성 모델이 직접 쓴 문구에는 이 예외가 적용되지 않는다.
-    passed = not missing or bool(provenance.get("passed"))
+    passed = ocr_passed or bool(provenance.get("passed"))
     return {
         "status": status,
         "passed": passed,
-        "ocr_passed": not missing,
+        "ocr_passed": ocr_passed,
+        "verification_method": "ocr_exact" if ocr_passed else (
+            "deterministic_pixel_provenance" if passed else "none"
+        ),
+        "comparison_policy": "ordered_exact_whitespace_only_all_attempts_v1",
+        "ocr_source": "injected_rows" if ocr_rows is not None else "tesseract",
+        "region_comparisons": comparisons,
         "deterministic_provenance": provenance,
         "expected": expected,
         "recognized": recognized,
@@ -117,6 +147,10 @@ def _inspect_deterministic_render_provenance(
     rendered = scene.get("deterministic_text_regions")
     if not isinstance(rendered, list) or not rendered:
         return {"passed": False, "reason": "metadata_missing"}
+    # 현재 렌더러는 전체 캡션을 한 영역에 기록한다. 여러 영역 중 하나의
+    # 해시만 맞는 것으로 다른 표면의 잘못된 값까지 승인하지 않는다.
+    if len(rendered) != 1 or scene.get("v5_verified_overlays"):
+        return {"passed": False, "reason": "unsupported_provenance_scope"}
     expected_hash = hashlib.sha256("\n".join(expected).encode("utf-8")).hexdigest()
     try:
         with Image.open(image_path) as source:
@@ -129,7 +163,10 @@ def _inspect_deterministic_render_provenance(
                     continue
                 if str(item.get("text_sha256") or "") != expected_hash:
                     continue
-                crop = rgb.crop(tuple(int(value) for value in bbox))
+                left, top, right, bottom = (int(value) for value in bbox)
+                if not (0 <= left < right <= rgb.width and 0 <= top < bottom <= rgb.height):
+                    continue
+                crop = rgb.crop((left, top, right, bottom))
                 current_hash = hashlib.sha256(crop.tobytes()).hexdigest()
                 if current_hash != str(item.get("rendered_crop_sha256") or ""):
                     continue
@@ -142,6 +179,8 @@ def _inspect_deterministic_render_provenance(
                 }
     except OSError:
         return {"passed": False, "reason": "image_unreadable"}
+    except (TypeError, ValueError, OverflowError):
+        return {"passed": False, "reason": "invalid_metadata"}
     return {"passed": False, "reason": "hash_mismatch"}
 
 
@@ -149,36 +188,55 @@ def _read_expected_regions(
     image_path: str,
     scene: dict[str, Any],
 ) -> tuple[str, list[dict[str, Any]]]:
-    """합성 좌표만 잘라 PSM 6으로 읽어 장면 선화의 OCR 오인식을 줄인다."""
-    regions: list[tuple[int, int, int, int]] = []
+    """표면별 예정 문자열과 PSM 6/11/13 관측을 분리해 보존한다."""
+    expected = expected_final_frame_texts(scene)
+    regions: list[tuple[tuple[int, int, int, int], list[str]]] = []
     rendered = scene.get("deterministic_text_regions")
-    if isinstance(rendered, list):
-        for item in rendered:
-            bbox = item.get("bbox") if isinstance(item, dict) else None
-            if isinstance(bbox, (list, tuple)) and len(bbox) == 4:
-                regions.append(tuple(int(value) for value in bbox))
-
-    with Image.open(image_path) as source:
+    try:
+        source = Image.open(image_path)
+    except OSError:
+        return "image_unreadable", []
+    with source:
         width, height = source.size
-        if not regions:
-            overlays = scene.get("v5_verified_overlays")
-            if isinstance(overlays, list):
+        overlays = scene.get("v5_verified_overlays")
+        try:
+            if isinstance(overlays, list) and overlays:
                 for overlay in overlays:
-                    anchor = overlay.get("anchor") if isinstance(overlay, dict) else None
-                    if not isinstance(anchor, dict):
-                        continue
-                    regions.append((
+                    if not isinstance(overlay, dict):
+                        return "invalid_surface_contract", []
+                    # 추세선의 시작/종료값은 별도 위치 계약이 필요하다. 라벨과
+                    # 값만 검사하고 나머지 수치를 승인했다고 보고하지 않는다.
+                    if overlay.get("visualization", "text") != "text":
+                        return "unsupported_surface_layout", []
+                    anchor = overlay["anchor"]
+                    bbox = (
                         round(float(anchor["x"]) * width),
                         round(float(anchor["y"]) * height),
                         round((float(anchor["x"]) + float(anchor["width"])) * width),
                         round((float(anchor["y"]) + float(anchor["height"])) * height),
-                    ))
+                    )
+                    texts = [str(overlay.get(key) or "").strip() for key in ("label", "value")]
+                    if not all(texts):
+                        return "invalid_surface_contract", []
+                    regions.append((bbox, texts))
+            elif rendered:
+                if not isinstance(rendered, list) or len(rendered) != 1:
+                    return "ambiguous_surface_contract", []
+                regions.append((tuple(int(value) for value in rendered[0]["bbox"]), expected))
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return "invalid_surface_contract", []
+        for bbox, _ in regions:
+            if len(bbox) != 4 or not (0 <= bbox[0] < bbox[2] <= width
+                                     and 0 <= bbox[1] < bbox[3] <= height):
+                return "invalid_surface_contract", []
         if not regions:
-            return _read_tesseract_rows(image_path, psm=6)
+            status, rows = _read_tesseract_rows(image_path, psm=6)
+            return status, [{"region_index": 0, "expected": expected,
+                             "attempts": [{"psm": 6, "status": status, "rows": rows}]}]
 
-        all_rows: list[dict[str, Any]] = []
-        for region in regions:
-            crop = source.convert("RGB").crop(region)
+        observations: list[dict[str, Any]] = []
+        for index, (bbox, texts) in enumerate(regions):
+            crop = source.convert("RGB").crop(bbox)
             crop = ImageOps.autocontrast(crop.convert("L")).resize(
                 (max(1, crop.width * 2), max(1, crop.height * 2)),
                 Image.Resampling.BICUBIC,
@@ -187,21 +245,17 @@ def _read_expected_regions(
                 temp_path = handle.name
             try:
                 crop.save(temp_path, "PNG")
-                statuses_and_rows = [
-                    _read_tesseract_rows(temp_path, psm=psm)
-                    for psm in (6, 11, 13)
-                ]
+                attempts = []
+                for psm in (6, 11, 13):
+                    status, rows = _read_tesseract_rows(temp_path, psm=psm)
+                    attempts.append({"psm": psm, "status": status, "rows": rows})
             finally:
                 try:
                     os.unlink(temp_path)
                 except OSError:
                     pass
-            completed_rows = [rows for status, rows in statuses_and_rows if status == "completed"]
-            if not completed_rows:
-                return statuses_and_rows[0][0], []
-            for rows in completed_rows:
-                all_rows.extend(rows)
-        return "completed", all_rows
+            observations.append({"region_index": index, "expected": texts, "attempts": attempts})
+        return "completed", observations
 
 
 def require_final_frame_text_integrity(
