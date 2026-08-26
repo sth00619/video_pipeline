@@ -1,0 +1,27 @@
+{
+  "captured_at_utc": "2026-08-26T05:17:07.871345+00:00",
+  "source_commit": "6fa5e793ee3a2f42757bf1647dcb477f5f367be4",
+  "backup_directory": "/Users/songtaeho/Documents/video_pipeline_backup_20260826_xJ4Ms9",
+  "roots": [
+    "artifacts",
+    "backend/artifacts",
+    "backend/fastapi-workers/out",
+    "data_jobs_175"
+  ],
+  "file_count": 1759,
+  "total_bytes": 3087324515,
+  "archive_verified_files": 1759,
+  "backup_files": {
+    "generated-artifacts.tar.gz": {
+      "bytes": 3038317552,
+      "sha256": "afddcb3116d426fb77a5cec80493401b468421f7231c58c5671dbb7734ef6c6f"
+    },
+    "repository-before-filter.bundle": {
+      "bytes": 3119097565,
+      "sha256": "1766b154877ae229df1bae8f1afbf4967e9df61baf6d39ae954d6bedc30daba6"
+    }
+  },
+  "historical_binary_paths": 1061,
+  "preserved": "대본·원장·JSON·MD·자막 등 텍스트와 런타임 assets/ 참조 이미지는 필터 대상이 아니다.",
+  "remote_rewrite_executed": false
+}

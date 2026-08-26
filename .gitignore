@@ -28,5 +28,14 @@ Thumbs.db
 .vscode/
 *.iml
 
-# ȯ�溯�� (API Ű �� �ΰ�����)
+# 로컬 환경변수와 민감정보
 .env.local
+
+# 생성 산출물은 외부 백업/객체 저장소에 보관하고 docs/evidence의 매니페스트만 커밋한다.
+/artifacts/
+/backend/artifacts/
+/backend/fastapi-workers/out/
+/data_jobs_*/
+**/out/*.mp4
+**/data/jobs/
+**/output/jobs/
