@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.056" timestamp="2026-08-26T18:15:28.800005+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_verified_fact_value_exact_regression" name="test_verified_overlay_rejects_truncated_value[reject-leading-digit-truncation]" time="0.004"><failure message="Failed: DID NOT RAISE &lt;class 'ValueError'&gt;">value = '4배', figure = '14배', fact = 'PER 14배'
+
+    @pytest.mark.parametrize("value,figure,fact", [
+        pytest.param("4배", "14배", "PER 14배", id="reject-leading-digit-truncation"),
+        pytest.param(
+            "143조", "143조 5000억 원", "기업의 영업이익은 143조 5000억 원이다.",
+            id="reject-trailing-amount-truncation",
+        ),
+    ])
+    def test_verified_overlay_rejects_truncated_value(value, figure, fact):
+&gt;       with pytest.raises(ValueError, match="원문"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'ValueError'&gt;
+
+tests/test_verified_fact_value_exact_regression.py:30: Failed</failure></testcase><testcase classname="tests.test_verified_fact_value_exact_regression" name="test_verified_overlay_rejects_truncated_value[reject-trailing-amount-truncation]" time="0.001"><failure message="Failed: DID NOT RAISE &lt;class 'ValueError'&gt;">value = '143조', figure = '143조 5000억 원', fact = '기업의 영업이익은 143조 5000억 원이다.'
+
+    @pytest.mark.parametrize("value,figure,fact", [
+        pytest.param("4배", "14배", "PER 14배", id="reject-leading-digit-truncation"),
+        pytest.param(
+            "143조", "143조 5000억 원", "기업의 영업이익은 143조 5000억 원이다.",
+            id="reject-trailing-amount-truncation",
+        ),
+    ])
+    def test_verified_overlay_rejects_truncated_value(value, figure, fact):
+&gt;       with pytest.raises(ValueError, match="원문"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'ValueError'&gt;
+
+tests/test_verified_fact_value_exact_regression.py:30: Failed</failure></testcase></testsuite></testsuites>
