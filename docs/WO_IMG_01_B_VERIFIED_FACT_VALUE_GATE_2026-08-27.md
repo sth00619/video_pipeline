@@ -77,6 +77,15 @@ if not value.strip() or _normalise(value) not in _normalise(evidence):
 
 이는 임의 substring 허용이 아니다. 구조화 값 `2,65`는 `2,650pt`를 통과하지 못하고, `143`은 복합 단위 `143조 5000억 원`을 통과하지 못한다. 다만 이 호환 규칙은 구조화 `verified_facts.value`를 신뢰하는 계약이다. 이 필드 자체의 생성·팩트체크 계보는 이번 모듈이 검증하지 않는다.
 
+후속 긍정 사례 검증(실제 생성기 → 실제 최종 어댑터, 합성 입력, 유료 호출 없음):
+
+| 구조화 value / unit | figure / 장면 내레이션 | 생성기 출력 | 최종 어댑터 | 같은 출력의 마지막 자릿수 삭제 |
+|---|---|---|---|---|
+| `2,650` / `pt` | `2,650pt` / `코스피가 2,650포인트를 기록했습니다.` | `2,650` | 허용 | `2,65` 거절 |
+| `6,597` / `pt` | `6,597pt` / `코스피가 6,597포인트를 기록했습니다.` | `6,597` | 허용 | `6,59` 거절 |
+
+두 테스트는 허용과 절단 거절을 함께 확인한다. [JUnit 원문](evidence/wo_img_01_b_fact_value_20260827/split-unit-positive.xml), `tests/test_verified_fact_split_unit_integration.py`에서 재실행 가능하다. 숫자는 테스트 fixture이며 실제 시장값으로 주장하지 않는다.
+
 ### 4.3 소비자 통합
 
 - `runtime_contract._build_v5_verified_overlays`: 현재 장면 내레이션/승인 화면 문구에 완전값이 있어야 오버레이 후보로 선택한다.
