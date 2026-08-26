@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="5" time="0.026" timestamp="2026-08-26T17:28:39.174342+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_final_frame_text_exact_regression" name="test_wo_img01_exact_text_spec[reject-extra-digit]" time="0.001"><failure message="assert True is False">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-71/test_wo_img01_exact_text_spec_0')
+expected = '4배', recognized = '14배', should_pass = False
+
+    @pytest.mark.parametrize("expected,recognized,should_pass", [
+        pytest.param("4배", "14배", False, id="reject-extra-digit"),
+        pytest.param("영업이익", "비영업이익", False, id="reject-negating-prefix"),
+        pytest.param("PER", "per", False, id="reject-case-change"),
+        pytest.param("현재 전망", "현력 토공", False, id="reject-korean-typo"),
+        pytest.param("143조 원", "143조\n원", True, id="allow-whitespace-only"),
+    ])
+    def test_wo_img01_exact_text_spec(tmp_path, expected, recognized, should_pass):
+        scene = {"v5_render_contract": {
+            "visual_text_policy": "deterministic_surface_text",
+            "surface_caption": {"texts": [expected]},
+        }}
+        # 파일이 없고 픽셀 계보도 없다. 실제 이미지/OCR/유료 공급자를 호출하지 않는다.
+        image_path = str(tmp_path / "unused-fixture.png")
+        rows = [{"text": recognized, "conf": "99"}]
+        report = inspect_final_frame_text_integrity(image_path, scene, ocr_rows=rows)
+&gt;       assert report["passed"] is should_pass
+E       assert True is False
+
+tests/test_final_frame_text_exact_regression.py:31: AssertionError</failure></testcase><testcase classname="tests.test_final_frame_text_exact_regression" name="test_wo_img01_exact_text_spec[reject-negating-prefix]" time="0.001"><failure message="assert True is False">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-71/test_wo_img01_exact_text_spec_1')
+expected = '영업이익', recognized = '비영업이익', should_pass = False
+
+    @pytest.mark.parametrize("expected,recognized,should_pass", [
+        pytest.param("4배", "14배", False, id="reject-extra-digit"),
+        pytest.param("영업이익", "비영업이익", False, id="reject-negating-prefix"),
+        pytest.param("PER", "per", False, id="reject-case-change"),
+        pytest.param("현재 전망", "현력 토공", False, id="reject-korean-typo"),
+        pytest.param("143조 원", "143조\n원", True, id="allow-whitespace-only"),
+    ])
+    def test_wo_img01_exact_text_spec(tmp_path, expected, recognized, should_pass):
+        scene = {"v5_render_contract": {
+            "visual_text_policy": "deterministic_surface_text",
+            "surface_caption": {"texts": [expected]},
+        }}
+        # 파일이 없고 픽셀 계보도 없다. 실제 이미지/OCR/유료 공급자를 호출하지 않는다.
+        image_path = str(tmp_path / "unused-fixture.png")
+        rows = [{"text": recognized, "conf": "99"}]
+        report = inspect_final_frame_text_integrity(image_path, scene, ocr_rows=rows)
+&gt;       assert report["passed"] is should_pass
+E       assert True is False
+
+tests/test_final_frame_text_exact_regression.py:31: AssertionError</failure></testcase><testcase classname="tests.test_final_frame_text_exact_regression" name="test_wo_img01_exact_text_spec[reject-case-change]" time="0.001" /><testcase classname="tests.test_final_frame_text_exact_regression" name="test_wo_img01_exact_text_spec[reject-korean-typo]" time="0.000" /><testcase classname="tests.test_final_frame_text_exact_regression" name="test_wo_img01_exact_text_spec[allow-whitespace-only]" time="0.000" /></testsuite></testsuites>

@@ -89,6 +89,8 @@ missing = [text for text in expected if _normalise(text) not in joined]
 | 수정 후 집중 검사 | 37 통과 | [green-focused.xml](evidence/ocr_exact_gate_20260827/green-focused.xml) |
 | 전체 검사, 소켓 접속 차단 | 976 통과, 1 실패 | [full-network-blocked.xml](evidence/ocr_exact_gate_20260827/full-network-blocked.xml) |
 | 동일 검사, RSS 외부접속 테스트 1개 제외 | 976 통과, 1 제외 | [offline.xml](evidence/ocr_exact_gate_20260827/offline.xml) |
+| 선행 커밋 `24dd526`만 추출해 독립 재검증 | 2 실패, 3 통과 | [committed-red.xml](evidence/ocr_exact_gate_20260827/committed-red.xml) |
+| 수정 커밋 `2a4fb51`만 추출해 독립 재검증 | 새 회귀 28개 통과 | [committed-green.xml](evidence/ocr_exact_gate_20260827/committed-green.xml) |
 
 최초 전체 검사의 실패는 `test_article_discovery_rss.py::TestArticleDiscoveryGoogleRssFallback::test_google_rss_fallback_when_naver_not_configured`가 실제 Google RSS 연결을 시도해 소켓 차단에 걸린 것이다. 그 테스트나 서비스는 이번에 수정하지 않았다. **전체 무조건 통과라고 보고하지 않는다.**
 
@@ -109,6 +111,8 @@ git show 24dd526:backend/fastapi-workers/app/services/final_frame_text_integrity
 ```
 
 기존 CI가 `tests/`를 수집하면 새 회귀도 포함된다. 이번에는 CI 워크플로를 바꾸거나 원격 CI를 실행하지 않았다. 전체 사본 검사는 기존 미커밋 요청 제어 변경도 포함한 작업 트리 검증이며, 그 변경들을 이번 커밋에 섞지 않았다.
+
+이 차이를 분리하기 위해 `git archive`로 두 커밋의 `app/`과 새 테스트만 각각 `/tmp/ocr_red_commit_verify.YiiMQO/`, `/tmp/ocr_committed_verify.UpzKfl/`에 추출했다. 소켓 접속을 차단하고 다시 실행한 결과가 표 마지막 두 행이다. 기존 미커밋 코드나 `tests/conftest.py` 없이도 두 핵심 실패의 수정과 새 28개 회귀 통과가 재현된다. 원문 JUnit의 실패 traceback 공백도 보존했으므로 일부 XML에 줄 끝 공백이 있다.
 
 ## 7. 입력·운영 상태의 불변 확인
 
