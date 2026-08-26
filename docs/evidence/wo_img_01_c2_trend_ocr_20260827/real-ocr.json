@@ -1,0 +1,974 @@
+{
+  "scope": "synthetic_raster_real_local_tesseract_not_gemini",
+  "paid_api_calls": 0,
+  "cases": [
+    {
+      "fixture": "trend_correct",
+      "expected_pass": true,
+      "image_sha256": "d8f67bbc0dbe649568b7d8df9ff40f979c3aae696703941849348bd664c5e46b",
+      "scene": {
+        "verified_facts": [
+          {
+            "figure": "2.50% → 2.75% (+0.25%p)",
+            "fact": "기준금리는 2.50%에서 2.75%로 0.25%p 인상됐다."
+          }
+        ],
+        "v5_verified_overlays": [
+          {
+            "label": "인상폭",
+            "value": "0.25%p",
+            "start_value": "2.50%",
+            "end_value": "2.75%",
+            "visualization": "upward_trend",
+            "source_ref": "facts[0]",
+            "anchor": {
+              "x": 0.1,
+              "y": 0.1,
+              "width": 0.8,
+              "height": 0.8,
+              "kind": "monitor"
+            }
+          }
+        ],
+        "surface_text_manifest": {
+          "version": 1,
+          "frame_size": [
+            1280,
+            720
+          ],
+          "contract_sha256": "c1453c1efa6d9228863442902b18708e4a3959ac7c44e88e2b18f4bfda5c31af",
+          "cells": [
+            {
+              "id": "overlay:0:label",
+              "role": "label",
+              "text": "인상폭",
+              "bbox": [
+                198,
+                129,
+                461,
+                218
+              ],
+              "anchor_bbox": [
+                128,
+                72,
+                1152,
+                648
+              ],
+              "font_size": 92,
+              "psm_modes": [
+                7
+              ]
+            },
+            {
+              "id": "overlay:0:start_value",
+              "role": "start_value",
+              "text": "2.50%",
+              "bbox": [
+                270,
+                527,
+                499,
+                591
+              ],
+              "anchor_bbox": [
+                128,
+                72,
+                1152,
+                648
+              ],
+              "font_size": 70,
+              "psm_modes": [
+                6,
+                7
+              ]
+            },
+            {
+              "id": "overlay:0:end_value",
+              "role": "end_value",
+              "text": "2.75%",
+              "bbox": [
+                815,
+                398,
+                1045,
+                462
+              ],
+              "anchor_bbox": [
+                128,
+                72,
+                1152,
+                648
+              ],
+              "font_size": 70,
+              "psm_modes": [
+                6,
+                7
+              ]
+            },
+            {
+              "id": "overlay:0:value",
+              "role": "value",
+              "text": "0.25%p",
+              "bbox": [
+                772,
+                130,
+                1083,
+                211
+              ],
+              "anchor_bbox": [
+                128,
+                72,
+                1152,
+                648
+              ],
+              "font_size": 80,
+              "psm_modes": [
+                6,
+                7
+              ]
+            }
+          ]
+        }
+      },
+      "report": {
+        "status": "completed",
+        "passed": true,
+        "ocr_passed": true,
+        "verification_method": "ocr_exact",
+        "comparison_policy": "ordered_exact_whitespace_only_all_attempts_v1",
+        "ocr_source": "tesseract",
+        "region_comparisons": [
+          {
+            "region_index": 0,
+            "expected": [
+              "인상폭"
+            ],
+            "cell_id": "overlay:0:label",
+            "bbox": [
+              198,
+              129,
+              461,
+              218
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "인",
+                  "상",
+                  "폭"
+                ],
+                "exact_match": true
+              }
+            ]
+          },
+          {
+            "region_index": 1,
+            "expected": [
+              "2.50%"
+            ],
+            "cell_id": "overlay:0:start_value",
+            "bbox": [
+              270,
+              527,
+              499,
+              591
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "2.50%"
+                ],
+                "exact_match": true
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "2.50%"
+                ],
+                "exact_match": true
+              }
+            ]
+          },
+          {
+            "region_index": 2,
+            "expected": [
+              "2.75%"
+            ],
+            "cell_id": "overlay:0:end_value",
+            "bbox": [
+              815,
+              398,
+              1045,
+              462
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "2.75%"
+                ],
+                "exact_match": true
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "2.75%"
+                ],
+                "exact_match": true
+              }
+            ]
+          },
+          {
+            "region_index": 3,
+            "expected": [
+              "0.25%p"
+            ],
+            "cell_id": "overlay:0:value",
+            "bbox": [
+              772,
+              130,
+              1083,
+              211
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "0.25%p"
+                ],
+                "exact_match": true
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "0.25%p"
+                ],
+                "exact_match": true
+              }
+            ]
+          }
+        ],
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "cellwise_exact_ocr_required"
+        },
+        "expected": [
+          "인상폭",
+          "0.25%p",
+          "2.50%",
+          "2.75%"
+        ],
+        "recognized": [
+          "인",
+          "상",
+          "폭",
+          "2.50%",
+          "2.50%",
+          "2.75%",
+          "2.75%",
+          "0.25%p",
+          "0.25%p"
+        ],
+        "missing_or_altered": [],
+        "ocr_missing_or_altered": []
+      }
+    },
+    {
+      "fixture": "trend_wrong_endpoint",
+      "expected_pass": false,
+      "image_sha256": "d8cdd785be9464b7a2b33c2f62259135345c174c97d699864e99783622c65f59",
+      "scene": {
+        "verified_facts": [
+          {
+            "figure": "2.50% → 2.75% (+0.25%p)",
+            "fact": "기준금리는 2.50%에서 2.75%로 0.25%p 인상됐다."
+          }
+        ],
+        "v5_verified_overlays": [
+          {
+            "label": "인상폭",
+            "value": "0.25%p",
+            "start_value": "2.50%",
+            "end_value": "2.75%",
+            "visualization": "upward_trend",
+            "source_ref": "facts[0]",
+            "anchor": {
+              "x": 0.1,
+              "y": 0.1,
+              "width": 0.8,
+              "height": 0.8,
+              "kind": "monitor"
+            }
+          }
+        ],
+        "surface_text_manifest": {
+          "version": 1,
+          "frame_size": [
+            1280,
+            720
+          ],
+          "contract_sha256": "c1453c1efa6d9228863442902b18708e4a3959ac7c44e88e2b18f4bfda5c31af",
+          "cells": [
+            {
+              "id": "overlay:0:label",
+              "role": "label",
+              "text": "인상폭",
+              "bbox": [
+                198,
+                129,
+                461,
+                218
+              ],
+              "anchor_bbox": [
+                128,
+                72,
+                1152,
+                648
+              ],
+              "font_size": 92,
+              "psm_modes": [
+                7
+              ]
+            },
+            {
+              "id": "overlay:0:start_value",
+              "role": "start_value",
+              "text": "2.50%",
+              "bbox": [
+                270,
+                527,
+                499,
+                591
+              ],
+              "anchor_bbox": [
+                128,
+                72,
+                1152,
+                648
+              ],
+              "font_size": 70,
+              "psm_modes": [
+                6,
+                7
+              ]
+            },
+            {
+              "id": "overlay:0:end_value",
+              "role": "end_value",
+              "text": "2.75%",
+              "bbox": [
+                815,
+                398,
+                1045,
+                462
+              ],
+              "anchor_bbox": [
+                128,
+                72,
+                1152,
+                648
+              ],
+              "font_size": 70,
+              "psm_modes": [
+                6,
+                7
+              ]
+            },
+            {
+              "id": "overlay:0:value",
+              "role": "value",
+              "text": "0.25%p",
+              "bbox": [
+                772,
+                130,
+                1083,
+                211
+              ],
+              "anchor_bbox": [
+                128,
+                72,
+                1152,
+                648
+              ],
+              "font_size": 80,
+              "psm_modes": [
+                6,
+                7
+              ]
+            }
+          ]
+        }
+      },
+      "report": {
+        "status": "completed",
+        "passed": false,
+        "ocr_passed": false,
+        "verification_method": "none",
+        "comparison_policy": "ordered_exact_whitespace_only_all_attempts_v1",
+        "ocr_source": "tesseract",
+        "region_comparisons": [
+          {
+            "region_index": 0,
+            "expected": [
+              "인상폭"
+            ],
+            "cell_id": "overlay:0:label",
+            "bbox": [
+              198,
+              129,
+              461,
+              218
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "인",
+                  "상",
+                  "폭"
+                ],
+                "exact_match": true
+              }
+            ]
+          },
+          {
+            "region_index": 1,
+            "expected": [
+              "2.50%"
+            ],
+            "cell_id": "overlay:0:start_value",
+            "bbox": [
+              270,
+              527,
+              499,
+              591
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "2.50%"
+                ],
+                "exact_match": true
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "2.50%"
+                ],
+                "exact_match": true
+              }
+            ]
+          },
+          {
+            "region_index": 2,
+            "expected": [
+              "2.75%"
+            ],
+            "cell_id": "overlay:0:end_value",
+            "bbox": [
+              815,
+              398,
+              1045,
+              462
+            ],
+            "passed": false,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "2.85%"
+                ],
+                "exact_match": false
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "2.85%"
+                ],
+                "exact_match": false
+              }
+            ]
+          },
+          {
+            "region_index": 3,
+            "expected": [
+              "0.25%p"
+            ],
+            "cell_id": "overlay:0:value",
+            "bbox": [
+              772,
+              130,
+              1083,
+              211
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "0.25%p"
+                ],
+                "exact_match": true
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "0.25%p"
+                ],
+                "exact_match": true
+              }
+            ]
+          }
+        ],
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "cellwise_exact_ocr_required"
+        },
+        "expected": [
+          "인상폭",
+          "0.25%p",
+          "2.50%",
+          "2.75%"
+        ],
+        "recognized": [
+          "인",
+          "상",
+          "폭",
+          "2.50%",
+          "2.50%",
+          "2.85%",
+          "2.85%",
+          "0.25%p",
+          "0.25%p"
+        ],
+        "missing_or_altered": [
+          "2.75%"
+        ],
+        "ocr_missing_or_altered": [
+          "2.75%"
+        ]
+      }
+    },
+    {
+      "fixture": "surfaces_correct",
+      "expected_pass": true,
+      "image_sha256": "4bb26c63b5e542b80a5467e2f577188c5ed558ac0f78c7a29d536f68c6043e20",
+      "scene": {
+        "text_render_policy": "semantic_roles_v1",
+        "screen_texts": [
+          "현재 전망",
+          "수정 전망"
+        ],
+        "screen_text_validation": {
+          "passed": true
+        },
+        "screen_text_plan": [
+          {
+            "text": "현재 전망",
+            "surface": "left",
+            "purpose": "information"
+          },
+          {
+            "text": "수정 전망",
+            "surface": "right",
+            "purpose": "information"
+          }
+        ],
+        "surface_bindings": {
+          "left": {
+            "bbox": [
+              0,
+              0,
+              0.5,
+              1
+            ]
+          },
+          "right": {
+            "bbox": [
+              0.5,
+              0,
+              0.5,
+              1
+            ]
+          }
+        },
+        "surface_text_manifest": {
+          "version": 1,
+          "frame_size": [
+            1280,
+            720
+          ],
+          "contract_sha256": "2fde332447a2b25f86758f3734ac59038622d61de1fb190d6bd21d486cc3f436",
+          "cells": [
+            {
+              "id": "plan:0:text",
+              "role": "text",
+              "text": "현재 전망",
+              "bbox": [
+                116,
+                306,
+                407,
+                379
+              ],
+              "anchor_bbox": [
+                0,
+                0,
+                640,
+                720
+              ],
+              "font_size": 70,
+              "psm_modes": [
+                6,
+                7
+              ]
+            },
+            {
+              "id": "plan:1:text",
+              "role": "text",
+              "text": "수정 전망",
+              "bbox": [
+                756,
+                306,
+                1047,
+                379
+              ],
+              "anchor_bbox": [
+                640,
+                0,
+                1280,
+                720
+              ],
+              "font_size": 70,
+              "psm_modes": [
+                6,
+                7
+              ]
+            }
+          ]
+        }
+      },
+      "report": {
+        "status": "completed",
+        "passed": true,
+        "ocr_passed": true,
+        "verification_method": "ocr_exact",
+        "comparison_policy": "ordered_exact_whitespace_only_all_attempts_v1",
+        "ocr_source": "tesseract",
+        "region_comparisons": [
+          {
+            "region_index": 0,
+            "expected": [
+              "현재 전망"
+            ],
+            "cell_id": "plan:0:text",
+            "bbox": [
+              116,
+              306,
+              407,
+              379
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "현재",
+                  "전망"
+                ],
+                "exact_match": true
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "현재",
+                  "전망"
+                ],
+                "exact_match": true
+              }
+            ]
+          },
+          {
+            "region_index": 1,
+            "expected": [
+              "수정 전망"
+            ],
+            "cell_id": "plan:1:text",
+            "bbox": [
+              756,
+              306,
+              1047,
+              379
+            ],
+            "passed": true,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "수정",
+                  "전망"
+                ],
+                "exact_match": true
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "수정",
+                  "전망"
+                ],
+                "exact_match": true
+              }
+            ]
+          }
+        ],
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "cellwise_exact_ocr_required"
+        },
+        "expected": [
+          "현재 전망",
+          "수정 전망"
+        ],
+        "recognized": [
+          "현재",
+          "전망",
+          "현재",
+          "전망",
+          "수정",
+          "전망",
+          "수정",
+          "전망"
+        ],
+        "missing_or_altered": [],
+        "ocr_missing_or_altered": []
+      }
+    },
+    {
+      "fixture": "surfaces_swapped",
+      "expected_pass": false,
+      "image_sha256": "5d305a5dc154a75066d48a36ea638a4c26f96d376954215b7bd537e9d92f11a4",
+      "scene": {
+        "text_render_policy": "semantic_roles_v1",
+        "screen_texts": [
+          "현재 전망",
+          "수정 전망"
+        ],
+        "screen_text_validation": {
+          "passed": true
+        },
+        "screen_text_plan": [
+          {
+            "text": "현재 전망",
+            "surface": "left",
+            "purpose": "information"
+          },
+          {
+            "text": "수정 전망",
+            "surface": "right",
+            "purpose": "information"
+          }
+        ],
+        "surface_bindings": {
+          "left": {
+            "bbox": [
+              0,
+              0,
+              0.5,
+              1
+            ]
+          },
+          "right": {
+            "bbox": [
+              0.5,
+              0,
+              0.5,
+              1
+            ]
+          }
+        },
+        "surface_text_manifest": {
+          "version": 1,
+          "frame_size": [
+            1280,
+            720
+          ],
+          "contract_sha256": "2fde332447a2b25f86758f3734ac59038622d61de1fb190d6bd21d486cc3f436",
+          "cells": [
+            {
+              "id": "plan:0:text",
+              "role": "text",
+              "text": "현재 전망",
+              "bbox": [
+                116,
+                306,
+                407,
+                379
+              ],
+              "anchor_bbox": [
+                0,
+                0,
+                640,
+                720
+              ],
+              "font_size": 70,
+              "psm_modes": [
+                6,
+                7
+              ]
+            },
+            {
+              "id": "plan:1:text",
+              "role": "text",
+              "text": "수정 전망",
+              "bbox": [
+                756,
+                306,
+                1047,
+                379
+              ],
+              "anchor_bbox": [
+                640,
+                0,
+                1280,
+                720
+              ],
+              "font_size": 70,
+              "psm_modes": [
+                6,
+                7
+              ]
+            }
+          ]
+        }
+      },
+      "report": {
+        "status": "completed",
+        "passed": false,
+        "ocr_passed": false,
+        "verification_method": "none",
+        "comparison_policy": "ordered_exact_whitespace_only_all_attempts_v1",
+        "ocr_source": "tesseract",
+        "region_comparisons": [
+          {
+            "region_index": 0,
+            "expected": [
+              "현재 전망"
+            ],
+            "cell_id": "plan:0:text",
+            "bbox": [
+              116,
+              306,
+              407,
+              379
+            ],
+            "passed": false,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "수정",
+                  "전망"
+                ],
+                "exact_match": false
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "수정",
+                  "전망"
+                ],
+                "exact_match": false
+              }
+            ]
+          },
+          {
+            "region_index": 1,
+            "expected": [
+              "수정 전망"
+            ],
+            "cell_id": "plan:1:text",
+            "bbox": [
+              756,
+              306,
+              1047,
+              379
+            ],
+            "passed": false,
+            "attempts": [
+              {
+                "psm": 6,
+                "status": "completed",
+                "recognized": [
+                  "현재",
+                  "전망"
+                ],
+                "exact_match": false
+              },
+              {
+                "psm": 7,
+                "status": "completed",
+                "recognized": [
+                  "현재",
+                  "전망"
+                ],
+                "exact_match": false
+              }
+            ]
+          }
+        ],
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "cellwise_exact_ocr_required"
+        },
+        "expected": [
+          "현재 전망",
+          "수정 전망"
+        ],
+        "recognized": [
+          "수정",
+          "전망",
+          "수정",
+          "전망",
+          "현재",
+          "전망",
+          "현재",
+          "전망"
+        ],
+        "missing_or_altered": [
+          "현재 전망",
+          "수정 전망"
+        ],
+        "ocr_missing_or_altered": [
+          "현재 전망",
+          "수정 전망"
+        ]
+      }
+    }
+  ]
+}

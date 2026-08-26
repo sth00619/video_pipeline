@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.412" timestamp="2026-08-26T19:17:06.565767+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_surface_text_contract_boundaries" name="test_trend_endpoint_ocr_cell_does_not_contain_graph_ink" time="0.046"><failure message="assert (255, 204, 66) not in {(20, 176, 197), (21, 176, 197), (23, 177, 197), (27, 178, 196), (28, 178, 196), (32, 53, 77), ...}">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-94/test_trend_endpoint_ocr_cell_d0')
+
+    def test_trend_endpoint_ocr_cell_does_not_contain_graph_ink(tmp_path):
+        scene, path = trend_file(tmp_path)
+        end_cell = next(cell for cell in scene["surface_text_manifest"]["cells"] if cell["role"] == "end_value")
+        with Image.open(path) as image:
+            colors = set(image.convert("RGB").crop(end_cell["bbox"]).getdata())
+&gt;       assert (255, 204, 66) not in colors  # 추세선/화살표
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert (255, 204, 66) not in {(20, 176, 197), (21, 176, 197), (23, 177, 197), (27, 178, 196), (28, 178, 196), (32, 53, 77), ...}
+
+tests/test_surface_text_contract_boundaries.py:73: AssertionError</failure></testcase><testcase classname="tests.test_surface_text_contract_boundaries" name="test_single_line_overlay_label_uses_the_measured_line_mode" time="0.031"><failure message="assert [6, 7] == [7]&#10;  &#10;  At index 0 diff: 6 != 7&#10;  Left contains one more item: 7&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-94/test_single_line_overlay_label0')
+
+    def test_single_line_overlay_label_uses_the_measured_line_mode(tmp_path):
+        scene, _ = trend_file(tmp_path)
+        label = next(cell for cell in scene["surface_text_manifest"]["cells"] if cell["role"] == "label")
+&gt;       assert label["psm_modes"] == [7]
+E       assert [6, 7] == [7]
+E         
+E         At index 0 diff: 6 != 7
+E         Left contains one more item: 7
+E         Use -v to get more diff
+
+tests/test_surface_text_contract_boundaries.py:81: AssertionError</failure></testcase></testsuite></testsuites>
