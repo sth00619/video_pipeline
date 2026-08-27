@@ -1,0 +1,46 @@
+{
+  "version": "wo-img-01-d-face-v2-three-scene-pilot-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "approved_by": "송태호",
+    "approved_at_kst": "2026-08-28",
+    "scope": "scene 02, 07, 35를 각각 1회만 생성하고 실패 시 재시도 없이 needs_review",
+    "approved_total_reserved_krw": 4800,
+    "reserved_per_scene_krw": 1600
+  },
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "face_reference": {
+    "name": "channel_character_face_range_v2.png",
+    "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+  },
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "image_size": "2K",
+  "scene42_frozen_and_excluded": true,
+  "scenes": [
+    {
+      "index": 2,
+      "scene_key": "face-v2:2",
+      "lane": "pilot_only_short_approved_label_measurement",
+      "exact_texts": ["경고"],
+      "visual_contract": "경고의 원인은 값싼 가격표와 함정으로 설명하며 경찰 제복·무관 원자재·말풍선을 쓰지 않는다. 얼굴은 Job52 승인 6장의 큰 갈색 홍채, 흰자, 이마 하이라이트, 완만한 눈썹을 유지한다."
+    },
+    {
+      "index": 7,
+      "scene_key": "face-v2:7",
+      "lane": "deterministic_information",
+      "exact_texts": ["삼성전자", "SK하이닉스", "코스피", "143조 원"],
+      "visual_contract": "두 기업을 제외해도 전체 영업이익이 크다는 비교 관계를 하나의 장면 안에서 보여준다. 얼굴은 흰자 없는 검은 타원 눈을 금지하고 Job52 승인 6장의 갈색 홍채와 반사광 구조를 유지한다."
+    },
+    {
+      "index": 35,
+      "scene_key": "face-v2:35",
+      "lane": "pilot_only_short_approved_label_measurement",
+      "exact_texts": ["경고", "전망치"],
+      "visual_contract": "현재와 하향 전망의 날씨 대비를 유지하고 승인되지 않은 한국어·영문을 추가하지 않는다. 경찰모를 쓰지 않고 Job52 승인 6장의 큰 갈색 홍채, 흰자, 이마 하이라이트를 유지한다."
+    }
+  ]
+}
