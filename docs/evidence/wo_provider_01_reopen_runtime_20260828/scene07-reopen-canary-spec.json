@@ -1,0 +1,67 @@
+{
+  "version": "wo-provider-01-scene07-reopen-canary-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "approved_by": "송태호",
+    "approved_at_kst": "2026-08-28",
+    "authorization_basis": "Gemini 이미지 재도전을 오프라인 작업 사이에 한 번씩 별도 승인 없이 진행 가능",
+    "standing_authorization": true,
+    "approved_incremental_reserved_krw": 1600,
+    "cumulative_ledger_exposure_cap_krw": 8000,
+    "on_http_failure": "stop_without_scene02_or_scene35",
+    "on_http_200": "stop_and_review_face_before_scene02_or_scene35"
+  },
+  "provider_status_check": {
+    "source": "https://status.cloud.google.com/",
+    "checked_at": "2026-08-28T06:35:01.470094+09:00",
+    "result": "no_official_incident",
+    "incident_url": null,
+    "dashboard_observation": "No broad severe incidents",
+    "dashboard_last_updated": "27 Aug 2026, 13:59 PDT"
+  },
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "original_three_scene_spec": {
+    "path": "docs/evidence/wo_img01_d_face_reference_20260828/face-pilot-spec.json",
+    "sha256": "bf83d52ddb68eae22448cd83f00cb909dce46fbcaca7eb407133bf016783ff29"
+  },
+  "original_output_dir": "artifacts/wo_img01_d_face_reference_pilot_20260828",
+  "original_ledger_sha256_before_reopen": "933a479b16c952e03c6323a54af1e04b6c68c64ce295b473dd1c2382391e3838",
+  "request_state": {
+    "project_scope": "wo-img01-d-bf83d52ddb68",
+    "scene_key": "face-v2:7",
+    "approved_retry_of": "e7eb8f76e28241cfae233e29905ef6eb",
+    "approved_retry_prior_count": 2,
+    "approved_retry_failure_n": 2,
+    "prior_status": "http_503",
+    "prior_status_code": 503,
+    "prior_payload_sha256": "b58ed621dd9d1bffb159109f3a5f8c03e05a4b1a86a2d4a139045f23df00a454",
+    "prior_contract_fingerprint": "e79c33bb3ed7f1d90a44fc10559c26c909f36803d9ddf4130d65f25495e71495",
+    "approved_reopen_after_cooldown": true,
+    "approved_reopen_first_needs_review_at": 1787848969.574858,
+    "approved_reopen_first_needs_review_attempt_id": "246a77ba4da44508a39ec8c25b4e1b50",
+    "approved_reopen_override_cooldown": true
+  },
+  "face_reference": {
+    "name": "channel_character_face_range_v2.png",
+    "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+  },
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "image_size": "2K",
+  "scene42_frozen_and_excluded": true,
+  "scene42_frozen_ledger": {
+    "path": "artifacts/gemini_usage_pilot_20260827/request_ledger.json",
+    "sha256": "79a7e345f796824e1db409cd24bd3089d26bb502ef912bd221252a4d2a8cbc4f",
+    "attempt_id": "8729ad2c69e949f8b30887ff9bc202f8"
+  },
+  "scene": {
+    "index": 7,
+    "scene_key": "face-v2:7",
+    "lane": "deterministic_information",
+    "exact_texts": ["삼성전자", "SK하이닉스", "코스피", "143조 원"],
+    "visual_contract": "두 기업을 제외해도 전체 영업이익이 크다는 비교 관계를 하나의 장면 안에서 보여준다. 얼굴은 흰자 없는 검은 타원 눈을 금지하고 Job52 승인 6장의 갈색 홍채와 반사광 구조를 유지한다."
+  }
+}
