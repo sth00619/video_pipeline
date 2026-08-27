@@ -9,7 +9,9 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-from app.services.surface_binding_attestation import attest_axis_aligned_surface
+from app.services.surface_binding_attestation import (
+    attest_axis_aligned_surface, attest_scene_surfaces, bind_single_local_surface,
+)
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -75,11 +77,28 @@ def run(output_dir: Path) -> dict:
             "attestation": attestation,
             "error": error,
         })
+    local_source = output_dir / "blank_bordered_panel.png"
+    local_scene = {
+        "screen_text_plan": [{
+            "text": "현재 전망", "surface": "main", "purpose": "information", "surface_kind": "board",
+        }],
+    }
+    try:
+        bind_single_local_surface(str(local_source), local_scene)
+        attest_scene_surfaces(str(local_source), local_scene)
+        automatic_binding = {
+            "passed": True,
+            "binding": local_scene["surface_bindings"]["main"],
+            "error": None,
+        }
+    except ValueError as exc:
+        automatic_binding = {"passed": False, "binding": None, "error": str(exc)}
     payload = {
         "audit": "semantic_surface_physical_attestation_v1",
         "paid_api_calls": 0,
-        "passed": all(item["matched"] for item in cases),
+        "passed": all(item["matched"] for item in cases) and automatic_binding["passed"],
         "cases": cases,
+        "automatic_local_binding": automatic_binding,
     }
     (output_dir / "surface-attestation-audit.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
