@@ -16,7 +16,6 @@ REPO = ROOT.parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts.run_gemini_eight_scene_pilot import _read_prices, _sha, _write_json  # noqa: E402
-from scripts.run_gemini_face_reference_pilot import prepare_rows  # noqa: E402
 
 
 SCENE_INDEX = 7
@@ -55,6 +54,10 @@ def validate_spec(spec: dict) -> None:
 
 def prepare_row(spec: dict) -> dict:
     """Job52 보존 장면에서 현재 코드가 만드는 새 payload 입력을 재구성한다."""
+    # 실행 시 GEMINI_REQUEST_STATE_PATH가 먼저 정해진 뒤에만 이미지 worker를
+    # 불러와야 runtime_config가 다른 상태 DB 경로로 조기에 고정되지 않는다.
+    from scripts.run_gemini_face_reference_pilot import prepare_rows
+
     source_path = REPO / spec["source"]["path"]
     original_spec_path = REPO / spec["original_three_scene_spec"]["path"]
     source_scenes = json.loads(source_path.read_text(encoding="utf-8"))
@@ -99,9 +102,11 @@ def main() -> int:
     if (prior.get("items") or [{}])[-1].get("attempt_id") != spec["prior_ledger"]["latest_attempt_id"]:
         raise RuntimeError("직전 scene07 성공 attempt 계보가 다릅니다.")
 
-    row = prepare_row(spec)
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
+    os.environ["GEMINI_REQUEST_STATE_PATH"] = str(output / "request_state.sqlite3")
+    os.environ["GEMINI_PROJECT_SCOPE"] = f"wo-scene07-promptfix-{_sha(spec_bytes)[:12]}"
+    row = prepare_row(spec)
     preflight = {
         "version": spec["version"],
         "status": "authorized_preflight",
@@ -131,18 +136,12 @@ def main() -> int:
         raise RuntimeError("promptfix canary는 이미 시작됐습니다. 중복 POST를 차단합니다.")
     claim.write_text(datetime.now(timezone.utc).isoformat(), encoding="utf-8")
 
-    os.environ["GEMINI_REQUEST_STATE_PATH"] = str(output / "request_state.sqlite3")
-    os.environ["GEMINI_PROJECT_SCOPE"] = f"wo-scene07-promptfix-{_sha(spec_bytes)[:12]}"
     from app import runtime_config
     from app.utils.budget import ProviderRequestAudit
     from app.utils.image_request_control import ImageRequestHeld
     from app.v5.providers.gemini_provider import GeminiModel, GeminiProvider
 
-    runtime_config.update(
-        gemini_scene_request_limit=1,
-        gemini_request_state_path=str(output / "request_state.sqlite3"),
-        gemini_project_scope=os.environ["GEMINI_PROJECT_SCOPE"],
-    )
+    runtime_config.update(gemini_scene_request_limit=1)
     _, usd_krw = _read_prices(args.pricing_config)
     contract_fingerprint = _sha(json.dumps(row["scene"], ensure_ascii=False, sort_keys=True).encode())
     audit = ProviderRequestAudit.for_path(
