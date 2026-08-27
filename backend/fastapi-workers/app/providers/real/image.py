@@ -36,6 +36,7 @@ from pathlib import Path
 from app.providers.base import ImageProvider
 from app.providers.real.prompt_builder import STYLE_LOCK
 from app.utils.budget import ProviderRequestBudgetExceeded
+from app.utils.image_request_control import ImageRequestHeld, payload_evidence, digest
 
 logger = logging.getLogger(__name__)
 
@@ -254,7 +255,7 @@ class NanaBananaProvider(ImageProvider):
                 }:
                     raise
                 logger.warning(f"공식 Gemini API 호출 실패 (GeminiImageGenerationError): {e}")
-            except ProviderRequestBudgetExceeded:
+            except (ProviderRequestBudgetExceeded, ImageRequestHeld):
                 # 예산 게이트가 막은 경우에는 다른 제공자로 조용히 우회하거나
                 # 같은 장면을 재시도하지 않는다. 호출 자체가 승인되지 않은 상태다.
                 raise
@@ -507,9 +508,12 @@ class NanaBananaProvider(ImageProvider):
         request_audit=None,
         reference_contract_declared: bool = False,
     ) -> bool:
-        """Use Gemini Interactions API so Flash and Pro share the same 16:9 contract."""
+        """한 번의 GenerateContent POST만 수행한다. 재시도 시각/한도는 영속 감사 객체가 소유한다."""
         import requests
         import time
+
+        if request_audit is None:
+            raise ImageRequestHeld("영속 요청 감사 객체 없음; 유료 POST 차단")
 
         if model not in {"gemini-3-pro-image", "gemini-3.1-flash-image"}:
             raise ValueError(f"Unsupported Gemini image model: {model}")
@@ -554,18 +558,7 @@ class NanaBananaProvider(ImageProvider):
             payload["serviceTier"] = service_tier
         headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
         is_pro = model == "gemini-3-pro-image"
-        if max_attempts is None:
-            max_attempts = int(os.getenv(
-                "GEMINI_PRO_MAX_ATTEMPTS" if is_pro else "GEMINI_IMAGE_MAX_ATTEMPTS",
-                "5" if is_pro else "3",
-            ))
-        max_attempts = max(1, int(max_attempts))
-        if retry_base_seconds is None:
-            retry_base_seconds = float(os.getenv(
-                "GEMINI_PRO_RETRY_BASE_SECONDS" if is_pro else "GEMINI_IMAGE_RETRY_BASE_SECONDS",
-                "10" if is_pro else "5",
-            ))
-        retry_base_seconds = max(1.0, float(retry_base_seconds))
+        # 기존 호출 시그니처는 유지하지만 공급자 내부 attempt/base 카운터는 사용하지 않는다.
         timeout_name = "GEMINI_PRO_REQUEST_TIMEOUT_SECONDS" if is_pro else "GEMINI_IMAGE_REQUEST_TIMEOUT_SECONDS"
         try:
             request_timeout_seconds = float(os.getenv(timeout_name, "300" if is_pro else "180"))
@@ -592,113 +585,63 @@ class NanaBananaProvider(ImageProvider):
         # 함께 보내 504/503을 구조적으로 분류하고 중첩 재시도를 막는다.
         headers["X-Server-Timeout"] = str(int(server_timeout_seconds))
         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-        last_failure = "unknown Gemini image failure"
+        evidence = payload_evidence(payload, endpoint=endpoint, model=model, tier=service_tier)
+        token = request_audit.before_attempt(attempt=1, model=model, evidence=evidence)
+        started = time.monotonic()
+        try:
+            request_audit.assert_dispatchable(token)
+        except ImageRequestHeld:
+            request_audit.after_attempt(token, outcome="not_dispatched")
+            raise
+        try:
+            response = requests.post(endpoint, json=payload, headers=headers, timeout=(20.0, request_timeout_seconds))
+        except requests.RequestException as exc:
+            state = request_audit.after_attempt(token, outcome="network_error", retryable=True,
+                error_code=type(exc).__name__, duration_seconds=time.monotonic() - started)
+            raise ImageRequestHeld("네트워크 오류", status=state["status"], next_allowed_at=state["next_allowed_at"]) from exc
 
-        def retry_delay(response, attempt: int) -> float:
-            retry_after = response.headers.get("Retry-After") if response is not None else None
+        request_id = response.headers.get("x-goog-request-id") or response.headers.get("x-request-id") or response.headers.get("request-id")
+        # 이미지 디코딩 실패/비정상 응답이어도 도착한 사용량은 해당 시도에 남긴다.
+        # 전체 응답 대신 사용량 객체만 보존하고, 필드 누락을 사용량 0으로 해석하지 않는다.
+        try:
+            response_body = response.json()
+        except ValueError:
+            response_body = None
+        usage_present = isinstance(response_body, dict) and "usageMetadata" in response_body
+        usage_metadata = response_body.get("usageMetadata") if usage_present else None
+        usage_status = "present" if isinstance(usage_metadata, dict) else "invalid" if usage_present else "absent"
+        common = {"status_code": response.status_code, "request_id": request_id,
+                  "duration_seconds": time.monotonic() - started,
+                  "usage_metadata": usage_metadata if isinstance(usage_metadata, dict) else None,
+                  "usage_metadata_status": usage_status}
+        if response.status_code == 200:
             try:
-                return min(120.0, max(1.0, float(retry_after)))
-            except (TypeError, ValueError):
-                return min(120.0, retry_base_seconds * (2 ** (attempt - 1)))
+                encoded = self._extract_interaction_image(response_body)
+                if not encoded:
+                    raise ValueError("이미지 출력 없음")
+                image_bytes = base64.b64decode(encoded)
+                from io import BytesIO
+                from PIL import Image
+                Image.open(BytesIO(image_bytes)).convert("RGB").save(output_path, "PNG")
+            except Exception as exc:
+                state = request_audit.after_attempt(token, outcome="invalid_image", retryable=True,
+                    error_code=type(exc).__name__, **common)
+                raise ImageRequestHeld("HTTP 200 이미지 해석 실패", status=state["status"], next_allowed_at=state["next_allowed_at"]) from exc
+            request_audit.after_attempt(token, outcome="http_200", image_sha256=digest(Path(output_path).read_bytes()), **common)
+            return True
 
-        for attempt in range(1, max_attempts + 1):
-            audit_token = None
-            try:
-                # 재시도도 별도 외부 요청이다. POST 직전에만 예약하도록 해
-                # 응답 대기 중 프로세스가 종료돼도 비용 추적이 끊기지 않는다.
-                if request_audit is not None:
-                    audit_token = request_audit.before_attempt(attempt=attempt, model=model)
-                # 연결 장애는 20초 안에 구분하되, 참조 이미지 3장을 쓰는 Pro 2K
-                # 생성 응답은 120초를 넘을 수 있으므로 별도의 읽기 제한을 쓴다.
-                response = requests.post(
-                    endpoint,
-                    json=payload,
-                    headers=headers,
-                    timeout=(20.0, request_timeout_seconds),
-                )
-            except requests.RequestException as exc:
-                if request_audit is not None and audit_token is not None:
-                    request_audit.after_attempt(audit_token, outcome="network_error")
-                last_failure = f"network error: {exc.__class__.__name__}: {exc}"
-                if attempt == max_attempts:
-                    break
-                wait_time = retry_delay(None, attempt)
-                logger.warning(
-                    "Gemini image network error (model=%s, attempt=%s/%s): %s; retrying in %.1fs",
-                    model, attempt, max_attempts, exc, wait_time,
-                )
-                time.sleep(wait_time)
-                continue
-
-            if request_audit is not None and audit_token is not None:
-                request_id = (
-                    response.headers.get("x-goog-request-id")
-                    or response.headers.get("x-request-id")
-                    or response.headers.get("request-id")
-                )
-                request_audit.after_attempt(
-                    audit_token,
-                    status_code=response.status_code,
-                    request_id=request_id,
-                    outcome=f"http_{response.status_code}",
-                )
-
-            if response.status_code == 200:
-                try:
-                    logger.info(
-                        "Gemini response service tier: %s",
-                        response.headers.get("x-gemini-service-tier", service_tier),
-                    )
-                    encoded = self._extract_interaction_image(response.json())
-                    if encoded:
-                        image_bytes = base64.b64decode(encoded)
-                        try:
-                            from io import BytesIO
-                            from PIL import Image
-                            Image.open(BytesIO(image_bytes)).convert("RGB").save(output_path, "PNG")
-                        except Exception as conversion_error:
-                            logger.warning(f"Gemini JPEG-to-PNG conversion failed; preserving JPEG bytes: {conversion_error}")
-                            Path(output_path).write_bytes(image_bytes)
-                        return True
-                    last_failure = "HTTP 200 response did not include an image output"
-                    logger.warning("Gemini Interactions API response did not include an image output")
-                except Exception as exc:
-                    last_failure = f"HTTP 200 response parsing error: {exc.__class__.__name__}: {exc}"
-                    logger.error(f"Gemini Interactions API 응답 파싱 에러: {exc}")
-                if attempt == max_attempts:
-                    break
-                wait_time = retry_delay(response, attempt)
-                logger.warning(
-                    "Gemini image returned no usable image (model=%s, attempt=%s/%s); retrying in %.1fs",
-                    model, attempt, max_attempts, wait_time,
-                )
-                time.sleep(wait_time)
-                continue
-
-            response_text = response.text[:500]
-            last_failure = f"HTTP {response.status_code}: {response_text}"
-            lower_response = response_text.lower()
-            # Billing caps and daily quota exhaustion are not transient. Do
-            # not wait through five attempts only to hide the real cause.
-            if response.status_code == 429 and (
-                "spending cap" in lower_response or "daily quota" in lower_response or "prepayment credits" in lower_response or "depleted" in lower_response
-            ):
-                logger.error("Gemini image quota/cap reached (model=%s): %s", model, response_text)
-                raise GeminiImageGenerationError(last_failure)
-            if response.status_code in {429, 500, 502, 503, 504} and attempt < max_attempts:
-                wait_time = retry_delay(response, attempt)
-                logger.warning(
-                    "Gemini image transient HTTP error (model=%s, attempt=%s/%s, status=%s): %s; retrying in %.1fs",
-                    model, attempt, max_attempts, response.status_code, response_text, wait_time,
-                )
-                time.sleep(wait_time)
-                continue
-            logger.warning("Gemini image HTTP error (model=%s): %s", model, last_failure)
-            raise GeminiImageGenerationError(last_failure)
-
-        raise GeminiImageGenerationError(
-            f"Gemini image request exhausted {max_attempts} attempts: {last_failure}"
-        )
+        # 공급자 메시지 원문은 민감정보를 되비출 수 있으므로 오류 코드만 감사한다.
+        try:
+            error_code = str(response_body.get("error", {}).get("status", ""))[:80]
+        except Exception:
+            error_code = ""
+        lower = response.text.lower()
+        quota = response.status_code == 429 and any(term in lower for term in ("spending cap", "daily quota", "prepayment credits", "depleted"))
+        retryable = response.status_code in {429, 500, 502, 503, 504} and not quota
+        state = request_audit.after_attempt(token, outcome=f"http_{response.status_code}",
+            retryable=retryable, permanent=not retryable, retry_after=response.headers.get("Retry-After"),
+            error_code=error_code, **common)
+        raise ImageRequestHeld(f"HTTP {response.status_code} {error_code}", status=state["status"], next_allowed_at=state["next_allowed_at"])
 
     def _generate_pollinations(self, prompt: str, output_path: str) -> str:
         """

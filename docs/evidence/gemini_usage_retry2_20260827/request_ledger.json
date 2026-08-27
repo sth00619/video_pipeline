@@ -1,0 +1,147 @@
+{
+  "items": [
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:42",
+      "attempt": 1,
+      "attempt_id": "8729ad2c69e949f8b30887ff9bc202f8",
+      "estimated_usd": 1.1428571428571428,
+      "amount_krw": 0,
+      "reserved_amount_krw": 1600,
+      "cost_status": "excluded_from_success_estimate_billing_unverified",
+      "status": "http_503",
+      "reserved_at": "2026-08-26T16:09:09.273345+00:00",
+      "run_id": "usage_metering_20260827_scene42",
+      "run_id_source": "caller",
+      "request_control": {
+        "scene_attempt": 1,
+        "failure_n": 1,
+        "scene": "scene:42",
+        "project_scope": "default",
+        "next_allowed_at": 1787760578.213986,
+        "status": "needs_review"
+      },
+      "request_evidence": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent",
+        "model": "gemini-3-pro-image",
+        "service_tier": "standard",
+        "payload_hash_basis": "canonical_json_utf8_sorted_keys",
+        "payload_sha256": "f8ea5d570c82016d2feb0bb571b289f4e7c7367d56f7d4c8e10a76b9631ed013",
+        "prompt_sha256": "2fa239aed28238683d41bc1ea29505f4ad34e14e346add8573a02f0f4fb6567e",
+        "references": [
+          {
+            "sha256": "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+            "byte_count": 1702564,
+            "mime_type": "image/png"
+          },
+          {
+            "sha256": "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+            "byte_count": 2706220,
+            "mime_type": "image/png"
+          },
+          {
+            "sha256": "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74",
+            "byte_count": 2926728,
+            "mime_type": "image/png"
+          }
+        ]
+      },
+      "contract_fingerprint": "4fc255095b4cd0bedfd5c1f0a8ce442c26d660e1fb475f7c4d9402152396fa6c",
+      "contract_fingerprint_source": "caller",
+      "request_metadata": {
+        "job_id": "usage_metering_20260827_scene42",
+        "run_id": "usage_metering_20260827_scene42",
+        "contract_fingerprint": "4fc255095b4cd0bedfd5c1f0a8ce442c26d660e1fb475f7c4d9402152396fa6c",
+        "reservation_basis": "entire_authorized_budget_not_image_unit_price"
+      },
+      "completed_at": "2026-08-26T16:09:21.939534+00:00",
+      "duration_seconds": 12.660527422034647,
+      "error_code": "UNAVAILABLE",
+      "image_sha256": null,
+      "usage_metadata_status": "absent",
+      "usage_metadata": null,
+      "usage_metadata_source": "generateContent.response.usageMetadata",
+      "usage_metadata_sha256": null,
+      "status_code": 503
+    },
+    {
+      "kind": "gemini_pro_request",
+      "provider": "gemini",
+      "model": "gemini-3-pro-image",
+      "scene_key": "image:42",
+      "attempt": 1,
+      "attempt_id": "2dac0c8918db43c08633f7c977a29c81",
+      "estimated_usd": 1.1428571428571428,
+      "amount_krw": 0,
+      "reserved_amount_krw": 1600,
+      "cost_status": "excluded_from_success_estimate_billing_unverified",
+      "status": "http_503",
+      "reserved_at": "2026-08-26T16:33:14.568948+00:00",
+      "run_id": "usage_metering_20260827_scene42",
+      "run_id_source": "caller",
+      "request_control": {
+        "scene_attempt": 2,
+        "failure_n": 2,
+        "scene": "scene:42",
+        "project_scope": "default",
+        "next_allowed_at": 1787762034.2775416,
+        "status": "needs_review"
+      },
+      "request_evidence": {
+        "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent",
+        "model": "gemini-3-pro-image",
+        "service_tier": "standard",
+        "payload_hash_basis": "canonical_json_utf8_sorted_keys",
+        "payload_sha256": "f8ea5d570c82016d2feb0bb571b289f4e7c7367d56f7d4c8e10a76b9631ed013",
+        "prompt_sha256": "2fa239aed28238683d41bc1ea29505f4ad34e14e346add8573a02f0f4fb6567e",
+        "references": [
+          {
+            "sha256": "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+            "byte_count": 1702564,
+            "mime_type": "image/png"
+          },
+          {
+            "sha256": "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+            "byte_count": 2706220,
+            "mime_type": "image/png"
+          },
+          {
+            "sha256": "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74",
+            "byte_count": 2926728,
+            "mime_type": "image/png"
+          }
+        ]
+      },
+      "contract_fingerprint": "4fc255095b4cd0bedfd5c1f0a8ce442c26d660e1fb475f7c4d9402152396fa6c",
+      "contract_fingerprint_source": "caller",
+      "request_metadata": {
+        "job_id": "usage_metering_20260827_scene42",
+        "run_id": "usage_metering_20260827_scene42",
+        "contract_fingerprint": "4fc255095b4cd0bedfd5c1f0a8ce442c26d660e1fb475f7c4d9402152396fa6c",
+        "reservation_basis": "additional_authorized_contingency_not_unit_price_or_spend",
+        "approved_retry_of": "8729ad2c69e949f8b30887ff9bc202f8",
+        "approved_retry_prior_count": 1,
+        "approved_retry_failure_n": 1,
+        "authorization_scope": "동일 요청 추가 1회; 결과와 무관하게 자동 재시도 금지",
+        "original_pilot_budget_krw": 1600,
+        "authorized_combined_reservation_cap_krw": 3200,
+        "additional_reservation_krw": 1600,
+        "cost_interpretation": "보수적 예약 상한; Gemini 단가/예상 비용/확정 지출 아님"
+      },
+      "completed_at": "2026-08-26T16:33:22.733913+00:00",
+      "duration_seconds": 8.15873704495607,
+      "error_code": "UNAVAILABLE",
+      "image_sha256": null,
+      "usage_metadata_status": "absent",
+      "usage_metadata": null,
+      "usage_metadata_source": "generateContent.response.usageMetadata",
+      "usage_metadata_sha256": null,
+      "status_code": 503
+    }
+  ],
+  "total_krw": 0,
+  "reserved_exposure_krw": 3200,
+  "budget_overrun_krw": 0
+}

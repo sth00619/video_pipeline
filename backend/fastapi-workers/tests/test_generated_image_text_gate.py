@@ -121,6 +121,29 @@ def test_explicit_opaque_equipment_surface_is_binding_without_global_layout():
     assert "unlettered scene-integrated visual surface" not in prompt
 
 
+def test_semantic_deterministic_values_are_not_reintroduced_into_model_prompt():
+    scene = {
+        "text_render_policy": "semantic_roles_v1",
+        "screen_texts": ["코스피", "143조 원"],
+        "screen_text_validation": {"passed": True},
+        "screen_text_plan": [
+            {"text": "코스피", "surface": "main", "purpose": "information"},
+            {"text": "143조 원", "surface": "main", "purpose": "information",
+             "source_ref": "facts[0]"},
+        ],
+    }
+    prompt = _bounded_text_generation_prompt(
+        'A data lab monitor displaying exactly "KOSPI 143 trillion won".',
+        audit_target=scene,
+    )
+    assert "코스피" not in prompt
+    assert "143조 원" not in prompt
+    assert "later deterministic typography" in prompt
+    assert "exactly one storyboard-essential physical" in prompt.lower()
+    assert "calm uniform interior" in prompt.lower()
+    assert "other props remain detailed" in prompt.lower()
+
+
 def test_reference_file_content_changes_resume_fingerprint(tmp_path):
     reference = tmp_path / "style.png"
     Image.new("RGB", (8, 8), "red").save(reference)

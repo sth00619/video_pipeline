@@ -19,6 +19,7 @@ import math
 import logging
 import random
 import time
+import uuid
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -41,6 +42,7 @@ from app.v5.scene.runtime_contract import (
 from app.v5.scene.longform_visual_mix import apply_longform_visual_mix
 from app.v5.providers.gemini_provider import _load_default_references, select_contextual_reference_paths
 from app.utils.budget import ProviderRequestAudit, plan_preflight, record_cost, write_preflight
+from app.utils.image_request_control import ImageRequestHeld, write_request_review
 from app.utils.intro_motion import infer_total_duration_seconds, select_intro_motion_scene_indices, scene_duration_seconds
 from app.utils.narration_contract import (
     bind_caption_chunks_to_scenes,
@@ -280,6 +282,7 @@ def _bounded_text_generation_prompt(
             "retry_contract": bool(retry),
             "retry_failure_categories": list((retry_feedback or {}).get("failure_categories") or []),
         }
+    deterministic = list(text_contract["deterministic_texts"])
     if generated_texts:
         exact_values = " | ".join(generated_texts)
         surface_plan = list(text_contract.get("surface_plan") or [])
@@ -303,6 +306,14 @@ def _bounded_text_generation_prompt(
             "On documents, books, cheques, certificates, newspapers, and equipment labels, do not add microprint, serial numbers, dates, currency symbols, or filler lettering outside this exact list. "
             "A detached translucent or holographic text card is forbidden unless the explicit scene-local surface plan requests that exact material."
         )
+    elif deterministic:
+        suffix = (
+            " FINAL SCENE-LOCAL TEXT CONTRACT: this scene has no model-generated string. Do not add readable Korean or English, letters, digits, "
+            "pseudo-text, logos, watermark, fake tickers, or invented labels. Preserve all narration-essential objects, action, diagrams, color, depth, and background detail. "
+            "Exactly one storyboard-essential physical screen, gauge, board, product face, or document must contain a clearly framed, axis-aligned, calm uniform interior "
+            "with no marks, symbols, line art, reflections, hands, character overlap, or decoration inside it. This surface must already belong to the scene and must not look like "
+            "a detached card, title panel, floating UI, hologram, or generic empty safe zone. Other props remain detailed, but do not create a second calm framed surface."
+        )
     else:
         suffix = (
             " FINAL SCENE-LOCAL TEXT CONTRACT: this scene has no approved generated string. Do not add readable "
@@ -311,11 +322,10 @@ def _bounded_text_generation_prompt(
             "and non-linguistic shapes; do not remove the props or simplify the environment. Books, documents, cheques, "
             "certificates, newspapers, and labels must use clearly non-linguistic blank lines or graphic blocks, never microprint or serial numbers."
         )
-    deterministic = list(text_contract["deterministic_texts"])
     if deterministic:
         suffix += (
-            " Use a calm region inside an existing storyboard-essential physical screen, gauge, board, product face, or document for the exact deterministic values "
-            f"[{ ' | '.join(deterministic) }]. Do not draw those numeric values yourself. Do not add a second placard, detached card, empty safe zone, "
+            " Use a calm region inside an existing storyboard-essential physical screen, gauge, board, product face, or document for later deterministic typography. "
+            "Do not draw, imitate, translate, or guess any of the withheld deterministic strings or values yourself. Do not add a second placard, detached card, empty safe zone, "
             "or generic panel merely to hold the later typography."
         )
     if retry:
@@ -396,7 +406,27 @@ def _requires_full_scene_regeneration(review: dict | None) -> bool:
     })
 
 
-def _inspect_generated_textless_image(
+def _audit_scene_quality(scene: dict, image_path: str, *, outcome: str, category: str) -> None:
+    """유료 호출 없이 원본 이미지 해시와 QA 결과를 같은 요청 원장에 연결한다."""
+    if scene.get("_request_job_id") is None:
+        return
+    ProviderRequestAudit.for_job(
+        job_id=scene["_request_job_id"], scene_key=f"image:{scene['index']}",
+        model=str((scene.get("image_profile") or {}).get("model") or "gemini-3-pro-image"),
+    ).record_quality(image_path=image_path, raw_path=scene.get("_request_raw_path"), outcome=outcome, category=category)
+
+
+def _inspect_generated_textless_image(scene: dict, image_path: str, *, ocr_rows=None) -> dict:
+    try:
+        result = _inspect_generated_textless_image_impl(scene, image_path, ocr_rows=ocr_rows)
+    except (GeneratedImageTextDetectedError, GeneratedImageVisualContractError):
+        _audit_scene_quality(scene, image_path, outcome="rejected", category="text_qa")
+        raise
+    _audit_scene_quality(scene, image_path, outcome="passed", category="text_qa")
+    return result
+
+
+def _inspect_generated_textless_image_impl(
     scene: dict,
     image_path: str,
     *,
@@ -434,6 +464,19 @@ def _inspect_generated_textless_image(
 
 
 def _inspect_generated_visual_image(scene: dict, image_path: str) -> dict:
+    try:
+        result = _inspect_generated_visual_image_impl(scene, image_path)
+    except GeneratedImageVisualContractError:
+        _audit_scene_quality(scene, image_path, outcome="rejected", category="visual_qa")
+        raise
+    except VisualQaUnavailableError:
+        _audit_scene_quality(scene, image_path, outcome="unavailable", category="visual_qa")
+        raise
+    _audit_scene_quality(scene, image_path, outcome="skipped" if result.get("skipped") else "passed", category="visual_qa")
+    return result
+
+
+def _inspect_generated_visual_image_impl(scene: dict, image_path: str) -> dict:
     """최종 저장 전에 한 장씩 의미·문자·얼굴·해부학을 교차 검증한다."""
     if not bool(runtime_config.value("visual_qa_enabled")):
         return {"skipped": True, "reason": "visual_qa_disabled"}
@@ -1729,6 +1772,9 @@ Rules:
 
             img_path = str(job_dir / f"scene_{i:03d}.png")
             raw_img_path = str(job_dir / f"scene_{i:03d}_raw.png")
+            scene["_request_job_id"] = job_id
+            scene["_request_raw_path"] = raw_img_path
+            scene.setdefault("index", i)
             background_path = None
 
             # If a long HTTP request was interrupted after this frame completed,
@@ -1977,6 +2023,10 @@ Rules:
                     logger.info(f"씬 {i} AI 이미지 생성 및 품질 검수 완료 (점수={quality_score or 85})")
                     continue
                 except Exception as e:
+                    if isinstance(e, ImageRequestHeld):
+                        write_request_review(job_dir, job_id, [{"index": i, "status": e.status,
+                            "reason": e.reason, "next_allowed_at": e.next_allowed_at}])
+                        raise
                     if image_profile.get("tier") == "pro":
                         if bool(runtime_config.value("gemini_pro_batch_fallback_enabled")) and not lora_model_id:
                             remaining = [
@@ -2031,6 +2081,13 @@ Rules:
             except Exception as e:
                 logger.error(f"씬 {i} 로컬 폴백 최종 실패: {e}")
 
+        if len(generated) != len(scenes_meta):
+            completed = {s["index"] for s in generated}
+            write_request_review(job_dir, job_id, [{"index": i, "status": "needs_review"}
+                for i in range(len(scenes_meta)) if i not in completed])
+            raise ImageRequestHeld("미완료 장면 존재; 이미지 단계 완료 처리 차단")
+        if (job_dir / "image_request_review.json").exists():
+            write_request_review(job_dir, job_id, [])
         _apply_fal_motion_safety_contract(generated)
         for scene in generated:
             scene["character_regions"] = _character_regions(scene)
@@ -2100,6 +2157,7 @@ Rules:
         import shutil
 
         prompt_cache_path = Path(job_dir) / "prompt_manifest.json"
+        request_run_id = uuid.uuid4().hex
         try:
             prompt_cache = json.loads(prompt_cache_path.read_text(encoding="utf-8"))
             if not isinstance(prompt_cache, dict):
@@ -2298,6 +2356,8 @@ Rules:
             index = ctx["index"]
             img_path = str(job_dir / f"scene_{index:03d}.png")
             raw_img_path = str(job_dir / f"scene_{index:03d}_raw.png")
+            ctx["_request_job_id"] = job_id
+            ctx["_request_raw_path"] = raw_img_path
             background_path = None
             image_profile = ctx["image_profile"]
             provider_options = ctx.get("v5_provider_options") or {}
@@ -2434,7 +2494,6 @@ Rules:
                             "generation_method": "resumed_existing", "quality_score": 90, "_fingerprint": scene_fingerprint}
 
             max_retries = max(3, min(int(runtime_config.value("gemini_retry_max")), 8))
-            base_backoff = max(0.5, float(runtime_config.value("gemini_pro_retry_base_seconds")))
             last_error = None
             for attempt in range(max_retries):
                 if is_job_stopped(job_id):
@@ -2631,6 +2690,7 @@ Rules:
                                 job_id=job_id,
                                 scene_key=f"image:{index}",
                                 model=str(image_profile.get("model") or "gemini-3-pro-image"),
+                                contract_fingerprint=scene_fingerprint, run_id=request_run_id,
                             ),
                             style_locked=bool(ctx["spec"]) or bool(provider_options.get("style_locked")),
                             suppress_legacy_style_lock=bool(provider_options.get("suppress_legacy_style_lock")),
@@ -2662,6 +2722,7 @@ Rules:
                                     job_id=job_id,
                                     scene_key=f"template_regen:{index}",
                                     model=str(image_profile.get("model") or "gemini-3-pro-image"),
+                                    contract_fingerprint=scene_fingerprint, run_id=request_run_id,
                                 ),
                                 style_locked=bool(ctx["spec"]),
                             )
@@ -2711,6 +2772,8 @@ Rules:
                     last_error = exc
                     if provider_request_started:
                         gemini_pressure.outcome(str(exc))
+                    if isinstance(exc, ImageRequestHeld):
+                        raise
                     if isinstance(exc, LocalEditPreservationError) and localized_edit:
                         # Gemini 국소 편집이 배경·팔레트·소품까지 재해석하면 그 후보는
                         # 폐기한다. 같은 실패 프레임을 다시 편집해 드리프트를 누적하지
@@ -2730,12 +2793,13 @@ Rules:
                             f"scene {index} 비전 검수 연결을 확인할 때까지 동일 이미지를 재생성하지 않음: {exc}"
                         ) from exc
                     if isinstance(exc, DeterministicSurfaceMissingError):
+                        _audit_scene_quality(ctx, img_path, outcome="rejected", category="surface_composition")
                         Path(retry_source_path).unlink(missing_ok=True)
                         full_regeneration_after_local_drift = True
                         contract_rejections += 1
                         retry_feedback = exc.review
                         if contract_rejections >= 3:
-                            raise NonRetryableImageGenerationError(
+                            raise ImageRequestHeld(
                                 f"scene {index} 안전한 결정론 수치 표면을 3개 후보에서 찾지 못함: {exc}"
                             ) from exc
                         logger.warning(
@@ -2764,7 +2828,7 @@ Rules:
                             }
                         )
                         if contract_rejections >= 3:
-                            raise NonRetryableImageGenerationError(
+                            raise ImageRequestHeld(
                                 f"scene {index} 장면별 표적 교정 2회 후에도 계약을 통과하지 못함: {exc}"
                             ) from exc
                         logger.warning(
@@ -2781,21 +2845,16 @@ Rules:
                         raise NonRetryableImageGenerationError(
                             f"scene {index} stopped: non-retryable ({decision.reason}): {exc}"
                         ) from exc
-                    provider_transient_failures += 1
-                    if attempt + 1 >= max_retries:
-                        break
-                    delay = min(60.0, base_backoff * (2 ** attempt) + random.uniform(0.0, 1.0))
-                    logger.warning(
-                        "Image scene %s attempt %s/%s failed; retrying in %.1fs: %s",
-                        index, attempt + 1, max_retries, delay, exc,
-                    )
-                    time.sleep(delay)
+                    # Gemini HTTP의 대기는 영속 요청 제어기만 소유한다.
+                    # 감사 계약 밖의 예외도 로컬 루프로 재전송하지 않는다.
+                    raise RuntimeError(f"감사되지 않은 공급자 오류: {type(exc).__name__}") from exc
             raise RuntimeError(f"scene {index} image generation failed after {max_retries} attempts: {last_error}")
 
         configured_workers = max(1, min(int(runtime_config.value("gemini_max_concurrency")), 32))
         max_workers = gemini_pressure.recommended_concurrency(configured_workers)
         logger.info("Parallel image generation enabled: job=%s scenes=%s concurrency=%s retries=%s", job_id, len(contexts), max_workers, runtime_config.value("gemini_retry_max"))
         results = []
+        held_scenes = []
         failures = []
         same_error_counts: Counter[str] = Counter()
         break_count = max(1, int(runtime_config.value("image_same_error_break_count")))
@@ -2850,6 +2909,12 @@ Rules:
                 except Exception as exc:
                     failures.append((index, str(exc)))
                     logger.error("Parallel image scene failed: job=%s scene=%s error=%s", job_id, index, exc)
+                    if isinstance(exc, ImageRequestHeld):
+                        held_scenes.append({"index": index, "status": exc.status,
+                                            "reason": exc.reason, "next_allowed_at": exc.next_allowed_at})
+                        write_request_review(job_dir, job_id, held_scenes)
+                        submit_next()
+                        continue
                     if isinstance(exc, (NonRetryableImageGenerationError, VisualQaUnavailableError)):
                         for pending in futures:
                             pending.cancel()
@@ -2875,34 +2940,13 @@ Rules:
                         ) from exc
                 submit_next()
 
-        # Do not discard hundreds of successful renders because a transient
-        # 503 exhausted one scene's local attempts.  Finish the first pass,
-        # then give only failed scenes one isolated recovery round.
-        if failures:
-            logger.warning("Image recovery round: retrying failed scenes only: %s", [index for index, _ in failures])
-            context_by_index = {ctx["index"]: ctx for ctx in contexts}
-            first_failures = failures
-            failures = []
-            recovery_workers = min(gemini_pressure.recommended_concurrency(max_workers), len(first_failures))
-            with ThreadPoolExecutor(max_workers=max(1, recovery_workers), thread_name_prefix="image-recovery") as pool:
-                futures = {pool.submit(render_one, context_by_index[index]): index for index, _ in first_failures}
-                for future in as_completed(futures):
-                    index = futures[future]
-                    try:
-                        result = future.result()
-                        persist_visual_qa_review(result)
-                        image_manifest[str(index)] = result.pop("_fingerprint", "")
-                        persist_manifest()
-                        # 복구 요청 역시 ProviderRequestAudit가 비용을 기록한다.
-                        results.append(result)
-                        logger.info("Image recovery scene complete: job=%s scene=%s", job_id, index)
-                    except Exception as exc:
-                        failures.append((index, str(exc)))
-                        logger.error("Image recovery scene failed: job=%s scene=%s error=%s", job_id, index, exc)
-
+        # 별도 복구 라운드는 카운터를 초기화하므로 제거한다. 명시적 재개도 같은 원장을 사용한다.
         if failures:
             failed_indices = ", ".join(str(index) for index, _ in sorted(failures))
             raise RuntimeError(f"Image generation incomplete; failed scenes: {failed_indices}")
+
+        if (job_dir / "image_request_review.json").exists():
+            write_request_review(job_dir, job_id, [])
 
         generated = []
         for result in sorted(results, key=lambda item: item["index"]):

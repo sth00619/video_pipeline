@@ -1,0 +1,126 @@
+{
+  "isolated_root": "/tmp/wo_request_verify.vm7YND/",
+  "all_match": true,
+  "files": [
+    {
+      "path": "backend/fastapi-workers/app/config.py",
+      "workspace_sha256": "b085dbd457061c7be1e6f6b2997e66ae561e318147de130c39fc9057c0003067",
+      "isolated_sha256": "b085dbd457061c7be1e6f6b2997e66ae561e318147de130c39fc9057c0003067",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/main.py",
+      "workspace_sha256": "3df10e35101e7c931021f05cade3901d6b00b3dfa1f42144045828f033686370",
+      "isolated_sha256": "3df10e35101e7c931021f05cade3901d6b00b3dfa1f42144045828f033686370",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/providers/real/image.py",
+      "workspace_sha256": "7cb6ecdce3642ed792c5e2eb740d3c1a1abca331543fc13c014c276776367da9",
+      "isolated_sha256": "7cb6ecdce3642ed792c5e2eb740d3c1a1abca331543fc13c014c276776367da9",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/runtime_config.py",
+      "workspace_sha256": "ad755cddcc0610ab39c3154a6193b4f9bfdef22887dbfbee811bed604982a0ca",
+      "isolated_sha256": "ad755cddcc0610ab39c3154a6193b4f9bfdef22887dbfbee811bed604982a0ca",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/utils/budget.py",
+      "workspace_sha256": "0cf88e43341884dd0a933a642650b6c879e087d3d015181e32f5b6de12fae17e",
+      "isolated_sha256": "0cf88e43341884dd0a933a642650b6c879e087d3d015181e32f5b6de12fae17e",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/utils/image_request_control.py",
+      "workspace_sha256": "0e6da4526ad297c25b8c290a13f32eb47cb927af098097dc1c168f2345bfae59",
+      "isolated_sha256": "0e6da4526ad297c25b8c290a13f32eb47cb927af098097dc1c168f2345bfae59",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/v5/providers/gemini_provider.py",
+      "workspace_sha256": "adc96a18940ec9eed2af48a7c026dace9291d1db11072fb01c5058b5e457ef85",
+      "isolated_sha256": "adc96a18940ec9eed2af48a7c026dace9291d1db11072fb01c5058b5e457ef85",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/v5/providers/router.py",
+      "workspace_sha256": "6e4c9f14f49d2a71aa62b6eb23a4d6c587d5843fa77e4447f77f435002098b04",
+      "isolated_sha256": "6e4c9f14f49d2a71aa62b6eb23a4d6c587d5843fa77e4447f77f435002098b04",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/workers/images_worker.py",
+      "workspace_sha256": "3a6bb7e23212ae4ec617f22076b9ce43faca34468eeaec0f4c28a62c8956f29e",
+      "isolated_sha256": "3a6bb7e23212ae4ec617f22076b9ce43faca34468eeaec0f4c28a62c8956f29e",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/app/workers/longform_worker.py",
+      "workspace_sha256": "84b43b9ce4eb5e8fa4a25d3c43dc8636a660bb6559daba9e955f9ed84153b618",
+      "isolated_sha256": "84b43b9ce4eb5e8fa4a25d3c43dc8636a660bb6559daba9e955f9ed84153b618",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/tests/conftest.py",
+      "workspace_sha256": "6d20924c9769f6774b91a53c88a717ed889504837e7ddd5a8bc44b854ca35346",
+      "isolated_sha256": "6d20924c9769f6774b91a53c88a717ed889504837e7ddd5a8bc44b854ca35346",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/tests/test_image_request_control.py",
+      "workspace_sha256": "88d4ef6cfbcc4d3fb9baf2dfe1db8d2b0363e66321daba59378293f316715ed4",
+      "isolated_sha256": "88d4ef6cfbcc4d3fb9baf2dfe1db8d2b0363e66321daba59378293f316715ed4",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/tests/test_image_worker_stability.py",
+      "workspace_sha256": "f41aed6db5a8f393d2be2425174fcdf887655a8cd2ef70fcae8710ee6b469226",
+      "isolated_sha256": "f41aed6db5a8f393d2be2425174fcdf887655a8cd2ef70fcae8710ee6b469226",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/tests/test_provider_request_audit.py",
+      "workspace_sha256": "d1b08ee428cfd3c36b7ce32364b582dc54872371eab15491e9ca1fd3df4a18a6",
+      "isolated_sha256": "d1b08ee428cfd3c36b7ce32364b582dc54872371eab15491e9ca1fd3df4a18a6",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/tests/test_v5_gemini_provider.py",
+      "workspace_sha256": "3808c1a75af639fc06eab953b069880fcea3210c68ccfc8a2f425b78ec2d944f",
+      "isolated_sha256": "3808c1a75af639fc06eab953b069880fcea3210c68ccfc8a2f425b78ec2d944f",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/scripts/audit_reference_cleanup.py",
+      "workspace_sha256": "3edd0ce71a7fc6ab45a92355b03e4fdbb69800ec3a3cf86b74eeb32e7519fbee",
+      "isolated_sha256": "3edd0ce71a7fc6ab45a92355b03e4fdbb69800ec3a3cf86b74eeb32e7519fbee",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/tests/test_reference_cleanup_audit.py",
+      "workspace_sha256": "1235a12b4d0bb2d30d2f967ed49353cfebfa59db729aa8ac1eb300a03db7a4ae",
+      "isolated_sha256": "1235a12b4d0bb2d30d2f967ed49353cfebfa59db729aa8ac1eb300a03db7a4ae",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/tests/test_gemini_usage_metadata.py",
+      "workspace_sha256": "b20d2eaf5140183377e32469cf9dc9a324fc0ed14f97e14bf142add29b5991b1",
+      "isolated_sha256": "b20d2eaf5140183377e32469cf9dc9a324fc0ed14f97e14bf142add29b5991b1",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/scripts/run_gemini_usage_pilot.py",
+      "workspace_sha256": "8f566cdc781ef0bf86af969f6022083841b2549b8cfb05f22672ab2fe206c5ae",
+      "isolated_sha256": "8f566cdc781ef0bf86af969f6022083841b2549b8cfb05f22672ab2fe206c5ae",
+      "match": true
+    },
+    {
+      "path": "backend/fastapi-workers/tests/test_gemini_usage_pilot.py",
+      "workspace_sha256": "bdc4db8794e4ffdeb84472a4134eca22baccdd768a126428c5ba0bba637e4a0d",
+      "isolated_sha256": "bdc4db8794e4ffdeb84472a4134eca22baccdd768a126428c5ba0bba637e4a0d",
+      "match": true
+    }
+  ]
+}

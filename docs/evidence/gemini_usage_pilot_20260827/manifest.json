@@ -1,0 +1,134 @@
+{
+  "status": "request_failed_no_retry",
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "image_size": "2K",
+  "pilot_id": "usage_metering_20260827_scene42",
+  "source_scene_index": 42,
+  "source_sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6",
+  "narration": "첫째, 이익 전망치가 더 내려가는지인 겁니다. 애널리스트들의 전망치 흐름을 보세요.",
+  "narration_sha256": "097133103703bb30a10332944b170b272d37a8c9df01678729f33918e3892385",
+  "source_prompt": "The 2D gold coin mascot character (Goldie), A dimly lit data lab with glowing analyst forecast screens lining the curved walls, each monitor showing sharply descending profit estimate arrows trending lower and lower. Goldie, wearing a crisp white lab coat and rounded safety goggles pushed up on its head, stands in the foreground clutching a clipboard, eyes wide and troubled as the falling forecast trend lines cascade visibly behind it. Labels reading \"ANALYST FORECAST\" float above each plunging monitor panel.\n\noriginal 2D Korean finance comic, bold ink outlines, cel shading, single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people",
+  "prompt": "The 2D gold coin mascot character (Goldie), A dimly lit data lab with glowing analyst forecast screens lining the curved walls, each monitor showing sharply descending profit estimate arrows trending lower and lower. Goldie, wearing a crisp white lab coat and rounded safety goggles pushed up on its head, stands in the foreground clutching a clipboard, eyes wide and troubled as the falling forecast trend lines cascade visibly behind it. Labels with an unlettered scene-integrated visual surface with non-linguistic shapes float above each plunging monitor panel. original 2D Korean finance comic, bold ink outlines, cel shading, single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people FINAL SCENE-LOCAL TEXT CONTRACT: this scene has no approved generated string. Do not add readable Korean or English, letters, digits, pseudo-text, logos, watermark, fake tickers, or invented labels. Keep boards, monitors, packages, documents, and gauges visually rich with material, diagrams, color blocks, and non-linguistic shapes; do not remove the props or simplify the environment. Books, documents, cheques, certificates, newspapers, and labels must use clearly non-linguistic blank lines or graphic blocks, never microprint or serial numbers. FINAL CHARACTER QUALITY BOUNDARY: keep the figure recognizably in the same round gold-coin mascot design family and 2D drawing language as the channel references. Use the approved scenes as a range, not as one mandatory face: expression, eye construction and openness, pupil or iris detail, brow angle, mouth shape, blush, costume, headwear, pose, and scale may change with the scene. Reject only a genuinely different character species, incompatible face language, or an accidental featureless emoji. Do not freeze one reference face. Expression, eye openness, and scene-specific acting remain free inside that family range. Use natural connected anatomy with no extra, duplicated, detached, or fused limb or hand. Resolve the pose as one physically coherent action. The scene-specific costume direction is: white lab coat and data goggles. Do not replace it with a generic finance-presenter uniform. Do not replace it with an unrelated police or law-enforcement costume. ",
+  "prompt_sha256_before_provider_wrapper": "a79342d8e477490ec921ec2a5b0f78ee6cce14b4f1df9ef30cb4fc6c16870e96",
+  "text_contract": {
+    "version": "scene-local-text-contract-v5-approved-scene-surface",
+    "approved_texts": [],
+    "generated_texts": [],
+    "deterministic_texts": [],
+    "surface_plan": [],
+    "surface_count": 0,
+    "placement_mode": "contextual_supporting",
+    "hierarchy_policy": "script_objects_and_action_above_supporting_text",
+    "surface_material_policy": "integrated_opaque_scene_surface",
+    "detached_translucent_card_allowed": false,
+    "bubble_policy": "unplanned",
+    "bubble_allowed": false,
+    "bubble_text": "",
+    "sources": [
+      "scene.screen_texts",
+      "scene.screen_text_plan"
+    ]
+  },
+  "references": [
+    {
+      "name": "channel_character_face_range_v1.png",
+      "sha256": "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45"
+    },
+    {
+      "name": "channel_style_job52_risk_map.png",
+      "sha256": "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337"
+    },
+    {
+      "name": "channel_style_job52_market_flow.png",
+      "sha256": "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+    }
+  ],
+  "pricing_config_sha256": "f564cd77d5985e472f28eb73598c28f3972fb31948ab460ae14e565749217bf5",
+  "output_only_estimate_usd": "0.134",
+  "usd_krw": "1400",
+  "authorized_budget_krw": 1600,
+  "reservation_basis": "entire_authorized_budget_not_image_unit_price",
+  "scope": "단일 요청 사용량 실측. 이미지 텍스트/화풍 최종 승인이나 전체 영상 검증 아님.",
+  "error_type": "ImageRequestHeld",
+  "request_summary": {
+    "attempt_count": 1,
+    "entries": [
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "image:42",
+        "attempt": 1,
+        "attempt_id": "8729ad2c69e949f8b30887ff9bc202f8",
+        "estimated_usd": 1.1428571428571428,
+        "amount_krw": 0,
+        "reserved_amount_krw": 1600,
+        "cost_status": "excluded_from_success_estimate_billing_unverified",
+        "status": "http_503",
+        "reserved_at": "2026-08-26T16:09:09.273345+00:00",
+        "run_id": "usage_metering_20260827_scene42",
+        "run_id_source": "caller",
+        "request_control": {
+          "scene_attempt": 1,
+          "failure_n": 1,
+          "scene": "scene:42",
+          "project_scope": "default",
+          "next_allowed_at": 1787760578.213986,
+          "status": "needs_review"
+        },
+        "request_evidence": {
+          "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent",
+          "model": "gemini-3-pro-image",
+          "service_tier": "standard",
+          "payload_hash_basis": "canonical_json_utf8_sorted_keys",
+          "payload_sha256": "f8ea5d570c82016d2feb0bb571b289f4e7c7367d56f7d4c8e10a76b9631ed013",
+          "prompt_sha256": "2fa239aed28238683d41bc1ea29505f4ad34e14e346add8573a02f0f4fb6567e",
+          "references": [
+            {
+              "sha256": "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+              "byte_count": 1702564,
+              "mime_type": "image/png"
+            },
+            {
+              "sha256": "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+              "byte_count": 2706220,
+              "mime_type": "image/png"
+            },
+            {
+              "sha256": "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74",
+              "byte_count": 2926728,
+              "mime_type": "image/png"
+            }
+          ]
+        },
+        "contract_fingerprint": "4fc255095b4cd0bedfd5c1f0a8ce442c26d660e1fb475f7c4d9402152396fa6c",
+        "contract_fingerprint_source": "caller",
+        "request_metadata": {
+          "job_id": "usage_metering_20260827_scene42",
+          "run_id": "usage_metering_20260827_scene42",
+          "contract_fingerprint": "4fc255095b4cd0bedfd5c1f0a8ce442c26d660e1fb475f7c4d9402152396fa6c",
+          "reservation_basis": "entire_authorized_budget_not_image_unit_price"
+        },
+        "completed_at": "2026-08-26T16:09:21.939534+00:00",
+        "duration_seconds": 12.660527422034647,
+        "error_code": "UNAVAILABLE",
+        "image_sha256": null,
+        "usage_metadata_status": "absent",
+        "usage_metadata": null,
+        "usage_metadata_source": "generateContent.response.usageMetadata",
+        "usage_metadata_sha256": null,
+        "status_code": 503
+      }
+    ],
+    "qa_events": [],
+    "failure_counts": {
+      "http": 1,
+      "network": 0,
+      "invalid_image": 0,
+      "qa": 0,
+      "surface_composition": 0
+    }
+  },
+  "finished_at": "2026-08-26T16:09:21.944181+00:00"
+}

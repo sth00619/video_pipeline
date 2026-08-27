@@ -144,7 +144,7 @@ class ImageProviderRouter:
         숨겨지지 않는다. 호출자는 요청 단위 감사 원장도 씬별로 전달해야 한다.
         """
         result = self.render(spec, ledger)
-        card = QualityGate.score(result.image_bytes, spec.scene)
+        card = self._score_audited(result, spec)
         action = QualityGate.next_action(card, generation_attempt=0, retry_budget_available=retry_budget_available)
         if action == "pass":
             return result, card
@@ -155,11 +155,26 @@ class ImageProviderRouter:
             )
         if action == "retry_once":
             retried = self.render(spec, ledger)
-            retry_card = QualityGate.score(retried.image_bytes, spec.scene)
+            retry_card = self._score_audited(retried, spec)
             if QualityGate.next_action(retry_card, generation_attempt=1, retry_budget_available=False) == "pass":
                 return retried, retry_card
             raise CutawayRequired("QualityGate 재생성 1회 후에도 미달: V4 cutaway로 명시적 강등")
         raise CutawayRequired("QualityGate 미달이며 재생성 예산이 없음: V4 cutaway로 명시적 강등")
+
+    @staticmethod
+    def _score_audited(result: ImageResult, spec: RenderSpec) -> ScoreCard:
+        """V5 QA도 HTTP 요청과 원본 이미지 hash로 연결한다."""
+        audit = spec.request_audit
+        try:
+            card = QualityGate.score(result.image_bytes, spec.scene)
+        except Exception:
+            if audit is not None:
+                audit.record_quality_bytes(result.image_bytes, outcome="unavailable", category="v5_qa")
+            raise
+        if audit is not None:
+            action = QualityGate.next_action(card, generation_attempt=0, retry_budget_available=False)
+            audit.record_quality_bytes(result.image_bytes, outcome="passed" if action == "pass" else "rejected", category="v5_qa")
+        return card
 
     def _candidates(self, tier: RenderTier) -> tuple[tuple[ProviderAdapter, str], ...]:
         if tier == "draft":

@@ -263,3 +263,37 @@ def test_runtime_contract_uses_same_semantic_routing():
     assert result["surface_caption"]["deterministic_texts"] == ["영업이익", "KOSPI"]
     assert result["source_visual_text_policy"] == "strict_textless"
     assert result["visual_text_policy"] == "deterministic_surface_text"
+
+
+def test_multiple_texts_share_one_surface_only_with_explicit_non_overlapping_regions(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.services.semantic_surface_text.attest_scene_surfaces", lambda *args: None)
+    scene, path = bound_scene(tmp_path, ("삼성전자", "SK하이닉스"))
+    scene["surface_bindings"] = {"left": scene["surface_bindings"]["left"]}
+    scene["screen_text_plan"] = [
+        {"text": "삼성전자", "surface": "left", "purpose": "information",
+         "region": [.05, .10, .90, .34]},
+        {"text": "SK하이닉스", "surface": "left", "purpose": "information",
+         "region": [.05, .56, .90, .34]},
+    ]
+    mock_plan(monkeypatch, scene["screen_texts"])
+    render_semantic_surface_text(scene, str(path))
+    cells = validate_manifest(scene, (1280, 720))
+    assert len(cells) == 2
+    assert cells[0]["anchor_bbox"] != cells[1]["anchor_bbox"]
+    assert cells[0]["bbox"][3] < cells[1]["bbox"][1]
+
+
+def test_numeric_plan_value_requires_exact_scene_local_verified_fact(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.services.semantic_surface_text.attest_scene_surfaces", lambda *args: None)
+    scene, path = bound_scene(tmp_path, ("4배", "현재 전망"))
+    scene["screen_text_plan"][0].update(source_ref="facts[0]")
+    scene["verified_facts"] = [{"figure": "PER 14배", "fact": "현재 장면은 PER 14배다."}]
+    original = path.read_bytes()
+    with pytest.raises(ValueError, match="검증 사실"):
+        render_semantic_surface_text(scene, str(path))
+    assert path.read_bytes() == original
+
+    scene["verified_facts"] = [{"figure": "PER 4배", "fact": "현재 장면은 PER 4배다."}]
+    mock_plan(monkeypatch, scene["screen_texts"])
+    render_semantic_surface_text(scene, str(path))
+    assert scene["final_frame_text_integrity"]["passed"] is True

@@ -1,5 +1,9 @@
 import os
 
+# 모든 이미지 워커가 같은 영속 볼륨과 프로젝트 식별자를 사용해야 한다.
+GEMINI_REQUEST_STATE_PATH = os.getenv("GEMINI_REQUEST_STATE_PATH", "/app/data/provider_requests/gemini.sqlite3")
+GEMINI_PROJECT_SCOPE = os.getenv("GEMINI_PROJECT_SCOPE", "default")
+
 APP_MODE = os.getenv("APP_MODE", "local")
 
 # S3/MinIO

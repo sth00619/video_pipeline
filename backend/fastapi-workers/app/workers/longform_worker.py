@@ -121,6 +121,9 @@ class LongformWorker:
     def assemble(self, tts_meta_json: str, scenes_meta_json: str,
                  gifs_meta_json: str, job_id: int = 0) -> dict:
 
+        from app.utils.image_request_control import assert_request_review_cleared
+        assert_request_review_cleared(job_id)
+
         stage_t0 = time.time()
 
         tts_meta = json.loads(tts_meta_json)

@@ -256,6 +256,9 @@ class GeminiProvider:
                     style_locked=True,
                 )
             except Exception as exc:
+                from app.utils.image_request_control import ImageRequestHeld
+                if isinstance(exc, ImageRequestHeld):
+                    raise
                 detail = str(exc).strip().replace("\n", " ")[:500]
                 raise GeminiProviderError(
                     f"Gemini Pro 이미지 생성 실패: {type(exc).__name__}: {detail or '상세 메시지 없음'}"
@@ -264,6 +267,12 @@ class GeminiProvider:
                 raise GeminiProviderError("Gemini Pro가 이미지 파일을 반환하지 않았습니다.")
             image_bytes = output_path.read_bytes()
 
+        request_lineage = {}
+        if request_audit is not None:
+            for entry in reversed(request_audit.summary()["entries"]):
+                if entry.get("image_sha256") == hashlib.sha256(image_bytes).hexdigest():
+                    request_lineage = {key: entry.get(key) for key in ("attempt_id", "request_id", "image_sha256", "run_id")}
+                    break
         return ImageResult(
             image_bytes=image_bytes,
             model=model.value,
@@ -271,9 +280,10 @@ class GeminiProvider:
             height=height,
             seed=seed,
             actual_cost_usd=None,
-            request_id="gemini-billing-not-returned",
+            request_id=request_lineage.get("request_id") or "gemini-request-id-not-returned",
             meta={
                 "cost_status": "unverified_until_console_reconciliation",
                 "reference_image_count": len(reference_image_paths or []),
+                "request_lineage": request_lineage,
             },
         )

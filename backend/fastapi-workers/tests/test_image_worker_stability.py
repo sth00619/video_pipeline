@@ -118,14 +118,15 @@ class ImageWorkerStabilityTests(unittest.TestCase):
         new_key = _image_prompt_cache_key(**common, screen_texts=["삼성전자", "110조 원"])
         self.assertEqual(old_key, new_key)
 
-    def test_latest_screen_text_contract_is_combined_at_render_boundary(self):
+    def test_financial_value_is_withheld_from_model_prompt_at_render_boundary(self):
         scene = {"screen_texts": ["삼성전자", "110조 원"]}
         prompt = _bounded_text_generation_prompt(
             "A semiconductor ceremony with one blank board reserved for post-production values.",
             audit_target=scene,
         )
         self.assertIn("삼성전자", prompt)
-        self.assertIn("110조 원", prompt)
+        self.assertNotIn("110조 원", prompt)
+        self.assertIn("withheld deterministic strings or values", prompt)
         self.assertNotIn("blank", prompt.lower())
 
     def test_single_worker_circuit_breaker_does_not_start_the_next_scene(self):
@@ -197,7 +198,7 @@ class ImageWorkerStabilityTests(unittest.TestCase):
                             job_id=9001,
                         )
 
-        self.assertEqual(provider.sections, ["scene_0", "scene_0", "scene_0"])
+        self.assertEqual(provider.sections, ["scene_0"])
 
 
 if __name__ == "__main__":

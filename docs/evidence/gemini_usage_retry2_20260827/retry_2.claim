@@ -1,0 +1,11 @@
+{
+  "approved_retry_of": "8729ad2c69e949f8b30887ff9bc202f8",
+  "approved_retry_prior_count": 1,
+  "approved_retry_failure_n": 1,
+  "authorization_scope": "동일 요청 추가 1회; 결과와 무관하게 자동 재시도 금지",
+  "original_pilot_budget_krw": 1600,
+  "authorized_combined_reservation_cap_krw": 3200,
+  "additional_reservation_krw": 1600,
+  "cost_interpretation": "보수적 예약 상한; Gemini 단가/예상 비용/확정 지출 아님",
+  "at": "2026-08-26T16:33:14.450118+00:00"
+}

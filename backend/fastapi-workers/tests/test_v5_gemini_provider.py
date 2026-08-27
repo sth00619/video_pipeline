@@ -40,7 +40,10 @@ def test_p1_comparison_forces_one_provider_attempt(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(image_module, "NanaBananaProvider", FakeNanaBananaProvider)
     reference = tmp_path / "reference.png"
     reference.write_bytes(b"reference")
-    audit = object()
+    class Audit:
+        def summary(self):
+            return {"entries": []}
+    audit = Audit()
 
     result = GeminiProvider(api_key="test-key").generate(
         "prompt", model=GeminiModel.PRO, reference_image_paths=[str(reference)], request_audit=audit,

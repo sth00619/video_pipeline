@@ -1,0 +1,1168 @@
+{
+  "scope": "WO-IMG-01 오프라인 준비 상태 감사. 유료 실행 승인/완료 선언 아님",
+  "source_sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6",
+  "source_bytes_unchanged": true,
+  "source_object_unchanged": true,
+  "source_count": 48,
+  "all_narrations_unchanged": true,
+  "empty_derived_text_scene_indices": [
+    2,
+    3,
+    9,
+    10,
+    12,
+    14,
+    17,
+    24,
+    26,
+    27,
+    28,
+    30,
+    32,
+    34,
+    35,
+    36,
+    38,
+    40,
+    41,
+    42,
+    47
+  ],
+  "scenes_with_generated_strings": 19,
+  "scenes_with_deterministic_strings": 14,
+  "scenes_with_surface_plan": 0,
+  "routing_probes": [
+    {
+      "text": "삼성전자",
+      "category": "회사명",
+      "observed_generated": [
+        "삼성전자"
+      ],
+      "observed_deterministic": [],
+      "wo_img01_expected_route": "deterministic",
+      "matches_wo_img01": false
+    },
+    {
+      "text": "KOSPI",
+      "category": "지수명",
+      "observed_generated": [
+        "KOSPI"
+      ],
+      "observed_deterministic": [],
+      "wo_img01_expected_route": "deterministic",
+      "matches_wo_img01": false
+    },
+    {
+      "text": "현재 전망",
+      "category": "정보성 라벨",
+      "observed_generated": [
+        "현재 전망"
+      ],
+      "observed_deterministic": [],
+      "wo_img01_expected_route": "deterministic",
+      "matches_wo_img01": false
+    },
+    {
+      "text": "143조 원",
+      "category": "수치",
+      "observed_generated": [],
+      "observed_deterministic": [
+        "143조 원"
+      ],
+      "wo_img01_expected_route": "deterministic",
+      "matches_wo_img01": true
+    },
+    {
+      "text": "와!",
+      "category": "실측 전 장식 문구",
+      "observed_generated": [
+        "와!"
+      ],
+      "observed_deterministic": [],
+      "wo_img01_expected_route": "deterministic",
+      "matches_wo_img01": false
+    }
+  ],
+  "raw_ocr_probes": [
+    {
+      "approved": "삼성전자",
+      "recognized_fixture": [
+        "삼성전자오탈"
+      ],
+      "observed": {
+        "version": "scene-local-text-contract-v5-approved-scene-surface",
+        "approved_texts": [
+          "삼성전자"
+        ],
+        "generated_texts": [
+          "삼성전자"
+        ],
+        "deterministic_texts": [],
+        "surface_plan": [],
+        "surface_count": 0,
+        "placement_mode": "contextual_supporting",
+        "hierarchy_policy": "script_objects_and_action_above_supporting_text",
+        "surface_material_policy": "integrated_opaque_scene_surface",
+        "detached_translucent_card_allowed": false,
+        "bubble_policy": "unplanned",
+        "bubble_allowed": false,
+        "bubble_text": "",
+        "sources": [
+          "scene.screen_texts",
+          "scene.screen_text_plan"
+        ],
+        "detected_texts": [
+          "삼성전자오탈"
+        ],
+        "narration_grounded_texts": [],
+        "review_required_nonnumeric_texts": [],
+        "review_required_numeric_texts": [],
+        "occurrence_counts": {
+          "삼성전자": 0
+        },
+        "duplicate_texts": [],
+        "unexpected_texts": [],
+        "passed": true
+      },
+      "scope": "OCR 중간 함수만 호출; 후속 멀티모달 QA의 최종 승인 여부는 검증하지 않음"
+    },
+    {
+      "approved": "삼성전자",
+      "recognized_fixture": [
+        "SK 하이느"
+      ],
+      "observed": {
+        "version": "scene-local-text-contract-v5-approved-scene-surface",
+        "approved_texts": [
+          "삼성전자"
+        ],
+        "generated_texts": [
+          "삼성전자"
+        ],
+        "deterministic_texts": [],
+        "surface_plan": [],
+        "surface_count": 0,
+        "placement_mode": "contextual_supporting",
+        "hierarchy_policy": "script_objects_and_action_above_supporting_text",
+        "surface_material_policy": "integrated_opaque_scene_surface",
+        "detached_translucent_card_allowed": false,
+        "bubble_policy": "unplanned",
+        "bubble_allowed": false,
+        "bubble_text": "",
+        "sources": [
+          "scene.screen_texts",
+          "scene.screen_text_plan"
+        ],
+        "detected_texts": [
+          "SK 하이느"
+        ],
+        "narration_grounded_texts": [],
+        "review_required_nonnumeric_texts": [
+          "SK 하이느"
+        ],
+        "review_required_numeric_texts": [],
+        "occurrence_counts": {
+          "삼성전자": 0
+        },
+        "duplicate_texts": [],
+        "unexpected_texts": [],
+        "passed": true
+      },
+      "scope": "OCR 중간 함수만 호출; 후속 멀티모달 QA의 최종 승인 여부는 검증하지 않음"
+    },
+    {
+      "approved": "삼성전자",
+      "recognized_fixture": [],
+      "observed": {
+        "version": "scene-local-text-contract-v5-approved-scene-surface",
+        "approved_texts": [
+          "삼성전자"
+        ],
+        "generated_texts": [
+          "삼성전자"
+        ],
+        "deterministic_texts": [],
+        "surface_plan": [],
+        "surface_count": 0,
+        "placement_mode": "contextual_supporting",
+        "hierarchy_policy": "script_objects_and_action_above_supporting_text",
+        "surface_material_policy": "integrated_opaque_scene_surface",
+        "detached_translucent_card_allowed": false,
+        "bubble_policy": "unplanned",
+        "bubble_allowed": false,
+        "bubble_text": "",
+        "sources": [
+          "scene.screen_texts",
+          "scene.screen_text_plan"
+        ],
+        "detected_texts": [],
+        "narration_grounded_texts": [],
+        "review_required_nonnumeric_texts": [],
+        "review_required_numeric_texts": [],
+        "occurrence_counts": {
+          "삼성전자": 0
+        },
+        "duplicate_texts": [],
+        "unexpected_texts": [],
+        "passed": true
+      },
+      "scope": "OCR 중간 함수만 호출; 후속 멀티모달 QA의 최종 승인 여부는 검증하지 않음"
+    }
+  ],
+  "final_ocr_probes": [
+    {
+      "expected": "4배",
+      "recognized_fixture": "14배",
+      "expected_passed": false,
+      "observed": {
+        "status": "completed",
+        "passed": true,
+        "ocr_passed": true,
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "metadata_missing"
+        },
+        "expected": [
+          "4배"
+        ],
+        "recognized": [
+          "14배"
+        ],
+        "missing_or_altered": [],
+        "ocr_missing_or_altered": []
+      },
+      "matches_expected": false
+    },
+    {
+      "expected": "영업이익",
+      "recognized_fixture": "비영업이익",
+      "expected_passed": false,
+      "observed": {
+        "status": "completed",
+        "passed": true,
+        "ocr_passed": true,
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "metadata_missing"
+        },
+        "expected": [
+          "영업이익"
+        ],
+        "recognized": [
+          "비영업이익"
+        ],
+        "missing_or_altered": [],
+        "ocr_missing_or_altered": []
+      },
+      "matches_expected": false
+    },
+    {
+      "expected": "PER",
+      "recognized_fixture": "per",
+      "expected_passed": false,
+      "observed": {
+        "status": "completed",
+        "passed": false,
+        "ocr_passed": false,
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "metadata_missing"
+        },
+        "expected": [
+          "PER"
+        ],
+        "recognized": [
+          "per"
+        ],
+        "missing_or_altered": [
+          "PER"
+        ],
+        "ocr_missing_or_altered": [
+          "PER"
+        ]
+      },
+      "matches_expected": true
+    },
+    {
+      "expected": "현재 전망",
+      "recognized_fixture": "현력 토공",
+      "expected_passed": false,
+      "observed": {
+        "status": "completed",
+        "passed": false,
+        "ocr_passed": false,
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "metadata_missing"
+        },
+        "expected": [
+          "현재 전망"
+        ],
+        "recognized": [
+          "현력 토공"
+        ],
+        "missing_or_altered": [
+          "현재 전망"
+        ],
+        "ocr_missing_or_altered": [
+          "현재 전망"
+        ]
+      },
+      "matches_expected": true
+    },
+    {
+      "expected": "143조 원",
+      "recognized_fixture": "143조\n원",
+      "expected_passed": true,
+      "observed": {
+        "status": "completed",
+        "passed": true,
+        "ocr_passed": true,
+        "deterministic_provenance": {
+          "passed": false,
+          "reason": "metadata_missing"
+        },
+        "expected": [
+          "143조 원"
+        ],
+        "recognized": [
+          "143조\n원"
+        ],
+        "missing_or_altered": [],
+        "ocr_missing_or_altered": []
+      },
+      "matches_expected": true
+    }
+  ],
+  "source_files_sha256": {
+    "app/utils/image_text_contract.py": "1ef07a1266f19518f165ae462d1f471adfcc64988d2c435b544d232f642359dc",
+    "app/utils/scene_screen_text_planner.py": "f35375669f235be764e40ec87a4c09f68ef4fc216310587d01dd01a6d9bfcb11",
+    "app/services/final_frame_text_integrity.py": "06f733c151a59714abe64c15e049df995a95c3cf26fb3c8aee006e2a71801945",
+    "app/v5/scene/runtime_contract.py": "8c536af6c0bd968648b5c8a0929c01f357b88a703ed44d3e2136f8607ebcb78e",
+    "app/workers/images_worker.py": "3a6bb7e23212ae4ec617f22076b9ce43faca34468eeaec0f4c28a62c8956f29e",
+    "app/utils/visual_qa.py": "1f7e604bed97972ffa5d64cd571e5c580443ec0568872b8dc01ac4e15532a71d",
+    "app/postprocess/text_overlay.py": "071351c7ad1e3f1ae7a5a002213e8495f1976b1ceffa281e6f1203a699b88b91"
+  },
+  "scenes": [
+    {
+      "source_scene_index": 0,
+      "narration": "PER 4배, 들어보셨나요? 삼성전자와 SK하이닉스 얘기입니다.",
+      "narration_sha256_before": "643bb19ec20e8b8f3527f0a22331133aca4b441d04b4c0bc52f492ae2733aa9c",
+      "narration_sha256_after": "643bb19ec20e8b8f3527f0a22331133aca4b441d04b4c0bc52f492ae2733aa9c",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "e7dd253beb2659447a3c649e224d1bae76f7d4d88d0a7020c8398c1469bba5f5",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "삼성전자",
+        "SK하이닉스",
+        "4배"
+      ],
+      "current_generated_texts": [
+        "삼성전자",
+        "SK하이닉스"
+      ],
+      "current_deterministic_texts": [
+        "4배"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 1,
+      "narration": "주가를 순이익으로 나누면 겨우 4배입니다. 숫자만 보면 역사적 저점처럼 보이죠.",
+      "narration_sha256_before": "df0dfcc50f8243977ef63569c2182b663b576b5cb80e232895f48581b7c3a72f",
+      "narration_sha256_after": "df0dfcc50f8243977ef63569c2182b663b576b5cb80e232895f48581b7c3a72f",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "6db16b2e35c2c587f2ee512ac43bd970f4a5e19661f8a1e51d7b13f8a1ca68bc",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "4배"
+      ],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [
+        "4배"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 2,
+      "narration": "그런데 전문가들은 경고합니다. 싸 보인다고 샀다가는 위험하다고요.",
+      "narration_sha256_before": "75d5e64b9cf072c28280d7e7e26803ed8a21e4151dc2d811fdbec86bd95c0d20",
+      "narration_sha256_after": "75d5e64b9cf072c28280d7e7e26803ed8a21e4151dc2d811fdbec86bd95c0d20",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "a8329b067e042fccc6979bef799466b7341ad769bc169bcb0d0bf6d0b502d74e",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 3,
+      "narration": "왜 그런 경고가 나오는 걸까요? 상반기 실적은 실제로 좋았습니다.",
+      "narration_sha256_before": "eda9a788c5793a50a8a5efaef4b3852af14573022c64097381f960e6f928bf25",
+      "narration_sha256_after": "eda9a788c5793a50a8a5efaef4b3852af14573022c64097381f960e6f928bf25",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "6122216d44fbcea429b7955466bdb0c4bdf0458d930d6c0ae77a1816bd6ed913",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 4,
+      "narration": "두 회사 모두 현금을 크게 늘렸습니다. 코스피 전체 순이익도 크게 늘었죠.",
+      "narration_sha256_before": "32449ad2d489fba1b38a85b3cae99abf65d865ac3d802336e0f9513c0727e99d",
+      "narration_sha256_after": "32449ad2d489fba1b38a85b3cae99abf65d865ac3d802336e0f9513c0727e99d",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "ba07743caf9012016928e2836d2349d51331233a7b6f4219bb34a01689790e4a",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "코스피"
+      ],
+      "current_generated_texts": [
+        "코스피"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 5,
+      "narration": "전년 대비 4배 수준으로 증가했습니다. 그 중심에 반도체가 있었습니다.",
+      "narration_sha256_before": "c672f655cc30e4f9f79436690771e37c2ea5f558d93a6019b7140df73d9c2347",
+      "narration_sha256_after": "c672f655cc30e4f9f79436690771e37c2ea5f558d93a6019b7140df73d9c2347",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "f3286bbdab13741acdb84537552b1fc12a5bd6eeb4f207119b2181fee0e03002",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "반도체",
+        "4배"
+      ],
+      "current_generated_texts": [
+        "반도체"
+      ],
+      "current_deterministic_texts": [
+        "4배"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 6,
+      "narration": "상반기 코스피 영업이익은 역대 최대였죠. 놀라운 건 두 기업을 빼도 마찬가지입니다.",
+      "narration_sha256_before": "944d819396ac0bd1e49dc1dbb3cde36738fa9fb7353cf70d9a7f4a3253a6b872",
+      "narration_sha256_after": "944d819396ac0bd1e49dc1dbb3cde36738fa9fb7353cf70d9a7f4a3253a6b872",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "f33ef346c747d073ffae94f027654c9d21a5db0e1b1963f629d7725b902d1537",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "코스피"
+      ],
+      "current_generated_texts": [
+        "코스피"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 7,
+      "narration": "삼성전자와 SK하이닉스를 제외해도요. 코스피 영업이익이 143조 원에 달했죠.",
+      "narration_sha256_before": "143e208a9e08b8b0cd335b3084dd9bf88af17b6ac68576af0ae206ed147a6d23",
+      "narration_sha256_after": "143e208a9e08b8b0cd335b3084dd9bf88af17b6ac68576af0ae206ed147a6d23",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "2055521c78708bc0408785670690ae70f25956eccf69d2d61724ab6835ce582b",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "삼성전자",
+        "SK하이닉스",
+        "코스피",
+        "143조 원"
+      ],
+      "current_generated_texts": [
+        "삼성전자",
+        "SK하이닉스",
+        "코스피"
+      ],
+      "current_deterministic_texts": [
+        "143조 원"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 8,
+      "narration": "코스피 전반이 함께 살아난 셈이죠. 그런데 분위기가 달라지고 있습니다.",
+      "narration_sha256_before": "2e87933f0ab99ee5e112a8f17ff93086cb322c0c56af06ed8c9e749ce0db3c13",
+      "narration_sha256_after": "2e87933f0ab99ee5e112a8f17ff93086cb322c0c56af06ed8c9e749ce0db3c13",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "97d87e62e39ed60e35d39eb751d45070f44d26758e0b89a34b14fb37540f0695",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "코스피"
+      ],
+      "current_generated_texts": [
+        "코스피"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 9,
+      "narration": "하반기 전망이 조용히 내려가고 있죠. 실적 전망치 하향 조정 분석이 나옵니다.",
+      "narration_sha256_before": "09f304f242476ff6f7e88fe2792929c4cb8cda8b4b071c393adb7025d8c8c1ea",
+      "narration_sha256_after": "09f304f242476ff6f7e88fe2792929c4cb8cda8b4b071c393adb7025d8c8c1ea",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "dbebf3d3159b70e829365c444ef2e5485ba21b8e0c75bc6aba4663063e8c9c33",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 10,
+      "narration": "지금 주가가 싸 보이는 이유입니다. 앞으로의 이익이 줄어든다면 어떨까요?",
+      "narration_sha256_before": "ae5335b826466970910251838b25b8c325a6fba0d4525b23fadc4358a08a2c22",
+      "narration_sha256_after": "ae5335b826466970910251838b25b8c325a6fba0d4525b23fadc4358a08a2c22",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "a81ca3ea2dc1043933d1e34950e947ff0f4d772810549a4f90290240951c90d3",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 11,
+      "narration": "PER 4배라는 숫자도 다시 봐야 합니다. 과거 이익 기준이 아니라는 뜻이죠.",
+      "narration_sha256_before": "2bbfe367003cfc1445bd263c3a68f97cbfb3de0c2892d9f4fe29e0da0dc2d3fc",
+      "narration_sha256_after": "2bbfe367003cfc1445bd263c3a68f97cbfb3de0c2892d9f4fe29e0da0dc2d3fc",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "83b8adb87bb3ab1fc2d20e3290df2d29c28eaf2bcad3433a26b3f21746f819a8",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "4배"
+      ],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [
+        "4배"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 12,
+      "narration": "급락 국면에서 수급도 엇갈렸습니다. 개인투자자들은 하락 때마다 담았습니다.",
+      "narration_sha256_before": "7090cce8c7cf6c63ff4f6727b60ae5db894e0f08c982cb295c95a6bba37599a6",
+      "narration_sha256_after": "7090cce8c7cf6c63ff4f6727b60ae5db894e0f08c982cb295c95a6bba37599a6",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "75855111052864473537812e2ec62f0895d4f4f82d3c566a32c54a1600e4b996",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 13,
+      "narration": "삼성전자와 SK하이닉스를 사들인 거죠. 반면 외국인은 매도로 돌아섰습니다.",
+      "narration_sha256_before": "0a2b60a2e633db58b0361a2352fcd983a28728a71ff3a263e8c386751c5b0b49",
+      "narration_sha256_after": "0a2b60a2e633db58b0361a2352fcd983a28728a71ff3a263e8c386751c5b0b49",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "b820597f15de462f93b396390c9320edf13d7805b4a6a326d0e9e3d05ab2d36c",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "삼성전자",
+        "SK하이닉스",
+        "외국인"
+      ],
+      "current_generated_texts": [
+        "삼성전자",
+        "SK하이닉스",
+        "외국인"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 14,
+      "narration": "같은 주가를 보고 반대로 움직인 겁니다. 누가 옳은지는 지금 알 수 없죠.",
+      "narration_sha256_before": "2dd256cf4ff000b543a399f3920242c942f0342f0ad3e7950ad3f4848c51a6ff",
+      "narration_sha256_after": "2dd256cf4ff000b543a399f3920242c942f0342f0ad3e7950ad3f4848c51a6ff",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "bcbdd390b0a7ace5db7247a13d94bb050745cf70b0ad69f31424d8ba6b937e9a",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 15,
+      "narration": "이 엇갈림 자체가 불확실성을 보여줍니다. SK하이닉스 이야기를 더 해봅니다.",
+      "narration_sha256_before": "ae5d3674d1fb049f7e44807e47dd4a41235171c2b179300ea6693f09c818aba2",
+      "narration_sha256_after": "ae5d3674d1fb049f7e44807e47dd4a41235171c2b179300ea6693f09c818aba2",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "5752c5918e744cfdc4ea823a4c820b3f4807e300be4be504f868dbc250d2d29b",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "SK하이닉스"
+      ],
+      "current_generated_texts": [
+        "SK하이닉스"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 16,
+      "narration": "매출이 전년 대비 257퍼센트 급등했죠. 그런데 한 미국 매체 목록에서 빠졌습니다.",
+      "narration_sha256_before": "b3fbf138143bade35d77f8ae2f64708bb5c46cba96b1ebfc4351c5227dc5a504",
+      "narration_sha256_after": "b3fbf138143bade35d77f8ae2f64708bb5c46cba96b1ebfc4351c5227dc5a504",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "a40c3dc48dc257b2321f3ea46bee0bb7723bc7e587c6fecf1c5939abce816088",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "257퍼센트"
+      ],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [
+        "257퍼센트"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 17,
+      "narration": "지금 사야 할 10대 주식 목록입니다. 매출이 두 배 넘게 뛰었는데도 말이죠.",
+      "narration_sha256_before": "2afb1029a6909e67310195fa8d319ed7e33b959a4a77556deb022bc8c55f3ef2",
+      "narration_sha256_after": "2afb1029a6909e67310195fa8d319ed7e33b959a4a77556deb022bc8c55f3ef2",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "3e7e72e59202fa8a309bfb997f44b9bbeccbb239dcd23b9996580cb1462997fd",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 18,
+      "narration": "월가는 반도체 조정 가능성을 주시합니다. 실적 방향이 아닌 전망이 기준이 된 겁니다.",
+      "narration_sha256_before": "07ae27550a7d66508aa95f712b38cdd1d7fc78923c5e93de3448bfc56e27354d",
+      "narration_sha256_after": "07ae27550a7d66508aa95f712b38cdd1d7fc78923c5e93de3448bfc56e27354d",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "b7ef40022cc1331cbc8b78279cce6feeaa972cba8ce262824f5efd99e932b7c1",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "반도체"
+      ],
+      "current_generated_texts": [
+        "반도체"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 19,
+      "narration": "다음 분기 전망이 더 중요하다는 뜻이죠. 코스피 흐름도 짚어볼 필요가 있습니다.",
+      "narration_sha256_before": "9c832d81c5435c22c64170af1dc507ca31f81b3283968da531e768453e90e234",
+      "narration_sha256_after": "9c832d81c5435c22c64170af1dc507ca31f81b3283968da531e768453e90e234",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "7337f72eabc6565a667a8169bdda2ed0bf5b8f3ba65f5affdadb58f8b2aae726",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "코스피"
+      ],
+      "current_generated_texts": [
+        "코스피"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 20,
+      "narration": "7월 10일, 7475포인트 고점을 찍었습니다. 이후 7월 29일까지 크게 내려앉았죠.",
+      "narration_sha256_before": "3761985886490b23e354266d7750039068e3727cffc196d848508a742768e725",
+      "narration_sha256_after": "3761985886490b23e354266d7750039068e3727cffc196d848508a742768e725",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "0293aebda89d3a1ee823975008847328e919b0bb56a07e36fe9d4b06a9bda747",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "7475포인트"
+      ],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [
+        "7475포인트"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 21,
+      "narration": "5663포인트대까지 하락한 겁니다. 낙폭만 약 1812포인트에 달했습니다.",
+      "narration_sha256_before": "cac3cc31d2d09320ce7f4fc125da8867f8fe0289aa41201539b92faafa06fa09",
+      "narration_sha256_after": "cac3cc31d2d09320ce7f4fc125da8867f8fe0289aa41201539b92faafa06fa09",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "f28de7d1379fc36207adbdaed6d2195f9385197c29faf0b17993a0f97f3604e3",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "5663포인트",
+        "1812포인트"
+      ],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [
+        "5663포인트",
+        "1812포인트"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 22,
+      "narration": "하락률로는 약 24퍼센트인 겁니다. 거의 4분의 1이 빠진 셈입니다.",
+      "narration_sha256_before": "9ca1ceac6f3841e7085e74120d9affaab7dfca59aef1c7394894b2514a7c2271",
+      "narration_sha256_after": "9ca1ceac6f3841e7085e74120d9affaab7dfca59aef1c7394894b2514a7c2271",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "635f9a980d38bf429a290a0f2a690682ad79227cd4926a46f9685c508df4fdbd",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "24퍼센트"
+      ],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [
+        "24퍼센트"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 23,
+      "narration": "8월 20일 코스피는 어디까지 왔을까요? 6860포인트로 마감했습니다.",
+      "narration_sha256_before": "0bc9add5127c0dd3b01527b9974b785c6f8f07cf4b4e851574f3a47f2f169390",
+      "narration_sha256_after": "0bc9add5127c0dd3b01527b9974b785c6f8f07cf4b4e851574f3a47f2f169390",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "d26ba5787750ab437f3ed7c7e9045e1adb28c18f245e5e6c2d9162d53de5a8f1",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "코스피",
+        "6860포인트"
+      ],
+      "current_generated_texts": [
+        "코스피"
+      ],
+      "current_deterministic_texts": [
+        "6860포인트"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 24,
+      "narration": "저점 대비 상당히 회복한 수준입니다. 하지만 아직 고점엔 한참 못 미치죠.",
+      "narration_sha256_before": "322742aa028398b0ba2bd6d43a0f8daeaf18a40a0a106cf3bfac57a6d4558e31",
+      "narration_sha256_after": "322742aa028398b0ba2bd6d43a0f8daeaf18a40a0a106cf3bfac57a6d4558e31",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "ecc1a7501480bcb5f0b5cc3d354c69df483ac6fe3fe4d6c5a5ca62dc74799f63",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 25,
+      "narration": "코스닥에서도 눈에 띄는 흐름이 있었습니다. 반도체 장비·소재주가 상위에 올랐습니다.",
+      "narration_sha256_before": "f6d847458e317c25b1ed67e27cc5d55a30488f617463283e4b92dc52be37adc0",
+      "narration_sha256_after": "f6d847458e317c25b1ed67e27cc5d55a30488f617463283e4b92dc52be37adc0",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "414a62d97a7d7f44322ca755fc7c5c5dcea71010d8cb7b2517be6f69a2e7bd04",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "코스닥",
+        "반도체"
+      ],
+      "current_generated_texts": [
+        "코스닥",
+        "반도체"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 26,
+      "narration": "시가총액 증가 상위 종목들이죠. 주성엔지니어링이 이름을 올렸습니다.",
+      "narration_sha256_before": "90ead418cb7c80f7b9b29ca26ce20d2dc6993f3d9fdb42ca18cb7c081a37c5ba",
+      "narration_sha256_after": "90ead418cb7c80f7b9b29ca26ce20d2dc6993f3d9fdb42ca18cb7c081a37c5ba",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "fb2bb29fabdcb0afec539279ac8cc1c863d1f8567ef6dd14febd478892df6d99",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 27,
+      "narration": "원익IPS도 주목을 받았습니다. 이오테크닉스와 리노공업도 마찬가지인 겁니다.",
+      "narration_sha256_before": "ff0bf70e84ccbadb203ae7452aa399e5ca2ee71b60d3f779335363f6bb08e95d",
+      "narration_sha256_after": "ff0bf70e84ccbadb203ae7452aa399e5ca2ee71b60d3f779335363f6bb08e95d",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "feb1dcabac74d6d824b2942e128731353097eba9ee067b443d65e6168dad37f9",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 28,
+      "narration": "왜 이 종목들이 부각된 걸까요? 대형주에 대한 불안감이 존재합니다.",
+      "narration_sha256_before": "5f241eebbdbc3c122dee3e459e184ae2a117411a56cfe148a62cec3a3eef432b",
+      "narration_sha256_after": "5f241eebbdbc3c122dee3e459e184ae2a117411a56cfe148a62cec3a3eef432b",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "c83e997d7df4f72c1e4fe9b8c7e69c41d0f98f8739368721b811990d9dd389d0",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 29,
+      "narration": "삼성전자와 SK하이닉스 얘기입니다. 공급망 장비·소재주로 관심이 옮겨가죠.",
+      "narration_sha256_before": "8daea4ee8788d9d8867f70a66ef39998921f2a7471a76488f5bcc0c32cafaa1f",
+      "narration_sha256_after": "8daea4ee8788d9d8867f70a66ef39998921f2a7471a76488f5bcc0c32cafaa1f",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "822eb1054763b7125dff698f3b5d96b32aa60c775e52ff959c9b83bbe77569bc",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "삼성전자",
+        "SK하이닉스"
+      ],
+      "current_generated_texts": [
+        "삼성전자",
+        "SK하이닉스"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 30,
+      "narration": "또 다른 흥미로운 신호도 있습니다. 두 대형주를 편입 안 한 ETF가 주목받습니다.",
+      "narration_sha256_before": "197574a89d1cb8ed5854c3126e5319b54cbe79624c5fdfde24bde8ceee19e641",
+      "narration_sha256_after": "197574a89d1cb8ed5854c3126e5319b54cbe79624c5fdfde24bde8ceee19e641",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "3e9caeb193d28a32b8664df5cf1ba9c261b2e90c951d0b3e39c91ef3688a307d",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 31,
+      "narration": "삼성전자·SK하이닉스를 빼는 ETF인 겁니다. 찾는 투자자들이 늘었다는 보도입니다.",
+      "narration_sha256_before": "a97fcbae9330e458a43f6e02eda61b72428605c7e603899f7639af13d82424c2",
+      "narration_sha256_after": "a97fcbae9330e458a43f6e02eda61b72428605c7e603899f7639af13d82424c2",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "c4f4a7558ed6c37dd1f3f558d1e25d763bdb50fb09e29a2ffc525a4ead0c4ed7",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "삼성전자",
+        "SK하이닉스"
+      ],
+      "current_generated_texts": [
+        "삼성전자",
+        "SK하이닉스"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 32,
+      "narration": "그룹주 ETF로도 관심이 이동하고 있습니다. 한화, LG, 포스코 관련 ETF인 겁니다.",
+      "narration_sha256_before": "19663e9fdfa71b114c0323da8684e37fd5a43e554f5d9606dfbf3ecc4a897716",
+      "narration_sha256_after": "19663e9fdfa71b114c0323da8684e37fd5a43e554f5d9606dfbf3ecc4a897716",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "362d6194d3346cec1b1358c41e219b2254d75a63fac06dbf3da962e4d65a3853",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 33,
+      "narration": "그렇다면 앞을 한번 볼까요? 3분기 반도체 실적 전망은 엇갈립니다.",
+      "narration_sha256_before": "20882fef65697c097a43ee40d3969b3f131335ab419aa6d8dc7074e16ba32f83",
+      "narration_sha256_after": "20882fef65697c097a43ee40d3969b3f131335ab419aa6d8dc7074e16ba32f83",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "163aefa51bd1e02aaa09820e34fbfba013258e3139eecfc4a0f1023648b37db3",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "반도체"
+      ],
+      "current_generated_texts": [
+        "반도체"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 34,
+      "narration": "역대급 실적이라는 분석도 나왔습니다. 복수의 매체에서 나온 이야기인 겁니다.",
+      "narration_sha256_before": "536f0453094ccdcf5f4fcff2331184857bc5df35386539ca21a125a82b50491a",
+      "narration_sha256_after": "536f0453094ccdcf5f4fcff2331184857bc5df35386539ca21a125a82b50491a",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "2633660abd2d8f8d6a4e3bdc967f4fec36aa9b8caa541dc9ebc59162a7910abf",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 35,
+      "narration": "하지만 동시에 경고도 공존합니다. 전망치가 하향 조정된다는 경고입니다.",
+      "narration_sha256_before": "ea09c0d561f50c874071ea4d042d47e03fdd02900f035f93be6cda8863d4049d",
+      "narration_sha256_after": "ea09c0d561f50c874071ea4d042d47e03fdd02900f035f93be6cda8863d4049d",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "ca16a928d194582e662b53ca64bb82d7ac09e2c68bcd7b944fc0641a62d83caf",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 36,
+      "narration": "두 이야기가 모순처럼 보일 수 있죠. 사실 같은 현상의 두 면이죠.",
+      "narration_sha256_before": "e43052cca3bd5610a8d490a20aa27c12d7616926fd94abfd1fa04aa84abcad75",
+      "narration_sha256_after": "e43052cca3bd5610a8d490a20aa27c12d7616926fd94abfd1fa04aa84abcad75",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "1e977fcfa5e9a2f017442b35abbd3f0e46fe776b90f82ec4a96d92a67e7a4f44",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 37,
+      "narration": "다시 처음으로 돌아와 봅니다. PER 4배, 싸 보이는 건 맞습니다.",
+      "narration_sha256_before": "260df75fcbe3f1c511f33820014b17cecfca16beafa0f56a1b0820fdbdbf906d",
+      "narration_sha256_after": "260df75fcbe3f1c511f33820014b17cecfca16beafa0f56a1b0820fdbdbf906d",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "669b8308c762fcfd3b36205434249b916d55302de9c2317cb03951d27a7d3299",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "4배"
+      ],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [
+        "4배"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 38,
+      "narration": "하지만 분석가들은 이렇게 경고하죠. PER은 현재 이익 기준의 계산값입니다.",
+      "narration_sha256_before": "3ab4b9ee1c19440ba4a82fc2de2b941a52886692b2bf9d774bb9197fbb619131",
+      "narration_sha256_after": "3ab4b9ee1c19440ba4a82fc2de2b941a52886692b2bf9d774bb9197fbb619131",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "bb661df1a715fc5d3b5e4a000a5c990526796e8f2dd3e493293b75617e5fa29a",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 39,
+      "narration": "이익 전망이 낮아지면 계산이 바뀌죠. 지금 4배라도 달라질 수 있습니다.",
+      "narration_sha256_before": "d4336503db3a4a8e8d146e926a5feb0b1ead7ba856812d8e5145a763987da786",
+      "narration_sha256_after": "d4336503db3a4a8e8d146e926a5feb0b1ead7ba856812d8e5145a763987da786",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "ae47c7dda29155d13bed783b7659e4a2a26ef17069d246e6c65fdd40a26954cb",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "4배"
+      ],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [
+        "4배"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 40,
+      "narration": "다음 분기 이익이 줄어든다면요. 실제 배수는 훨씬 높아지게 되죠.",
+      "narration_sha256_before": "6d1aaa45f62cc8541254a0e5efc495edadd5ca88acbd947d02209b125a9837fb",
+      "narration_sha256_after": "6d1aaa45f62cc8541254a0e5efc495edadd5ca88acbd947d02209b125a9837fb",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "d62381ce0ff1822a1aa14c984f6769ecc7f090b076b4e68d971c636bbb8dd120",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 41,
+      "narration": "확인해야 할 지점을 짚어봅니다. 두 기업을 보고 있다면 세 가지입니다.",
+      "narration_sha256_before": "d84e1a69881b79643b50072e001ae051b992c6036db149755a67a1134569e8ac",
+      "narration_sha256_after": "d84e1a69881b79643b50072e001ae051b992c6036db149755a67a1134569e8ac",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "36eb313a27236905869dc20e2287cc1edb12881757043c8f4bc4101f7dc53aac",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 42,
+      "narration": "첫째, 이익 전망치가 더 내려가는지인 겁니다. 애널리스트들의 전망치 흐름을 보세요.",
+      "narration_sha256_before": "097133103703bb30a10332944b170b272d37a8c9df01678729f33918e3892385",
+      "narration_sha256_after": "097133103703bb30a10332944b170b272d37a8c9df01678729f33918e3892385",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "b8b216884a277730e568116918fae49bc4d2b6194a1a44d08c39ac33758fd00d",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 43,
+      "narration": "둘째, 외국인 수급 변화를 봐야 합니다. 매도에서 매수로 돌아서는지가 관건인 겁니다.",
+      "narration_sha256_before": "f8835b4769e09054da64051cc0f7a56bb8db6f8de3724dff246d43bf50e4facf",
+      "narration_sha256_after": "f8835b4769e09054da64051cc0f7a56bb8db6f8de3724dff246d43bf50e4facf",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "5fe842efddb7278779ec32e49441ed5f19b67ceb27d7f3ca04ea580bcb97d0c7",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "외국인"
+      ],
+      "current_generated_texts": [
+        "외국인"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 44,
+      "narration": "셋째, 월가의 우려가 반영되는지입니다. 반도체 조정 우려가 주가에 나타나는지요.",
+      "narration_sha256_before": "8d9c195caf5138d533eedff3e7e6911bfdb01720eb3240fa1aea43926dfe864d",
+      "narration_sha256_after": "8d9c195caf5138d533eedff3e7e6911bfdb01720eb3240fa1aea43926dfe864d",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "9feb17b31ba377b646b5df683f28cdcaa4a15c6e9f5040aa2c309d3f6721055a",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "반도체"
+      ],
+      "current_generated_texts": [
+        "반도체"
+      ],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 45,
+      "narration": "오늘 시장을 정리해 보죠. 코스피는 6860포인트로 올랐습니다.",
+      "narration_sha256_before": "816e0e7642d0b5f2d16440c0ae3f3d618b4e8108104d6564d46a84cade379f76",
+      "narration_sha256_after": "816e0e7642d0b5f2d16440c0ae3f3d618b4e8108104d6564d46a84cade379f76",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "1f670e12aefc2de397abc0b20f7183fe349d25e501a94a91293c2bf1fa04237a",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "코스피",
+        "6860포인트"
+      ],
+      "current_generated_texts": [
+        "코스피"
+      ],
+      "current_deterministic_texts": [
+        "6860포인트"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 46,
+      "narration": "코스닥은 839포인트를 기록했죠. 반도체 장비·소재주가 상승을 이끌었습니다.",
+      "narration_sha256_before": "f9572d4724446e6f31e14d665c08a55e195ba6fe44cf1dbedfc5b10cb7da1c48",
+      "narration_sha256_after": "f9572d4724446e6f31e14d665c08a55e195ba6fe44cf1dbedfc5b10cb7da1c48",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "97cde86f81e053d61c8ae0984f188b1da83a42ce739025617a16de95c68d6baf",
+      "original_screen_texts": null,
+      "derived_screen_texts": [
+        "코스닥",
+        "반도체",
+        "839포인트"
+      ],
+      "current_generated_texts": [
+        "코스닥",
+        "반도체"
+      ],
+      "current_deterministic_texts": [
+        "839포인트"
+      ],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    },
+    {
+      "source_scene_index": 47,
+      "narration": "상반기 실적은 확실히 좋았습니다. 하지만 시장이 묻는 질문은 다르죠.",
+      "narration_sha256_before": "912044005089db51b741df38f7749bf09d3532330e0a862dc52518daed6ba62c",
+      "narration_sha256_after": "912044005089db51b741df38f7749bf09d3532330e0a862dc52518daed6ba62c",
+      "narration_unchanged": true,
+      "source_prompt_sha256": "53aebee406fae44b566a6d069cb611a3ae4ba5b04157da2d5ba7d4ea95ea7f05",
+      "original_screen_texts": null,
+      "derived_screen_texts": [],
+      "current_generated_texts": [],
+      "current_deterministic_texts": [],
+      "current_surface_plan": [],
+      "note": "과거 승인 내레이션 추출 재현; 새 사실 확인/표면 계획 승인/이미지 생성 아님"
+    }
+  ],
+  "paid_execution_ready": false,
+  "ready_reason": "정보성/장식성 분기·정확 일치 및 장식 크기 게이트·8장 실행 명세/예산 검증 미완료"
+}

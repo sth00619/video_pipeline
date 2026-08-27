@@ -1,0 +1,13 @@
+{
+  "basis": "작업 트리 shasum -a 256과 격리 실행 사본 sha256sum 출력 직접 대조",
+  "workspace_root": "/Users/songtaeho/Documents/GitHub/video_pipeline/backend/fastapi-workers",
+  "isolated_root": "/tmp/wo_request_verify.vm7YND/backend/fastapi-workers",
+  "all_match": true,
+  "matching_sha256": {
+    "app/utils/budget.py": "b4daf95030c99dfc2931cc1d580dafead7eaa5ad37e926da5e35d5e86fb5d1e3",
+    "app/utils/image_request_control.py": "8ee594f8119e0d638a0316ee2b19a60945ac59dbf319b91ff8c99a8905f6645f",
+    "scripts/run_gemini_usage_pilot.py": "63dfe255a2bad821fcd62a6ed3a7e9132418aed789ad8b41c66be509a0a0bf11",
+    "tests/test_gemini_approved_retry.py": "475b02ed733cc7f55fc9f71c2a2177423539d95e2b8af514feabdaee96f07a73",
+    "tests/test_gemini_usage_pilot.py": "c4c36e187772e369e6e42500bdb27da68fed51dfbe56e832b09c8b5e6c761131"
+  }
+}

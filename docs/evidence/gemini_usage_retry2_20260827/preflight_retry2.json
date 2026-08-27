@@ -1,0 +1,61 @@
+{
+  "status": "preflight_only",
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "image_size": "2K",
+  "pilot_id": "usage_metering_20260827_scene42",
+  "source_scene_index": 42,
+  "source_sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6",
+  "narration": "첫째, 이익 전망치가 더 내려가는지인 겁니다. 애널리스트들의 전망치 흐름을 보세요.",
+  "narration_sha256": "097133103703bb30a10332944b170b272d37a8c9df01678729f33918e3892385",
+  "source_prompt": "The 2D gold coin mascot character (Goldie), A dimly lit data lab with glowing analyst forecast screens lining the curved walls, each monitor showing sharply descending profit estimate arrows trending lower and lower. Goldie, wearing a crisp white lab coat and rounded safety goggles pushed up on its head, stands in the foreground clutching a clipboard, eyes wide and troubled as the falling forecast trend lines cascade visibly behind it. Labels reading \"ANALYST FORECAST\" float above each plunging monitor panel.\n\noriginal 2D Korean finance comic, bold ink outlines, cel shading, single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people",
+  "prompt": "The 2D gold coin mascot character (Goldie), A dimly lit data lab with glowing analyst forecast screens lining the curved walls, each monitor showing sharply descending profit estimate arrows trending lower and lower. Goldie, wearing a crisp white lab coat and rounded safety goggles pushed up on its head, stands in the foreground clutching a clipboard, eyes wide and troubled as the falling forecast trend lines cascade visibly behind it. Labels with an unlettered scene-integrated visual surface with non-linguistic shapes float above each plunging monitor panel. original 2D Korean finance comic, bold ink outlines, cel shading, single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people FINAL SCENE-LOCAL TEXT CONTRACT: this scene has no approved generated string. Do not add readable Korean or English, letters, digits, pseudo-text, logos, watermark, fake tickers, or invented labels. Keep boards, monitors, packages, documents, and gauges visually rich with material, diagrams, color blocks, and non-linguistic shapes; do not remove the props or simplify the environment. Books, documents, cheques, certificates, newspapers, and labels must use clearly non-linguistic blank lines or graphic blocks, never microprint or serial numbers. FINAL CHARACTER QUALITY BOUNDARY: keep the figure recognizably in the same round gold-coin mascot design family and 2D drawing language as the channel references. Use the approved scenes as a range, not as one mandatory face: expression, eye construction and openness, pupil or iris detail, brow angle, mouth shape, blush, costume, headwear, pose, and scale may change with the scene. Reject only a genuinely different character species, incompatible face language, or an accidental featureless emoji. Do not freeze one reference face. Expression, eye openness, and scene-specific acting remain free inside that family range. Use natural connected anatomy with no extra, duplicated, detached, or fused limb or hand. Resolve the pose as one physically coherent action. The scene-specific costume direction is: white lab coat and data goggles. Do not replace it with a generic finance-presenter uniform. Do not replace it with an unrelated police or law-enforcement costume. ",
+  "prompt_sha256_before_provider_wrapper": "a79342d8e477490ec921ec2a5b0f78ee6cce14b4f1df9ef30cb4fc6c16870e96",
+  "text_contract": {
+    "version": "scene-local-text-contract-v5-approved-scene-surface",
+    "approved_texts": [],
+    "generated_texts": [],
+    "deterministic_texts": [],
+    "surface_plan": [],
+    "surface_count": 0,
+    "placement_mode": "contextual_supporting",
+    "hierarchy_policy": "script_objects_and_action_above_supporting_text",
+    "surface_material_policy": "integrated_opaque_scene_surface",
+    "detached_translucent_card_allowed": false,
+    "bubble_policy": "unplanned",
+    "bubble_allowed": false,
+    "bubble_text": "",
+    "sources": [
+      "scene.screen_texts",
+      "scene.screen_text_plan"
+    ]
+  },
+  "references": [
+    {
+      "name": "channel_character_face_range_v1.png",
+      "sha256": "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45"
+    },
+    {
+      "name": "channel_style_job52_risk_map.png",
+      "sha256": "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337"
+    },
+    {
+      "name": "channel_style_job52_market_flow.png",
+      "sha256": "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+    }
+  ],
+  "pricing_config_sha256": "f564cd77d5985e472f28eb73598c28f3972fb31948ab460ae14e565749217bf5",
+  "output_only_estimate_usd": "0.134",
+  "usd_krw": "1400",
+  "authorized_budget_krw": 3200,
+  "reservation_basis": "additional_authorized_contingency_not_unit_price_or_spend",
+  "scope": "단일 요청 사용량 실측. 이미지 텍스트/화풍 최종 승인이나 전체 영상 검증 아님.",
+  "approved_retry_of": "8729ad2c69e949f8b30887ff9bc202f8",
+  "approved_retry_prior_count": 1,
+  "approved_retry_failure_n": 1,
+  "authorization_scope": "동일 요청 추가 1회; 결과와 무관하게 자동 재시도 금지",
+  "original_pilot_budget_krw": 1600,
+  "authorized_combined_reservation_cap_krw": 3200,
+  "additional_reservation_krw": 1600,
+  "cost_interpretation": "보수적 예약 상한; Gemini 단가/예상 비용/확정 지출 아님"
+}

@@ -45,6 +45,10 @@ _state = {
     "gemini_parallel_enabled": _cfg.GEMINI_PARALLEL_ENABLED,
     "gemini_max_concurrency": _cfg.GEMINI_MAX_CONCURRENCY,
     "gemini_retry_max": _cfg.GEMINI_RETRY_MAX,
+    # 저장 경로/프로젝트는 배포 계약이다. API로 바꿔 누적 한도를 초기화하지 않는다.
+    "gemini_request_state_path": _cfg.GEMINI_REQUEST_STATE_PATH,
+    "gemini_project_scope": _cfg.GEMINI_PROJECT_SCOPE,
+    "gemini_scene_request_limit": 3,
     "image_same_error_break_count": _cfg.IMAGE_SAME_ERROR_BREAK_COUNT,
     "gemini_rpm_soft_cap": _cfg.GEMINI_RPM_SOFT_CAP,
     "gemini_adaptive_backoff_enabled": _cfg.GEMINI_ADAPTIVE_BACKOFF_ENABLED,
@@ -153,6 +157,10 @@ def update(**kwargs) -> dict:
         expected = _TYPES[k]
         try:
             normalized = expected(v)
+            if k in {"gemini_request_state_path", "gemini_project_scope"} and normalized != _state[k]:
+                raise ValueError("요청 상태 저장소/프로젝트 변경은 런타임에 허용되지 않습니다.")
+            if k == "gemini_scene_request_limit" and not 1 <= normalized <= 3:
+                raise ValueError("이미지 요청 한도는 최초 포함 1~3회입니다.")
             if k == "max_budget_per_video_krw":
                 normalized = min(normalized, _cfg.MAX_BUDGET_PER_VIDEO_KRW)
             if k == "image_quality_tier" and normalized != "pro":

@@ -1,0 +1,8 @@
+backend/fastapi-workers/out/references/channel_character_face_range_v1.png
+backend/fastapi-workers/out/references/channel_style_job52_briefing.png
+backend/fastapi-workers/out/references/channel_style_job52_data_lab.png
+backend/fastapi-workers/out/references/channel_style_job52_market_flow.png
+backend/fastapi-workers/out/references/channel_style_job52_risk_map.png
+backend/fastapi-workers/out/references/channel_style_job52_semiconductor.png
+backend/fastapi-workers/out/references/channel_style_semiconductor_growth_scene_v1.png
+backend/fastapi-workers/out/references/channel_style_semiconductor_production_scene_v1.png

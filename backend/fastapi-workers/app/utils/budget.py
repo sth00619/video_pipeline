@@ -10,13 +10,29 @@ import json
 import os
 import threading
 import uuid
+import fcntl
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from app import runtime_config
+from app.utils.image_request_control import ImageRequestControl, ImageRequestHeld, canonical_scene, digest
 
 _LOCK = threading.Lock()
+
+
+@contextmanager
+def _ledger_lock(path: Path):
+    """기존 비용 원장의 읽기-수정-쓰기도 프로세스 간에 직렬화한다."""
+    with _LOCK:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.with_suffix(path.suffix + ".lock").open("a") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle, fcntl.LOCK_UN)
 
 _GEMINI_IMAGE_RATE_KEYS = {
     "gemini-3-pro-image": "img_cost_pro_2k_usd",
@@ -58,9 +74,13 @@ class ProviderRequestAudit:
         self._usd_krw = float(usd_krw)
         self._budget_limit_krw = int(budget_limit_krw)
         self._request_metadata = dict(request_metadata or {})
+        self._run_id = uuid.uuid4().hex
+        self._control = ImageRequestControl() if provider == "gemini" else None
+        self._last_token = None
 
     @classmethod
-    def for_job(cls, *, job_id: int, scene_key: str, model: str) -> "ProviderRequestAudit":
+    def for_job(cls, *, job_id: int, scene_key: str, model: str,
+                contract_fingerprint: str | None = None, run_id: str | None = None) -> "ProviderRequestAudit":
         """V4 공용 비용 원장에 Gemini 시도를 기록한다."""
         rate_key = _GEMINI_IMAGE_RATE_KEYS.get(model)
         if rate_key is None:
@@ -80,7 +100,8 @@ class ProviderRequestAudit:
             unit_usd=float(rates[rate_key]),
             usd_krw=float(rates["usd_krw"]),
             budget_limit_krw=int(preflight.get("budget_limit_krw") or rates["max_budget_per_video_krw"]),
-            request_metadata={"policy_version": preflight.get("policy_version", "runtime-default")},
+            request_metadata={"policy_version": preflight.get("policy_version", "runtime-default"), "job_id": job_id,
+                              "contract_fingerprint": contract_fingerprint, "run_id": run_id},
         )
 
     @classmethod
@@ -131,17 +152,47 @@ class ProviderRequestAudit:
             request_metadata={"policy_version": preflight.get("policy_version", "runtime-default")},
         )
 
-    def before_attempt(self, *, attempt: int, model: str | None = None) -> str:
+    def before_attempt(self, *, attempt: int, model: str | None = None, evidence: dict | None = None) -> str:
         """POST 직전에 예약을 영속화하고, 초과 시 네트워크 호출을 막는다."""
+        if evidence:
+            self._assert_job_running()
         amount_krw = _krw(self._unit_usd, self._usd_krw)
         token = uuid.uuid4().hex
-        with _LOCK:
+        with _ledger_lock(self._path):
             ledger = _load_ledger(self._path)
-            projected = int(ledger.get("total_krw", 0)) + amount_krw
+            # HTTP 실패/타임아웃은 청구 없음의 증거가 아니다. 신규 Gemini 예약은
+            # 성공 비용 추정치와 별도로 보수적인 최대 노출액을 기준으로 차단한다.
+            exposure = sum(
+                int(i.get("reserved_amount_krw", i.get("amount_krw", 0)))
+                for i in ledger["items"] if i.get("status") != "not_dispatched"
+            )
+            projected = max(int(ledger.get("total_krw", 0)), exposure) + amount_krw if self._control else int(ledger.get("total_krw", 0)) + amount_krw
             if projected > self._budget_limit_krw:
                 raise ProviderRequestBudgetExceeded(
                     f"이미지 요청 예산 초과: 예약 {amount_krw}원, "
                     f"누적 예정 {projected}원, 상한 {self._budget_limit_krw}원"
+                )
+            control = {}
+            if self._control:
+                scene = canonical_scene(self._scene_key)
+                prior = [i for i in ledger["items"] if i.get("provider") == "gemini" and canonical_scene(i.get("scene_key", "")) == scene]
+                if any(i.get("status") == "reserved" for i in prior):
+                    raise ImageRequestHeld("원장에 응답 미확정 예약 존재")
+                retry_of = self._request_metadata.get("approved_retry_of")
+                if retry_of:
+                    previous = prior[-1] if prior else {}
+                    if (len(prior) != self._request_metadata.get("approved_retry_prior_count")
+                            or previous.get("attempt_id") != retry_of
+                            or previous.get("status") != "http_503" or previous.get("status_code") != 503
+                            or previous.get("model") != (model or self._model)
+                            or not evidence or evidence != previous.get("request_evidence")
+                            or self._request_metadata.get("contract_fingerprint") != previous.get("contract_fingerprint")
+                            or previous.get("request_control", {}).get("failure_n") != self._request_metadata.get("approved_retry_failure_n")):
+                        raise ImageRequestHeld("단일 503 재시도 승인과 원장/요청 계약 불일치")
+                control = self._control.reserve(
+                    scope=str(self._path.resolve()), scene=scene, token=token, legacy_count=len(prior),
+                    review_retry_of=retry_of,
+                    expected_failure_n=self._request_metadata.get("approved_retry_failure_n"),
                 )
             item = {
                 "kind": self._request_kind,
@@ -152,17 +203,46 @@ class ProviderRequestAudit:
                 "attempt_id": token,
                 "estimated_usd": self._unit_usd,
                 "amount_krw": amount_krw,
+                "reserved_amount_krw": amount_krw,
                 "cost_status": "unverified_until_console_reconciliation",
                 "status": "reserved",
                 "reserved_at": datetime.now(timezone.utc).isoformat(),
+                "run_id": self._request_metadata.get("run_id") or self._run_id,
+                "run_id_source": "caller" if self._request_metadata.get("run_id") else "audit_session",
+                "request_control": control,
             }
+            if evidence:
+                item["request_evidence"] = evidence
+                item["contract_fingerprint"] = self._request_metadata.get("contract_fingerprint") or evidence["payload_sha256"]
+                item["contract_fingerprint_source"] = "caller" if self._request_metadata.get("contract_fingerprint") else "payload_sha256"
             if self._request_metadata:
                 item["request_metadata"] = self._request_metadata
             ledger["items"].append(item)
-            ledger["total_krw"] = projected
+            ledger["total_krw"] = int(ledger.get("total_krw", 0)) + amount_krw
+            ledger["reserved_exposure_krw"] = projected
             ledger["budget_overrun_krw"] = max(0, projected - self._budget_limit_krw)
             _write_ledger(self._path, ledger)
+        self._last_token = token
         return token
+
+    def assert_dispatchable(self, token: str) -> None:
+        if self._control:
+            self._assert_job_running()
+            self._control.assert_dispatchable(token)
+
+    def _assert_job_running(self) -> None:
+        job_id = self._request_metadata.get("job_id")
+        if self._control and job_id is not None:
+            from app.utils import process_manager
+            client = process_manager._get_redis()
+            if client is None:
+                raise ImageRequestHeld("Redis 중지 상태 확인 불가; 유료 POST 차단")
+            try:
+                stopped = client.exists(f"{process_manager.STOP_KEY_PREFIX}{job_id}")
+            except Exception as exc:
+                raise ImageRequestHeld("Redis 중지 상태 조회 실패") from exc
+            if stopped:
+                raise ImageRequestHeld("사용자 중지 플래그 활성", status="stopped")
 
     def after_attempt(
         self,
@@ -171,46 +251,112 @@ class ProviderRequestAudit:
         status_code: int | None = None,
         request_id: str | None = None,
         outcome: str,
-    ) -> None:
-        """응답 결과를 기록한다. 실패한 시도는 비용을 0원으로 감액하고 총액을 재계산한다."""
-        with _LOCK:
+        retryable: bool = False,
+        permanent: bool = False,
+        retry_after: str | None = None,
+        duration_seconds: float | None = None,
+        error_code: str | None = None,
+        image_sha256: str | None = None,
+        usage_metadata: dict[str, Any] | None = None,
+        usage_metadata_status: str | None = None,
+    ) -> dict:
+        """응답과 성공 비용 추정치를 기록한다. 실제 청구/보수적 예약 노출액은 별개다."""
+        with _ledger_lock(self._path):
             ledger = _load_ledger(self._path)
+            control = self._control.finish(token, retryable=retryable, permanent=permanent, retry_after=retry_after) if self._control else {}
             for item in reversed(ledger["items"]):
                 if item.get("attempt_id") != token:
                     continue
                 item["status"] = outcome
                 item["completed_at"] = datetime.now(timezone.utc).isoformat()
+                item["request_control"] = {**item.get("request_control", {}), **control}
+                item["duration_seconds"] = duration_seconds
+                item["error_code"] = error_code
+                item["image_sha256"] = image_sha256
+                if usage_metadata_status is not None:
+                    # 공급자 사용량 객체만 원형 보존한다. 응답 본문/인증 헤더는
+                    # 기록하지 않으며 누락된 수치를 0이나 차감식으로 보충하지 않는다.
+                    item["usage_metadata_status"] = usage_metadata_status
+                    item["usage_metadata"] = usage_metadata
+                    item["usage_metadata_source"] = "generateContent.response.usageMetadata"
+                    item["usage_metadata_sha256"] = (
+                        digest(json.dumps(usage_metadata, ensure_ascii=False, sort_keys=True,
+                                          separators=(",", ":")).encode())
+                        if usage_metadata is not None else None
+                    )
                 if status_code is not None:
                     item["status_code"] = int(status_code)
                 if request_id:
                     item["request_id"] = str(request_id)[:256]
 
-                # 실패한 시도(network_error, http_500, failed 등)는 과금액을 0원으로 처리하여 이중 청구 방지
+                # 성공 추정 합계에서 제외할 뿐 실제 청구 여부는 콘솔 대조 전까지 미확정이다.
                 is_success = outcome in ("http_200", "succeeded", "http_201") or (status_code is not None and 200 <= status_code < 300)
                 if not is_success:
                     item["amount_krw"] = 0
-                    item["cost_status"] = "cancelled_due_to_failure"
+                    item["cost_status"] = "not_dispatched" if outcome == "not_dispatched" else "excluded_from_success_estimate_billing_unverified"
                 break
 
-            # 성공(http_200) 또는 아직 진행 중(reserved)인 요청의 amount_krw만 합산하여 total_krw 재계산
+            # 실패 항목의 성공 추정액은 위에서 0으로 바꿨다. 비이미지 비용도 보존한다.
             recalculated_total = sum(
                 int(i.get("amount_krw", 0))
                 for i in ledger.get("items", [])
-                if isinstance(i, dict) and i.get("status") in ("reserved", "http_200", "succeeded", "http_201")
+                if isinstance(i, dict)
             )
             ledger["total_krw"] = recalculated_total
+            ledger["reserved_exposure_krw"] = sum(int(i.get("reserved_amount_krw", i.get("amount_krw", 0)))
+                for i in ledger["items"] if i.get("status") != "not_dispatched")
             limit = self._budget_limit_krw
             ledger["budget_overrun_krw"] = max(0, recalculated_total - limit)
             _write_ledger(self._path, ledger)
+        return control
+
+    def record_quality(self, *, image_path: str, outcome: str, category: str, raw_path: str | None = None) -> None:
+        """이미지 hash로 HTTP 시도를 연결한다. 불명확하면 임의로 마지막 시도에 연결하지 않는다."""
+        path = Path(raw_path or image_path)
+        if not path.is_file():
+            return
+        raw_hash = digest(path.read_bytes())
+        final_hash = digest(Path(image_path).read_bytes()) if Path(image_path).is_file() else None
+        self._record_quality_hash(raw_hash, final_hash, outcome=outcome, category=category)
+
+    def record_quality_bytes(self, image_bytes: bytes, *, outcome: str, category: str) -> None:
+        """V5의 메모리 이미지도 별도 파일/재생성 없이 동일 요청에 연결한다."""
+        image_hash = digest(image_bytes)
+        self._record_quality_hash(image_hash, image_hash, outcome=outcome, category=category)
+
+    def _record_quality_hash(self, raw_hash: str, final_hash: str | None, *, outcome: str, category: str) -> None:
+        with _ledger_lock(self._path):
+            ledger = _load_ledger(self._path)
+            matches = [i for i in ledger["items"] if i.get("provider") == "gemini"
+                       and canonical_scene(i.get("scene_key", "")) == canonical_scene(self._scene_key)
+                       and i.get("image_sha256") == raw_hash]
+            # 같은 바이트를 여러 요청이 반환했으면 현재 인스턴스의 토큰으로만 구분한다.
+            match = next((i for i in matches if i["attempt_id"] == self._last_token), None)
+            if match is None and len(matches) == 1:
+                match = matches[0]
+            event = {"attempt_id": match["attempt_id"] if match else None, "image_sha256": raw_hash,
+                     "final_image_sha256": final_hash, "outcome": outcome, "category": category,
+                     "scene_key": self._scene_key, "at": datetime.now(timezone.utc).isoformat(),
+                     "link_status": "exact_hash" if match else "unresolved"}
+            ledger.setdefault("qa_events", []).append(event)
+            _write_ledger(self._path, ledger)
 
     def summary(self) -> dict[str, Any]:
-        with _LOCK:
+        with _ledger_lock(self._path):
             ledger = _load_ledger(self._path)
             entries = [
                 item for item in ledger["items"]
-                if item.get("provider") == self._provider and item.get("scene_key") == self._scene_key
+                if item.get("provider") == self._provider and canonical_scene(item.get("scene_key", "")) == canonical_scene(self._scene_key)
             ]
-        return {"attempt_count": len(entries), "entries": entries}
+            events = [e for e in ledger.get("qa_events", []) if canonical_scene(e.get("scene_key", "")) == canonical_scene(self._scene_key)]
+        return {"attempt_count": len(entries), "entries": entries, "qa_events": events,
+                "failure_counts": {
+                    "http": sum(int(e.get("status_code") or 0) >= 400 for e in entries),
+                    "network": sum(e.get("status") == "network_error" for e in entries),
+                    "invalid_image": sum(e.get("status") == "invalid_image" for e in entries),
+                    "qa": sum(e["outcome"] == "rejected" and e["category"] != "surface_composition" for e in events),
+                    "surface_composition": sum(e["outcome"] == "rejected" and e["category"] == "surface_composition" for e in events),
+                }}
 
 
 def _krw(usd: float, rate: float) -> int:
@@ -280,10 +426,12 @@ def _job_path(job_id: int, name: str) -> Path:
 def _load_ledger(path: Path) -> dict[str, Any]:
     try:
         ledger = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError):
+    except FileNotFoundError:
         ledger = {"items": [], "total_krw": 0}
-    if not isinstance(ledger.get("items"), list):
-        ledger["items"] = []
+    except (OSError, ValueError) as exc:
+        raise ImageRequestHeld("비용 원장 읽기 실패; 초기화하지 않고 차단") from exc
+    if not isinstance(ledger, dict) or not isinstance(ledger.get("items"), list):
+        raise ImageRequestHeld("비용 원장 손상; 초기화하지 않고 차단")
     ledger["total_krw"] = int(ledger.get("total_krw", 0))
     return ledger
 
@@ -291,8 +439,16 @@ def _load_ledger(path: Path) -> dict[str, Any]:
 def _write_ledger(path: Path, ledger: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     staged = path.with_suffix(".tmp")
-    staged.write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding="utf-8")
+    with staged.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(ledger, ensure_ascii=False, indent=2))
+        handle.flush()
+        os.fsync(handle.fileno())
     os.replace(staged, path)
+    directory = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
 
 
 def write_preflight(job_id: int, plan: dict[str, Any]) -> None:
@@ -317,21 +473,23 @@ def load_cost_ledger_summary(job_id: int) -> dict[str, Any]:
     """
     cfg = runtime_config.get()
     path = _job_path(job_id, "cost_ledger.json")
-    with _LOCK:
+    with _ledger_lock(path):
         ledger = _load_ledger(path)
         items = [dict(item) for item in ledger["items"] if isinstance(item, dict)]
     
-    # 실패/취소된 시도를 제외하고 실제 유효한 과금액만 합산
+    # 이 합계는 성공 추정액이다. 실패 요청의 실청구 여부는 콘솔 검증이 필요하다.
     total = sum(
         int(item.get("amount_krw", 0))
         for item in items
-        if item.get("status") in ("reserved", "http_200", "succeeded", "http_201")
     )
     limit = int(cfg["max_budget_per_video_krw"])
     return {
         "job_id": int(job_id),
         "currency": "KRW",
         "total_krw": total,
+        "reserved_exposure_krw": ledger.get("reserved_exposure_krw", total),
+        "billing_verified": False,
+        "qa_events": ledger.get("qa_events", []),
         "budget_limit_krw": limit,
         "remaining_krw": max(0, limit - total),
         "budget_overrun_krw": max(0, total - limit),
@@ -348,7 +506,7 @@ def can_charge_overlay_vision(job_id: int, scene_key: str) -> bool:
     rate = float(os.getenv("OVERLAY_VISION_COST_USD", "0.03"))
     cfg = runtime_config.get()
     path = _job_path(job_id, "cost_ledger.json")
-    with _LOCK:
+    with _ledger_lock(path):
         ledger = _load_ledger(path)
         duplicate = any(
             item.get("kind") == "overlay_vision" and item.get("scene_key") == scene_key
@@ -375,7 +533,7 @@ def record_cost(job_id: int, kind: str, count: int = 1, *, scene_key: str | None
     }.get(kind, 0.0)
     amount = _krw(unit_usd * count, float(rates["usd_krw"]))
     path = _job_path(job_id, "cost_ledger.json")
-    with _LOCK:
+    with _ledger_lock(path):
         ledger = _load_ledger(path)
         provider_by_kind = {"pro": "gemini", "kling": "fal"}
         if scene_key and provider_by_kind.get(kind) and any(

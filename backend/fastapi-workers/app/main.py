@@ -190,6 +190,7 @@ class PipelineConfigUpdate(BaseModel):
     gemini_parallel_enabled: Optional[bool] = None
     gemini_max_concurrency: Optional[int] = None
     gemini_retry_max: Optional[int] = None
+    gemini_scene_request_limit: Optional[int] = None
     gemini_rpm_soft_cap: Optional[int] = None
     gemini_adaptive_backoff_enabled: Optional[bool] = None
     longform_scene_max_workers: Optional[int] = None

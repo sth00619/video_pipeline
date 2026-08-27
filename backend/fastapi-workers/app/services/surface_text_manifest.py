@@ -57,6 +57,24 @@ def normalized_bbox(region, size) -> list[int]:
     return [round(x * size[0]), round(y * size[1]), round((x + w) * size[0]), round((y + h) * size[1])]
 
 
+def planned_text_bbox(item: dict, binding: dict, size) -> list[int]:
+    """물리 표면 전체 또는 그 안의 명시적 상대 영역을 픽셀 좌표로 바꾼다."""
+    surface = [float(value) for value in binding["bbox"]]
+    normalized_bbox(surface, size)
+    region = item.get("region")
+    if region is None:
+        return normalized_bbox(surface, size)
+    if not isinstance(region, (list, tuple)) or len(region) != 4:
+        raise ValueError("문구 상대 영역은 x/y/너비/높이 4개여야 합니다.")
+    rx, ry, rw, rh = (float(value) for value in region)
+    if not all(math.isfinite(value) for value in (rx, ry, rw, rh)) or not (
+        0 <= rx < 1 and 0 <= ry < 1 and rw > 0 and rh > 0 and rx + rw <= 1 and ry + rh <= 1
+    ):
+        raise ValueError("문구 상대 영역이 물리 표면 범위를 벗어났습니다.")
+    sx, sy, sw, sh = surface
+    return normalized_bbox([sx + sw * rx, sy + sh * ry, sw * rw, sh * rh], size)
+
+
 def draw_text_cell(draw, xy, text, *, font, cells, cell_id, role, anchor_bbox, psm_modes=None, **kwargs):
     """기존 글꼴·색·좌표는 그대로 쓰고 실제 잉크 bbox를 함께 기록한다."""
     draw.text(xy, text, font=font, **kwargs)
@@ -101,8 +119,9 @@ def validate_manifest(scene: dict, size) -> list[dict[str, Any]]:
             region = [anchor[name] for name in ("x", "y", "width", "height")]
         else:
             item = scene["screen_text_plan"][int(key.split(":")[1])]
-            region = scene["surface_bindings"][item["surface"]]["bbox"]
-        anchor_bbox = normalized_bbox(region, size)
+            anchor_bbox = planned_text_bbox(item, scene["surface_bindings"][item["surface"]], size)
+        if key.startswith("overlay:"):
+            anchor_bbox = normalized_bbox(region, size)
         if cell.get("anchor_bbox") != anchor_bbox:
             raise ValueError("문자 위치가 다른 표면에 연결됐습니다.")
         bbox = cell.get("bbox")

@@ -5,15 +5,35 @@ import copy
 import hashlib
 import io
 import os
+import re
 import tempfile
 
 from PIL import Image, ImageDraw
 
 from app.services.surface_text_manifest import (
-    contract_digest, draw_text_cell, normalized_bbox, set_manifest, validate_manifest,
+    contract_digest, draw_text_cell, normalized_bbox, planned_text_bbox, set_manifest, validate_manifest,
     expected_cells, SEMANTIC_TEXT_POLICY,
 )
 from app.services.surface_binding_attestation import attest_scene_surfaces, bind_single_local_surface
+
+
+_FACT_REF = re.compile(r"^(?:facts|verified_facts)\[(\d+)]$")
+
+
+def _require_numeric_plan_evidence(scene: dict, item: dict) -> None:
+    """수치 셀도 결정론 렌더 전에 장면 로컬 검증 사실과 정확히 연결한다."""
+    from app.v5.overlay.fact_value_contract import verified_fact_contains_value
+
+    match = _FACT_REF.fullmatch(str(item.get("source_ref") or ""))
+    facts = scene.get("verified_facts")
+    if match is None or not isinstance(facts, list):
+        raise ValueError("수치 문구에는 장면 로컬 검증 사실 source_ref가 필요합니다.")
+    index = int(match.group(1))
+    if index >= len(facts) or not isinstance(facts[index], dict):
+        raise ValueError("수치 문구가 존재하지 않는 검증 사실을 참조합니다.")
+    if not verified_fact_contains_value(facts[index], str(item.get("text") or ""),
+                                        require_structured_value_match=True):
+        raise ValueError("수치 문구는 참조한 검증 사실의 완전한 값과 일치해야 합니다.")
 
 
 def render_semantic_surface_text(scene: dict, image_path: str) -> None:
@@ -43,14 +63,14 @@ def render_semantic_surface_text(scene: dict, image_path: str) -> None:
     attest_scene_surfaces(image_path, candidate)
     bindings = candidate.get("surface_bindings") or {}
     for item in plan:
-        # 수치가 포함된 문구는 승인 플래그만으로 사실 근거 검증을 우회하면 안 된다.
-        # v1에서는 기존 verified_facts → v5_verified_overlays 경로로만 수치를 받는다.
+        # 수치가 포함된 일반 셀도 오버레이와 같은 장면 로컬 사실 계약을 거친다.
+        # 실제 그리기는 Pillow이며 이미지 모델에는 이 문자열을 전달하지 않는다.
         if any(char.isdigit() for char in item["text"]):
-            raise ValueError("수치 문구는 verified_facts 기반 수치 오버레이로 지정해야 합니다.")
+            _require_numeric_plan_evidence(candidate, item)
         binding = bindings.get(item.get("surface"))
         if not isinstance(binding, dict) or binding.get("image_sha256") != source_sha:
             raise ValueError("물리 표면 연결 증거가 없거나 원본 이미지가 변경됐습니다.")
-        normalized_bbox(binding["bbox"], size)
+        planned_text_bbox(item, binding, size)
     # 새 경로의 수치 표면도 같은 최종 원본 이미지에 승인된 연결이어야 한다.
     for overlay in candidate.get("v5_verified_overlays") or []:
         binding = bindings.get(overlay.get("surface"))
@@ -65,7 +85,7 @@ def render_semantic_surface_text(scene: dict, image_path: str) -> None:
     draw = ImageDraw.Draw(image)
     cells = list((candidate.get("surface_text_manifest") or {}).get("cells") or [])
     for index, item in enumerate(plan):
-        anchor = normalized_bbox(bindings[item["surface"]]["bbox"], size)
+        anchor = planned_text_bbox(item, bindings[item["surface"]], size)
         l, t, r, b = anchor
         text = item["text"]
         chosen = None

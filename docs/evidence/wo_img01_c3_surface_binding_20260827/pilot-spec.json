@@ -1,7 +1,7 @@
 {
   "version": "wo-img-01-c3-eight-scene-measurement-v1",
-  "execution_status": "not_run",
-  "paid_execution_authorized": false,
+  "execution_status": "authorized_not_run",
+  "paid_execution_authorized": true,
   "scene42_frozen_and_excluded": true,
   "source": {
     "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
@@ -84,7 +84,8 @@
     "current_conservative_reservation_per_attempt_krw": 1600,
     "one_attempt_each_eight_scenes_reserved_upper_bound_krw": 12800,
     "three_attempt_each_worst_reserved_upper_bound_krw": 38400,
-    "approved_total_for_this_spec_krw": null,
-    "execution_blocked_until_explicit_total_cap": true
+    "approved_total_for_this_spec_krw": 12800,
+    "execution_blocked_until_explicit_total_cap": false,
+    "approval_scope": "8장 각 외부 POST 1회, 실패 장면 재시도 없음, 첫 성공 usageMetadata 원문 보존"
   }
 }

@@ -1,0 +1,17 @@
+{
+  "basis": "실행 후 영속 원장·기존 manifest·SQLite 읽기 전용 대조 및 시각 차이 재계산; 공급자 응답 원문 아님",
+  "first_entry_unchanged": true,
+  "request_evidence_identical": true,
+  "entries": 2,
+  "extra_post_count": 1,
+  "state": {"count": 2, "failure_n": 2, "next_allowed_at": 1787762034.2775416, "active": null, "status": "needs_review"},
+  "project": {"failure_n": 2, "next_allowed_at": 1787762034.2775416},
+  "post_completion_cooldown_seconds": 31.543628692626953,
+  "start_to_start_seconds": 1445.295603,
+  "reserved_exposure_krw": 3200,
+  "success_estimate_krw": 0,
+  "actual_billing": "unverified",
+  "usage_file_present": false,
+  "image_file_present": false,
+  "original_manifest_sha256": "af2d625a6c2c0dd2054d932bc41459b43bceda37ee12f7e3cc54619d89f0ec88"
+}

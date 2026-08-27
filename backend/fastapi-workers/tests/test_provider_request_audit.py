@@ -14,6 +14,12 @@ sys.path.insert(0, str(ROOT))
 from app.utils import budget
 from app.utils.budget import ProviderRequestAudit, ProviderRequestBudgetExceeded, record_cost
 from app.providers.real.image import GeminiImageGenerationError, NanaBananaProvider
+from app.utils.image_request_control import ImageRequestHeld
+
+
+def _audit(tmp_path, model="gemini-3-pro-image"):
+    return ProviderRequestAudit.for_path(path=tmp_path / "audit.json", scene_key="scene-1", model=model,
+        unit_usd=0.1, usd_krw=1000, budget_limit_krw=300)
 
 
 def test_each_http_attempt_is_reserved_and_persisted(tmp_path: Path):
@@ -35,7 +41,7 @@ def test_each_http_attempt_is_reserved_and_persisted(tmp_path: Path):
 
     ledger = json.loads(path.read_text(encoding="utf-8"))
 
-    # 503 실패는 과금되지 않으므로 합계는 성공한 1건(100원)만 포함한다.
+    # 성공 추정 합계만 100원이다. 503의 실제 청구 여부는 이 테스트로 확인할 수 없다.
     assert ledger["total_krw"] == 100
 
     assert [(item["attempt"], item["status"], item["status_code"]) for item in ledger["items"]] == [
@@ -43,9 +49,9 @@ def test_each_http_attempt_is_reserved_and_persisted(tmp_path: Path):
         (2, "http_200", 200),
     ]
 
-    # 503 항목: Google 과금 없음 → 0원 취소 처리
+    # 503 항목: 성공 추정 합계에서만 제외한다.
     assert ledger["items"][0]["amount_krw"] == 0
-    assert ledger["items"][0]["cost_status"] == "cancelled_due_to_failure"
+    assert ledger["items"][0]["cost_status"] == "excluded_from_success_estimate_billing_unverified"
 
     # 200 항목: 성공 → 과금 미확정 상태로 유지
     assert ledger["items"][1]["cost_status"] == "unverified_until_console_reconciliation"
@@ -140,12 +146,15 @@ def test_kling_success_record_does_not_duplicate_a_reserved_request(tmp_path: Pa
     assert ledger["items"][0]["kind"] == "kling_request"
 
 
-def test_provider_records_each_retry_before_post(tmp_path: Path, monkeypatch):
+def test_provider_records_one_post_and_defers_instead_of_nested_retry(tmp_path: Path, monkeypatch):
     class Response:
         def __init__(self, status_code: int, request_id: str):
             self.status_code = status_code
             self.headers = {"x-goog-request-id": request_id}
             self.text = "provider test response"
+
+        def json(self):
+            return {"error": {"status": "UNAVAILABLE" if self.status_code == 503 else "NOT_FOUND"}}
 
     responses = [Response(503, "retry-1"), Response(404, "final-2")]
     calls = []
@@ -166,7 +175,7 @@ def test_provider_records_each_retry_before_post(tmp_path: Path, monkeypatch):
         budget_limit_krw=300,
     )
 
-    with pytest.raises(GeminiImageGenerationError):
+    with pytest.raises(ImageRequestHeld, match="HTTP 503"):
         NanaBananaProvider()._generate_gemini_api(
             "test", str(tmp_path / "unused.png"), "not-a-real-key", [],
             model="gemini-3-pro-image", image_size="2K", max_attempts=2,
@@ -175,22 +184,21 @@ def test_provider_records_each_retry_before_post(tmp_path: Path, monkeypatch):
 
     ledger = json.loads(path.read_text(encoding="utf-8"))
 
-    # 핵심 검증: HTTP 시도가 2번 모두 원장에 기록됐는가
-    assert len(calls) == 2
+    # 내부 max_attempts=2가 전달돼도 POST는 한 번만 수행한다.
+    assert len(calls) == 1
     assert all(call["timeout"] == (20.0, 300.0) for call in calls)
     assert all(call["headers"]["X-Server-Timeout"] == "285" for call in calls)
-    assert len(ledger["items"]) == 2, "재시도 포함 모든 attempt가 원장에 기록돼야 한다"
+    assert len(ledger["items"]) == 1
 
     assert [(item["status"], item["request_id"]) for item in ledger["items"]] == [
         ("http_503", "retry-1"),
-        ("http_404", "final-2"),
     ]
 
-    # 503·404 둘 다 non-2xx → 과금 없음, 합계 0원
+    # 503은 성공 추정 합계에서 제외되지만 보수적 요청 노출액은 유지된다.
     assert ledger["total_krw"] == 0
 
-    # 두 항목 모두 취소 처리됐는지 확인
-    assert all(item["cost_status"] == "cancelled_due_to_failure" for item in ledger["items"])
+    assert ledger["reserved_exposure_krw"] == 100
+    assert all(item["cost_status"] == "excluded_from_success_estimate_billing_unverified" for item in ledger["items"])
     assert all(item["amount_krw"] == 0 for item in ledger["items"])
 
 
@@ -230,6 +238,7 @@ def test_reference_payload_order_matches_the_v3_declared_contract(tmp_path: Path
         "contract prompt", str(output), "not-a-real-key", references,
         model="gemini-3-pro-image", image_size="2K", max_attempts=1,
         reference_contract_declared=True,
+        request_audit=_audit(tmp_path),
     )
     parts = captured["payload"]["contents"][0]["parts"]
     assert [base64.b64decode(part["inlineData"]["data"]) for part in parts[:2]] == [
@@ -269,6 +278,7 @@ def test_priority_service_tier_is_a_top_level_generate_content_field(tmp_path: P
         "priority contract", str(output), "not-a-real-key", [],
         model="gemini-3-pro-image", image_size="2K", service_tier="priority",
         max_attempts=1,
+        request_audit=_audit(tmp_path),
     )
     assert captured["payload"]["serviceTier"] == "priority"
     assert "serviceTier" not in captured["payload"]["generationConfig"]
@@ -307,6 +317,7 @@ def test_flash_image_uses_the_same_reference_edit_contract(tmp_path: Path, monke
         "같은 프레임에서 잘못된 글자만 수정", str(output), "not-a-real-key", [str(reference)],
         model="gemini-3.1-flash-image", image_size="2K", max_attempts=1,
         reference_contract_declared=True,
+        request_audit=_audit(tmp_path, "gemini-3.1-flash-image"),
     )
     assert captured["endpoint"].endswith("/gemini-3.1-flash-image:generateContent")
     assert captured["payload"]["generationConfig"]["imageConfig"] == {
