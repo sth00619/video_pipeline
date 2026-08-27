@@ -302,10 +302,12 @@ def _targeted_exact_text_retry(
     image_path: str,
     expected_texts: Iterable[str],
 ) -> tuple[str, list[str], list[dict[str, Any]]]:
-    """2열×3행 국소 타일에서 누락 승인 문구만 PSM 6으로 재검증한다.
+    """국소 타일에서 누락 승인 문구만 PSM 6으로 재검증한다.
 
     이미지 생성 모델이 쓴 짧은 승인 문구에만 사용하는 선택 경로다. 일반
-    장면의 OCR 정책이나 결정론 렌더 경로를 전역적으로 바꾸지 않는다.
+    장면의 OCR 정책이나 결정론 렌더 경로를 전역적으로 바꾸지 않는다. 기본
+    2열×3행이 놓친 문구만 더 작은 원본 해상도 4열×4행 타일로 한 번 더
+    확인하며, 탐색 결과는 정확한 승인 문자열에만 연결한다.
     """
     remaining = [str(value).strip() for value in expected_texts if str(value).strip()]
     if not remaining:
@@ -319,29 +321,49 @@ def _targeted_exact_text_retry(
     evidence: list[dict[str, Any]] = []
     found: list[str] = []
     statuses: list[str] = []
+    scan_boxes: list[tuple[str, tuple[int, int, int, int]]] = []
     for row_index in range(3):
         for column_index in range(2):
-            # 경계를 넓혀 주변 선화를 다시 끌어들이면 큰 승인 라벨도 재차
-            # 사라졌다. 먼저 겹침 없는 국소 타일로 배경 복잡도를 확실히
-            # 낮춘다. 경계에 걸친 글자는 전체 프레임 판독이 보조한다.
-            left = round(column_index * width / 2)
-            right = round((column_index + 1) * width / 2)
-            top = round(row_index * height / 3)
-            bottom = round((row_index + 1) * height / 3)
-            box = (left, top, right, bottom)
-            status, rows = _read_tesseract_region_rows(image_path, box, psm=6)
-            statuses.append(status)
-            hits = _exact_text_hits(rows, remaining)
-            if hits:
-                found.extend(hits)
-                evidence.append({
-                    "source": "local_tile_psm6",
-                    "tile": [left, top, right, bottom],
-                    "texts": hits,
-                })
-                remaining = [value for value in remaining if value not in hits]
-                if not remaining:
-                    break
+            # 먼저 겹침 없는 큰 타일로 배경 복잡도를 줄인다.
+            scan_boxes.append(("local_tile_psm6", (
+                round(column_index * width / 2),
+                round(row_index * height / 3),
+                round((column_index + 1) * width / 2),
+                round((row_index + 1) * height / 3),
+            )))
+    # scene47처럼 문구가 큰 타일 경계에 걸치면 배경이 다시 합쳐져
+    # 사라진다. 너비를 1/4로 줄이고 세로 시작점을 1/4 간격으로
+    # 옮긴 원본 타일을 보조 경로로 사용한다.
+    fine_width = max(1, round(width / 4))
+    fine_height = max(1, round(height / 3))
+    for row_index in range(4):
+        for column_index in range(4):
+            left = round(column_index * width / 4)
+            top = round(row_index * height / 4)
+            scan_boxes.append(("local_overlap_4x4_psm6", (
+                left,
+                top,
+                min(width, left + fine_width),
+                min(height, top + fine_height),
+            )))
+
+    seen_boxes: set[tuple[int, int, int, int]] = set()
+    for source, box in scan_boxes:
+        if box in seen_boxes:
+            continue
+        seen_boxes.add(box)
+        status, rows = _read_tesseract_region_rows(image_path, box, psm=6)
+        statuses.append(status)
+        hits = _exact_text_hits(rows, remaining)
+        if not hits:
+            continue
+        found.extend(hits)
+        evidence.append({
+            "source": source,
+            "tile": list(box),
+            "texts": hits,
+        })
+        remaining = [value for value in remaining if value not in hits]
         if not remaining:
             break
     status = "completed" if any(value == "completed" for value in statuses) else (

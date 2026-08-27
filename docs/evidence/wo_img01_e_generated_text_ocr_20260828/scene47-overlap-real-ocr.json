@@ -1,0 +1,43 @@
+{
+  "version": "wo-img01-e-scene47-overlap-ocr-v1",
+  "source_path": "artifacts/wo_img01_c3_eight_scene_pilot/scene_47_raw.png",
+  "source_sha256": "17f66cd3739e1b54e4352838018480e9c2c512f39ff17cec1bfbe31eec8cec16",
+  "expected": [
+    "상반기 실적",
+    "질문"
+  ],
+  "result": {
+    "status": "completed",
+    "visible_tokens": [
+      "상반기"
+    ],
+    "numeric_confirmation_status": "not_required",
+    "exact_generated_texts": [
+      "상반기 실적",
+      "질문"
+    ],
+    "missing_generated_texts": [],
+    "targeted_exact_ocr_status": "completed",
+    "full_frame_psm6_status": "completed",
+    "exact_text_evidence": [
+      {
+        "source": "full_frame_psm11",
+        "texts": [
+          "상반기 실적"
+        ]
+      },
+      {
+        "source": "local_overlap_4x4_psm6",
+        "tile": [
+          1376,
+          768,
+          2064,
+          1280
+        ],
+        "texts": [
+          "질문"
+        ]
+      }
+    ]
+  }
+}
