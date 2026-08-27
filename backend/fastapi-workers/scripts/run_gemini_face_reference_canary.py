@@ -115,6 +115,17 @@ def main() -> int:
 
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
     previous = validate_prior_state(spec, ledger)
+    # prepare_rows가 images_worker를 가져오면서 runtime_config를 먼저 로드할 수
+    # 있다. 환경변수만 늦게 바꾸지 말고, 승인된 기존 DB·scope를 준비 전에
+    # 런타임에도 직접 반영해 다른 상태 저장소로 새 요청이 새는 일을 막는다.
+    os.environ["GEMINI_REQUEST_STATE_PATH"] = str(state_path)
+    os.environ["GEMINI_PROJECT_SCOPE"] = spec["request_state"]["project_scope"]
+    from app import runtime_config
+    runtime_config.update(
+        gemini_scene_request_limit=2,
+        gemini_request_state_path=str(state_path),
+        gemini_project_scope=spec["request_state"]["project_scope"],
+    )
     original_spec = json.loads(original_spec_path.read_text(encoding="utf-8"))
     original_scene = next(item for item in original_spec["scenes"] if int(item["index"]) == SCENE_INDEX)
     if original_scene != spec["scene"]:
@@ -156,14 +167,10 @@ def main() -> int:
         raise RuntimeError("scene07 canary는 이미 시작됐습니다. 추가 POST를 차단합니다.")
     claim.write_text(datetime.now(timezone.utc).isoformat(), encoding="utf-8")
 
-    os.environ["GEMINI_REQUEST_STATE_PATH"] = str(state_path)
-    os.environ["GEMINI_PROJECT_SCOPE"] = spec["request_state"]["project_scope"]
-    from app import runtime_config
     from app.utils.budget import ProviderRequestAudit
     from app.utils.image_request_control import ImageRequestHeld
     from app.v5.providers.gemini_provider import GeminiModel, GeminiProvider
 
-    runtime_config.update(gemini_scene_request_limit=2)
     _, usd_krw = _read_prices(args.pricing_config)
     audit = ProviderRequestAudit.for_path(
         path=ledger_path,
@@ -228,8 +235,22 @@ def main() -> int:
             continuation_allowed=False,
         )
     summary = audit.summary()
-    if len(summary.get("entries") or []) != 2:
+    if len(summary.get("entries") or []) == 1:
+        # before_attempt가 차단한 경우 POST도 예약도 없으므로 원래 오류를
+        # 가리지 않고 증거를 남긴다. 이 상태는 유료 canary 소진이 아니다.
+        manifest.update(
+            status="predispatch_blocked_no_external_post",
+            provider_status="not_dispatched",
+            external_post_count=0,
+            incremental_reserved_exposure_krw=0,
+        )
+    elif len(summary.get("entries") or []) != 2:
+        manifest.update(status="ledger_lineage_mismatch", continuation_allowed=False)
+        _write_json(manifest_path, manifest)
         raise RuntimeError("scene07 원장은 기존 1건과 canary 1건만 가져야 합니다.")
+    else:
+        manifest["external_post_count"] = 1
+        manifest["incremental_reserved_exposure_krw"] = INCREMENTAL_RESERVED_KRW
     manifest["request_summary"] = summary
     latest = summary["entries"][-1]
     manifest["latest_attempt_id"] = latest.get("attempt_id")
