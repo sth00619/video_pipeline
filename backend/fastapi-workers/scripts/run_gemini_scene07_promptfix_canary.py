@@ -107,6 +107,9 @@ def main() -> int:
     os.environ["GEMINI_REQUEST_STATE_PATH"] = str(output / "request_state.sqlite3")
     os.environ["GEMINI_PROJECT_SCOPE"] = f"wo-scene07-promptfix-{_sha(spec_bytes)[:12]}"
     row = prepare_row(spec)
+    # 가격 계약도 execute claim보다 먼저 검증해 로컬 경로 오류를 유료 호출
+    # 시도로 오인하거나 재실행을 막는 빈 claim으로 남기지 않는다.
+    _, usd_krw = _read_prices(args.pricing_config)
     preflight = {
         "version": spec["version"],
         "status": "authorized_preflight",
@@ -142,7 +145,6 @@ def main() -> int:
     from app.v5.providers.gemini_provider import GeminiModel, GeminiProvider
 
     runtime_config.update(gemini_scene_request_limit=1)
-    _, usd_krw = _read_prices(args.pricing_config)
     contract_fingerprint = _sha(json.dumps(row["scene"], ensure_ascii=False, sort_keys=True).encode())
     audit = ProviderRequestAudit.for_path(
         path=ledger_path,
