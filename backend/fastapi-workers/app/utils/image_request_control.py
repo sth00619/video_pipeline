@@ -9,6 +9,7 @@ import random
 import re
 import sqlite3
 import time
+from datetime import datetime
 from datetime import timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -93,6 +94,35 @@ def retry_after_seconds(value: str | None, now: float) -> float:
         except (ValueError, TypeError, OverflowError):
             return 0.0
     return max(0.0, seconds) if math.isfinite(seconds) else 0.0
+
+
+def validate_provider_status_check(check: object) -> dict:
+    """사람이 확인한 공식 상태 대시보드 결과를 재도전 원장 계약으로 검증한다."""
+    if not isinstance(check, dict):
+        raise ImageRequestHeld("공급자 상태 확인 기록이 없음")
+    source = str(check.get("source") or "").strip()
+    if not source.startswith("https://status.cloud.google.com/"):
+        raise ImageRequestHeld("공급자 상태 확인 출처가 Google Cloud 공식 대시보드가 아님")
+    try:
+        checked_at = datetime.fromisoformat(str(check.get("checked_at") or ""))
+    except ValueError as exc:
+        raise ImageRequestHeld("공급자 상태 확인 시각이 ISO-8601 형식이 아님") from exc
+    if checked_at.tzinfo is None:
+        raise ImageRequestHeld("공급자 상태 확인 시각에 시간대가 없음")
+    result = str(check.get("result") or "").strip()
+    if result not in {"no_official_incident", "official_incident_posted"}:
+        raise ImageRequestHeld("공급자 상태 확인 판정값이 허용 목록과 다름")
+    incident_url = check.get("incident_url")
+    if result == "official_incident_posted" and not str(incident_url or "").startswith(
+        "https://status.cloud.google.com/"
+    ):
+        raise ImageRequestHeld("공급자 상태 확인에 공식 장애 링크가 없음")
+    return {
+        "source": source,
+        "checked_at": checked_at.isoformat(),
+        "result": result,
+        "incident_url": str(incident_url) if incident_url else None,
+    }
 
 
 class ImageRequestControl:

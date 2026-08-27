@@ -17,7 +17,10 @@ from pathlib import Path
 from typing import Any
 
 from app import runtime_config
-from app.utils.image_request_control import ImageRequestControl, ImageRequestHeld, canonical_scene, digest
+from app.utils.image_request_control import (
+    ImageRequestControl, ImageRequestHeld, canonical_scene, digest,
+    validate_provider_status_check,
+)
 
 _LOCK = threading.Lock()
 
@@ -184,6 +187,10 @@ class ProviderRequestAudit:
                     raise ImageRequestHeld("냉각 후 재도전 승인 값이 boolean이 아님")
                 if reopen_after_cooldown is True and not retry_of:
                     raise ImageRequestHeld("냉각 후 재도전에는 직전 503 승인 식별자가 필요함")
+                if reopen_after_cooldown is True:
+                    self._request_metadata["provider_status_check"] = validate_provider_status_check(
+                        self._request_metadata.get("provider_status_check")
+                    )
                 if retry_of:
                     previous = prior[-1] if prior else {}
                     if (len(prior) != self._request_metadata.get("approved_retry_prior_count")
