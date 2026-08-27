@@ -420,6 +420,19 @@ def detect_surface(
     return remember(detected) if _surface_is_text_free(path, detected) else None
 
 
+def detect_surface_local(image_path: str, surface_kind: SurfaceKind) -> SurfaceDetection | None:
+    """외부 비전·과금 원장·과거 vision 캐시 없이 로컬 픽셀만 검사한다."""
+    path = Path(str(image_path or ""))
+    if not path.is_file():
+        return None
+    candidates = [
+        detected
+        for detected in (_opencv_quad(path), _heuristic_quad(path), _sliding_blank_surface(path))
+        if detected and _surface_is_text_free(path, detected)
+    ]
+    return max(candidates, key=lambda value: value.confidence) if candidates else None
+
+
 def detect_surface_quad(image_path: str, surface_kind: SurfaceKind) -> Quad | None:
     """Compatibility API used by existing callers."""
     detected = detect_surface(image_path, surface_kind)

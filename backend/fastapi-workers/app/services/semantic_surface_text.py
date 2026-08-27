@@ -13,7 +13,7 @@ from app.services.surface_text_manifest import (
     contract_digest, draw_text_cell, normalized_bbox, set_manifest, validate_manifest,
     expected_cells, SEMANTIC_TEXT_POLICY,
 )
-from app.services.surface_binding_attestation import attest_scene_surfaces
+from app.services.surface_binding_attestation import attest_scene_surfaces, bind_single_local_surface
 
 
 def render_semantic_surface_text(scene: dict, image_path: str) -> None:
@@ -39,6 +39,7 @@ def render_semantic_surface_text(scene: dict, image_path: str) -> None:
     expected_cells(candidate)
     with Image.open(io.BytesIO(source)) as original:
         size, original_format = original.size, original.format or "PNG"
+    bind_single_local_surface(image_path, candidate)
     attest_scene_surfaces(image_path, candidate)
     bindings = candidate.get("surface_bindings") or {}
     for item in plan:
