@@ -63,7 +63,7 @@ def retry_case(tmp_path, monkeypatch):
         return NanaBananaProvider()._generate_gemini_api(prompt, str(tmp_path / "image.png"), "fake-key",
             model="gemini-3-pro-image", image_size="2K", request_audit=audit)
 
-    monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 1)
+    monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 2)
     first = owner()
     first._control.clock = lambda: 0.
     with pytest.raises(ImageRequestHeld):
@@ -71,7 +71,6 @@ def retry_case(tmp_path, monkeypatch):
     old = copy.deepcopy(first.summary()["entries"][0])
     metadata = {"contract_fingerprint": "same-contract", "approved_retry_of": old["attempt_id"],
                 "approved_retry_prior_count": 1, "approved_retry_failure_n": 1}
-    monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 2)
     return owner, run, metadata, calls, status, old, path
 
 

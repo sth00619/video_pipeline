@@ -201,6 +201,11 @@ class ProviderRequestAudit:
                             or self._request_metadata.get("contract_fingerprint") != previous.get("contract_fingerprint")
                             or previous.get("request_control", {}).get("failure_n") != self._request_metadata.get("approved_retry_failure_n")):
                         raise ImageRequestHeld("단일 503 재시도 승인과 원장/요청 계약 불일치")
+                    if (
+                        previous.get("request_control", {}).get("status") == "needs_review"
+                        and reopen_after_cooldown is not True
+                    ):
+                        raise ImageRequestHeld("검수 상태 장면은 냉각 재도전 승인 계약이 필요함")
                     if reopen_after_cooldown is True and (
                         previous.get("request_control", {}).get("status") != "needs_review"
                         or previous.get("request_control", {}).get("first_needs_review_at")

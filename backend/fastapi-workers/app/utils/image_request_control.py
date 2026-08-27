@@ -194,6 +194,8 @@ class ImageRequestControl:
                 raise ImageRequestHeld("장면 누적 요청 상한 도달")
             if active:
                 raise ImageRequestHeld("응답 미확정 예약 존재; 자동 재요청 금지")
+            if status == "needs_review" and review_retry_of and not reopen_requested:
+                raise ImageRequestHeld("검수 상태 장면은 냉각 재도전 승인 계약이 필요함")
             reopened_from = None
             cooldown_override_used = False
             if reopen_requested:
@@ -202,8 +204,7 @@ class ImageRequestControl:
                     (scope, scene),
                 ).fetchone()
                 if (
-                    count < self.limit
-                    or status != "needs_review"
+                    status != "needs_review"
                     or previous != (review_reopen_of, 1, self.project)
                     or n != expected_failure_n
                     or n < 1
