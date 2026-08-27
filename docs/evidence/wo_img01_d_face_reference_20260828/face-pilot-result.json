@@ -1,0 +1,105 @@
+{
+  "version": "wo-img-01-d-face-v2-three-scene-pilot-result-v1",
+  "run_id": "wo_img01_d_face_reference_pilot_20260828",
+  "executed_at_utc": {
+    "first_reserved_at": "2026-08-27T16:42:20.985115+00:00",
+    "last_completed_at": "2026-08-27T16:43:27.331087+00:00"
+  },
+  "result": "provider_unavailable_no_image_generated",
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "attempt_policy": "one_external_post_per_scene_no_retry",
+  "external_post_count": 3,
+  "authorized_reserved_cap_krw": 4800,
+  "ledger_total_krw": 0,
+  "reserved_exposure_krw": 4800,
+  "billing_interpretation": "503 응답 3건은 성공 비용 합계에서 제외했지만 실제 청구 여부는 확인되지 않았다. 예약액은 예상 비용이나 확정 지출이 아니다.",
+  "first_success_usage_metadata": null,
+  "generated_image_count": 0,
+  "face_quality_verdict": "not_evaluable_provider_failure_before_image",
+  "face_reference": {
+    "name": "channel_character_face_range_v2.png",
+    "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e",
+    "sent_as_first_reference_on_all_requests": true,
+    "v1_reference_sent": false
+  },
+  "scene42": {
+    "frozen_and_excluded": true,
+    "attempt_id_before_and_after": "8729ad2c69e949f8b30887ff9bc202f8",
+    "status_before_and_after": "http_503",
+    "failure_n_before_and_after": 1,
+    "control_status_before_and_after": "needs_review"
+  },
+  "attempts": [
+    {
+      "scene_index": 2,
+      "scene_key": "face-v2:2",
+      "attempt": 1,
+      "attempt_id": "56f0fabebbe24f4ebaa1681212bb5680",
+      "status": "http_503",
+      "status_code": 503,
+      "error_code": "UNAVAILABLE",
+      "duration_seconds": 10.252014171001065,
+      "failure_n": 1,
+      "control_status": "needs_review",
+      "payload_sha256": "6cb2cc37c89e630f5cdc33d68941c58efffcd305d3c382c859941febdb997c8e",
+      "prompt_sha256": "366e16093e098eb07f635f3924f09cb0d624b26dd333cd704b4fecdc677306e9",
+      "first_reference_sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e",
+      "usage_metadata_status": "absent",
+      "image_sha256": null,
+      "reserved_amount_krw": 1600,
+      "cost_status": "excluded_from_success_estimate_billing_unverified"
+    },
+    {
+      "scene_index": 7,
+      "scene_key": "face-v2:7",
+      "attempt": 1,
+      "attempt_id": "246a77ba4da44508a39ec8c25b4e1b50",
+      "status": "http_503",
+      "status_code": 503,
+      "error_code": "UNAVAILABLE",
+      "duration_seconds": 7.1444034619999,
+      "failure_n": 1,
+      "control_status": "needs_review",
+      "payload_sha256": "b58ed621dd9d1bffb159109f3a5f8c03e05a4b1a86a2d4a139045f23df00a454",
+      "prompt_sha256": "dca49ed47b54ea2bef11088abec8cc02d36bd54137385624312331f15f1abd96",
+      "first_reference_sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e",
+      "usage_metadata_status": "absent",
+      "image_sha256": null,
+      "reserved_amount_krw": 1600,
+      "cost_status": "excluded_from_success_estimate_billing_unverified"
+    },
+    {
+      "scene_index": 35,
+      "scene_key": "face-v2:35",
+      "attempt": 1,
+      "attempt_id": "f84afef34a064bfeba502f6a9e0f596a",
+      "status": "http_503",
+      "status_code": 503,
+      "error_code": "UNAVAILABLE",
+      "duration_seconds": 4.6571937530025025,
+      "failure_n": 1,
+      "control_status": "needs_review",
+      "payload_sha256": "697fb0c2322aad0d6312a09d4aba69dad72070dd42bb64e76c5461ab82051b1a",
+      "prompt_sha256": "1b6783bbf7735bd087dacf3434d2c60a5f175d4747c208e0cb811ed3b34f83a5",
+      "first_reference_sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e",
+      "usage_metadata_status": "absent",
+      "image_sha256": null,
+      "reserved_amount_krw": 1600,
+      "cost_status": "excluded_from_success_estimate_billing_unverified"
+    }
+  ],
+  "artifact_sha256": {
+    "pilot_manifest.json": "1fa1bcd0faebbd68c11e902c130a68b24122ab881764dfdc98d9f68287485e0d",
+    "request_ledger.json": "a97436bc6e129fa182f411c94201b4429dfe19daf377fd79598b704bf63ff625",
+    "preflight.json": "7c8455dd754bbe66c45771a3c9e03daa5aace5502ac8a2e5b4ed85a203a84df4",
+    "frozen_scene42_request_ledger.json": "79a7e345f796824e1db409cd24bd3089d26bb502ef912bd221252a4d2a8cbc4f"
+  },
+  "out_of_scope_stages_invoked": {
+    "anthropic": 0,
+    "tts": 0,
+    "fal_or_kling": 0,
+    "ffmpeg_assembly": 0,
+    "thumbnail": 0
+  }
+}
