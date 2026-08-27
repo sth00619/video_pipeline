@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.113" timestamp="2026-08-27T23:38:09.207897+00:00" hostname="baee5ffc6451"><testcase classname="" name="tests.test_operational_contract_audit" time="0.000"><error message="collection failure">ImportError while importing test module '/repo/backend/fastapi-workers/tests/test_operational_contract_audit.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_operational_contract_audit.py:3: in &lt;module&gt;
+    from app.utils.operational_contract_audit import (
+E   ModuleNotFoundError: No module named 'app.utils.operational_contract_audit'</error></testcase></testsuite></testsuites>
