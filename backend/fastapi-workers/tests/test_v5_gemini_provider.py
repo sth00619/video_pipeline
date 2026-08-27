@@ -10,7 +10,9 @@ from app.v5.providers.gemini_provider import (
     GeminiModel,
     GeminiProvider,
     GeminiProviderError,
+    GEMINI_REFERENCE_CONTRACT_VERSION,
     _load_default_references,
+    ensure_gemini_reference_contract,
     select_contextual_reference_paths,
 )
 
@@ -225,3 +227,44 @@ def test_goggles_face_anchor_contract_is_larger_face_evidence_not_costume_lock(t
     ]
     assert "larger role-matched face crop" in observed["prompt"]
     assert "Do not copy or freeze its expression, costume, goggles, pose" in observed["prompt"]
+
+
+def test_reference_contract_is_idempotent_when_operational_transport_checks_it_again(tmp_path: Path):
+    refs = []
+    for name in (
+        "channel_character_face_range_v2.png",
+        "channel_character_face_scene05_v1.png",
+        "channel_style_job52_briefing.png",
+    ):
+        path = tmp_path / name
+        path.write_bytes(name.encode())
+        refs.append(str(path))
+
+    once = ensure_gemini_reference_contract("scientist goggles", refs)
+    twice = ensure_gemini_reference_contract(once, refs)
+
+    assert twice == once
+    assert twice.count(
+        f"FINAL GEMINI REFERENCE CONTRACT [{GEMINI_REFERENCE_CONTRACT_VERSION}]:"
+    ) == 1
+
+
+def test_localized_retry_source_is_not_misclassified_as_character_identity(tmp_path: Path):
+    refs = []
+    for name in (
+        "scene_007_rejected.png",
+        "channel_character_face_range_v2.png",
+        "channel_style_job52_briefing.png",
+    ):
+        path = tmp_path / name
+        path.write_bytes(name.encode())
+        refs.append(str(path))
+
+    prompt = ensure_gemini_reference_contract(
+        "The FIRST attached image is the previously rejected full scene. Edit that same frame locally.",
+        refs,
+    )
+
+    assert "Reference image 1 is only the previously rejected full-scene edit source" in prompt
+    assert "Reference image 2 contains exact, non-generatively altered face crops" in prompt
+    assert "Reference image 1 is an explicitly selected character reference" not in prompt

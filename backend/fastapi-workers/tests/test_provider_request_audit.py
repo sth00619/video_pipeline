@@ -247,7 +247,12 @@ def test_reference_payload_order_matches_the_v3_declared_contract(tmp_path: Path
     assert len(parts) == 3  # 두 참조 이미지와 하나의 텍스트 프롬프트
 
 
-def test_operational_generate_content_injects_the_same_face_reference_contract_as_canary(tmp_path: Path, monkeypatch):
+@pytest.mark.parametrize("reference_contract_declared", [False, True])
+def test_operational_generate_content_injects_the_same_face_reference_contract_as_canary(
+    tmp_path: Path,
+    monkeypatch,
+    reference_contract_declared: bool,
+):
     """영상 생성 버튼의 실제 HTTP 경로도 canary와 같은 얼굴 계약을 보내야 한다."""
     import base64
     from io import BytesIO
@@ -292,7 +297,7 @@ def test_operational_generate_content_injects_the_same_face_reference_contract_a
         model="gemini-3-pro-image",
         image_size="2K",
         max_attempts=1,
-        reference_contract_declared=True,
+        reference_contract_declared=reference_contract_declared,
         request_audit=_audit(tmp_path),
     )
 

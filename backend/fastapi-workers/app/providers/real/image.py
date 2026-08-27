@@ -524,6 +524,19 @@ class NanaBananaProvider(ImageProvider):
         # V5 벤치마크는 캐릭터·스타일·구도 가이드 3장을 의도적으로 함께 쓴다.
         # Gemini Pro가 허용하는 참조 이미지 범위 내에서 기존 2장 제한을 확장한다.
         reference_paths = [path for path in (character_image_paths or []) if path and os.path.exists(path)][:3]
+        has_channel_reference_contract = any(
+            Path(path).name == "channel_character_face_range_v2.png"
+            or Path(path).name.startswith("channel_character_face_scene")
+            or Path(path).name.startswith("channel_style_")
+            for path in reference_paths
+        )
+        if reference_paths and (reference_contract_declared or has_channel_reference_contract):
+            # 테스트용 Gemini 래퍼와 영상 생성 버튼의 운영 경로가 동일한
+            # 얼굴·화풍·참조 순서 계약을 사용해야 한다. 전송 직전 한 곳에서
+            # 보강하므로 병렬/직렬/국소 재생성뿐 아니라 구형 장면의 재개
+            # 경로도 서로 달라지지 않는다.
+            from app.v5.providers.gemini_provider import ensure_gemini_reference_contract
+            prompt = ensure_gemini_reference_contract(prompt, reference_paths)
         # 호출 payload의 이미지 순서는 V5 계약과 동일하게 보존한다.
         # 이전 구현은 style/layout을 먼저 넣어 프롬프트의 character→style→layout
         # 설명과 실제 이미지 번호가 서로 달랐다.

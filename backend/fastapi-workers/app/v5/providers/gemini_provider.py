@@ -47,6 +47,11 @@ _FACE_ROLE_REF_NAMES = {
     "goggles": "channel_character_face_scene05_v1.png",
 }
 
+GEMINI_REFERENCE_CONTRACT_VERSION = "job52-range-v2-operational-v1"
+_REFERENCE_CONTRACT_MARKER = (
+    f"FINAL GEMINI REFERENCE CONTRACT [{GEMINI_REFERENCE_CONTRACT_VERSION}]:"
+)
+
 _CONTEXTUAL_REFERENCE_GROUPS = {
     "semiconductor": (
         "channel_style_semiconductor_production_scene_v1.png",
@@ -135,6 +140,111 @@ def select_contextual_reference_paths(
     return list(dict.fromkeys([*identity, *selected]))[:limit]
 
 
+def ensure_gemini_reference_contract(
+    prompt: str,
+    reference_image_paths: list[str] | None,
+) -> str:
+    """Canary와 운영 HTTP 경로에 동일한 참조 이미지 의미 계약을 붙인다.
+
+    참조 파일만 전송하고 그 역할을 설명하지 않으면 모델이 얼굴 범위·화풍·
+    이전 실패 프레임을 임의로 평균낸다. 모든 실제 GenerateContent POST 직전에
+    이 함수를 거치며, marker가 이미 있으면 중복 주입하지 않는다.
+    """
+    source_prompt = str(prompt or "")
+    if _REFERENCE_CONTRACT_MARKER in source_prompt:
+        return source_prompt
+    reference_names = [Path(path).name.lower() for path in reference_image_paths or []]
+    if not reference_names:
+        return source_prompt
+
+    localized_edit = "the first attached image is the previously rejected full scene" in source_prompt.casefold()
+    face_range_indices = [
+        index + 1 for index, name in enumerate(reference_names)
+        if "channel_character_face_range" in name
+    ]
+    face_anchor_indices = [
+        index + 1 for index, name in enumerate(reference_names)
+        if "channel_character_face_scene" in name
+    ]
+    style_indices = [
+        index + 1 for index, name in enumerate(reference_names)
+        if "style_reference" in name or "style_scene_ref" in name or "channel_style_" in name
+    ]
+    system_indices = set(face_range_indices + face_anchor_indices + style_indices)
+    character_indices = [
+        index + 1 for index, name in enumerate(reference_names)
+        if "character_reference" in name
+    ]
+    if not character_indices and len(reference_names) > 1:
+        character_indices = [
+            index + 1 for index in range(len(reference_names))
+            if index + 1 not in system_indices and not (localized_edit and index == 0)
+        ]
+
+    clauses = [_REFERENCE_CONTRACT_MARKER]
+    if localized_edit:
+        clauses.append(
+            "Reference image 1 is only the previously rejected full-scene edit source. Preserve its successful composition and correct only the named failed contract; do not treat it as the channel character identity."
+        )
+    if character_indices:
+        character_index = character_indices[0]
+        clauses.append(
+            f"Reference image {character_index} is an explicitly selected character reference. "
+            f"Keep the mascot recognizably related to image {character_index}, while following the scene-specific expression, costume, action, and scale. "
+            "Do not copy a neutral face, outfit, pose, or framing into every scene."
+        )
+    elif face_range_indices:
+        face_index = face_range_indices[0]
+        clauses.append(
+            f"Reference image {face_index} contains exact, non-generatively altered face crops from approved Job52 scenes 03, 04, 05, 09, 13, and 14. "
+            "Use their shared face construction as the identity contract: preserve large readable eyes with warm brown pupils or irises whose diameter stays "
+            "within 38% to 58% of the full visible eye width, visible white sclera, and layered white catchlights. A soft forehead reflection highlight is required. "
+            "Use gently curved eyebrows that can rise or soften with the emotion; do not use sharply angled or deeply furrowed eyebrows. Keep subtle cheek blush "
+            "when compatible with the scene lighting. The round gold-coin species, embossed rim, compact anatomy, and face construction takes priority over background and prop detail. "
+            "Costume and headwear remain scene-specific, as the six approved examples intentionally use different outfits. Do not force one outfit, hat, pose, expression, scale, or framing."
+        )
+        if face_anchor_indices:
+            anchor_index = face_anchor_indices[0]
+            clauses.append(
+                f"Reference image {anchor_index} is a larger role-matched face crop taken without generative alteration from one of those same six approved scenes. "
+                "Use it only to resolve the shared eye, iris, catchlight, forehead-highlight, and line construction at readable scale. "
+                "Do not copy or freeze its expression, costume, goggles, pose, scale, or framing when the written scene requests something else."
+            )
+    elif len(reference_names) == 1 and not style_indices:
+        clauses.append(
+            "Reference image 1 is an explicitly selected character reference. Preserve the recognizable gold-coin mascot design language, "
+            "but let the written scene choose expression, costume, action, headwear, and framing."
+        )
+    else:
+        clauses.append(
+            "No single authoritative mascot model sheet is supplied. When the written prompt requests the mascot, infer the shared gold-coin "
+            "character design range from the channel scene references without copying one scene's face, outfit, pose, or scale."
+        )
+
+    if style_indices:
+        clauses.append(
+            f"Reference images {', '.join(str(index) for index in style_indices)} collectively define the channel's acceptable visual range. "
+            "Preserve their 2D editorial-comic line language, scene-dependent palette, cel shading, information density, and varied use of the "
+            "gold-coin mascot. They intentionally show different expressions, costumes, character sizes, compositions, text surfaces, and color moods. "
+            "Do not collapse that range into one fixed expression, navy outfit, studio, board, or camera angle."
+        )
+        clauses.append(
+            "Keep the earlier face-construction identity contract."
+            if face_range_indices or character_indices
+            else "Keep any explicitly requested mascot identity while varying the scene expression and staging."
+        )
+        clauses.append(
+            "Do not copy any reference's literal text, numbers, speech bubbles, props, or composition into a different narration. When the current scene allows text or values, borrow the "
+            "references' structural treatment—solid scene-mounted monitors, printed wall boards, machine gauges, engraved or painted prop faces—rather "
+            "than inventing a detached translucent glass card. A floating holographic surface is allowed only when the scene-local surface plan explicitly requests one."
+        )
+    clauses.append(
+        "Follow the scene-specific composition in the written prompt. A continuous scene, split comparison, stage, classroom, control room, laboratory, or other framing is allowed only when that scene calls for it. "
+        "Do not force every scene into one studio template. Do not reproduce marks from any reference image."
+    )
+    return " ".join(clauses) + "\n\n" + source_prompt
+
+
 class GeminiProvider:
     """기존 실사용 Gemini 전송 경로를 V5 ImageResult 계약으로 감싼다."""
 
@@ -177,75 +287,7 @@ class GeminiProvider:
         # 하향 폴백을 거부한다. 따라서 비교 결과의 공급자가 섞이지 않는다.
         from app.providers.real.image import NanaBananaProvider
 
-        reference_names = [Path(path).name.lower() for path in reference_image_paths or []]
-        character_indices = [index + 1 for index, name in enumerate(reference_names) if "character_reference" in name]
-        face_range_indices = [index + 1 for index, name in enumerate(reference_names) if "channel_character_face_range" in name]
-        face_anchor_indices = [index + 1 for index, name in enumerate(reference_names) if "channel_character_face_scene" in name]
-        style_indices = [
-            index + 1 for index, name in enumerate(reference_names)
-            if "style_reference" in name or "style_scene_ref" in name or "channel_style_" in name
-        ]
-        if character_indices:
-            character_index = character_indices[0]
-            reference_contract = (
-                f"Reference image {character_index} is an explicitly selected character reference. "
-                f"Keep the mascot recognizably related to image {character_index}, while following the scene-specific expression, costume, action, and scale. "
-                "Do not copy a neutral face, outfit, pose, or framing into every scene. "
-            )
-        elif face_range_indices:
-            face_index = face_range_indices[0]
-            reference_contract = (
-                f"Reference image {face_index} contains exact, non-generatively altered face crops from approved Job52 scenes 03, 04, 05, 09, 13, and 14. "
-                "Use their shared face construction as the identity contract: preserve large readable eyes with warm brown pupils or irises whose diameter stays "
-                "within 38% to 58% of the full visible eye width, visible white sclera, and layered white catchlights. A soft forehead reflection highlight is required. "
-                "Use gently curved eyebrows that can rise or soften with the emotion; do not use sharply angled or deeply furrowed eyebrows. Keep subtle cheek blush "
-                "when compatible with the scene lighting. The round gold-coin species, embossed rim, compact anatomy, and face construction takes priority over background and prop detail. "
-                "Costume and headwear remain scene-specific, as the six approved examples intentionally use different outfits. Do not force one outfit, hat, pose, expression, scale, or framing. "
-            )
-            if face_anchor_indices:
-                anchor_index = face_anchor_indices[0]
-                reference_contract += (
-                    f"Reference image {anchor_index} is a larger role-matched face crop taken without generative alteration from one of those same six approved scenes. "
-                    "Use it only to resolve the shared eye, iris, catchlight, forehead-highlight, and line construction at readable scale. "
-                    "Do not copy or freeze its expression, costume, goggles, pose, scale, or framing when the written scene requests something else. "
-                )
-        elif len(reference_names) == 1 and not style_indices:
-            # 기존 단일 캐릭터 참조 호출과의 호환성이다. 파일명이 명확한 스타일
-            # 참조인 경우에는 이 분기로 들어오지 않는다.
-            reference_contract = (
-                "Reference image 1 is an explicitly selected character reference. Preserve the recognizable gold-coin mascot design language, "
-                "but let the written scene choose expression, costume, action, headwear, and framing. "
-            )
-        else:
-            reference_contract = (
-                "No single authoritative mascot model sheet is supplied. When the written prompt requests the mascot, infer the shared gold-coin "
-                "character design range from the channel scene references without copying one scene's face, outfit, pose, or scale. "
-            )
-        if style_indices:
-            face_priority = (
-                "Keep the earlier face-construction identity contract. "
-                if face_range_indices
-                else "Keep any explicitly requested mascot identity while varying the scene expression and staging. "
-            )
-            reference_contract += (
-                f"Reference images {', '.join(str(index) for index in style_indices)} collectively define the channel's acceptable visual range. "
-                "Preserve their 2D editorial-comic line language, scene-dependent palette, cel shading, information density, and varied use of the "
-                "gold-coin mascot. They intentionally show different expressions, costumes, character sizes, compositions, text surfaces, and color moods. "
-                "Do not collapse that range into one fixed expression, navy outfit, studio, board, or camera angle. "
-            )
-            reference_contract += face_priority
-            reference_contract += (
-                "Do not copy any reference's literal text, "
-                "numbers, speech bubbles, props, or composition into a different narration. When the current scene allows text or values, borrow the "
-                "references' structural treatment—solid scene-mounted monitors, printed wall boards, machine gauges, engraved or painted prop faces—rather "
-                "than inventing a detached translucent glass card. A floating holographic surface is allowed only when the scene-local surface plan explicitly requests one. "
-            )
-        prompt = (
-            reference_contract
-            + "Follow the scene-specific composition in the written prompt. A continuous scene, split comparison, stage, classroom, control room, "
-            "laboratory, or other framing is allowed only when that scene calls for it. Do not force every scene into one studio template. "
-            "Do not reproduce marks from any reference image.\n\n" + prompt
-        )
+        prompt = ensure_gemini_reference_contract(prompt, reference_image_paths)
         # ──────────────────────────────────────────────────────────────────
         # [전송 전 강제 검증 로그] 매 Gemini API 호출마다 실제 전송 파일을 기록한다.
         # 이 로그 없이는 "코드는 맞다"는 보고가 검증 불가 — 반드시 출력돼야 한다.
