@@ -1,0 +1,576 @@
+{
+  "schema_version": 1,
+  "measurement_method": "원본 PNG의 눈/홍채 경계를 사람이 픽셀 좌표로 선택하고 비율은 코드로 계산",
+  "source_hashes_verified": true,
+  "limitations": [
+    "학습형 얼굴 랜드마크 검출기가 아니며 육안 의미 판정을 대체하지 않는다.",
+    "유료 재생성 전 선행 실패를 반복 가능한 좌표와 산술로 고정하기 위한 측정이다."
+  ],
+  "contract": {
+    "iris_eye_width_ratio_min": 0.38,
+    "iris_eye_width_ratio_max": 0.58
+  },
+  "approved_reference_observed_mean_range": [
+    0.4571,
+    0.4878
+  ],
+  "approved_reference_pass_count": 6,
+  "pilot_failure_reproduced_count": 3,
+  "reopen_candidate_failure_count": 1,
+  "samples": [
+    {
+      "kind": "approved_reference",
+      "scene": 3,
+      "path": "artifacts/job52_full_audit_20260824/images/scene_003.png",
+      "sha256": "fad619f51fbef7f6b87636e2c33c3fde584b2576ec26c4b05011452e0eb1c024",
+      "sclera_visible": true,
+      "warm_brown_iris": true,
+      "layered_catchlights": true,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": false,
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            775,
+            310,
+            845,
+            405
+          ],
+          "iris_bbox_xyxy": [
+            800,
+            330,
+            832,
+            392
+          ],
+          "iris_eye_width_ratio": 0.4571
+        },
+        {
+          "eye_bbox_xyxy": [
+            900,
+            310,
+            970,
+            405
+          ],
+          "iris_bbox_xyxy": [
+            922,
+            330,
+            954,
+            392
+          ],
+          "iris_eye_width_ratio": 0.4571
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.4571,
+      "checks": {
+        "iris_width_ratio_in_range": true,
+        "sclera_visible": true,
+        "warm_brown_iris": true,
+        "layered_catchlights": true,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": true
+    },
+    {
+      "kind": "approved_reference",
+      "scene": 4,
+      "path": "artifacts/job52_full_audit_20260824/images/scene_004.png",
+      "sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6",
+      "sclera_visible": true,
+      "warm_brown_iris": true,
+      "layered_catchlights": true,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": true,
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            775,
+            260,
+            865,
+            375
+          ],
+          "iris_bbox_xyxy": [
+            805,
+            280,
+            848,
+            360
+          ],
+          "iris_eye_width_ratio": 0.4778
+        },
+        {
+          "eye_bbox_xyxy": [
+            920,
+            260,
+            1010,
+            375
+          ],
+          "iris_bbox_xyxy": [
+            948,
+            280,
+            991,
+            360
+          ],
+          "iris_eye_width_ratio": 0.4778
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.4778,
+      "checks": {
+        "iris_width_ratio_in_range": true,
+        "sclera_visible": true,
+        "warm_brown_iris": true,
+        "layered_catchlights": true,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": true
+    },
+    {
+      "kind": "approved_reference",
+      "scene": 5,
+      "path": "artifacts/job52_full_audit_20260824/images/scene_005.png",
+      "sha256": "f38142ec185ddab03e08d5baacdf9fbbda3659c168ecbeaa225f75483e92d46e",
+      "sclera_visible": true,
+      "warm_brown_iris": true,
+      "layered_catchlights": true,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": true,
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            765,
+            320,
+            830,
+            410
+          ],
+          "iris_bbox_xyxy": [
+            788,
+            335,
+            820,
+            398
+          ],
+          "iris_eye_width_ratio": 0.4923
+        },
+        {
+          "eye_bbox_xyxy": [
+            890,
+            310,
+            950,
+            400
+          ],
+          "iris_bbox_xyxy": [
+            907,
+            326,
+            936,
+            390
+          ],
+          "iris_eye_width_ratio": 0.4833
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.4878,
+      "checks": {
+        "iris_width_ratio_in_range": true,
+        "sclera_visible": true,
+        "warm_brown_iris": true,
+        "layered_catchlights": true,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": true
+    },
+    {
+      "kind": "approved_reference",
+      "scene": 9,
+      "path": "artifacts/job52_full_audit_20260824/images/scene_009.png",
+      "sha256": "80c6ba98deb097119ae911b607df164e1a54d6859772f5db65a2f2452664654b",
+      "sclera_visible": true,
+      "warm_brown_iris": true,
+      "layered_catchlights": true,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": false,
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            1230,
+            465,
+            1290,
+            555
+          ],
+          "iris_bbox_xyxy": [
+            1248,
+            480,
+            1277,
+            543
+          ],
+          "iris_eye_width_ratio": 0.4833
+        },
+        {
+          "eye_bbox_xyxy": [
+            1360,
+            465,
+            1420,
+            555
+          ],
+          "iris_bbox_xyxy": [
+            1380,
+            480,
+            1409,
+            543
+          ],
+          "iris_eye_width_ratio": 0.4833
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.4833,
+      "checks": {
+        "iris_width_ratio_in_range": true,
+        "sclera_visible": true,
+        "warm_brown_iris": true,
+        "layered_catchlights": true,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": true
+    },
+    {
+      "kind": "approved_reference",
+      "scene": 13,
+      "path": "artifacts/job52_full_audit_20260824/images/scene_013.png",
+      "sha256": "cd6502b7879fdd2a283238ae29513151890b782ed9a227defc03205121d8da59",
+      "sclera_visible": true,
+      "warm_brown_iris": true,
+      "layered_catchlights": true,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": false,
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            820,
+            405,
+            880,
+            495
+          ],
+          "iris_bbox_xyxy": [
+            838,
+            420,
+            866,
+            482
+          ],
+          "iris_eye_width_ratio": 0.4667
+        },
+        {
+          "eye_bbox_xyxy": [
+            940,
+            405,
+            1000,
+            495
+          ],
+          "iris_bbox_xyxy": [
+            958,
+            420,
+            986,
+            482
+          ],
+          "iris_eye_width_ratio": 0.4667
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.4667,
+      "checks": {
+        "iris_width_ratio_in_range": true,
+        "sclera_visible": true,
+        "warm_brown_iris": true,
+        "layered_catchlights": true,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": true
+    },
+    {
+      "kind": "approved_reference",
+      "scene": 14,
+      "path": "artifacts/job52_full_audit_20260824/images/scene_014.png",
+      "sha256": "e584e57951bad80307e01b921f58177d92853a81fafeb0c9942a8cf1813f45c7",
+      "sclera_visible": true,
+      "warm_brown_iris": true,
+      "layered_catchlights": true,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": true,
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            800,
+            450,
+            860,
+            540
+          ],
+          "iris_bbox_xyxy": [
+            818,
+            465,
+            846,
+            527
+          ],
+          "iris_eye_width_ratio": 0.4667
+        },
+        {
+          "eye_bbox_xyxy": [
+            920,
+            450,
+            980,
+            540
+          ],
+          "iris_bbox_xyxy": [
+            938,
+            465,
+            966,
+            527
+          ],
+          "iris_eye_width_ratio": 0.4667
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.4667,
+      "checks": {
+        "iris_width_ratio_in_range": true,
+        "sclera_visible": true,
+        "warm_brown_iris": true,
+        "layered_catchlights": true,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": true
+    },
+    {
+      "kind": "pilot_failure",
+      "scene": 2,
+      "path": "artifacts/wo_img01_c3_eight_scene_pilot/scene_02_raw.png",
+      "sha256": "9a6821a14fd175d2af2f76aad24c98a35bb2de5053c530a4a640e50521aeaf3a",
+      "sclera_visible": true,
+      "warm_brown_iris": false,
+      "layered_catchlights": false,
+      "forehead_highlight": true,
+      "eyebrow_shape": "deep_furrow",
+      "blush": false,
+      "wardrobe_observation": "대본 근거 없는 경찰모·경찰 제복",
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            905,
+            655,
+            1005,
+            795
+          ],
+          "iris_bbox_xyxy": [
+            950,
+            680,
+            979,
+            770
+          ],
+          "iris_eye_width_ratio": 0.29
+        },
+        {
+          "eye_bbox_xyxy": [
+            1060,
+            655,
+            1132,
+            795
+          ],
+          "iris_bbox_xyxy": [
+            1088,
+            680,
+            1114,
+            770
+          ],
+          "iris_eye_width_ratio": 0.3611
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.3256,
+      "checks": {
+        "iris_width_ratio_in_range": false,
+        "sclera_visible": true,
+        "warm_brown_iris": false,
+        "layered_catchlights": false,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": false
+      },
+      "face_contract_pass": false
+    },
+    {
+      "kind": "pilot_failure",
+      "scene": 7,
+      "path": "artifacts/wo_img01_c3_eight_scene_pilot/scene_07_raw.png",
+      "sha256": "d442a2a00399e6feb65fdca543ab3b0cad1e9eea2a97ef241b804015bbaa4e6e",
+      "sclera_visible": false,
+      "warm_brown_iris": false,
+      "layered_catchlights": false,
+      "forehead_highlight": true,
+      "eyebrow_shape": "sharp_angle",
+      "blush": false,
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            1830,
+            735,
+            1872,
+            825
+          ],
+          "iris_bbox_xyxy": [
+            1830,
+            735,
+            1872,
+            825
+          ],
+          "iris_eye_width_ratio": 1.0
+        },
+        {
+          "eye_bbox_xyxy": [
+            1985,
+            735,
+            2027,
+            825
+          ],
+          "iris_bbox_xyxy": [
+            1985,
+            735,
+            2027,
+            825
+          ],
+          "iris_eye_width_ratio": 1.0
+        }
+      ],
+      "mean_iris_eye_width_ratio": 1.0,
+      "checks": {
+        "iris_width_ratio_in_range": false,
+        "sclera_visible": false,
+        "warm_brown_iris": false,
+        "layered_catchlights": false,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": false
+      },
+      "face_contract_pass": false
+    },
+    {
+      "kind": "pilot_failure",
+      "scene": 35,
+      "path": "artifacts/wo_img01_c3_eight_scene_pilot/scene_35_raw.png",
+      "sha256": "800ebc51b1ea91894eab4fe808fdb0c63ec00a61f1b080055275fe30c1799428",
+      "sclera_visible": true,
+      "warm_brown_iris": false,
+      "layered_catchlights": false,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": false,
+      "wardrobe_observation": "대본 근거 없는 경찰모",
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            1250,
+            575,
+            1337,
+            695
+          ],
+          "iris_bbox_xyxy": [
+            1288,
+            595,
+            1317,
+            675
+          ],
+          "iris_eye_width_ratio": 0.3333
+        },
+        {
+          "eye_bbox_xyxy": [
+            1438,
+            575,
+            1525,
+            695
+          ],
+          "iris_bbox_xyxy": [
+            1476,
+            595,
+            1505,
+            675
+          ],
+          "iris_eye_width_ratio": 0.3333
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.3333,
+      "checks": {
+        "iris_width_ratio_in_range": false,
+        "sclera_visible": true,
+        "warm_brown_iris": false,
+        "layered_catchlights": false,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": false
+    },
+    {
+      "kind": "reopen_candidate",
+      "scene": 7,
+      "path": "artifacts/wo_img01_d_face_reference_pilot_20260828/scene_07_reopen_01_raw.png",
+      "sha256": "4925e325ebd8000dc61ee7db4733e63ffa96ef0ec34f0a8dea8c34eefa8d8b7e",
+      "sclera_visible": false,
+      "warm_brown_iris": false,
+      "layered_catchlights": false,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": false,
+      "attempt_id": "dfbf4c89677f4a63a58c3212d5245a93",
+      "observation": "HTTP 200이지만 기존 scene07과 같은 흰자 없는 검은 타원 눈",
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            696,
+            774,
+            735,
+            844
+          ],
+          "iris_bbox_xyxy": [
+            696,
+            774,
+            735,
+            844
+          ],
+          "iris_eye_width_ratio": 1.0
+        },
+        {
+          "eye_bbox_xyxy": [
+            830,
+            761,
+            866,
+            830
+          ],
+          "iris_bbox_xyxy": [
+            830,
+            761,
+            866,
+            830
+          ],
+          "iris_eye_width_ratio": 1.0
+        }
+      ],
+      "mean_iris_eye_width_ratio": 1.0,
+      "checks": {
+        "iris_width_ratio_in_range": false,
+        "sclera_visible": false,
+        "warm_brown_iris": false,
+        "layered_catchlights": false,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": false
+    }
+  ]
+}

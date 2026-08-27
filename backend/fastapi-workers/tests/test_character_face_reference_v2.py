@@ -54,3 +54,16 @@ def test_existing_pilot_face_failures_are_quantitatively_reproduced():
     pilot_rows = [row for row in report["samples"] if row["kind"] == "pilot_failure"]
     assert {row["scene"] for row in pilot_rows} == {2, 7, 35}
     assert all(not row["face_contract_pass"] for row in pilot_rows)
+
+
+def test_scene07_reopen_candidate_still_fails_measured_face_contract():
+    report = build_report(verify_sources=False)
+    rows = [row for row in report["samples"] if row["kind"] == "reopen_candidate"]
+    assert report["reopen_candidate_failure_count"] == 1
+    assert len(rows) == 1
+    assert rows[0]["scene"] == 7
+    assert rows[0]["mean_iris_eye_width_ratio"] == 1.0
+    assert rows[0]["checks"]["sclera_visible"] is False
+    assert rows[0]["checks"]["warm_brown_iris"] is False
+    assert rows[0]["checks"]["layered_catchlights"] is False
+    assert rows[0]["face_contract_pass"] is False

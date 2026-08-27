@@ -90,6 +90,19 @@ SAMPLES = (
         "forehead_highlight": True, "eyebrow_shape": "gentle_curve", "blush": False,
         "wardrobe_observation": "대본 근거 없는 경찰모",
     },
+    {
+        "kind": "reopen_candidate", "scene": 7,
+        "path": "artifacts/wo_img01_d_face_reference_pilot_20260828/scene_07_reopen_01_raw.png",
+        "sha256": "4925e325ebd8000dc61ee7db4733e63ffa96ef0ec34f0a8dea8c34eefa8d8b7e",
+        "eyes": [
+            ((696, 774, 735, 844), (696, 774, 735, 844)),
+            ((830, 761, 866, 830), (830, 761, 866, 830)),
+        ],
+        "sclera_visible": False, "warm_brown_iris": False, "layered_catchlights": False,
+        "forehead_highlight": True, "eyebrow_shape": "gentle_curve", "blush": False,
+        "attempt_id": "dfbf4c89677f4a63a58c3212d5245a93",
+        "observation": "HTTP 200이지만 기존 scene07과 같은 흰자 없는 검은 타원 눈",
+    },
 )
 
 
@@ -133,6 +146,7 @@ def build_report(*, verify_sources: bool = True) -> dict:
     rows = [evaluate(sample, verify_source=verify_sources) for sample in SAMPLES]
     approved = [row for row in rows if row["kind"] == "approved_reference"]
     pilots = [row for row in rows if row["kind"] == "pilot_failure"]
+    reopen_candidates = [row for row in rows if row["kind"] == "reopen_candidate"]
     return {
         "schema_version": 1,
         "measurement_method": "원본 PNG의 눈/홍채 경계를 사람이 픽셀 좌표로 선택하고 비율은 코드로 계산",
@@ -148,6 +162,9 @@ def build_report(*, verify_sources: bool = True) -> dict:
         ],
         "approved_reference_pass_count": sum(row["face_contract_pass"] for row in approved),
         "pilot_failure_reproduced_count": sum(not row["face_contract_pass"] for row in pilots),
+        "reopen_candidate_failure_count": sum(
+            not row["face_contract_pass"] for row in reopen_candidates
+        ),
         "samples": rows,
     }
 
@@ -162,6 +179,7 @@ def main() -> int:
     print(json.dumps({
         "approved_reference_pass_count": report["approved_reference_pass_count"],
         "pilot_failure_reproduced_count": report["pilot_failure_reproduced_count"],
+        "reopen_candidate_failure_count": report["reopen_candidate_failure_count"],
     }, ensure_ascii=False))
     return 0
 
