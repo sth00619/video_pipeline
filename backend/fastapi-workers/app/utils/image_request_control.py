@@ -169,6 +169,7 @@ class ImageRequestControl:
                 review_retry_of: str | None = None, expected_failure_n: int | None = None,
                 review_reopen_of: str | None = None,
                 review_reopen_first_needs_review_at: float | None = None,
+                review_reopen_legacy_first_needs_review_at: float | None = None,
                 review_reopen_override_cooldown: bool = False) -> dict:
         scene = canonical_scene(scene)
         db = self._db()
@@ -182,6 +183,19 @@ class ImageRequestControl:
             )
             count = max(count, legacy_count)
             reopen_requested = bool(review_reopen_of)
+            legacy_first_review_recovered = False
+            if reopen_requested and status == "needs_review" and first_review_at is None:
+                if (
+                    review_reopen_legacy_first_needs_review_at is None
+                    or not math.isfinite(review_reopen_legacy_first_needs_review_at)
+                    or review_reopen_legacy_first_needs_review_at
+                    != review_reopen_first_needs_review_at
+                ):
+                    raise ImageRequestHeld("정책 도입 전 검수 시각 복원 근거 불일치")
+                # 이 값은 상위 감사 계층이 직전 원장의 timezone-aware completed_at과
+                # 정확히 대조한 경우에만 전달한다. 임의 승인 시각은 받지 않는다.
+                first_review_at = review_reopen_legacy_first_needs_review_at
+                legacy_first_review_recovered = True
             if count >= self.limit and not reopen_requested:
                 first_review_at = first_review_at if first_review_at is not None else self.clock()
                 db.execute(
@@ -253,6 +267,7 @@ class ImageRequestControl:
                 "reopened_after_cooldown": reopen_requested,
                 "reopened_from_first_needs_review_at": reopened_from,
                 "cooldown_override_used": cooldown_override_used,
+                "legacy_first_needs_review_at_recovered": legacy_first_review_recovered,
             }
         finally:
             db.close()

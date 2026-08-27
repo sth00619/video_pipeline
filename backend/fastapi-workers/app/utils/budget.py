@@ -206,13 +206,36 @@ class ProviderRequestAudit:
                         and reopen_after_cooldown is not True
                     ):
                         raise ImageRequestHeld("검수 상태 장면은 냉각 재도전 승인 계약이 필요함")
-                    if reopen_after_cooldown is True and (
-                        previous.get("request_control", {}).get("status") != "needs_review"
-                        or previous.get("request_control", {}).get("first_needs_review_at")
-                        != self._request_metadata.get("approved_reopen_first_needs_review_at")
-                        or not isinstance(self._request_metadata.get("approved_reopen_override_cooldown", False), bool)
-                    ):
-                        raise ImageRequestHeld("냉각 후 재도전 승인과 최초 검수 시각 불일치")
+                    legacy_first_review_at = None
+                    if reopen_after_cooldown is True:
+                        previous_control = previous.get("request_control") or {}
+                        approved_first_review_at = self._request_metadata.get(
+                            "approved_reopen_first_needs_review_at"
+                        )
+                        recorded_first_review_at = previous_control.get("first_needs_review_at")
+                        if recorded_first_review_at is None:
+                            try:
+                                completed_at = datetime.fromisoformat(str(previous.get("completed_at") or ""))
+                            except ValueError as exc:
+                                raise ImageRequestHeld("정책 도입 전 원장 완료 시각을 검증할 수 없음") from exc
+                            if completed_at.tzinfo is None:
+                                raise ImageRequestHeld("정책 도입 전 원장 완료 시각에 시간대가 없음")
+                            legacy_first_review_at = completed_at.timestamp()
+                            if approved_first_review_at != legacy_first_review_at:
+                                raise ImageRequestHeld("승인 검수 시각이 직전 원장 완료 시각과 다름")
+                            self._request_metadata[
+                                "approved_reopen_first_needs_review_at_source"
+                            ] = "legacy_previous_completed_at"
+                        elif recorded_first_review_at != approved_first_review_at:
+                            raise ImageRequestHeld("냉각 후 재도전 승인과 최초 검수 시각 불일치")
+                        if (
+                            previous_control.get("status") != "needs_review"
+                            or not isinstance(
+                                self._request_metadata.get("approved_reopen_override_cooldown", False),
+                                bool,
+                            )
+                        ):
+                            raise ImageRequestHeld("냉각 후 재도전 승인과 최초 검수 시각 불일치")
                 # 원장은 평생 이력을 보존하지만 장면 상한은 승인된 재도전 이후의
                 # 현재 냉각 구간만 센다. 상태 DB가 유실돼도 원장 마커로 복원한다.
                 reopen_indices = [
@@ -234,6 +257,9 @@ class ProviderRequestAudit:
                     review_reopen_first_needs_review_at=(
                         self._request_metadata.get("approved_reopen_first_needs_review_at")
                         if reopen_after_cooldown is True else None
+                    ),
+                    review_reopen_legacy_first_needs_review_at=(
+                        legacy_first_review_at if reopen_after_cooldown is True else None
                     ),
                     review_reopen_override_cooldown=(
                         self._request_metadata.get("approved_reopen_override_cooldown", False)
