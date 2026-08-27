@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.086" timestamp="2026-08-27T21:52:28.146265+00:00" hostname="0e5c4b17e05a"><testcase classname="tests.test_image_text_contract" name="test_job52_scene07_sanitizer_preserves_objects_without_cascading_replacement_damage" time="0.005"><failure message="AssertionError: assert 'shapesinguistic' not in 'Behind Gold...n on screen.'&#10;  &#10;  'shapesinguistic' is contained here:&#10;  ?           -&#10;    inguistic shapesinguistic shapes sit visibly set aside on a side shelf, excluded from the glowing profit calculation on screen.&#10;  ?                 ++++++++++++++++">def test_job52_scene07_sanitizer_preserves_objects_without_cascading_replacement_damage():
+        """문자 제거가 모니터·제외 기업 소품의 장면 의미까지 훼손하면 안 된다."""
+        prompt = (
+            'Behind Goldie, a massive central monitor displays '
+            '"KOSPI Operating Profit: 143조" in bold digits. '
+            'Labeled containers marked "Samsung Electronics" and "SK Hynix" '
+            'sit visibly set aside on a side shelf, excluded from the glowing '
+            'profit calculation on screen.'
+        )
+    
+        cleaned, report = require_sanitized_generated_text_prompt(
+            prompt, allowed_texts=[],
+        )
+    
+        assert "KOSPI Operating Profit" not in cleaned
+        assert "Samsung Electronics" not in cleaned
+        assert "SK Hynix" not in cleaned
+&gt;       assert "shapesinguistic" not in cleaned
+E       AssertionError: assert 'shapesinguistic' not in 'Behind Gold...n on screen.'
+E         
+E         'shapesinguistic' is contained here:
+E         ?           -
+E           inguistic shapesinguistic shapes sit visibly set aside on a side shelf, excluded from the glowing profit calculation on screen.
+E         ?                 ++++++++++++++++
+
+tests/test_image_text_contract.py:107: AssertionError</failure></testcase></testsuite></testsuites>

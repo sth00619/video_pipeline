@@ -87,6 +87,32 @@ def test_removing_unapproved_short_label_does_not_create_a_malformed_word():
     assert report["violations_after"] == []
 
 
+def test_job52_scene07_sanitizer_preserves_objects_without_cascading_replacement_damage():
+    """문자 제거가 모니터·제외 기업 소품의 장면 의미까지 훼손하면 안 된다."""
+    prompt = (
+        'Behind Goldie, a massive central monitor displays '
+        '"KOSPI Operating Profit: 143조" in bold digits. '
+        'Labeled containers marked "Samsung Electronics" and "SK Hynix" '
+        'sit visibly set aside on a side shelf, excluded from the glowing '
+        'profit calculation on screen.'
+    )
+
+    cleaned, report = require_sanitized_generated_text_prompt(
+        prompt, allowed_texts=[],
+    )
+
+    assert "KOSPI Operating Profit" not in cleaned
+    assert "Samsung Electronics" not in cleaned
+    assert "SK Hynix" not in cleaned
+    assert "shapesinguistic" not in cleaned
+    assert "bold digits" not in cleaned
+    assert "containers" in cleaned
+    assert "set aside on a side shelf" in cleaned
+    assert "excluded from the glowing profit calculation" in cleaned
+    assert not cleaned.lstrip().startswith("with ")
+    assert report["violations_after"] == []
+
+
 def test_ocr_fast_gate_defers_unlisted_nonnumeric_text_to_visual_review():
     scene = {
         "screen_texts": ["SK하이닉스"],
