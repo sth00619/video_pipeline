@@ -35,6 +35,9 @@ _NUMERIC_FACT_RE = re.compile(
 )
 
 _BLANK_SURFACE = "an unlettered scene-integrated visual surface with non-linguistic shapes"
+# 여러 정규식 치환이 긴 최종 문구를 다시 문자 지시로 오인하지 않도록 모든
+# 판정이 끝날 때까지 의미 없는 소문자 표식으로 보존한다.
+_TEXT_SLOT = "scenetextplaceholder"
 _UNQUOTED_TEXT_CLAUSE_RE = re.compile(
     r"\b(?:label(?:ed|led)?|reading|saying|titled|captioned|stamped|printed)\s+"
     r"(?!with\s+an?\s+(?:blank\s+)?unlettered\b)"
@@ -157,7 +160,9 @@ def build_scene_text_contract(scene: dict[str, Any] | None) -> dict[str, Any]:
 
 def _is_text_payload(value: str) -> bool:
     candidate = str(value or "").strip()
-    return bool(candidate and re.search(r"[가-힣]|\d|[A-Z]{2,}", candidate))
+    # 따옴표 안의 고유명사도 이미지 모델에는 그대로 쓸 문자 지시가 된다.
+    # 혼합 대소문자 회사명(Samsung Electronics 등)을 예외로 두지 않는다.
+    return bool(candidate and re.search(r"[A-Za-z가-힣]|\d", candidate))
 
 
 def _is_allowed_payload(value: str, allowed_texts: Iterable[str]) -> bool:
@@ -220,24 +225,41 @@ def sanitize_generated_text_prompt(
     def replace_quoted(match: re.Match[str]) -> str:
         payload = match.group("value")
         if _is_text_payload(payload) and not _is_allowed_payload(payload, allowed):
-            return _BLANK_SURFACE
+            return _TEXT_SLOT
         return match.group(0)
 
     cleaned = _QUOTED_TEXT_RE.sub(replace_quoted, source)
+    # ``Labeled containers marked <문구> and <문구>``처럼 문자와 장면 소품이
+    # 한 절에 섞인 경우에는 라벨만 제거하고 컨테이너와 제외 동작을 보존한다.
+    cleaned = re.sub(
+        rf"\b(?:labeled|labelled)\s+(?P<object>[^,.;\n\"']{{1,60}}?)\s+"
+        rf"(?:marked|printed|stamped|reading|saying)\s+{_TEXT_SLOT}"
+        rf"(?:\s+(?:and|or)\s+{_TEXT_SLOT})*",
+        lambda match: f"unlettered {match.group('object').strip()}",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
     # 따옴표 문자열 뒤에 붙었던 의미 없는 글자 장식 표현까지 중립 표면에
     # 달라붙으면 ``typographylow`` 같은 새 의사 문구가 생긴다. 문자열을
     # 제거한 경우에만 그 장식 꼬리를 함께 정리한다.
     cleaned = re.sub(
-        rf"{re.escape(_BLANK_SURFACE)}\s+(?:expectation|warning|headline|caption|label)\s+"
+        rf"{re.escape(_TEXT_SLOT)}\s+(?:expectation|warning|headline|caption|label)\s+"
         r"(?:glow|text|sign|lettering)?",
-        _BLANK_SURFACE,
+        _TEXT_SLOT,
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        rf"{re.escape(_TEXT_SLOT)}\s+in\s+(?:(?:bold|large|bright|glowing)\s+)*"
+        r"(?:digits|letters|text|typography)",
+        _TEXT_SLOT,
         cleaned,
         flags=re.IGNORECASE,
     )
     cleaned = re.sub(
         rf"\b(?:label(?:ed|led)?|reading|saying|titled|captioned|"
         rf"stamped|printed|write|written|spelled)\b\s*(?:as|with|:)?\s*"
-        rf"(?={re.escape(_BLANK_SURFACE)})",
+        rf"(?={re.escape(_TEXT_SLOT)})",
         "with ",
         cleaned,
         flags=re.IGNORECASE,
@@ -246,23 +268,24 @@ def sanitize_generated_text_prompt(
     def replace_unquoted(match: re.Match[str]) -> str:
         if any(_compact(value) in _compact(match.group(0)) for value in allowed):
             return match.group(0)
-        return f"with {_BLANK_SURFACE}"
+        return f"with {_TEXT_SLOT}"
 
     cleaned = _UNQUOTED_TEXT_CLAUSE_RE.sub(replace_unquoted, cleaned)
 
     def replace_exact(match: re.Match[str]) -> str:
         if any(_compact(value) in _compact(match.group(0)) for value in allowed):
             return match.group(0)
-        return _BLANK_SURFACE
+        return _TEXT_SLOT
 
     cleaned = _EXACT_VALUE_RE.sub(replace_exact, cleaned)
 
     def replace_display(match: re.Match[str]) -> str:
         if any(_compact(value) in _compact(match.group(0)) for value in allowed):
             return match.group(0)
-        return _replace_display_value_instruction(match)
+        return _replace_display_value_instruction(match).replace(_BLANK_SURFACE, _TEXT_SLOT)
 
     cleaned = _DISPLAY_VALUE_RE.sub(replace_display, cleaned)
+    cleaned = cleaned.replace(_TEXT_SLOT, _BLANK_SURFACE)
     cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
     after = prompt_text_contract_violations(cleaned, allowed)
     return cleaned, {
