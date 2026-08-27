@@ -111,3 +111,16 @@ def test_source_mutation_invalidates_the_binding_hash(tmp_path):
     Image.new("RGB", (1280, 720), "#eef8fb").save(path)
     with pytest.raises(ValueError, match="해시"):
         attest_axis_aligned_surface(str(path), binding)
+
+
+def test_single_surface_can_be_bound_by_local_pixels_without_vision_api(tmp_path, monkeypatch):
+    path = tmp_path / "local-binding.png"
+    _save_panel(path)
+    scene = _scene(path, [.10, .10, .35, .40])
+    scene.pop("surface_bindings")
+    _mock_final_ocr(monkeypatch)
+    render_semantic_surface_text(scene, str(path))
+    binding = scene["surface_bindings"]["main"]
+    assert binding["detector_evidence"]["paid_api_calls"] == 0
+    assert binding["detector_evidence"]["strategy"] in {"opencv", "heuristic"}
+    assert binding["attestation"]["source_sha256"] == binding["image_sha256"]
