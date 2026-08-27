@@ -1,0 +1,85 @@
+{
+  "version": "wo-img-01-d-face-v2-scene07-canary-result-v1",
+  "run_id": "wo_img01_d_face_scene07_canary_20260828",
+  "result": "http_503_provider_unavailable_no_image_generated",
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "authorization": {
+    "approved_incremental_reserved_krw": 1600,
+    "prior_reserved_exposure_krw": 4800,
+    "cumulative_ledger_exposure_cap_krw": 6400,
+    "actual_external_post_count": 1,
+    "scene02_external_post_count": 0,
+    "scene35_external_post_count": 0
+  },
+  "predispatch_incident": {
+    "occurred": true,
+    "external_post_count": 0,
+    "new_ledger_item_count": 0,
+    "new_reserved_exposure_krw": 0,
+    "cause": "prepare_rows 호출이 승인 상태 DB와 project scope의 런타임 반영보다 먼저 실행됨",
+    "payload_reconstruction_matched_prior": true,
+    "recovery": "초기 claim과 manifest를 삭제하지 않고 predispatch_blocked 파일로 이동해 보존한 뒤 런타임 설정 순서를 수정",
+    "fix_commit": "32b144a"
+  },
+  "canary_attempt": {
+    "scene_index": 7,
+    "scene_key": "face-v2:7",
+    "prior_attempt_id": "246a77ba4da44508a39ec8c25b4e1b50",
+    "attempt_id": "e7eb8f76e28241cfae233e29905ef6eb",
+    "scene_attempt": 2,
+    "failure_n_before": 1,
+    "failure_n_after": 2,
+    "status": "http_503",
+    "status_code": 503,
+    "error_code": "UNAVAILABLE",
+    "duration_seconds": 5.328284503000759,
+    "control_status": "needs_review",
+    "payload_sha256": "b58ed621dd9d1bffb159109f3a5f8c03e05a4b1a86a2d4a139045f23df00a454",
+    "prompt_sha256": "dca49ed47b54ea2bef11088abec8cc02d36bd54137385624312331f15f1abd96",
+    "contract_fingerprint": "e79c33bb3ed7f1d90a44fc10559c26c909f36803d9ddf4130d65f25495e71495",
+    "first_reference_sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e",
+    "request_contract_equal_to_prior": true,
+    "usage_metadata_status": "absent",
+    "usage_metadata": null,
+    "image_sha256": null,
+    "reserved_amount_krw": 1600,
+    "cost_status": "excluded_from_success_estimate_billing_unverified"
+  },
+  "separate_verdicts": {
+    "provider_availability": "failed_http_503",
+    "face_contract": "not_evaluable_provider_failure_before_image",
+    "deterministic_text_gate": "not_evaluable_provider_failure_before_image",
+    "continuation_to_scene02_or_scene35": false
+  },
+  "ledger_after_canary": {
+    "item_count": 4,
+    "scene07_item_count": 2,
+    "scene02_item_count": 1,
+    "scene35_item_count": 1,
+    "total_krw": 0,
+    "reserved_exposure_krw": 6400,
+    "budget_overrun_krw": 0,
+    "billing_interpretation": "성공 비용 합계는 0원이지만 503 요청의 실제 청구 여부는 미확정이며 예약 노출액은 확정 지출이 아니다."
+  },
+  "scene42": {
+    "frozen_and_excluded": true,
+    "attempt_id": "8729ad2c69e949f8b30887ff9bc202f8",
+    "ledger_sha256": "79a7e345f796824e1db409cd24bd3089d26bb502ef912bd221252a4d2a8cbc4f"
+  },
+  "artifact_sha256": {
+    "predispatch_blocked_claim": "819361dbd56020e88b86024bc700fda5b7aaa1e39ccf0b75931808c521610dae",
+    "predispatch_blocked_manifest": "be76bb296c6c66615d141aa65d6914ebe29a96b22822922ff02ab2375b7b0dc8",
+    "execute_once_claim": "ce237811874df9eecf34b55b727f8f9ad6fcf80a1cd4f25a82802875406b26e4",
+    "canary_manifest": "032c024f33e1ab54f3c1f792c0b41388a280a81c0678bfea2248dcb3fde6f886",
+    "canary_preflight": "e3d4a3537c0cfc2632ea9b0fca29a287535c5e7cdd28b79eab0639c9928e24ad",
+    "request_ledger_after_canary": "933a479b16c952e03c6323a54af1e04b6c68c64ce295b473dd1c2382391e3838"
+  },
+  "out_of_scope_stages_invoked": {
+    "anthropic": 0,
+    "tts": 0,
+    "fal_or_kling": 0,
+    "ffmpeg_assembly": 0,
+    "thumbnail": 0
+  }
+}

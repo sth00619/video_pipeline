@@ -101,3 +101,17 @@ Git에 보존한 비민감 요약은 `docs/evidence/wo_img01_d_face_reference_20
 3. 기존 텍스트·물리 표면·OCR 게이트 적용
 4. 모두 통과한 뒤에만 Fal 적합성 검토
 
+## 9. 승인 후 scene07 canary
+
+사용자가 scene07 한 장의 신규 예약 상한 ₩1,600을 승인했다. 기존 attempt ID·payload·계약 fingerprint·failure count를 그대로 이어받는 승인 재시도 경로로 외부 POST 1회를 실행했다.
+
+- 결과: HTTP 503 `UNAVAILABLE`
+- 신규 attempt ID: `e7eb8f76e28241cfae233e29905ef6eb`
+- 소요: 5.328초
+- scene07 `failure_n`: 1 → 2
+- 신규 예약 노출: ₩1,600
+- 누적 예약 노출: ₩6,400
+- 이미지/usageMetadata: 없음
+- scene02·35 후속 호출: 0회
+
+따라서 공급자 가용성은 실패로 판정했지만 얼굴 및 텍스트 품질은 평가 불가다. 상세 내용과 실행 전 차단 사고의 보존 증거는 `docs/WO_IMG_01_D_FACE_SCENE07_CANARY_RESULT_2026-08-28.md`에 기록했다.
