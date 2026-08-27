@@ -13,6 +13,15 @@ from app.utils.budget import ProviderRequestAudit, ProviderRequestBudgetExceeded
 from app.utils.image_request_control import ImageRequestHeld
 
 
+def _provider_status_check():
+    return {
+        "source": "https://status.cloud.google.com/",
+        "checked_at": "2026-08-28T09:00:00+09:00",
+        "result": "no_official_incident",
+        "incident_url": None,
+    }
+
+
 @pytest.fixture
 def retry_case(tmp_path, monkeypatch):
     calls = []
@@ -162,6 +171,7 @@ def test_cooldown_reopen_requires_exact_ledger_contract_and_explicit_approval(tm
         "approved_reopen_after_cooldown": True,
         "approved_reopen_first_needs_review_at": review_at,
         "approved_reopen_override_cooldown": False,
+        "provider_status_check": _provider_status_check(),
     }
     reopened = owner(approved)
     token = reopened.before_attempt(attempt=1, evidence=evidence)
@@ -172,7 +182,7 @@ def test_cooldown_reopen_requires_exact_ledger_contract_and_explicit_approval(tm
     assert entry["request_control"]["cooldown_override_used"] is False
 
 
-@pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval"])
+@pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval", "status_check"])
 def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, change):
     path = tmp_path / "ledger.json"
     evidence = {
@@ -208,6 +218,7 @@ def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, chang
         "approved_reopen_after_cooldown": True,
         "approved_reopen_first_needs_review_at": review_at,
         "approved_reopen_override_cooldown": False,
+        "provider_status_check": _provider_status_check(),
     }
     request_evidence = evidence
     if change == "timestamp":
@@ -218,7 +229,60 @@ def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, chang
         request_evidence = {**evidence, "payload_sha256": "different"}
     elif change == "approval":
         metadata["approved_reopen_after_cooldown"] = False
+    elif change == "status_check":
+        metadata["provider_status_check"] = {
+            **_provider_status_check(), "source": "https://example.com/unverified",
+        }
 
     with pytest.raises(ImageRequestHeld):
         owner(metadata).before_attempt(attempt=1, evidence=request_evidence)
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize("status_check", [
+    None,
+    {"source": "https://status.cloud.google.com/", "checked_at": "not-a-date",
+     "result": "no_official_incident", "incident_url": None},
+    {"source": "https://status.cloud.google.com/", "checked_at": "2026-08-28T09:00:00+09:00",
+     "result": "official_incident_posted", "incident_url": None},
+])
+def test_cooldown_reopen_requires_auditable_manual_provider_status_check(tmp_path, status_check):
+    path = tmp_path / "ledger.json"
+    evidence = {
+        "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+        "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+    }
+    now = [1000.]
+
+    def owner(metadata=None):
+        audit = ProviderRequestAudit.for_path(
+            path=path, scene_key="image:7", model="gemini-3-pro-image",
+            unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+            request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+        )
+        audit._control.clock = lambda: now[0]
+        audit._control.uniform = lambda low, high: high
+        return audit
+
+    for _ in range(3):
+        audit = owner()
+        token = audit.before_attempt(attempt=1, evidence=evidence)
+        state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+        now[0] = state["next_allowed_at"]
+    before = path.read_bytes()
+    previous = json.loads(before)["items"][-1]
+    review_at = previous["request_control"]["first_needs_review_at"]
+    now[0] = review_at + 86400
+    metadata = {
+        "contract_fingerprint": "same-contract",
+        "approved_retry_of": previous["attempt_id"],
+        "approved_retry_prior_count": 3,
+        "approved_retry_failure_n": 3,
+        "approved_reopen_after_cooldown": True,
+        "approved_reopen_first_needs_review_at": review_at,
+        "approved_reopen_override_cooldown": False,
+        "provider_status_check": status_check,
+    }
+    with pytest.raises(ImageRequestHeld, match="공급자 상태"):
+        owner(metadata).before_attempt(attempt=1, evidence=evidence)
     assert path.read_bytes() == before
