@@ -90,6 +90,97 @@ def test_post_completion_deadline_persists_with_injected_clock_and_rng(tmp_path,
     assert result["status"] == "needs_review"
 
 
+def _exhaust_scene_window(control, now):
+    """503 세 번으로 현재 냉각 구간을 소진한다."""
+    result = None
+    for index in range(3):
+        token = f"failure-{index}"
+        control.reserve(scope="job", scene="image:7", token=token)
+        result = control.finish(token, retryable=True)
+        now[0] = result["next_allowed_at"]
+    return result
+
+
+def test_needs_review_records_first_timestamp_and_never_reopens_automatically(tmp_path):
+    now = [1000.]
+    control = ImageRequestControl(
+        path=tmp_path / "control.sqlite3",
+        clock=lambda: now[0],
+        uniform=lambda low, high: high,
+    )
+    result = _exhaust_scene_window(control, now)
+
+    assert result["status"] == "needs_review"
+    assert result["first_needs_review_at"] == 1060.
+    assert result["review_cycle"] == 0
+
+    now[0] += 86400 * 2
+    with pytest.raises(ImageRequestHeld, match="상한"):
+        control.reserve(scope="job", scene="image:7", token="automatic-reopen")
+
+
+def test_explicit_reopen_warns_before_24_hours_and_override_is_audited(tmp_path):
+    now = [1000.]
+    control = ImageRequestControl(
+        path=tmp_path / "control.sqlite3",
+        clock=lambda: now[0],
+        uniform=lambda low, high: high,
+    )
+    result = _exhaust_scene_window(control, now)
+    review_at = result["first_needs_review_at"]
+    now[0] = review_at + 3600
+
+    kwargs = {
+        "scope": "job", "scene": "image:7", "token": "reopen",
+        "review_reopen_of": "failure-2", "expected_failure_n": 3,
+        "review_reopen_first_needs_review_at": review_at,
+    }
+    with pytest.raises(ImageRequestHeld, match="24시간 냉각") as held:
+        control.reserve(**kwargs)
+    assert held.value.next_allowed_at == review_at + 86400
+
+    reopened = control.reserve(**kwargs, review_reopen_override_cooldown=True)
+    assert reopened["scene_attempt"] == 1
+    assert reopened["failure_n"] == 3
+    assert reopened["review_cycle"] == 1
+    assert reopened["cooldown_override_used"] is True
+
+
+def test_explicit_reopen_after_24_hours_starts_new_three_attempt_window(tmp_path):
+    now = [1000.]
+    control = ImageRequestControl(
+        path=tmp_path / "control.sqlite3",
+        clock=lambda: now[0],
+        uniform=lambda low, high: high,
+    )
+    result = _exhaust_scene_window(control, now)
+    review_at = result["first_needs_review_at"]
+    now[0] = review_at + 86400
+
+    reopened = control.reserve(
+        scope="job", scene="image:7", token="reopen",
+        review_reopen_of="failure-2", expected_failure_n=3,
+        review_reopen_first_needs_review_at=review_at,
+    )
+    assert reopened["scene_attempt"] == 1
+    assert reopened["review_cycle"] == 1
+    assert reopened["cooldown_override_used"] is False
+    first = control.finish("reopen", retryable=True)
+    assert first["status"] == "deferred"
+    assert first["scene_attempt"] == 1
+
+    now[0] = first["next_allowed_at"]
+    control.reserve(scope="job", scene="image:7", token="window-2")
+    second = control.finish("window-2", retryable=True)
+    now[0] = second["next_allowed_at"]
+    control.reserve(scope="job", scene="image:7", token="window-3")
+    third = control.finish("window-3", retryable=True)
+    assert third["status"] == "needs_review"
+    assert third["scene_attempt"] == 3
+    assert third["review_cycle"] == 1
+    assert third["first_needs_review_at"] == now[0]
+
+
 def test_shared_project_backoff_caps_at_300_but_jitter_remains(tmp_path, monkeypatch):
     monkeypatch.setitem(runtime_config._state, "gemini_pro_retry_base_seconds", 20.)
     now = [0.]

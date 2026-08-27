@@ -119,3 +119,105 @@ def test_invalid_retry_never_posts_or_changes_first_record(retry_case, change):
         run(second, prompt)
     assert len(calls) == 1
     assert path.read_bytes() == before
+
+
+def test_cooldown_reopen_requires_exact_ledger_contract_and_explicit_approval(tmp_path):
+    path = tmp_path / "ledger.json"
+    evidence = {
+        "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+        "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+    }
+    now = [1000.]
+
+    def owner(metadata=None):
+        audit = ProviderRequestAudit.for_path(
+            path=path, scene_key="image:7", model="gemini-3-pro-image",
+            unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+            request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+        )
+        audit._control.clock = lambda: now[0]
+        audit._control.uniform = lambda low, high: high
+        return audit
+
+    last = None
+    for index in range(3):
+        audit = owner()
+        token = audit.before_attempt(attempt=1, evidence=evidence)
+        last = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+        now[0] = last["next_allowed_at"]
+    ledger = json.loads(path.read_text())
+    previous = ledger["items"][-1]
+    review_at = previous["request_control"]["first_needs_review_at"]
+
+    now[0] = review_at + 86400
+    with pytest.raises(ImageRequestHeld, match="상한"):
+        owner().before_attempt(attempt=1, evidence=evidence)
+
+    approved = {
+        "contract_fingerprint": "same-contract",
+        "approved_retry_of": previous["attempt_id"],
+        "approved_retry_prior_count": 3,
+        "approved_retry_failure_n": 3,
+        "approved_reopen_after_cooldown": True,
+        "approved_reopen_first_needs_review_at": review_at,
+        "approved_reopen_override_cooldown": False,
+    }
+    reopened = owner(approved)
+    token = reopened.before_attempt(attempt=1, evidence=evidence)
+    entry = reopened.summary()["entries"][-1]
+    assert entry["attempt_id"] == token
+    assert entry["request_control"]["scene_attempt"] == 1
+    assert entry["request_control"]["review_cycle"] == 1
+    assert entry["request_control"]["cooldown_override_used"] is False
+
+
+@pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval"])
+def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, change):
+    path = tmp_path / "ledger.json"
+    evidence = {
+        "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+        "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+    }
+    now = [1000.]
+
+    def owner(metadata=None):
+        audit = ProviderRequestAudit.for_path(
+            path=path, scene_key="image:7", model="gemini-3-pro-image",
+            unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+            request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+        )
+        audit._control.clock = lambda: now[0]
+        audit._control.uniform = lambda low, high: high
+        return audit
+
+    for _ in range(3):
+        audit = owner()
+        token = audit.before_attempt(attempt=1, evidence=evidence)
+        state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+        now[0] = state["next_allowed_at"]
+    before = path.read_bytes()
+    previous = json.loads(before)["items"][-1]
+    review_at = previous["request_control"]["first_needs_review_at"]
+    now[0] = review_at + 86400
+    metadata = {
+        "contract_fingerprint": "same-contract",
+        "approved_retry_of": previous["attempt_id"],
+        "approved_retry_prior_count": 3,
+        "approved_retry_failure_n": 3,
+        "approved_reopen_after_cooldown": True,
+        "approved_reopen_first_needs_review_at": review_at,
+        "approved_reopen_override_cooldown": False,
+    }
+    request_evidence = evidence
+    if change == "timestamp":
+        metadata["approved_reopen_first_needs_review_at"] += 1
+    elif change == "contract":
+        metadata["contract_fingerprint"] = "different"
+    elif change == "payload":
+        request_evidence = {**evidence, "payload_sha256": "different"}
+    elif change == "approval":
+        metadata["approved_reopen_after_cooldown"] = False
+
+    with pytest.raises(ImageRequestHeld):
+        owner(metadata).before_attempt(attempt=1, evidence=request_evidence)
+    assert path.read_bytes() == before
