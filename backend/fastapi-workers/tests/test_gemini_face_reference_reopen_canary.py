@@ -8,6 +8,7 @@ import pytest
 from scripts.run_gemini_face_reference_reopen_canary import (
     CUMULATIVE_EXPOSURE_CAP_KRW,
     INCREMENTAL_RESERVED_KRW,
+    classify_scene_summary,
     validate_prior_state,
     validate_reopen_spec,
 )
@@ -103,3 +104,13 @@ def test_reopen_canary_preserves_existing_reserved_exposure():
     ledger["reserved_exposure_krw"] = 0
     with pytest.raises(RuntimeError, match="예약 노출"):
         validate_prior_state(spec, ledger)
+
+
+def test_scene_summary_counts_only_scene07_lineage_not_whole_ledger():
+    entries = prior_ledger()["items"]
+    assert classify_scene_summary(entries, prior_scene_count=2) == 0
+    assert classify_scene_summary(
+        [*entries, {"scene_key": "face-v2:7"}], prior_scene_count=2
+    ) == 1
+    with pytest.raises(RuntimeError, match="장면 원장"):
+        classify_scene_summary([*entries, {}, {}], prior_scene_count=2)

@@ -111,12 +111,91 @@ def validate_prior_state(spec: dict, ledger: dict) -> tuple[dict, dict]:
     return first_review, previous
 
 
+def classify_scene_summary(entries: list[dict], *, prior_scene_count: int) -> int:
+    """장면별 summary에서 신규 외부 POST가 0회인지 1회인지 판정한다."""
+    if len(entries) == prior_scene_count:
+        return 0
+    if len(entries) == prior_scene_count + 1:
+        return 1
+    raise RuntimeError("scene07 장면 원장은 기존 계보와 신규 최대 1건만 허용합니다.")
+
+
+def recover_completed_manifest(*, spec: dict, output: Path, ledger: dict) -> dict:
+    """재호출 없이 기존 원장·이미지로 사후 카운트 오류 manifest만 복구한다."""
+    manifest_path = output / "scene_07_reopen_01_manifest.json"
+    claim_path = output / "scene_07_reopen_01_execute_once.claim"
+    if not manifest_path.is_file() or not claim_path.is_file():
+        raise RuntimeError("복구할 실행 claim 또는 manifest가 없습니다.")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("spec_sha256") != _sha(json.dumps(spec, ensure_ascii=False, indent=2).encode()):
+        # 저장된 spec은 마지막 줄바꿈을 포함하므로 호출자가 원문 hash를 다시 넣는다.
+        if manifest.get("spec_sha256") != spec.get("_spec_sha256_for_recovery"):
+            raise RuntimeError("복구 대상 manifest의 명세 해시가 다릅니다.")
+    all_entries = ledger.get("items") or []
+    if len(all_entries) != 5:
+        raise RuntimeError("복구 시 전체 원장은 기존 4건과 신규 1건이어야 합니다.")
+    latest = all_entries[-1]
+    state = spec["request_state"]
+    if (
+        latest.get("scene_key") != SCENE_KEY
+        or latest.get("run_id") != "wo_provider_01_scene07_reopen_01_20260828"
+        or (latest.get("request_metadata") or {}).get("approved_retry_of") != state["approved_retry_of"]
+        or (latest.get("request_evidence") or {}).get("payload_sha256") != state["prior_payload_sha256"]
+        or latest.get("status") not in {"http_200", "http_503"}
+    ):
+        raise RuntimeError("복구 대상 신규 원장 항목이 승인된 재도전과 다릅니다.")
+    prior_ledger = {
+        **ledger,
+        "items": all_entries[:-1],
+        "reserved_exposure_krw": PRIOR_EXPOSURE_KRW,
+    }
+    validate_prior_state(spec, prior_ledger)
+    scene_entries = [item for item in all_entries if item.get("scene_key") == SCENE_KEY]
+    external_post_count = classify_scene_summary(
+        scene_entries, prior_scene_count=state["approved_retry_prior_count"]
+    )
+    if external_post_count != 1:
+        raise RuntimeError("복구 대상에는 신규 외부 POST가 정확히 한 건 있어야 합니다.")
+    if latest.get("status") == "http_200":
+        raw_path = output / "scene_07_reopen_01_raw.png"
+        final_path = output / "scene_07_reopen_01_final.png"
+        if (
+            not raw_path.is_file()
+            or not final_path.is_file()
+            or _sha(raw_path.read_bytes()) != latest.get("image_sha256")
+        ):
+            raise RuntimeError("HTTP 200 원장과 복구 대상 이미지가 다릅니다.")
+        manifest["status"] = (
+            "http_200_text_gate_needs_review"
+            if manifest.get("text_gate_status") == "needs_review"
+            else "http_200_awaiting_face_review"
+        )
+    else:
+        manifest["status"] = "provider_request_failed"
+    manifest.update(
+        request_summary={"attempt_count": len(scene_entries), "entries": scene_entries},
+        external_post_count=1,
+        incremental_reserved_exposure_krw=INCREMENTAL_RESERVED_KRW,
+        latest_attempt_id=latest.get("attempt_id"),
+        latest_usage_metadata=latest.get("usage_metadata"),
+        latest_usage_metadata_status=latest.get("usage_metadata_status"),
+        recovered_without_external_post=True,
+        recovered_at=datetime.now(timezone.utc).isoformat(),
+        finished_at=latest.get("completed_at"),
+    )
+    _write_json(manifest_path, manifest)
+    return manifest
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--spec", type=Path, required=True)
     parser.add_argument("--pricing-config", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--recover", action="store_true")
     args = parser.parse_args()
+    if args.execute and args.recover:
+        raise RuntimeError("execute와 recover를 동시에 사용할 수 없습니다.")
 
     spec_bytes = args.spec.read_bytes()
     spec = json.loads(spec_bytes)
@@ -128,18 +207,32 @@ def main() -> int:
     source_path = REPO / spec["source"]["path"]
     scene42_path = REPO / spec["scene42_frozen_ledger"]["path"]
 
-    for path, expected, label in (
+    immutable_paths = (
         (original_spec_path, spec["original_three_scene_spec"]["sha256"], "원본 3장 명세"),
         (source_path, spec["source"]["sha256"], "Job52 보존 입력"),
-        (ledger_path, spec["original_ledger_sha256_before_reopen"], "scene07 기존 원장"),
         (scene42_path, spec["scene42_frozen_ledger"]["sha256"], "scene42 동결 원장"),
-    ):
+    )
+    for path, expected, label in immutable_paths:
         if not path.is_file() or _sha(path.read_bytes()) != expected:
             raise RuntimeError(f"{label} 해시가 허가 시점과 다릅니다.")
     scene42 = json.loads(scene42_path.read_text(encoding="utf-8"))
     if (scene42.get("items") or [{}])[0].get("attempt_id") != spec["scene42_frozen_ledger"]["attempt_id"]:
         raise RuntimeError("scene42 attempt ID가 바뀌었습니다.")
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    if args.recover:
+        spec["_spec_sha256_for_recovery"] = _sha(spec_bytes)
+        manifest = recover_completed_manifest(spec=spec, output=output, ledger=ledger)
+        print(json.dumps({
+            "status": manifest["status"],
+            "provider_status": manifest.get("provider_status"),
+            "external_post_count": manifest["external_post_count"],
+            "latest_attempt_id": manifest.get("latest_attempt_id"),
+            "latest_usage_metadata": manifest.get("latest_usage_metadata"),
+            "recovered_without_external_post": True,
+        }, ensure_ascii=False, indent=2))
+        return 0
+    if _sha(ledger_path.read_bytes()) != spec["original_ledger_sha256_before_reopen"]:
+        raise RuntimeError("scene07 기존 원장 해시가 허가 시점과 다릅니다.")
     first_review, previous = validate_prior_state(spec, ledger)
 
     os.environ["GEMINI_REQUEST_STATE_PATH"] = str(state_path)
@@ -270,14 +363,13 @@ def main() -> int:
     summary = audit.summary()
     entries = summary.get("entries") or []
     manifest["request_summary"] = summary
-    manifest["external_post_count"] = 1 if len(entries) == 5 else 0
-    manifest["incremental_reserved_exposure_krw"] = (
-        INCREMENTAL_RESERVED_KRW if len(entries) == 5 else 0
+    external_post_count = classify_scene_summary(
+        entries, prior_scene_count=state["approved_retry_prior_count"]
     )
-    if len(entries) not in {4, 5}:
-        manifest.update(status="ledger_lineage_mismatch", continuation_allowed=False)
-        _write_json(manifest_path, manifest)
-        raise RuntimeError("scene07 재개 뒤 전체 원장은 기존 4건과 신규 최대 1건만 허용합니다.")
+    manifest["external_post_count"] = external_post_count
+    manifest["incremental_reserved_exposure_krw"] = (
+        INCREMENTAL_RESERVED_KRW if external_post_count == 1 else 0
+    )
     latest = entries[-1]
     manifest["latest_attempt_id"] = latest.get("attempt_id")
     manifest["latest_usage_metadata"] = latest.get("usage_metadata")
