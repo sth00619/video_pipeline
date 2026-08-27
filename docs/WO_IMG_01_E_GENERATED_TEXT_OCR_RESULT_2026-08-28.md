@@ -98,6 +98,36 @@ Job52 원본 48장이나 현재 동결 장면을 재생성·교체한 것은 아
 | `git archive df86769` 독립 집중 검사 | 50 passed | [archive-green.xml](evidence/wo_img01_e_generated_text_ocr_20260828/archive-green.xml) |
 | 자산을 포함한 격리 전체 오프라인 검사 | 1083 passed, 1 deselected, 20 warnings | [full-offline.xml](evidence/wo_img01_e_generated_text_ocr_20260828/full-offline.xml) |
 
+### 6.1 red 24건과 green 50건의 범위 차이
+
+두 수치는 같은 파일 집합을 전후 비교한 값이 아니다. 선행 실패 재현은 결함을 직접 소유한 두 파일만 실행했고, 수정 후 집중 검사는 공용 OCR 판정이 연결되는 파일럿 정책과 Fal 안전성 회귀까지 범위를 넓혔다.
+
+| 테스트 모듈 | 이전 전체 기준 | red 집중 | green 집중·현재 전체 | 이번 신규 |
+|---|---:|---:|---:|---:|
+| `test_image_text_contract.py` | 12 | 13 | 13 | +1 |
+| `test_generated_image_text_gate.py` | 9 | 11 | 12 | +3 |
+| `test_gemini_eight_scene_pilot.py` | 2 | 미실행 | 3 | +1 |
+| `test_fal_motion_safety.py` | 22 | 미실행 | 22 | 0 |
+| 합계 | 45 | 24 | 50 | +5 |
+
+따라서 red에서 green으로 보이는 26건 증가는 다음과 같이 분해된다.
+
+- 수정 단계에서 추가된 `test_generated_image_text_gate.py` 1건
+- green 명령부터 포함한 `test_gemini_eight_scene_pilot.py` 3건(기존 2건 + 신규 1건)
+- green 명령부터 포함한 기존 `test_fal_motion_safety.py` 22건
+
+즉 `1 + 3 + 22 = 26`이며, 신규 테스트가 26개 생겼거나 전체 회귀에서 누락된 것이 아니다. red 커밋에 먼저 추가된 3건은 이미 red의 24건 안에 들어 있으므로 red→green 차이에는 나타나지 않는다.
+
+### 6.2 전체 회귀 증가분 대조
+
+직전 WO-PROVIDER-01 전체 원문은 1,079건이었다. 이번 실제 신규 테스트는 위 표처럼 5건이고, 현재 격리 전체 검사에서는 네트워크 의존 기존 Google RSS 테스트 1건을 명시적으로 제외했다.
+
+```text
+1,079 + 신규 5 - 외부 RSS 제외 1 = 1,083 passed
+```
+
+현재 [full-offline.xml](evidence/wo_img01_e_generated_text_ocr_20260828/full-offline.xml)에는 신규 5건의 정확한 테스트 이름이 모두 존재하고, 직전 [WO-PROVIDER-01 전체 XML](evidence/wo_provider_01_20260828/full-offline-green.xml)에는 존재하지 않는다. 따라서 새 테스트가 전체 스위트 컬렉션에서 빠진 정황은 없다.
+
 제외한 한 건은 기존 Google RSS 외부 연결 테스트 `test_google_rss_fallback_when_naver_not_configured`다. 최초 격리 전체 검사에서는 참조 PNG·파일럿 명세·입력 자산을 복사하지 않아 23건, 이어 캐릭터 시트가 빠져 2건이 실패했다. 동일 커밋과 코드에 필요한 읽기 전용 자산을 포함한 최종 격리본에서는 위 표처럼 모두 통과했다. 중간 실패를 코드 회귀로 고쳐 쓰지 않는다.
 
 ## 7. 동결·비용·후속 경계
