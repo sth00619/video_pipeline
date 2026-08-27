@@ -1,0 +1,144 @@
+{
+  "audit": "semantic_surface_physical_attestation_v1",
+  "paid_api_calls": 0,
+  "passed": true,
+  "cases": [
+    {
+      "case": "blank_bordered_panel",
+      "expected_pass": true,
+      "actual_pass": true,
+      "matched": true,
+      "source_sha256": "325c1b13c1363d58d62dc00518abe5c1622936f424d6e34dc04fcca202f4b1a6",
+      "attestation": {
+        "version": 1,
+        "validation_method": "opencv_geometry_text_free_v1",
+        "source_sha256": "325c1b13c1363d58d62dc00518abe5c1622936f424d6e34dc04fcca202f4b1a6",
+        "surface_crop_sha256": "4bdf8620d191f890f065fd49a6b755394d6847971d62e4ba3580e81aee3122ef",
+        "surface_bbox": [
+          0.1,
+          0.1,
+          0.35,
+          0.4
+        ],
+        "surface_kind": "board",
+        "geometry": "axis_aligned_rect",
+        "interior_channel_stddev": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_interior_channel_stddev": 60.0,
+        "frame_edge_density": 0.045062,
+        "min_frame_edge_density": 0.03
+      },
+      "error": null
+    },
+    {
+      "case": "open_background",
+      "expected_pass": false,
+      "actual_pass": false,
+      "matched": true,
+      "source_sha256": "90772f6aefff4b19a26f35f243e835e4481175e1d52efb551a4766301e582e7c",
+      "attestation": null,
+      "error": "물리 표면이 테두리·빈 내부·무문자·무가림 검사를 통과하지 못했습니다."
+    },
+    {
+      "case": "detached_color_card",
+      "expected_pass": false,
+      "actual_pass": false,
+      "matched": true,
+      "source_sha256": "cb58bff1084aa4b8602bb99d73e31246d1656efbfeee2ad366e99fb2f0336dd0",
+      "attestation": null,
+      "error": "물리 표면에 충분히 분명한 프레임 선이 없습니다."
+    },
+    {
+      "case": "existing_text",
+      "expected_pass": false,
+      "actual_pass": false,
+      "matched": true,
+      "source_sha256": "f932ae66aea05fc492b2e1ec5b2f94e62bb6dde17018f130631bd4f5f4e6a6de",
+      "attestation": null,
+      "error": "물리 표면이 테두리·빈 내부·무문자·무가림 검사를 통과하지 못했습니다."
+    },
+    {
+      "case": "occluded",
+      "expected_pass": false,
+      "actual_pass": false,
+      "matched": true,
+      "source_sha256": "d7ac1acfa09b676726197a320876f23e1fcb93570c2687a448a7aa8ea3099139",
+      "attestation": null,
+      "error": "물리 표면 내부가 사물이나 캐릭터에 가려져 있습니다."
+    },
+    {
+      "case": "perspective_without_renderer",
+      "expected_pass": false,
+      "actual_pass": false,
+      "matched": true,
+      "source_sha256": "325c1b13c1363d58d62dc00518abe5c1622936f424d6e34dc04fcca202f4b1a6",
+      "attestation": null,
+      "error": "원근 표면은 좌표 변환 렌더러가 검증되기 전까지 사용할 수 없습니다."
+    }
+  ],
+  "automatic_local_binding": {
+    "passed": true,
+    "binding": {
+      "bbox": [
+        0.10276,
+        0.10934,
+        0.34449,
+        0.38133
+      ],
+      "geometry": "axis_aligned_rect",
+      "surface_kind": "board",
+      "image_sha256": "325c1b13c1363d58d62dc00518abe5c1622936f424d6e34dc04fcca202f4b1a6",
+      "detector_evidence": {
+        "strategy": "opencv",
+        "confidence": 0.813,
+        "quad": [
+          [
+            0.10938,
+            0.11667
+          ],
+          [
+            0.10938,
+            0.48333
+          ],
+          [
+            0.44062,
+            0.48333
+          ],
+          [
+            0.44062,
+            0.11667
+          ]
+        ],
+        "paid_api_calls": 0,
+        "cache_policy": "local_pixels_only_no_vision_cache",
+        "frame_padding_ratio": 0.02
+      },
+      "attestation": {
+        "version": 1,
+        "validation_method": "opencv_geometry_text_free_v1",
+        "source_sha256": "325c1b13c1363d58d62dc00518abe5c1622936f424d6e34dc04fcca202f4b1a6",
+        "surface_crop_sha256": "cf27a746c98b031bd0a99148bc79e7779c50c855fffb4c4ba67a3faac83dc8fb",
+        "surface_bbox": [
+          0.10276,
+          0.10934,
+          0.34449,
+          0.38133
+        ],
+        "surface_kind": "board",
+        "geometry": "axis_aligned_rect",
+        "interior_channel_stddev": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_interior_channel_stddev": 60.0,
+        "frame_edge_density": 0.048608,
+        "min_frame_edge_density": 0.03
+      }
+    },
+    "error": null
+  }
+}

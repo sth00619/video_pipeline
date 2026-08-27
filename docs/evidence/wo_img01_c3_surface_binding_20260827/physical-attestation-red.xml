@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="5" time="0.328" timestamp="2026-08-27T09:48:01.411557+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_semantic_surface_attestation_regression" name="test_open_background_cannot_self_approve_with_validated_boolean" time="0.082"><failure message="Failed: DID NOT RAISE &lt;class 'ValueError'&gt;">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-96/test_open_background_cannot_se0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff84530050&gt;
+
+    def test_open_background_cannot_self_approve_with_validated_boolean(tmp_path, monkeypatch):
+        path = tmp_path / "open.png"
+        Image.new("RGB", (1280, 720), "#eef8fb").save(path)
+        scene = _scene(path, [.10, .10, .35, .40])
+        _mock_final_ocr(monkeypatch)
+&gt;       with pytest.raises(ValueError, match="물리 표면"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'ValueError'&gt;
+
+tests/test_semantic_surface_attestation_regression.py:48: Failed</failure></testcase><testcase classname="tests.test_semantic_surface_attestation_regression" name="test_actual_blank_bordered_panel_emits_pixel_attestation" time="0.043"><failure message="KeyError: 'attestation'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-96/test_actual_blank_bordered_pan0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff842ba150&gt;
+
+    def test_actual_blank_bordered_panel_emits_pixel_attestation(tmp_path, monkeypatch):
+        path = tmp_path / "panel.png"
+        _save_panel(path)
+        scene = _scene(path, [.10, .10, .35, .40])
+        source_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        _mock_final_ocr(monkeypatch)
+        render_semantic_surface_text(scene, str(path))
+&gt;       attestation = scene["surface_bindings"]["main"]["attestation"]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'attestation'
+
+tests/test_semantic_surface_attestation_regression.py:59: KeyError</failure></testcase><testcase classname="tests.test_semantic_surface_attestation_regression" name="test_labeled_or_occluded_panel_is_rejected_before_render[text]" time="0.045"><failure message="Failed: DID NOT RAISE &lt;class 'ValueError'&gt;">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-96/test_labeled_or_occluded_panel0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff85550d70&gt;
+variant = 'text'
+
+    @pytest.mark.parametrize("variant", ["text", "occlusion"])
+    def test_labeled_or_occluded_panel_is_rejected_before_render(tmp_path, monkeypatch, variant):
+        path = tmp_path / f"{variant}.png"
+        _save_panel(path, text=variant == "text", occluded=variant == "occlusion")
+        scene = _scene(path, [.10, .10, .35, .40])
+        before = path.read_bytes()
+        _mock_final_ocr(monkeypatch)
+&gt;       with pytest.raises(ValueError, match="물리 표면"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'ValueError'&gt;
+
+tests/test_semantic_surface_attestation_regression.py:74: Failed</failure></testcase><testcase classname="tests.test_semantic_surface_attestation_regression" name="test_labeled_or_occluded_panel_is_rejected_before_render[occlusion]" time="0.048"><failure message="Failed: DID NOT RAISE &lt;class 'ValueError'&gt;">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-96/test_labeled_or_occluded_panel1')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff842c1790&gt;
+variant = 'occlusion'
+
+    @pytest.mark.parametrize("variant", ["text", "occlusion"])
+    def test_labeled_or_occluded_panel_is_rejected_before_render(tmp_path, monkeypatch, variant):
+        path = tmp_path / f"{variant}.png"
+        _save_panel(path, text=variant == "text", occluded=variant == "occlusion")
+        scene = _scene(path, [.10, .10, .35, .40])
+        before = path.read_bytes()
+        _mock_final_ocr(monkeypatch)
+&gt;       with pytest.raises(ValueError, match="물리 표면"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'ValueError'&gt;
+
+tests/test_semantic_surface_attestation_regression.py:74: Failed</failure></testcase><testcase classname="tests.test_semantic_surface_attestation_regression" name="test_slanted_surface_is_blocked_until_perspective_renderer_exists" time="0.041"><failure message="Failed: DID NOT RAISE &lt;class 'ValueError'&gt;">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-96/test_slanted_surface_is_blocke0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff842c2ba0&gt;
+
+    def test_slanted_surface_is_blocked_until_perspective_renderer_exists(tmp_path, monkeypatch):
+        path = tmp_path / "slanted.png"
+        _save_panel(path)
+        scene = _scene(path, [.10, .10, .35, .40], geometry="planar_quad")
+        _mock_final_ocr(monkeypatch)
+&gt;       with pytest.raises(ValueError, match="원근"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'ValueError'&gt;
+
+tests/test_semantic_surface_attestation_regression.py:85: Failed</failure></testcase></testsuite></testsuites>

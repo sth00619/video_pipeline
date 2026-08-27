@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.224" timestamp="2026-08-27T10:02:08.952891+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_semantic_surface_attestation_regression" name="test_single_surface_can_be_bound_by_local_pixels_without_vision_api" time="0.034"><failure message="ValueError: 물리 표면 연결 목록이 없습니다.">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-101/test_single_surface_can_be_bou0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffffb1fe8d70&gt;
+
+    def test_single_surface_can_be_bound_by_local_pixels_without_vision_api(tmp_path, monkeypatch):
+        path = tmp_path / "local-binding.png"
+        _save_panel(path)
+        scene = _scene(path, [.10, .10, .35, .40])
+        scene.pop("surface_bindings")
+        _mock_final_ocr(monkeypatch)
+&gt;       render_semantic_surface_text(scene, str(path))
+
+tests/test_semantic_surface_attestation_regression.py:122:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app/services/semantic_surface_text.py:42: in render_semantic_surface_text
+    attest_scene_surfaces(image_path, candidate)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+image_path = '/tmp/pytest-of-root/pytest-101/test_single_surface_can_be_bou0/local-binding.png'
+scene = {'screen_text_plan': [{'purpose': 'information', 'surface': 'main', 'text': '현재 전망'}], 'screen_text_validation': {'passed': True}, 'screen_texts': ['현재 전망'], 'text_render_policy': 'semantic_roles_v1'}
+
+    def attest_scene_surfaces(image_path: str, scene: dict[str, Any]) -&gt; None:
+        """실제로 사용되는 표면만 검증하고 서로 다른 표면의 중첩을 거절한다."""
+        bindings = scene.get("surface_bindings")
+        if not isinstance(bindings, dict):
+&gt;           raise ValueError("물리 표면 연결 목록이 없습니다.")
+E           ValueError: 물리 표면 연결 목록이 없습니다.
+
+app/services/surface_binding_attestation.py:117: ValueError</failure></testcase></testsuite></testsuites>

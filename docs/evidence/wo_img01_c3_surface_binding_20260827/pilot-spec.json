@@ -1,0 +1,90 @@
+{
+  "version": "wo-img-01-c3-eight-scene-measurement-v1",
+  "execution_status": "not_run",
+  "paid_execution_authorized": false,
+  "scene42_frozen_and_excluded": true,
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "global_constraints": {
+    "model": "gemini-3-pro-image",
+    "style_contract": "2026-08-25-r8-job52-range-scene-local-v1",
+    "llm_financial_numbers": false,
+    "single_axis_aligned_physical_surface": true,
+    "speech_bubble_unless_explicitly_planned": false,
+    "fal_or_kling": false,
+    "tts_or_assembly": false,
+    "approved_narration_mutation": false
+  },
+  "lanes": {
+    "deterministic_information": [0, 5, 7, 21],
+    "pilot_only_short_approved_label_measurement": [2, 15, 35, 47]
+  },
+  "scenes": [
+    {
+      "index": 0,
+      "lane": "deterministic_information",
+      "exact_texts": ["삼성전자", "SK하이닉스", "4배"],
+      "visual_contract": "두 반도체 기업 칩과 밸류에이션 저울의 관계가 먼저 보이고 수치는 물리 표면의 보조 정보다."
+    },
+    {
+      "index": 2,
+      "lane": "pilot_only_short_approved_label_measurement",
+      "exact_texts": ["경고"],
+      "visual_contract": "경고의 원인은 값싼 가격표와 함정으로 설명하며 경찰 제복·무관 원자재·말풍선을 쓰지 않는다."
+    },
+    {
+      "index": 5,
+      "lane": "deterministic_information",
+      "exact_texts": ["반도체", "4배"],
+      "visual_contract": "지난해와 올해의 생산량 차이는 칩·웨이퍼·생산 설비가 설명하고 숫자판만 크게 두지 않는다."
+    },
+    {
+      "index": 7,
+      "lane": "deterministic_information",
+      "exact_texts": ["삼성전자", "SK하이닉스", "코스피", "143조 원"],
+      "visual_contract": "두 기업을 제외해도 전체 영업이익이 크다는 비교 관계를 하나의 장면 안에서 보여준다."
+    },
+    {
+      "index": 15,
+      "lane": "pilot_only_short_approved_label_measurement",
+      "exact_texts": ["엇갈림"],
+      "visual_contract": "상승과 하락 전망을 좌우 상황으로 대비하되 캐릭터 종·얼굴 그림 언어는 Job52 범위 안에 둔다."
+    },
+    {
+      "index": 21,
+      "lane": "deterministic_information",
+      "exact_texts": ["5663포인트", "1812포인트"],
+      "visual_contract": "급락의 크기는 관제실 계기·깨진 게이지·하락 궤적이 설명하고 두 수치는 검증 사실로만 렌더한다."
+    },
+    {
+      "index": 35,
+      "lane": "pilot_only_short_approved_label_measurement",
+      "exact_texts": ["경고", "전망치"],
+      "visual_contract": "현재와 하향 전망의 날씨 대비를 유지하고 승인되지 않은 한국어·영문을 추가하지 않는다."
+    },
+    {
+      "index": 47,
+      "lane": "pilot_only_short_approved_label_measurement",
+      "exact_texts": ["상반기 실적", "질문"],
+      "visual_contract": "과거 실적과 미래 질문의 대비를 물리 장면으로 보여주고 명시되지 않은 말풍선은 금지한다."
+    }
+  ],
+  "measurement": {
+    "character_height_ratio": "ocr_bbox_height / final_frame_height",
+    "record_each_ocr_mode_separately": true,
+    "exact_match_whitespace_only": true,
+    "stray_text_count_required": 0,
+    "financial_number_error_count_required": 0,
+    "threshold_activation_after_eight_samples": false,
+    "reason": "8장은 실행 가능성과 실패 유형을 보는 탐색 표본이며 전역 최소 글자 높이를 확정할 통계 표본이 아니다."
+  },
+  "budget_preflight": {
+    "current_conservative_reservation_per_attempt_krw": 1600,
+    "one_attempt_each_eight_scenes_reserved_upper_bound_krw": 12800,
+    "three_attempt_each_worst_reserved_upper_bound_krw": 38400,
+    "approved_total_for_this_spec_krw": null,
+    "execution_blocked_until_explicit_total_cap": true
+  }
+}
