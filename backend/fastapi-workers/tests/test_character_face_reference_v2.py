@@ -67,3 +67,17 @@ def test_scene07_reopen_candidate_still_fails_measured_face_contract():
     assert rows[0]["checks"]["warm_brown_iris"] is False
     assert rows[0]["checks"]["layered_catchlights"] is False
     assert rows[0]["face_contract_pass"] is False
+
+
+def test_scene07_promptfix_candidate_improves_sclera_but_still_fails_face_contract():
+    report = build_report(verify_sources=False)
+    rows = [row for row in report["samples"] if row["kind"] == "promptfix_candidate"]
+    assert report["promptfix_candidate_failure_count"] == 1
+    assert len(rows) == 1
+    assert rows[0]["scene"] == 7
+    assert rows[0]["checks"]["sclera_visible"] is True
+    assert rows[0]["checks"]["iris_width_ratio_in_range"] is False
+    assert rows[0]["checks"]["warm_brown_iris"] is False
+    assert rows[0]["checks"]["layered_catchlights"] is False
+    assert rows[0]["checks"]["eyebrow_shape_allowed"] is False
+    assert rows[0]["face_contract_pass"] is False

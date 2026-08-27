@@ -103,6 +103,19 @@ SAMPLES = (
         "attempt_id": "dfbf4c89677f4a63a58c3212d5245a93",
         "observation": "HTTP 200이지만 기존 scene07과 같은 흰자 없는 검은 타원 눈",
     },
+    {
+        "kind": "promptfix_candidate", "scene": 7,
+        "path": "artifacts/wo_scene07_promptfix_canary_v3_20260828/scene_07_raw.png",
+        "sha256": "93eea450aea1fd398fb4774f9c303c3acedaed0d44ef46dbe84f4710fa2834c3",
+        "eyes": [
+            ((585, 660, 780, 840), (665, 710, 725, 795)),
+            ((830, 655, 990, 835), (870, 700, 930, 785)),
+        ],
+        "sclera_visible": True, "warm_brown_iris": False, "layered_catchlights": False,
+        "forehead_highlight": True, "eyebrow_shape": "sharp_angle", "blush": False,
+        "attempt_id": "a259e66e5bdd462997a639dade7dd77e",
+        "observation": "검은 타원 눈은 해소됐지만 홍채가 작고 회청색이며 캐치라이트가 한 겹이고 눈썹이 각짐",
+    },
 )
 
 
@@ -147,6 +160,7 @@ def build_report(*, verify_sources: bool = True) -> dict:
     approved = [row for row in rows if row["kind"] == "approved_reference"]
     pilots = [row for row in rows if row["kind"] == "pilot_failure"]
     reopen_candidates = [row for row in rows if row["kind"] == "reopen_candidate"]
+    promptfix_candidates = [row for row in rows if row["kind"] == "promptfix_candidate"]
     return {
         "schema_version": 1,
         "measurement_method": "원본 PNG의 눈/홍채 경계를 사람이 픽셀 좌표로 선택하고 비율은 코드로 계산",
@@ -165,6 +179,9 @@ def build_report(*, verify_sources: bool = True) -> dict:
         "reopen_candidate_failure_count": sum(
             not row["face_contract_pass"] for row in reopen_candidates
         ),
+        "promptfix_candidate_failure_count": sum(
+            not row["face_contract_pass"] for row in promptfix_candidates
+        ),
         "samples": rows,
     }
 
@@ -180,6 +197,7 @@ def main() -> int:
         "approved_reference_pass_count": report["approved_reference_pass_count"],
         "pilot_failure_reproduced_count": report["pilot_failure_reproduced_count"],
         "reopen_candidate_failure_count": report["reopen_candidate_failure_count"],
+        "promptfix_candidate_failure_count": report["promptfix_candidate_failure_count"],
     }, ensure_ascii=False))
     return 0
 
