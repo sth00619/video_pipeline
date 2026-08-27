@@ -6,6 +6,7 @@ import pytest
 from PIL import Image
 
 from app.services.fal_motion_safety import (
+    _targeted_exact_text_retry,
     assess_fal_motion_safety,
     fal_motion_safety_is_current,
     inspect_visible_text,
@@ -167,6 +168,34 @@ def test_different_digits_at_same_location_are_not_numeric_confirmation(tmp_path
 
     assert result["visible_tokens"] == []
     assert result["numeric_confirmation_status"] == "completed"
+
+
+def test_targeted_exact_retry_uses_finer_original_resolution_tiles_after_coarse_miss(tmp_path):
+    image = tmp_path / "wide-scene.png"
+    Image.new("RGB", (2752, 1536), "white").save(image)
+    target_box = (1376, 768, 2064, 1280)
+
+    def fake_region_rows(_path, box, *, psm=6):
+        if box == target_box:
+            return "completed", [{
+                "text": "질문", "conf": "96", "word_num": "1",
+                "block_num": "1", "par_num": "1", "line_num": "1",
+            }]
+        return "completed", []
+
+    with patch(
+        "app.services.fal_motion_safety._read_tesseract_region_rows",
+        side_effect=fake_region_rows,
+    ):
+        status, hits, evidence = _targeted_exact_text_retry(str(image), ["질문"])
+
+    assert status == "completed"
+    assert hits == ["질문"]
+    assert evidence == [{
+        "source": "local_overlap_4x4_psm6",
+        "tile": list(target_box),
+        "texts": ["질문"],
+    }]
 
 
 def test_ocr_unavailable_fails_closed(tmp_path):

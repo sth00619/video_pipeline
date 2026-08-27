@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.416" timestamp="2026-08-27T21:57:14.978831+00:00" hostname="ec471fbf6892"><testcase classname="tests.test_fal_motion_safety" name="test_targeted_exact_retry_uses_finer_original_resolution_tiles_after_coarse_miss" time="0.034"><failure message="AssertionError: assert [] == ['질문']&#10;  &#10;  Right contains one more item: '질문'&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_targeted_exact_retry_uses0')
+
+    def test_targeted_exact_retry_uses_finer_original_resolution_tiles_after_coarse_miss(tmp_path):
+        image = tmp_path / "wide-scene.png"
+        Image.new("RGB", (2752, 1536), "white").save(image)
+        target_box = (1376, 768, 2064, 1280)
+    
+        def fake_region_rows(_path, box, *, psm=6):
+            if box == target_box:
+                return "completed", [{
+                    "text": "질문", "conf": "96", "word_num": "1",
+                    "block_num": "1", "par_num": "1", "line_num": "1",
+                }]
+            return "completed", []
+    
+        with patch(
+            "app.services.fal_motion_safety._read_tesseract_region_rows",
+            side_effect=fake_region_rows,
+        ):
+            status, hits, evidence = _targeted_exact_text_retry(str(image), ["질문"])
+    
+        assert status == "completed"
+&gt;       assert hits == ["질문"]
+E       AssertionError: assert [] == ['질문']
+E         
+E         Right contains one more item: '질문'
+E         Use -v to get more diff
+
+tests/test_fal_motion_safety.py:193: AssertionError</failure></testcase></testsuite></testsuites>
