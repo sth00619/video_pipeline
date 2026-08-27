@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.229" timestamp="2026-08-27T15:44:41.668854+00:00" hostname="dd64ad0918b3"><testcase classname="tests.test_character_face_reference_v2" name="test_default_face_reference_uses_user_approved_six_scene_v2" time="0.012"><failure message="AssertionError: assert 'channel_char..._range_v1.png' == 'channel_char..._range_v2.png'&#10;  &#10;  - channel_character_face_range_v2.png&#10;  ?                               ^&#10;  + channel_character_face_range_v1.png&#10;  ?                               ^">def test_default_face_reference_uses_user_approved_six_scene_v2():
+&gt;       assert gemini_provider._FACE_RANGE_REF_NAME == "channel_character_face_range_v2.png"
+E       AssertionError: assert 'channel_char..._range_v1.png' == 'channel_char..._range_v2.png'
+E
+E         - channel_character_face_range_v2.png
+E         ?                               ^
+E         + channel_character_face_range_v1.png
+E         ?                               ^
+
+tests/test_character_face_reference_v2.py:9: AssertionError</failure></testcase><testcase classname="tests.test_character_face_reference_v2" name="test_face_reference_prompt_prioritizes_measured_face_without_freezing_costume" time="0.085"><failure message="AssertionError: assert '38% to 58% of the full visible eye width' in 'Reference image 1 is a contact strip cropped without generative alteration from several approved channel scenes. Trea...o one studio template. Do not reproduce marks from any reference image.\n\neconomic briefing with the gold coin mascot'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_face_reference_prompt_pri0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff9792e420&gt;
+
+    def test_face_reference_prompt_prioritizes_measured_face_without_freezing_costume(tmp_path: Path, monkeypatch):
+        observed = {}
+
+        class FakeNanaBananaProvider:
+            def generate(self, **kwargs):
+                observed.update(kwargs)
+                Path(kwargs["output_path"]).write_bytes(b"test-image")
+
+        import app.providers.real.image as image_module
+
+        monkeypatch.setattr(image_module, "NanaBananaProvider", FakeNanaBananaProvider)
+        face_range = tmp_path / "channel_character_face_range_v2.png"
+        style = tmp_path / "channel_style_job52_briefing.png"
+        face_range.write_bytes(b"face-range-v2")
+        style.write_bytes(b"style")
+
+        GeminiProvider(api_key="test-key").generate(
+            "economic briefing with the gold coin mascot",
+            model=GeminiModel.PRO,
+            reference_image_paths=[str(face_range), str(style)],
+        )
+
+        prompt = observed["prompt"]
+&gt;       assert "38% to 58% of the full visible eye width" in prompt
+E       AssertionError: assert '38% to 58% of the full visible eye width' in 'Reference image 1 is a contact strip cropped without generative alteration from several approved channel scenes. Trea...o one studio template. Do not reproduce marks from any reference image.\n\neconomic briefing with the gold coin mascot'
+
+tests/test_character_face_reference_v2.py:37: AssertionError</failure></testcase></testsuite></testsuites>

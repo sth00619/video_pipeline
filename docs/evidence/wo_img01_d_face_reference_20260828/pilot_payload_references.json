@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "source": "artifacts/wo_img01_c3_eight_scene_pilot/pilot_manifest.json",
+  "source_sha256": "a9181f131c9d1909a5e436b2d297ff87d2f2ffda29a435df54db0b969d3fdcb0",
+  "expected_v1_sha256": "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+  "scene_count": 8,
+  "all_scenes_sent_v1_first": true,
+  "scenes": [
+    {
+      "scene": 0,
+      "payload_sha256": "3b506b70452cc1fdca3349815e270f9b4421277d2b4cea00e552e2730ba9ab47",
+      "high_level_reference_names": [
+        "channel_character_face_range_v1.png",
+        "channel_style_job52_briefing.png",
+        "channel_style_job52_market_flow.png"
+      ],
+      "high_level_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "actual_request_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "v1_is_first_reference_in_both_records": true
+    },
+    {
+      "scene": 2,
+      "payload_sha256": "305cd86337cd17b9f2ac79a972a4d47086a895cf200f9d79b9203f4df0075867",
+      "high_level_reference_names": [
+        "channel_character_face_range_v1.png",
+        "channel_style_job52_briefing.png",
+        "channel_style_job52_market_flow.png"
+      ],
+      "high_level_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "actual_request_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "v1_is_first_reference_in_both_records": true
+    },
+    {
+      "scene": 5,
+      "payload_sha256": "db690786b1d13eba146ec489ee035af040a9b772fd54a650bc32aad875844552",
+      "high_level_reference_names": [
+        "channel_character_face_range_v1.png",
+        "channel_style_semiconductor_production_scene_v1.png",
+        "channel_style_semiconductor_growth_scene_v1.png"
+      ],
+      "high_level_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+        "a2d2fee40b190d0efa1f78e30440db3fefffd2fe61a1b291d81cf7cfbf20c92c"
+      ],
+      "actual_request_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+        "a2d2fee40b190d0efa1f78e30440db3fefffd2fe61a1b291d81cf7cfbf20c92c"
+      ],
+      "v1_is_first_reference_in_both_records": true
+    },
+    {
+      "scene": 7,
+      "payload_sha256": "dbfec1590f2d9a09559be2e7dffa678a82be2a75c521a57cb8da935b715276e5",
+      "high_level_reference_names": [
+        "channel_character_face_range_v1.png",
+        "channel_style_job52_briefing.png",
+        "channel_style_job52_market_flow.png"
+      ],
+      "high_level_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "actual_request_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "v1_is_first_reference_in_both_records": true
+    },
+    {
+      "scene": 15,
+      "payload_sha256": "59f8a8c2a1a222adfc69ff15738bceae9f7f8647745a0cb974ef5a954f6cdbae",
+      "high_level_reference_names": [
+        "channel_character_face_range_v1.png",
+        "channel_style_job52_briefing.png",
+        "channel_style_job52_market_flow.png"
+      ],
+      "high_level_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "actual_request_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "v1_is_first_reference_in_both_records": true
+    },
+    {
+      "scene": 21,
+      "payload_sha256": "08f455a40d47a432f5a15e8af2dd3c2143dd87c5cd11259b5a97cb8581b09811",
+      "high_level_reference_names": [
+        "channel_character_face_range_v1.png",
+        "channel_style_job52_briefing.png",
+        "channel_style_job52_market_flow.png"
+      ],
+      "high_level_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "actual_request_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "v1_is_first_reference_in_both_records": true
+    },
+    {
+      "scene": 35,
+      "payload_sha256": "31298b760640625964a77c7c02f19ad8b25416bb84570c855272ff0e0498dc01",
+      "high_level_reference_names": [
+        "channel_character_face_range_v1.png",
+        "channel_style_job52_risk_map.png",
+        "channel_style_job52_market_flow.png"
+      ],
+      "high_level_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "actual_request_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "v1_is_first_reference_in_both_records": true
+    },
+    {
+      "scene": 47,
+      "payload_sha256": "6c5e84074d6a1a4de97f672b9ab1184803166af53258d21fedbad8c88352a9bb",
+      "high_level_reference_names": [
+        "channel_character_face_range_v1.png",
+        "channel_style_job52_risk_map.png",
+        "channel_style_job52_market_flow.png"
+      ],
+      "high_level_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "actual_request_reference_sha256": [
+        "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+        "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+        "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+      ],
+      "v1_is_first_reference_in_both_records": true
+    }
+  ]
+}

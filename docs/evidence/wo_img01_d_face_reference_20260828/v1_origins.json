@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "method": "ORB 6000 features, Hamming KNN, Lowe ratio 0.75",
+  "v1_path": "backend/fastapi-workers/out/references/channel_character_face_range_v1.png",
+  "v1_sha256": "3d113c43e9395435d1b07b6e5a015c17e606b246e7a4f177bd3de4d074489c45",
+  "panel_size": [
+    512,
+    512
+  ],
+  "panels": [
+    {
+      "panel_index": 0,
+      "top_matches": [
+        {
+          "scene_number": 6,
+          "good_orb_matches": 512,
+          "scene_sha256": "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a"
+        },
+        {
+          "scene_number": 17,
+          "good_orb_matches": 137,
+          "scene_sha256": "8a382cfe86e5e29a3abed2c203b2ee5241ee446df0d50b7db9608c869fd3747a"
+        },
+        {
+          "scene_number": 26,
+          "good_orb_matches": 100,
+          "scene_sha256": "678da982fc4e359820e1afa08f8421e69ddd72ba1ed55a4a0dee0f61e3b39d33"
+        },
+        {
+          "scene_number": 36,
+          "good_orb_matches": 96,
+          "scene_sha256": "427742828eeb52e8a4567956588ff426be9cc5acac52bea7d51ca38e0896555b"
+        },
+        {
+          "scene_number": 23,
+          "good_orb_matches": 73,
+          "scene_sha256": "56f1de3d393b20ed7a35456c39ce20d2d3a69fc1f02e1dc0d608776a837bab92"
+        }
+      ]
+    },
+    {
+      "panel_index": 1,
+      "top_matches": [
+        {
+          "scene_number": 18,
+          "good_orb_matches": 578,
+          "scene_sha256": "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337"
+        },
+        {
+          "scene_number": 20,
+          "good_orb_matches": 125,
+          "scene_sha256": "3a2feb84e675b10e91b9908b776ff80f00cbe1c01bbfee629afe40b00daf30c0"
+        },
+        {
+          "scene_number": 28,
+          "good_orb_matches": 98,
+          "scene_sha256": "c85d33cf343b90f3d56ad4d93a7b4de8b3fa293624961493cc5003bd47d49f20"
+        },
+        {
+          "scene_number": 43,
+          "good_orb_matches": 97,
+          "scene_sha256": "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74"
+        },
+        {
+          "scene_number": 41,
+          "good_orb_matches": 94,
+          "scene_sha256": "b9c6a7e21e0f49967f6f631b5948b254265a62cfea1a7f451bdeecb944128dfc"
+        }
+      ]
+    },
+    {
+      "panel_index": 2,
+      "top_matches": [
+        {
+          "scene_number": 29,
+          "good_orb_matches": 533,
+          "scene_sha256": "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d"
+        },
+        {
+          "scene_number": 25,
+          "good_orb_matches": 162,
+          "scene_sha256": "a2d2fee40b190d0efa1f78e30440db3fefffd2fe61a1b291d81cf7cfbf20c92c"
+        },
+        {
+          "scene_number": 3,
+          "good_orb_matches": 89,
+          "scene_sha256": "fad619f51fbef7f6b87636e2c33c3fde584b2576ec26c4b05011452e0eb1c024"
+        },
+        {
+          "scene_number": 20,
+          "good_orb_matches": 80,
+          "scene_sha256": "3a2feb84e675b10e91b9908b776ff80f00cbe1c01bbfee629afe40b00daf30c0"
+        },
+        {
+          "scene_number": 8,
+          "good_orb_matches": 70,
+          "scene_sha256": "a12b06ad052bcc7eb0c8650119f16d58808c0750f452779777fa15004e48ea39"
+        }
+      ]
+    }
+  ],
+  "interpretation_limit": "특징점 일치는 출처 확인용이며 얼굴 품질 점수가 아니다."
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "command": "docker run --rm -v $PWD:/repo -w /repo/backend/fastapi-workers video_pipeline-fastapi-workers pytest -q",
+  "result": {
+    "passed": 1051,
+    "failed": 1,
+    "warnings": 20,
+    "duration_seconds": 98.0
+  },
+  "failure": {
+    "test": "tests/test_gemini_approved_retry.py::test_one_approved_post_preserves_history_usage_and_blocks_reuse[503]",
+    "actual_next_allowed_at_relative_seconds": 11.5779142026321,
+    "expected_relative_seconds_min": 20,
+    "expected_relative_seconds_max": 40,
+    "classification": "unrelated_environment_sensitive_retry_base_expectation",
+    "scope_action": "WO-IMG-01-D에서는 수정하지 않음"
+  },
+  "face_or_image_contract_failures": 0,
+  "paid_api_calls": 0
+}
