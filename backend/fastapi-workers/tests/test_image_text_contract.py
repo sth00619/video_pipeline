@@ -106,7 +106,7 @@ def test_job52_scene07_sanitizer_preserves_objects_without_cascading_replacement
     assert "SK Hynix" not in cleaned
     assert "shapesinguistic" not in cleaned
     assert "bold digits" not in cleaned
-    assert "containers" in cleaned
+    assert "two unlettered containers" in cleaned
     assert "set aside on a side shelf" in cleaned
     assert "excluded from the glowing profit calculation" in cleaned
     assert not cleaned.lstrip().startswith("with ")
