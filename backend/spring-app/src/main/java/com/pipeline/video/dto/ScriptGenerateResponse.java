@@ -101,4 +101,8 @@ public class ScriptGenerateResponse {
      * 이미지 단계가 생성 시점의 장면 경계를 감사할 수 없다. */
     @JsonProperty("narration_contract")
     private Map<String, Object> narrationContract;
+
+    /** 영상 생성 버튼의 전역 계약 버전과 이 단계의 실제 통과 판정. */
+    @JsonProperty("operational_contract_audit")
+    private Map<String, Object> operationalContractAudit;
 }

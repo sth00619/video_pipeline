@@ -6,6 +6,9 @@ from app.utils.operational_contract_audit import (
 )
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+
+
 def test_operational_contract_registry_is_global_and_stage_specific() -> None:
     audit = build_operational_contract_audit(
         "images",
@@ -30,7 +33,7 @@ def test_operational_contract_registry_is_global_and_stage_specific() -> None:
 
 
 def test_every_paid_or_approval_stage_emits_the_operational_contract_audit() -> None:
-    root = Path("/repo")
+    root = REPOSITORY_ROOT
     expected = {
         "backend/fastapi-workers/app/workers/script_worker.py": 'build_operational_contract_audit("script"',
         "backend/fastapi-workers/app/workers/tts_worker.py": 'build_operational_contract_audit("tts"',
@@ -42,7 +45,7 @@ def test_every_paid_or_approval_stage_emits_the_operational_contract_audit() -> 
 
 
 def test_spring_preserves_the_audit_in_every_stage_asset() -> None:
-    root = Path("/repo/backend/spring-app/src/main/java/com/pipeline/video/dto")
+    root = REPOSITORY_ROOT / "backend/spring-app/src/main/java/com/pipeline/video/dto"
     for name in (
         "ScriptGenerateResponse.java",
         "TtsGenerateResponse.java",

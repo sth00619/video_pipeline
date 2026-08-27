@@ -42,6 +42,7 @@ from app.utils.script_style import (
 from app.utils.script_content_depth_analyzer import assess_script_content_depth
 from app.utils.script_length import get_tolerance, make_length_contract, spoken_char_count
 from app.utils.narration_contract import build_script_contract
+from app.utils.operational_contract_audit import build_operational_contract_audit
 from app.utils.sentence_splitter import split_sentences
 from app.utils.caption_segmentation import split_script_into_caption_chunks
 from app.utils.image_text_contract import contains_financial_number, prompt_text_contract_violations
@@ -1762,6 +1763,14 @@ JSON 배열만 반환하세요. 각 원소는 {{"index": 정수, "text": "수정
                 "screen_text": {"passed": not rejected_scenes, "rejected_scenes": rejected_scenes},
             },
             "thumbnail_brief": thumbnail_brief,
+            "operational_contract_audit": build_operational_contract_audit("script", checks={
+                "used_real_llm": used_real_llm,
+                "verified_fact_count": len(verified_facts),
+                "news_article_count": len(script_audit["news_articles"]),
+                "flow_qa_passed": bool(flow_qa.get("passed")),
+                "narration_contract_present": bool(narration_contract),
+                "manual_review_required": requires_manual_review,
+            }),
             "youtube_metadata": {
                 "title": meta_title,
                 "thumbnail_prompt": meta_thumb,

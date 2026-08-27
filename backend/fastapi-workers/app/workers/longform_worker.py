@@ -55,6 +55,10 @@ from app.utils.narration_contract import (
     narration_from_sections,
     verify_tts_against_script_contract,
 )
+from app.utils.operational_contract_audit import (
+    PIPELINE_OPERATIONAL_CONTRACT_VERSION,
+    build_operational_contract_audit,
+)
 from app.utils.output_qc import build_output_qc_report
 from app.services.kling_prompt_builder import build_kling_motion_prompt
 from app.services.fal_motion_safety import (
@@ -213,6 +217,7 @@ class LongformWorker:
 
         assembly_fingerprint = hashlib.sha256(json.dumps({
             "assembly_contract": "integrated-data-motion-v6",
+            "operational_contract": PIPELINE_OPERATIONAL_CONTRACT_VERSION,
             "tts": tts_meta_json,
             "scenes": scenes_meta_json,
             "gifs": gifs_meta_json,
@@ -764,6 +769,15 @@ class LongformWorker:
             kling_motion_plan=kling_motion_plan,
         )
         quality_report["output_qc"] = output_qc
+        operational_contract_audit = build_operational_contract_audit("longform", checks={
+            "tts_subtitle_sync_passed": bool(tts_subtitle_sync.get("passed")),
+            "duration_ok": bool(quality_report.get("duration_ok")),
+            "output_qc_passed": bool(output_qc.get("passed")),
+            "requested_motion_count": len(requested_motion_indices),
+            "delivered_motion_count": actual_kling_count,
+            "motion_delivery_ok": bool(quality_report.get("motion_delivery_ok")),
+        })
+        quality_report["operational_contract_audit"] = operational_contract_audit
         logger.info(
             "Verified overlay delivery cards=%s/%s charts=%s/%s; output_qc=%s",
             data_card_count, data_card_count, market_chart_count, market_chart_count,
@@ -800,6 +814,7 @@ class LongformWorker:
             "has_subtitles": has_subtitles,
             "resolution": "1920x1080",
             "quality_report": quality_report,
+            "operational_contract_audit": operational_contract_audit,
         }
         # Persist a small, stable provenance manifest for deterministic
         # thumbnail selection.  A thumbnail may only use an image recorded
@@ -835,6 +850,7 @@ class LongformWorker:
             "video_path": output_path,
             "resolution": "1920x1080",
             "kling_motion_plan": kling_motion_plan,
+            "operational_contract_audit": operational_contract_audit,
             "scenes": manifest_scenes,
         }, ensure_ascii=False, indent=2), encoding="utf-8")
         result["assembly_manifest_path"] = str(manifest_path)

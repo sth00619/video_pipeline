@@ -50,6 +50,7 @@ from app.utils.narration_contract import (
     build_script_contract,
     verify_tts_against_script_contract,
 )
+from app.utils.operational_contract_audit import build_operational_contract_audit
 from app.utils.gemini_pressure import gemini_pressure
 from app.utils.image_job_lock import acquire_image_job_lock, release_image_job_lock
 from app.utils.retry_policy import classify_image_error, error_signature
@@ -1248,6 +1249,16 @@ Rules:
             })
             _apply_fal_motion_safety_contract([ctx])
             ctx["character_regions"] = _character_regions(ctx)
+            ctx["operational_contract_audit"] = build_operational_contract_audit(
+                "single_scene",
+                checks={
+                    "scene_metadata_preserved": True,
+                    "bounded_prompt_applied": True,
+                    "base_image_gate_passed": True,
+                    "final_image_gate_passed": True,
+                    "fal_preflight_attached": isinstance(ctx.get("fal_motion_safety"), dict),
+                },
+            )
             return ctx
         finally:
             release_image_job_lock(job_id, lock_token)
@@ -2301,6 +2312,15 @@ Rules:
             "tts_subtitle_sync": self.tts_subtitle_sync,
             "evidence_audit": self.evidence_audit,
             "visual_mix_plan": self.visual_mix_plan,
+            "operational_contract_audit": build_operational_contract_audit("images", checks={
+                "tts_subtitle_sync_passed": self.tts_subtitle_sync.get("passed"),
+                "scene_count": len(generated),
+                "scene_metadata_contract_present": bool(image_quality.get("scene_metadata_contract")),
+                "fal_preflight_attached_to_all": all(
+                    isinstance(scene.get("fal_motion_safety"), dict) for scene in generated
+                ),
+                "manual_review_required": bool(review_reasons),
+            }),
             "requires_manual_review": bool(review_reasons),
             "review_reasons": review_reasons,
         }
@@ -3163,6 +3183,15 @@ Rules:
             "budget_preflight": budget_preflight,
             "evidence_audit": self.evidence_audit,
             "visual_mix_plan": self.visual_mix_plan,
+            "operational_contract_audit": build_operational_contract_audit("images", checks={
+                "tts_subtitle_sync_passed": self.tts_subtitle_sync.get("passed"),
+                "scene_count": len(generated),
+                "scene_metadata_contract_present": bool(image_quality.get("scene_metadata_contract")),
+                "fal_preflight_attached_to_all": all(
+                    isinstance(scene.get("fal_motion_safety"), dict) for scene in generated
+                ),
+                "manual_review_required": bool(review_reasons),
+            }),
             "requires_manual_review": bool(review_reasons),
             "review_reasons": review_reasons,
         }

@@ -6,6 +6,9 @@ from app.main import SingleImageGenerateRequest
 from app.workers.images_worker import ImagesWorker
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+
+
 class _Provider:
     def __init__(self) -> None:
         self.calls: list[dict] = []
@@ -104,8 +107,9 @@ def test_single_scene_regeneration_does_not_silently_fallback_to_a_chart() -> No
 
 
 def test_spring_has_no_metadata_free_single_scene_bypass() -> None:
-    source = Path(
-        "/repo/backend/spring-app/src/main/java/com/pipeline/video/service/FastApiClient.java"
+    source = (
+        REPOSITORY_ROOT
+        / "backend/spring-app/src/main/java/com/pipeline/video/service/FastApiClient.java"
     ).read_text(encoding="utf-8")
 
     assert source.count('postJson(fastApiUrl + "/workers/images/generate-single"') == 1

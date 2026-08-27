@@ -44,4 +44,7 @@ public class LongformGenerateResponse {
 
     @JsonProperty("quality_report")
     private Map<String, Object> qualityReport;
+
+    @JsonProperty("operational_contract_audit")
+    private Map<String, Object> operationalContractAudit;
 }

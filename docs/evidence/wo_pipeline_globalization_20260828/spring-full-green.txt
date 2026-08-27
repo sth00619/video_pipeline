@@ -1,0 +1,7 @@
+실행일: 2026-08-28 KST
+명령: gradle test --no-daemon
+결과: BUILD SUCCESSFUL
+JUnit XML 집계: 14 files, 54 tests, 0 failures, 0 errors, 0 skipped
+
+이번 실행은 Script/TTS/Images/Longform 응답 DTO에 추가한
+operational_contract_audit 필드를 포함한 Spring 전체 회귀다.

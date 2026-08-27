@@ -42,6 +42,7 @@ from app.utils.korean_tts import normalize_korean_numbers_for_tts
 from app.utils.sentence_splitter import split_sentences
 from app.utils.caption_segmentation import split_script_into_caption_chunks
 from app.utils.script_length import effective_duration_tolerance, spoken_char_count, update_calibration
+from app.utils.operational_contract_audit import build_operational_contract_audit
 
 logger = logging.getLogger(__name__)
 
@@ -423,6 +424,13 @@ class TtsWorker:
             },
         }
         persist_quality_report(job_id, "tts", quality_report)
+        operational_contract_audit = build_operational_contract_audit("tts", checks={
+            "canonical_text_match": True,
+            "canonical_sha256_present": bool(canonical_sha256),
+            "duration_validation_passed": bool(duration_validation.get("passed")),
+            "subtitle_quality_passed": bool(subtitle_quality.get("passed")),
+            "subtitle_alignment_mode": self._last_subtitle_alignment_mode,
+        })
         # 후속 이미지·조립 단계가 일회성 HTTP 응답 메모리에만 의존하지 않도록,
         # 승인 원문과 문자 단위 자막 큐를 작업 폴더에도 함께 보존한다.
         tts_manifest = {
@@ -439,6 +447,7 @@ class TtsWorker:
             "canonical_text": clean_script,
             "canonical_sha256": canonical_sha256,
             "quality_report": quality_report,
+            "operational_contract_audit": operational_contract_audit,
         }
         (job_dir / "tts_manifest.json").write_text(
             json.dumps(tts_manifest, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -462,6 +471,7 @@ class TtsWorker:
             "quality_report": quality_report,
             "canonical_text": clean_script,
             "canonical_sha256": canonical_sha256,
+            "operational_contract_audit": operational_contract_audit,
         }
 
     # ============================

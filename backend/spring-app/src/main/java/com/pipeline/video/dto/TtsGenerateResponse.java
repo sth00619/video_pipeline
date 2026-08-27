@@ -58,4 +58,7 @@ public class TtsGenerateResponse {
 
     @JsonProperty("canonical_sha256")
     private String canonicalSha256;
+
+    @JsonProperty("operational_contract_audit")
+    private Map<String, Object> operationalContractAudit;
 }
