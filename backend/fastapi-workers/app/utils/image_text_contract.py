@@ -231,11 +231,17 @@ def sanitize_generated_text_prompt(
     cleaned = _QUOTED_TEXT_RE.sub(replace_quoted, source)
     # ``Labeled containers marked <문구> and <문구>``처럼 문자와 장면 소품이
     # 한 절에 섞인 경우에는 라벨만 제거하고 컨테이너와 제외 동작을 보존한다.
+    def replace_labeled_objects(match: re.Match[str]) -> str:
+        label_count = match.group("labels").count(_TEXT_SLOT)
+        quantity = {2: "two ", 3: "three "}.get(label_count, "multiple " if label_count > 3 else "")
+        replacement = f"{quantity}unlettered {match.group('object').strip()}"
+        return replacement[:1].upper() + replacement[1:] if match.group(0)[:1].isupper() else replacement
+
     cleaned = re.sub(
         rf"\b(?:labeled|labelled)\s+(?P<object>[^,.;\n\"']{{1,60}}?)\s+"
-        rf"(?:marked|printed|stamped|reading|saying)\s+{_TEXT_SLOT}"
-        rf"(?:\s+(?:and|or)\s+{_TEXT_SLOT})*",
-        lambda match: f"unlettered {match.group('object').strip()}",
+        rf"(?:marked|printed|stamped|reading|saying)\s+"
+        rf"(?P<labels>{_TEXT_SLOT}(?:\s+(?:and|or)\s+{_TEXT_SLOT})*)",
+        replace_labeled_objects,
         cleaned,
         flags=re.IGNORECASE,
     )
