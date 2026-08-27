@@ -206,6 +206,42 @@ def test_existing_request_database_is_migrated_without_resetting_counts(tmp_path
     assert {"first_needs_review_at", "review_cycle"} <= columns
 
 
+def test_historical_two_attempt_needs_review_cannot_bypass_cooldown_when_limit_is_three(
+    tmp_path, monkeypatch,
+):
+    monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 2)
+    now = [1000.]
+    path = tmp_path / "control.sqlite3"
+    control = ImageRequestControl(
+        path=path, clock=lambda: now[0], uniform=lambda low, high: high,
+    )
+    for index in range(2):
+        token = f"historical-{index}"
+        control.reserve(scope="job", scene="image:7", token=token)
+        state = control.finish(token, retryable=True)
+        now[0] = state["next_allowed_at"]
+    review_at = state["first_needs_review_at"]
+    assert state["status"] == "needs_review"
+
+    monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 3)
+    resumed = ImageRequestControl(path=path, clock=lambda: now[0])
+    with pytest.raises(ImageRequestHeld, match="냉각 재도전"):
+        resumed.reserve(
+            scope="job", scene="image:7", token="legacy-approved-retry",
+            legacy_count=2, review_retry_of="historical-1", expected_failure_n=2,
+        )
+
+    now[0] = review_at + 86400
+    reopened = resumed.reserve(
+        scope="job", scene="image:7", token="approved-reopen",
+        legacy_count=0, review_retry_of="historical-1", expected_failure_n=2,
+        review_reopen_of="historical-1",
+        review_reopen_first_needs_review_at=review_at,
+    )
+    assert reopened["scene_attempt"] == 1
+    assert reopened["review_cycle"] == 1
+
+
 def test_shared_project_backoff_caps_at_300_but_jitter_remains(tmp_path, monkeypatch):
     monkeypatch.setitem(runtime_config._state, "gemini_pro_retry_base_seconds", 20.)
     now = [0.]
