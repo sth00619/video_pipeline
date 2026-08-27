@@ -247,6 +247,64 @@ def test_reference_payload_order_matches_the_v3_declared_contract(tmp_path: Path
     assert len(parts) == 3  # 두 참조 이미지와 하나의 텍스트 프롬프트
 
 
+def test_operational_generate_content_injects_the_same_face_reference_contract_as_canary(tmp_path: Path, monkeypatch):
+    """영상 생성 버튼의 실제 HTTP 경로도 canary와 같은 얼굴 계약을 보내야 한다."""
+    import base64
+    from io import BytesIO
+
+    from PIL import Image
+
+    source = BytesIO()
+    Image.new("RGB", (2, 2), "white").save(source, "PNG")
+    generated = base64.b64encode(source.getvalue()).decode()
+    captured = {}
+
+    class Response:
+        status_code = 200
+        headers = {}
+        text = "ok"
+
+        @staticmethod
+        def json():
+            return {"candidates": [{"content": {"parts": [{"inlineData": {"data": generated}}]}}]}
+
+    def fake_post(_endpoint, *, json, **_kwargs):
+        captured["payload"] = json
+        return Response()
+
+    monkeypatch.setattr("requests.post", fake_post)
+    references = []
+    for name in (
+        "channel_character_face_range_v2.png",
+        "channel_character_face_scene05_v1.png",
+        "channel_style_job52_briefing.png",
+    ):
+        path = tmp_path / name
+        path.write_bytes(name.encode())
+        references.append(str(path))
+
+    output = tmp_path / "result.png"
+    assert NanaBananaProvider()._generate_gemini_api(
+        "white lab coat and scientist goggles in a data laboratory",
+        str(output),
+        "not-a-real-key",
+        references,
+        model="gemini-3-pro-image",
+        image_size="2K",
+        max_attempts=1,
+        reference_contract_declared=True,
+        request_audit=_audit(tmp_path),
+    )
+
+    prompt = captured["payload"]["contents"][0]["parts"][-1]["text"]
+    assert "38% to 58% of the full visible eye width" in prompt
+    assert "visible white sclera" in prompt
+    assert "warm brown pupils or irises" in prompt
+    assert "layered white catchlights" in prompt
+    assert "larger role-matched face crop" in prompt
+    assert "Do not copy or freeze its expression, costume, goggles, pose" in prompt
+
+
 def test_priority_service_tier_is_a_top_level_generate_content_field(tmp_path: Path, monkeypatch):
     import base64
     from io import BytesIO
