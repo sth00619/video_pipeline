@@ -2,7 +2,7 @@
 import hashlib
 import io
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from app.services import final_frame_text_integrity as gate
 from app.utils.image_text_contract import build_scene_text_contract
@@ -44,7 +44,11 @@ def test_renderer_emits_individual_trend_text_positions():
 
 def test_worker_renders_two_bound_surfaces_and_checks_separate_ocr(tmp_path, monkeypatch):
     path = tmp_path / "surfaces.png"
-    Image.new("RGB", (1280, 720), "#20354d").save(path)
+    image = Image.new("RGB", (1280, 720), "#20354d")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((64, 72, 576, 432), fill="#eef8fb", outline="#081522", width=12)
+    draw.rectangle((704, 72, 1216, 432), fill="#eef8fb", outline="#081522", width=12)
+    image.save(path)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     scene = {
         "text_render_policy": "semantic_roles_v1",
@@ -53,8 +57,10 @@ def test_worker_renders_two_bound_surfaces_and_checks_separate_ocr(tmp_path, mon
         "screen_text_plan": [{"text": "현재 전망", "surface": "left", "purpose": "information"},
                              {"text": "수정 전망", "surface": "right", "purpose": "information"}],
         "surface_bindings": {
-            "left": {"bbox": [.05, .1, .4, .5], "image_sha256": digest, "validated": True},
-            "right": {"bbox": [.55, .1, .4, .5], "image_sha256": digest, "validated": True},
+            "left": {"bbox": [.05, .1, .4, .5], "geometry": "axis_aligned_rect", "surface_kind": "board",
+                     "image_sha256": digest, "validated": True},
+            "right": {"bbox": [.55, .1, .4, .5], "geometry": "axis_aligned_rect", "surface_kind": "board",
+                      "image_sha256": digest, "validated": True},
         },
     }
     results = iter(["현재 전망", "현재 전망", "수정 전망", "수정 전망"])

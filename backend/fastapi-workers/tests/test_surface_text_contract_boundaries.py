@@ -4,7 +4,7 @@ import hashlib
 import io
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from app.services import final_frame_text_integrity as gate
 from app.services.semantic_surface_text import render_semantic_surface_text
@@ -35,7 +35,11 @@ def mock_cells(monkeypatch, scene, replace=None):
 
 def bound_scene(tmp_path, texts=("현재 전망", "수정 전망")):
     path = tmp_path / "bound.png"
-    Image.new("RGB", (1280, 720), "#20354d").save(path)
+    image = Image.new("RGB", (1280, 720), "#20354d")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((64, 72, 576, 432), fill="#eef8fb", outline="#081522", width=12)
+    draw.rectangle((704, 72, 1216, 432), fill="#eef8fb", outline="#081522", width=12)
+    image.save(path)
     sha = hashlib.sha256(path.read_bytes()).hexdigest()
     scene = {
         "text_render_policy": "semantic_roles_v1", "screen_texts": list(texts),
@@ -43,8 +47,10 @@ def bound_scene(tmp_path, texts=("현재 전망", "수정 전망")):
         "screen_text_plan": [{"text": text, "surface": name, "purpose": "information"}
                              for text, name in zip(texts, ("left", "right"))],
         "surface_bindings": {
-            "left": {"bbox": [.05, .1, .4, .5], "image_sha256": sha, "validated": True},
-            "right": {"bbox": [.55, .1, .4, .5], "image_sha256": sha, "validated": True},
+            "left": {"bbox": [.05, .1, .4, .5], "geometry": "axis_aligned_rect", "surface_kind": "board",
+                     "image_sha256": sha, "validated": True},
+            "right": {"bbox": [.55, .1, .4, .5], "geometry": "axis_aligned_rect", "surface_kind": "board",
+                      "image_sha256": sha, "validated": True},
         },
     }
     return scene, path
@@ -148,10 +154,11 @@ def test_semantic_numeric_surface_still_uses_upstream_fact_gate(tmp_path, monkey
     scene.update(trend_scene())
     scene["screen_texts"] = ["인상폭", "0.25%p", "2.50%", "2.75%"]
     scene["screen_text_plan"] = []
-    scene["surface_bindings"]["chart"] = {
-        "bbox": [.1, .1, .8, .8], "validated": True, "image_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    # 실제 픽셀로 검증 가능한 왼쪽 패널 안에 수치 오버레이를 둔다.
+    scene["v5_verified_overlays"][0]["surface"] = "left"
+    scene["v5_verified_overlays"][0]["anchor"] = {
+        "x": .07, "y": .12, "width": .36, "height": .36, "kind": "monitor",
     }
-    scene["v5_verified_overlays"][0]["surface"] = "chart"
     original = path.read_bytes()
     invalid = copy.deepcopy(scene)
     invalid["v5_verified_overlays"][0]["value"] = "0.5%p"
@@ -195,13 +202,13 @@ def test_repeat_text_is_not_deduplicated_between_surfaces(tmp_path, monkeypatch)
     assert len(scene["surface_text_manifest"]["cells"]) == 2
 
 
-@pytest.mark.parametrize("damage", ["hash", "approval", "missing", "overlap", "numeric"])
+@pytest.mark.parametrize("damage", ["hash", "geometry", "missing", "overlap", "numeric"])
 def test_bad_binding_or_ungrounded_number_does_not_overwrite(tmp_path, monkeypatch, damage):
     scene, path = bound_scene(tmp_path)
     if damage == "hash":
         scene["surface_bindings"]["left"]["image_sha256"] = "stale"
-    elif damage == "approval":
-        scene["surface_bindings"]["left"]["validated"] = False
+    elif damage == "geometry":
+        scene["surface_bindings"]["left"]["geometry"] = "planar_quad"
     elif damage == "missing":
         scene["screen_text_plan"].pop()
     elif damage == "overlap":

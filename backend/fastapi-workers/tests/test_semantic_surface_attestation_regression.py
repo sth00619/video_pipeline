@@ -2,10 +2,11 @@
 import hashlib
 
 import pytest
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from app.services import final_frame_text_integrity as gate
 from app.services.semantic_surface_text import render_semantic_surface_text
+from app.services.surface_binding_attestation import attest_axis_aligned_surface
 
 
 def _scene(path, bbox, *, geometry="axis_aligned_rect"):
@@ -34,7 +35,8 @@ def _save_panel(path, *, text=False, occluded=False):
     draw = ImageDraw.Draw(image)
     draw.rectangle((128, 72, 576, 360), fill="#eef8fb", outline="#081522", width=12)
     if text:
-        draw.text((220, 180), "OLD 14X", fill="#081522", stroke_width=2)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 58)
+        draw.text((170, 170), "OLD 14X", font=font, fill="#081522", stroke_width=2)
     if occluded:
         draw.ellipse((300, 120, 650, 520), fill="#e0a927", outline="#081522", width=12)
     image.save(path)
@@ -44,8 +46,22 @@ def test_open_background_cannot_self_approve_with_validated_boolean(tmp_path, mo
     path = tmp_path / "open.png"
     Image.new("RGB", (1280, 720), "#eef8fb").save(path)
     scene = _scene(path, [.10, .10, .35, .40])
+    scene["surface_bindings"]["main"]["attestation"] = {
+        "version": 1, "validation_method": "forged",
+    }
     _mock_final_ocr(monkeypatch)
     with pytest.raises(ValueError, match="물리 표면"):
+        render_semantic_surface_text(scene, str(path))
+
+
+def test_detached_color_card_without_frame_is_not_a_physical_surface(tmp_path, monkeypatch):
+    path = tmp_path / "detached.png"
+    image = Image.new("RGB", (1280, 720), "#20354d")
+    ImageDraw.Draw(image).rectangle((128, 72, 576, 360), fill="#eef8fb")
+    image.save(path)
+    scene = _scene(path, [.10, .10, .35, .40])
+    _mock_final_ocr(monkeypatch)
+    with pytest.raises(ValueError, match="프레임"):
         render_semantic_surface_text(scene, str(path))
 
 
@@ -53,6 +69,8 @@ def test_actual_blank_bordered_panel_emits_pixel_attestation(tmp_path, monkeypat
     path = tmp_path / "panel.png"
     _save_panel(path)
     scene = _scene(path, [.10, .10, .35, .40])
+    # 레거시 bool은 거짓이어도 실제 픽셀 검증 결과만으로 승인되어야 한다.
+    scene["surface_bindings"]["main"]["validated"] = False
     source_sha = hashlib.sha256(path.read_bytes()).hexdigest()
     _mock_final_ocr(monkeypatch)
     render_semantic_surface_text(scene, str(path))
@@ -84,3 +102,12 @@ def test_slanted_surface_is_blocked_until_perspective_renderer_exists(tmp_path, 
     _mock_final_ocr(monkeypatch)
     with pytest.raises(ValueError, match="원근"):
         render_semantic_surface_text(scene, str(path))
+
+
+def test_source_mutation_invalidates_the_binding_hash(tmp_path):
+    path = tmp_path / "mutated.png"
+    _save_panel(path)
+    binding = _scene(path, [.10, .10, .35, .40])["surface_bindings"]["main"]
+    Image.new("RGB", (1280, 720), "#eef8fb").save(path)
+    with pytest.raises(ValueError, match="해시"):
+        attest_axis_aligned_surface(str(path), binding)

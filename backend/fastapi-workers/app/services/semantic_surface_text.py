@@ -13,6 +13,7 @@ from app.services.surface_text_manifest import (
     contract_digest, draw_text_cell, normalized_bbox, set_manifest, validate_manifest,
     expected_cells, SEMANTIC_TEXT_POLICY,
 )
+from app.services.surface_binding_attestation import attest_scene_surfaces
 
 
 def render_semantic_surface_text(scene: dict, image_path: str) -> None:
@@ -38,20 +39,22 @@ def render_semantic_surface_text(scene: dict, image_path: str) -> None:
     expected_cells(candidate)
     with Image.open(io.BytesIO(source)) as original:
         size, original_format = original.size, original.format or "PNG"
+    attest_scene_surfaces(image_path, candidate)
+    bindings = candidate.get("surface_bindings") or {}
     for item in plan:
         # 수치가 포함된 문구는 승인 플래그만으로 사실 근거 검증을 우회하면 안 된다.
         # v1에서는 기존 verified_facts → v5_verified_overlays 경로로만 수치를 받는다.
         if any(char.isdigit() for char in item["text"]):
             raise ValueError("수치 문구는 verified_facts 기반 수치 오버레이로 지정해야 합니다.")
         binding = bindings.get(item.get("surface"))
-        if not isinstance(binding, dict) or binding.get("validated") is not True or binding.get("image_sha256") != source_sha:
-            raise ValueError("표면 연결 승인이 없거나 원본 이미지가 변경됐습니다.")
+        if not isinstance(binding, dict) or binding.get("image_sha256") != source_sha:
+            raise ValueError("물리 표면 연결 증거가 없거나 원본 이미지가 변경됐습니다.")
         normalized_bbox(binding["bbox"], size)
     # 새 경로의 수치 표면도 같은 최종 원본 이미지에 승인된 연결이어야 한다.
     for overlay in candidate.get("v5_verified_overlays") or []:
         binding = bindings.get(overlay.get("surface"))
-        if not isinstance(binding, dict) or binding.get("validated") is not True or binding.get("image_sha256") != source_sha:
-            raise ValueError("수치 오버레이 표면 연결이 승인되지 않았습니다.")
+        if not isinstance(binding, dict) or binding.get("image_sha256") != source_sha:
+            raise ValueError("수치 오버레이 물리 표면 연결이 승인되지 않았습니다.")
         a = normalized_bbox(binding["bbox"], size)
         b = normalized_bbox([overlay["anchor"][k] for k in ("x", "y", "width", "height")], size)
         if not (a[0] <= b[0] < b[2] <= a[2] and a[1] <= b[1] < b[3] <= a[3]):
