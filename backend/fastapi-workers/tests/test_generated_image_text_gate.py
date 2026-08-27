@@ -38,6 +38,51 @@ def test_ocr_accepts_approved_text_and_defers_nonnumeric_spelling_to_visual_gate
     assert deferred["review_required_nonnumeric_texts"] == ["SK 하이느"]
 
 
+def test_strict_generated_text_lane_rejects_when_one_approved_label_is_missing(tmp_path):
+    scene = {
+        "screen_texts": ["경고", "전망치"],
+        "screen_text_validation": {"passed": True},
+        "generated_text_ocr_policy": {
+            "version": "strict-scene-local-generated-text-v1",
+            "require_all_approved": True,
+            "reject_unapproved": True,
+        },
+    }
+
+    with pytest.raises(GeneratedImageTextDetectedError, match="승인 문구 누락: 전망치"):
+        _inspect_generated_textless_image(
+            scene,
+            str(_png(tmp_path)),
+            ocr_rows=[{"text": "경고", "conf": "96"}],
+        )
+
+
+def test_strict_generated_text_lane_accepts_complete_fragmented_korean_tokens(tmp_path):
+    scene = {
+        "screen_texts": ["전망치"],
+        "screen_text_validation": {"passed": True},
+        "generated_text_ocr_policy": {
+            "version": "strict-scene-local-generated-text-v1",
+            "require_all_approved": True,
+            "reject_unapproved": True,
+        },
+    }
+    rows = [
+        {"text": "전", "conf": "95", "word_num": "1", "block_num": "1", "par_num": "1", "line_num": "1"},
+        {"text": "망", "conf": "95", "word_num": "2", "block_num": "1", "par_num": "1", "line_num": "1"},
+        {"text": "치", "conf": "95", "word_num": "3", "block_num": "1", "par_num": "1", "line_num": "1"},
+    ]
+
+    result = _inspect_generated_textless_image(
+        scene,
+        str(_png(tmp_path)),
+        ocr_rows=rows,
+    )
+
+    assert result["exact_generated_texts"] == ["전망치"]
+    assert result["missing_generated_texts"] == []
+
+
 def test_exact_narration_term_is_allowed_but_derived_word_and_number_are_not():
     scene = {
         "text": "배당도 주주환원의 방식이지만 자사주 소각과는 다릅니다.",

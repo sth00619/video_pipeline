@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="24" time="0.266" timestamp="2026-08-27T19:55:34.595415+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_image_text_contract" name="test_scene_local_approved_english_or_korean_text_is_preserved" time="0.002" /><testcase classname="tests.test_image_text_contract" name="test_financial_number_is_reserved_for_deterministic_surface_renderer" time="0.001" /><testcase classname="tests.test_image_text_contract" name="test_generated_base_raster_financial_number_is_detected_even_when_approved" time="0.000" /><testcase classname="tests.test_image_text_contract" name="test_global_verified_facts_do_not_expand_current_scene_allowlist" time="0.000" /><testcase classname="tests.test_image_text_contract" name="test_unapproved_job52_prompt_payloads_are_detected_without_banning_all_text" time="0.000" /><testcase classname="tests.test_image_text_contract" name="test_removing_unapproved_short_label_does_not_create_a_malformed_word" time="0.000" /><testcase classname="tests.test_image_text_contract" name="test_ocr_fast_gate_defers_unlisted_nonnumeric_text_to_visual_review" time="0.000" /><testcase classname="tests.test_image_text_contract" name="test_strict_generated_text_lane_rejects_every_unapproved_word_and_number" time="0.001"><failure message="AssertionError: assert [] == ['RISK', '2021']&#10;  &#10;  Right contains 2 more items, first extra item: 'RISK'&#10;  Use -v to get more diff">def test_strict_generated_text_lane_rejects_every_unapproved_word_and_number():
+        scene = {
+            "screen_texts": ["전망치"],
+            "screen_text_validation": {"passed": True},
+            "generated_text_ocr_policy": {
+                "version": "strict-scene-local-generated-text-v1",
+                "require_all_approved": True,
+                "reject_unapproved": True,
+            },
+        }
+    
+        result = visible_text_contract_result(["전망치", "RISK", "2021"], scene)
+    
+        assert result["review_required_nonnumeric_texts"] == ["RISK"]
+        assert result["review_required_numeric_texts"] == ["2021"]
+&gt;       assert result["unexpected_texts"] == ["RISK", "2021"]
+E       AssertionError: assert [] == ['RISK', '2021']
+E         
+E         Right contains 2 more items, first extra item: 'RISK'
+E         Use -v to get more diff
+
+tests/test_image_text_contract.py:119: AssertionError</failure></testcase><testcase classname="tests.test_image_text_contract" name="test_ocr_fast_gate_rejects_unplanned_duplicate_even_when_spelling_is_approved" time="0.001" /><testcase classname="tests.test_image_text_contract" name="test_ocr_fast_gate_allows_repetition_only_when_surface_plan_requests_it" time="0.000" /><testcase classname="tests.test_image_text_contract" name="test_unapproved_bubble_is_never_promoted_from_bubble_text_alone" time="0.000" /><testcase classname="tests.test_image_text_contract" name="test_multiple_approved_text_surfaces_are_preserved_as_scene_layout_not_one_board" time="0.000" /><testcase classname="tests.test_image_text_contract" name="test_holographic_text_surface_requires_explicit_scene_local_material" time="0.000" /><testcase classname="tests.test_generated_image_text_gate" name="test_ocr_accepts_approved_text_and_defers_nonnumeric_spelling_to_visual_gate" time="0.003" /><testcase classname="tests.test_generated_image_text_gate" name="test_strict_generated_text_lane_rejects_when_one_approved_label_is_missing" time="0.001"><failure message="Failed: DID NOT RAISE &lt;class 'app.workers.images_worker.GeneratedImageTextDetectedError'&gt;">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-107/test_strict_generated_text_lan1')
+
+    def test_strict_generated_text_lane_rejects_when_one_approved_label_is_missing(tmp_path):
+        scene = {
+            "screen_texts": ["경고", "전망치"],
+            "screen_text_validation": {"passed": True},
+            "generated_text_ocr_policy": {
+                "version": "strict-scene-local-generated-text-v1",
+                "require_all_approved": True,
+                "reject_unapproved": True,
+            },
+        }
+    
+&gt;       with pytest.raises(GeneratedImageTextDetectedError, match="승인 문구 누락: 전망치"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE &lt;class 'app.workers.images_worker.GeneratedImageTextDetectedError'&gt;
+
+tests/test_generated_image_text_gate.py:52: Failed</failure></testcase><testcase classname="tests.test_generated_image_text_gate" name="test_strict_generated_text_lane_accepts_complete_fragmented_korean_tokens" time="0.001"><failure message="KeyError: 'exact_generated_texts'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-107/test_strict_generated_text_lan2')
+
+    def test_strict_generated_text_lane_accepts_complete_fragmented_korean_tokens(tmp_path):
+        scene = {
+            "screen_texts": ["전망치"],
+            "screen_text_validation": {"passed": True},
+            "generated_text_ocr_policy": {
+                "version": "strict-scene-local-generated-text-v1",
+                "require_all_approved": True,
+                "reject_unapproved": True,
+            },
+        }
+        rows = [
+            {"text": "전", "conf": "95", "word_num": "1", "block_num": "1", "par_num": "1", "line_num": "1"},
+            {"text": "망", "conf": "95", "word_num": "2", "block_num": "1", "par_num": "1", "line_num": "1"},
+            {"text": "치", "conf": "95", "word_num": "3", "block_num": "1", "par_num": "1", "line_num": "1"},
+        ]
+    
+        result = _inspect_generated_textless_image(
+            scene,
+            str(_png(tmp_path)),
+            ocr_rows=rows,
+        )
+    
+&gt;       assert result["exact_generated_texts"] == ["전망치"]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'exact_generated_texts'
+
+tests/test_generated_image_text_gate.py:82: KeyError</failure></testcase><testcase classname="tests.test_generated_image_text_gate" name="test_exact_narration_term_is_allowed_but_derived_word_and_number_are_not" time="0.001" /><testcase classname="tests.test_generated_image_text_gate" name="test_visual_gate_rejects_only_reported_scene_categories" time="0.000" /><testcase classname="tests.test_generated_image_text_gate" name="test_retry_keeps_information_props_and_targets_only_bad_surface" time="0.001" /><testcase classname="tests.test_generated_image_text_gate" name="test_explicit_opaque_equipment_surface_is_binding_without_global_layout" time="0.001" /><testcase classname="tests.test_generated_image_text_gate" name="test_semantic_deterministic_values_are_not_reintroduced_into_model_prompt" time="0.001" /><testcase classname="tests.test_generated_image_text_gate" name="test_reference_file_content_changes_resume_fingerprint" time="0.001" /><testcase classname="tests.test_generated_image_text_gate" name="test_resume_fingerprint_tracks_final_prompt_not_derived_scene_direction" time="0.000" /><testcase classname="tests.test_generated_image_text_gate" name="test_prompt_cache_key_keeps_content_prompt_separate_from_scene_text_contract" time="0.001" /></testsuite></testsuites>
