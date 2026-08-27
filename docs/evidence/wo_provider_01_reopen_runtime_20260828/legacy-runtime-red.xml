@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="21" time="0.437" timestamp="2026-08-27T21:24:03.888408+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_gemini_approved_retry" name="test_one_approved_post_preserves_history_usage_and_blocks_reuse[200]" time="0.121" /><testcase classname="tests.test_gemini_approved_retry" name="test_one_approved_post_preserves_history_usage_and_blocks_reuse[503]" time="0.014" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[prompt]" time="0.011" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[contract]" time="0.010" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[previous]" time="0.009" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[failure_n]" time="0.013" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[count]" time="0.010" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[budget]" time="0.010" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[cooldown]" time="0.008" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[unresolved]" time="0.008" /><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_exact_ledger_contract_and_explicit_approval" time="0.018" /><testcase classname="tests.test_gemini_approved_retry" name="test_pre_policy_needs_review_database_recovers_timestamp_only_from_matching_ledger" time="0.003"><failure message="app.utils.image_request_control.ImageRequestHeld: 이미지 요청 보류: 냉각 후 재도전 승인과 최초 검수 시각 불일치; 상태=needs_review; 재개가능시각=0.000">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-117/test_pre_policy_needs_review_d0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffffa9689f70&gt;
+
+    def test_pre_policy_needs_review_database_recovers_timestamp_only_from_matching_ledger(tmp_path, monkeypatch):
+        """정책 도입 전 DB의 빈 시각은 직전 완료 원장 시각으로만 복원한다."""
+        ledger_path = tmp_path / "ledger.json"
+        state_path = tmp_path / "legacy.sqlite3"
+        completed_at = "2026-08-27T17:41:06.077450+00:00"
+        review_at = datetime.fromisoformat(completed_at).timestamp()
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        previous = {
+            "provider": "gemini", "model": "gemini-3-pro-image", "scene_key": "face-v2:7",
+            "attempt_id": "legacy-second", "status": "http_503", "status_code": 503,
+            "reserved_amount_krw": 1600, "completed_at": completed_at,
+            "request_evidence": evidence, "contract_fingerprint": "same-contract",
+            "request_control": {"failure_n": 2, "status": "needs_review"},
+        }
+        ledger_path.write_text(json.dumps({
+            "items": [
+                {**previous, "attempt_id": "legacy-first", "request_control": {"failure_n": 1, "status": "needs_review"}},
+                previous,
+            ],
+            "total_krw": 0,
+            "reserved_exposure_krw": 3200,
+            "budget_overrun_krw": 0,
+        }))
+        scope = str(ledger_path.resolve())
+        with sqlite3.connect(state_path) as db:
+            db.execute(
+                "CREATE TABLE scenes (scope TEXT, scene TEXT, count INTEGER, n INTEGER, "
+                "next REAL, active TEXT, status TEXT, PRIMARY KEY(scope, scene))"
+            )
+            db.execute(
+                "INSERT INTO scenes VALUES (?,?,?,?,?,?,?)",
+                (scope, "face-v2:7", 2, 2, 0., None, "needs_review"),
+            )
+            db.execute("CREATE TABLE projects (name TEXT PRIMARY KEY, n INTEGER, next REAL)")
+            db.execute("INSERT INTO projects VALUES (?,?,?)", ("legacy-project", 2, 0.))
+            db.execute(
+                "CREATE TABLE attempts (id TEXT PRIMARY KEY, scope TEXT, scene TEXT, "
+                "project TEXT, completed INTEGER DEFAULT 0)"
+            )
+            db.execute(
+                "INSERT INTO attempts VALUES (?,?,?,?,?)",
+                ("legacy-second", scope, "face-v2:7", "legacy-project", 1),
+            )
+        monkeypatch.setitem(runtime_config._state, "gemini_request_state_path", str(state_path))
+        monkeypatch.setitem(runtime_config._state, "gemini_project_scope", "legacy-project")
+        monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 3)
+        audit = ProviderRequestAudit.for_path(
+            path=ledger_path, scene_key="face-v2:7", model="gemini-3-pro-image",
+            unit_usd=1.6, usd_krw=1000, budget_limit_krw=4800,
+            request_metadata={
+                "contract_fingerprint": "same-contract",
+                "approved_retry_of": "legacy-second",
+                "approved_retry_prior_count": 2,
+                "approved_retry_failure_n": 2,
+                "approved_reopen_after_cooldown": True,
+                "approved_reopen_first_needs_review_at": review_at,
+                "approved_reopen_override_cooldown": True,
+                "provider_status_check": _provider_status_check(),
+            },
+        )
+        audit._control.clock = lambda: review_at + 3600
+    
+&gt;       token = audit.before_attempt(attempt=1, evidence=evidence)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_gemini_approved_retry.py:251: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;app.utils.budget.ProviderRequestAudit object at 0xffffa968b530&gt;
+
+    def before_attempt(self, *, attempt: int, model: str | None = None, evidence: dict | None = None) -&gt; str:
+        """POST 직전에 예약을 영속화하고, 초과 시 네트워크 호출을 막는다."""
+        if evidence:
+            self._assert_job_running()
+        amount_krw = _krw(self._unit_usd, self._usd_krw)
+        token = uuid.uuid4().hex
+        with _ledger_lock(self._path):
+            ledger = _load_ledger(self._path)
+            # HTTP 실패/타임아웃은 청구 없음의 증거가 아니다. 신규 Gemini 예약은
+            # 성공 비용 추정치와 별도로 보수적인 최대 노출액을 기준으로 차단한다.
+            exposure = sum(
+                int(i.get("reserved_amount_krw", i.get("amount_krw", 0)))
+                for i in ledger["items"] if i.get("status") != "not_dispatched"
+            )
+            projected = max(int(ledger.get("total_krw", 0)), exposure) + amount_krw if self._control else int(ledger.get("total_krw", 0)) + amount_krw
+            if projected &gt; self._budget_limit_krw:
+                raise ProviderRequestBudgetExceeded(
+                    f"이미지 요청 예산 초과: 예약 {amount_krw}원, "
+                    f"누적 예정 {projected}원, 상한 {self._budget_limit_krw}원"
+                )
+            control = {}
+            if self._control:
+                scene = canonical_scene(self._scene_key)
+                prior = [i for i in ledger["items"] if i.get("provider") == "gemini" and canonical_scene(i.get("scene_key", "")) == scene]
+                if any(i.get("status") == "reserved" for i in prior):
+                    raise ImageRequestHeld("원장에 응답 미확정 예약 존재")
+                retry_of = self._request_metadata.get("approved_retry_of")
+                reopen_after_cooldown = self._request_metadata.get("approved_reopen_after_cooldown")
+                if reopen_after_cooldown not in (None, False, True):
+                    raise ImageRequestHeld("냉각 후 재도전 승인 값이 boolean이 아님")
+                if reopen_after_cooldown is True and not retry_of:
+                    raise ImageRequestHeld("냉각 후 재도전에는 직전 503 승인 식별자가 필요함")
+                if reopen_after_cooldown is True:
+                    self._request_metadata["provider_status_check"] = validate_provider_status_check(
+                        self._request_metadata.get("provider_status_check")
+                    )
+                if retry_of:
+                    previous = prior[-1] if prior else {}
+                    if (len(prior) != self._request_metadata.get("approved_retry_prior_count")
+                            or previous.get("attempt_id") != retry_of
+                            or previous.get("status") != "http_503" or previous.get("status_code") != 503
+                            or previous.get("model") != (model or self._model)
+                            or not evidence or evidence != previous.get("request_evidence")
+                            or self._request_metadata.get("contract_fingerprint") != previous.get("contract_fingerprint")
+                            or previous.get("request_control", {}).get("failure_n") != self._request_metadata.get("approved_retry_failure_n")):
+                        raise ImageRequestHeld("단일 503 재시도 승인과 원장/요청 계약 불일치")
+                    if (
+                        previous.get("request_control", {}).get("status") == "needs_review"
+                        and reopen_after_cooldown is not True
+                    ):
+                        raise ImageRequestHeld("검수 상태 장면은 냉각 재도전 승인 계약이 필요함")
+                    if reopen_after_cooldown is True and (
+                        previous.get("request_control", {}).get("status") != "needs_review"
+                        or previous.get("request_control", {}).get("first_needs_review_at")
+                        != self._request_metadata.get("approved_reopen_first_needs_review_at")
+                        or not isinstance(self._request_metadata.get("approved_reopen_override_cooldown", False), bool)
+                    ):
+&gt;                       raise ImageRequestHeld("냉각 후 재도전 승인과 최초 검수 시각 불일치")
+E                       app.utils.image_request_control.ImageRequestHeld: 이미지 요청 보류: 냉각 후 재도전 승인과 최초 검수 시각 불일치; 상태=needs_review; 재개가능시각=0.000
+
+app/utils/budget.py:215: ImageRequestHeld</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_pre_policy_needs_review_timestamp_cannot_be_invented_by_approval" time="0.003"><failure message="AssertionError: Regex pattern did not match.&#10; Regex: '완료 시각'&#10; Input: '이미지 요청 보류: 냉각 후 재도전 승인과 최초 검수 시각 불일치; 상태=needs_review; 재개가능시각=0.000'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-117/test_pre_policy_needs_review_t0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffffa968b170&gt;
+
+    def test_pre_policy_needs_review_timestamp_cannot_be_invented_by_approval(tmp_path, monkeypatch):
+        """원장 완료 시각과 다른 승인 시각으로 기존 검수 상태를 열 수 없다."""
+        ledger_path = tmp_path / "ledger.json"
+        state_path = tmp_path / "legacy.sqlite3"
+        completed_at = "2026-08-27T17:41:06.077450+00:00"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        previous = {
+            "provider": "gemini", "model": "gemini-3-pro-image", "scene_key": "face-v2:7",
+            "attempt_id": "legacy-second", "status": "http_503", "status_code": 503,
+            "reserved_amount_krw": 1600, "completed_at": completed_at,
+            "request_evidence": evidence, "contract_fingerprint": "same-contract",
+            "request_control": {"failure_n": 2, "status": "needs_review"},
+        }
+        ledger_path.write_text(json.dumps({
+            "items": [previous], "total_krw": 0, "reserved_exposure_krw": 1600, "budget_overrun_krw": 0,
+        }))
+        scope = str(ledger_path.resolve())
+        with sqlite3.connect(state_path) as db:
+            db.execute(
+                "CREATE TABLE scenes (scope TEXT, scene TEXT, count INTEGER, n INTEGER, "
+                "next REAL, active TEXT, status TEXT, PRIMARY KEY(scope, scene))"
+            )
+            db.execute(
+                "INSERT INTO scenes VALUES (?,?,?,?,?,?,?)",
+                (scope, "face-v2:7", 1, 2, 0., None, "needs_review"),
+            )
+            db.execute("CREATE TABLE projects (name TEXT PRIMARY KEY, n INTEGER, next REAL)")
+            db.execute("INSERT INTO projects VALUES (?,?,?)", ("legacy-project", 2, 0.))
+            db.execute(
+                "CREATE TABLE attempts (id TEXT PRIMARY KEY, scope TEXT, scene TEXT, "
+                "project TEXT, completed INTEGER DEFAULT 0)"
+            )
+            db.execute(
+                "INSERT INTO attempts VALUES (?,?,?,?,?)",
+                ("legacy-second", scope, "face-v2:7", "legacy-project", 1),
+            )
+        monkeypatch.setitem(runtime_config._state, "gemini_request_state_path", str(state_path))
+        monkeypatch.setitem(runtime_config._state, "gemini_project_scope", "legacy-project")
+        audit = ProviderRequestAudit.for_path(
+            path=ledger_path, scene_key="face-v2:7", model="gemini-3-pro-image",
+            unit_usd=1.6, usd_krw=1000, budget_limit_krw=3200,
+            request_metadata={
+                "contract_fingerprint": "same-contract",
+                "approved_retry_of": "legacy-second",
+                "approved_retry_prior_count": 1,
+                "approved_retry_failure_n": 2,
+                "approved_reopen_after_cooldown": True,
+                "approved_reopen_first_needs_review_at": datetime.fromisoformat(completed_at).timestamp() - 1,
+                "approved_reopen_override_cooldown": True,
+                "provider_status_check": _provider_status_check(),
+            },
+        )
+        before = ledger_path.read_bytes()
+        with pytest.raises(ImageRequestHeld, match="완료 시각"):
+&gt;           audit.before_attempt(attempt=1, evidence=evidence)
+
+tests/test_gemini_approved_retry.py:318: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;app.utils.budget.ProviderRequestAudit object at 0xffffa9689df0&gt;
+
+    def before_attempt(self, *, attempt: int, model: str | None = None, evidence: dict | None = None) -&gt; str:
+        """POST 직전에 예약을 영속화하고, 초과 시 네트워크 호출을 막는다."""
+        if evidence:
+            self._assert_job_running()
+        amount_krw = _krw(self._unit_usd, self._usd_krw)
+        token = uuid.uuid4().hex
+        with _ledger_lock(self._path):
+            ledger = _load_ledger(self._path)
+            # HTTP 실패/타임아웃은 청구 없음의 증거가 아니다. 신규 Gemini 예약은
+            # 성공 비용 추정치와 별도로 보수적인 최대 노출액을 기준으로 차단한다.
+            exposure = sum(
+                int(i.get("reserved_amount_krw", i.get("amount_krw", 0)))
+                for i in ledger["items"] if i.get("status") != "not_dispatched"
+            )
+            projected = max(int(ledger.get("total_krw", 0)), exposure) + amount_krw if self._control else int(ledger.get("total_krw", 0)) + amount_krw
+            if projected &gt; self._budget_limit_krw:
+                raise ProviderRequestBudgetExceeded(
+                    f"이미지 요청 예산 초과: 예약 {amount_krw}원, "
+                    f"누적 예정 {projected}원, 상한 {self._budget_limit_krw}원"
+                )
+            control = {}
+            if self._control:
+                scene = canonical_scene(self._scene_key)
+                prior = [i for i in ledger["items"] if i.get("provider") == "gemini" and canonical_scene(i.get("scene_key", "")) == scene]
+                if any(i.get("status") == "reserved" for i in prior):
+                    raise ImageRequestHeld("원장에 응답 미확정 예약 존재")
+                retry_of = self._request_metadata.get("approved_retry_of")
+                reopen_after_cooldown = self._request_metadata.get("approved_reopen_after_cooldown")
+                if reopen_after_cooldown not in (None, False, True):
+                    raise ImageRequestHeld("냉각 후 재도전 승인 값이 boolean이 아님")
+                if reopen_after_cooldown is True and not retry_of:
+                    raise ImageRequestHeld("냉각 후 재도전에는 직전 503 승인 식별자가 필요함")
+                if reopen_after_cooldown is True:
+                    self._request_metadata["provider_status_check"] = validate_provider_status_check(
+                        self._request_metadata.get("provider_status_check")
+                    )
+                if retry_of:
+                    previous = prior[-1] if prior else {}
+                    if (len(prior) != self._request_metadata.get("approved_retry_prior_count")
+                            or previous.get("attempt_id") != retry_of
+                            or previous.get("status") != "http_503" or previous.get("status_code") != 503
+                            or previous.get("model") != (model or self._model)
+                            or not evidence or evidence != previous.get("request_evidence")
+                            or self._request_metadata.get("contract_fingerprint") != previous.get("contract_fingerprint")
+                            or previous.get("request_control", {}).get("failure_n") != self._request_metadata.get("approved_retry_failure_n")):
+                        raise ImageRequestHeld("단일 503 재시도 승인과 원장/요청 계약 불일치")
+                    if (
+                        previous.get("request_control", {}).get("status") == "needs_review"
+                        and reopen_after_cooldown is not True
+                    ):
+                        raise ImageRequestHeld("검수 상태 장면은 냉각 재도전 승인 계약이 필요함")
+                    if reopen_after_cooldown is True and (
+                        previous.get("request_control", {}).get("status") != "needs_review"
+                        or previous.get("request_control", {}).get("first_needs_review_at")
+                        != self._request_metadata.get("approved_reopen_first_needs_review_at")
+                        or not isinstance(self._request_metadata.get("approved_reopen_override_cooldown", False), bool)
+                    ):
+&gt;                       raise ImageRequestHeld("냉각 후 재도전 승인과 최초 검수 시각 불일치")
+E                       app.utils.image_request_control.ImageRequestHeld: 이미지 요청 보류: 냉각 후 재도전 승인과 최초 검수 시각 불일치; 상태=needs_review; 재개가능시각=0.000
+
+app/utils/budget.py:215: ImageRequestHeld
+
+During handling of the above exception, another exception occurred:
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-117/test_pre_policy_needs_review_t0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffffa968b170&gt;
+
+    def test_pre_policy_needs_review_timestamp_cannot_be_invented_by_approval(tmp_path, monkeypatch):
+        """원장 완료 시각과 다른 승인 시각으로 기존 검수 상태를 열 수 없다."""
+        ledger_path = tmp_path / "ledger.json"
+        state_path = tmp_path / "legacy.sqlite3"
+        completed_at = "2026-08-27T17:41:06.077450+00:00"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        previous = {
+            "provider": "gemini", "model": "gemini-3-pro-image", "scene_key": "face-v2:7",
+            "attempt_id": "legacy-second", "status": "http_503", "status_code": 503,
+            "reserved_amount_krw": 1600, "completed_at": completed_at,
+            "request_evidence": evidence, "contract_fingerprint": "same-contract",
+            "request_control": {"failure_n": 2, "status": "needs_review"},
+        }
+        ledger_path.write_text(json.dumps({
+            "items": [previous], "total_krw": 0, "reserved_exposure_krw": 1600, "budget_overrun_krw": 0,
+        }))
+        scope = str(ledger_path.resolve())
+        with sqlite3.connect(state_path) as db:
+            db.execute(
+                "CREATE TABLE scenes (scope TEXT, scene TEXT, count INTEGER, n INTEGER, "
+                "next REAL, active TEXT, status TEXT, PRIMARY KEY(scope, scene))"
+            )
+            db.execute(
+                "INSERT INTO scenes VALUES (?,?,?,?,?,?,?)",
+                (scope, "face-v2:7", 1, 2, 0., None, "needs_review"),
+            )
+            db.execute("CREATE TABLE projects (name TEXT PRIMARY KEY, n INTEGER, next REAL)")
+            db.execute("INSERT INTO projects VALUES (?,?,?)", ("legacy-project", 2, 0.))
+            db.execute(
+                "CREATE TABLE attempts (id TEXT PRIMARY KEY, scope TEXT, scene TEXT, "
+                "project TEXT, completed INTEGER DEFAULT 0)"
+            )
+            db.execute(
+                "INSERT INTO attempts VALUES (?,?,?,?,?)",
+                ("legacy-second", scope, "face-v2:7", "legacy-project", 1),
+            )
+        monkeypatch.setitem(runtime_config._state, "gemini_request_state_path", str(state_path))
+        monkeypatch.setitem(runtime_config._state, "gemini_project_scope", "legacy-project")
+        audit = ProviderRequestAudit.for_path(
+            path=ledger_path, scene_key="face-v2:7", model="gemini-3-pro-image",
+            unit_usd=1.6, usd_krw=1000, budget_limit_krw=3200,
+            request_metadata={
+                "contract_fingerprint": "same-contract",
+                "approved_retry_of": "legacy-second",
+                "approved_retry_prior_count": 1,
+                "approved_retry_failure_n": 2,
+                "approved_reopen_after_cooldown": True,
+                "approved_reopen_first_needs_review_at": datetime.fromisoformat(completed_at).timestamp() - 1,
+                "approved_reopen_override_cooldown": True,
+                "provider_status_check": _provider_status_check(),
+            },
+        )
+        before = ledger_path.read_bytes()
+&gt;       with pytest.raises(ImageRequestHeld, match="완료 시각"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E        Regex: '완료 시각'
+E        Input: '이미지 요청 보류: 냉각 후 재도전 승인과 최초 검수 시각 불일치; 상태=needs_review; 재개가능시각=0.000'
+
+tests/test_gemini_approved_retry.py:317: AssertionError</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[timestamp]" time="0.015" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[contract]" time="0.016" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[payload]" time="0.016" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[approval]" time="0.015" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[status_check]" time="0.014" /><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_auditable_manual_provider_status_check[None]" time="0.015" /><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_auditable_manual_provider_status_check[status_check1]" time="0.015" /><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_auditable_manual_provider_status_check[status_check2]" time="0.015" /></testsuite></testsuites>

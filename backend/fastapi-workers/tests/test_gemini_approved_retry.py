@@ -1,8 +1,10 @@
 """승인된 503 재시도는 같은 계약/원장의 다음 1회만 실행한다. 전부 가짜 HTTP다."""
 import base64
 import copy
+from datetime import datetime, timezone
 from io import BytesIO
 import json
+import sqlite3
 
 import pytest
 from PIL import Image
@@ -179,6 +181,142 @@ def test_cooldown_reopen_requires_exact_ledger_contract_and_explicit_approval(tm
     assert entry["request_control"]["scene_attempt"] == 1
     assert entry["request_control"]["review_cycle"] == 1
     assert entry["request_control"]["cooldown_override_used"] is False
+
+
+def test_pre_policy_needs_review_database_recovers_timestamp_only_from_matching_ledger(tmp_path, monkeypatch):
+    """정책 도입 전 DB의 빈 시각은 직전 완료 원장 시각으로만 복원한다."""
+    ledger_path = tmp_path / "ledger.json"
+    state_path = tmp_path / "legacy.sqlite3"
+    completed_at = "2026-08-27T17:41:06.077450+00:00"
+    review_at = datetime.fromisoformat(completed_at).timestamp()
+    evidence = {
+        "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+        "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+    }
+    previous = {
+        "provider": "gemini", "model": "gemini-3-pro-image", "scene_key": "face-v2:7",
+        "attempt_id": "legacy-second", "status": "http_503", "status_code": 503,
+        "reserved_amount_krw": 1600, "completed_at": completed_at,
+        "request_evidence": evidence, "contract_fingerprint": "same-contract",
+        "request_control": {"failure_n": 2, "status": "needs_review"},
+    }
+    ledger_path.write_text(json.dumps({
+        "items": [
+            {**previous, "attempt_id": "legacy-first", "request_control": {"failure_n": 1, "status": "needs_review"}},
+            previous,
+        ],
+        "total_krw": 0,
+        "reserved_exposure_krw": 3200,
+        "budget_overrun_krw": 0,
+    }))
+    scope = str(ledger_path.resolve())
+    with sqlite3.connect(state_path) as db:
+        db.execute(
+            "CREATE TABLE scenes (scope TEXT, scene TEXT, count INTEGER, n INTEGER, "
+            "next REAL, active TEXT, status TEXT, PRIMARY KEY(scope, scene))"
+        )
+        db.execute(
+            "INSERT INTO scenes VALUES (?,?,?,?,?,?,?)",
+            (scope, "face-v2:7", 2, 2, 0., None, "needs_review"),
+        )
+        db.execute("CREATE TABLE projects (name TEXT PRIMARY KEY, n INTEGER, next REAL)")
+        db.execute("INSERT INTO projects VALUES (?,?,?)", ("legacy-project", 2, 0.))
+        db.execute(
+            "CREATE TABLE attempts (id TEXT PRIMARY KEY, scope TEXT, scene TEXT, "
+            "project TEXT, completed INTEGER DEFAULT 0)"
+        )
+        db.execute(
+            "INSERT INTO attempts VALUES (?,?,?,?,?)",
+            ("legacy-second", scope, "face-v2:7", "legacy-project", 1),
+        )
+    monkeypatch.setitem(runtime_config._state, "gemini_request_state_path", str(state_path))
+    monkeypatch.setitem(runtime_config._state, "gemini_project_scope", "legacy-project")
+    monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 3)
+    audit = ProviderRequestAudit.for_path(
+        path=ledger_path, scene_key="face-v2:7", model="gemini-3-pro-image",
+        unit_usd=1.6, usd_krw=1000, budget_limit_krw=4800,
+        request_metadata={
+            "contract_fingerprint": "same-contract",
+            "approved_retry_of": "legacy-second",
+            "approved_retry_prior_count": 2,
+            "approved_retry_failure_n": 2,
+            "approved_reopen_after_cooldown": True,
+            "approved_reopen_first_needs_review_at": review_at,
+            "approved_reopen_override_cooldown": True,
+            "provider_status_check": _provider_status_check(),
+        },
+    )
+    audit._control.clock = lambda: review_at + 3600
+
+    token = audit.before_attempt(attempt=1, evidence=evidence)
+    entry = audit.summary()["entries"][-1]
+    assert entry["attempt_id"] == token
+    assert entry["request_control"]["scene_attempt"] == 1
+    assert entry["request_control"]["review_cycle"] == 1
+    assert entry["request_control"]["cooldown_override_used"] is True
+    assert entry["request_control"]["legacy_first_needs_review_at_recovered"] is True
+    assert entry["request_control"]["reopened_from_first_needs_review_at"] == review_at
+
+
+def test_pre_policy_needs_review_timestamp_cannot_be_invented_by_approval(tmp_path, monkeypatch):
+    """원장 완료 시각과 다른 승인 시각으로 기존 검수 상태를 열 수 없다."""
+    ledger_path = tmp_path / "ledger.json"
+    state_path = tmp_path / "legacy.sqlite3"
+    completed_at = "2026-08-27T17:41:06.077450+00:00"
+    evidence = {
+        "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+        "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+    }
+    previous = {
+        "provider": "gemini", "model": "gemini-3-pro-image", "scene_key": "face-v2:7",
+        "attempt_id": "legacy-second", "status": "http_503", "status_code": 503,
+        "reserved_amount_krw": 1600, "completed_at": completed_at,
+        "request_evidence": evidence, "contract_fingerprint": "same-contract",
+        "request_control": {"failure_n": 2, "status": "needs_review"},
+    }
+    ledger_path.write_text(json.dumps({
+        "items": [previous], "total_krw": 0, "reserved_exposure_krw": 1600, "budget_overrun_krw": 0,
+    }))
+    scope = str(ledger_path.resolve())
+    with sqlite3.connect(state_path) as db:
+        db.execute(
+            "CREATE TABLE scenes (scope TEXT, scene TEXT, count INTEGER, n INTEGER, "
+            "next REAL, active TEXT, status TEXT, PRIMARY KEY(scope, scene))"
+        )
+        db.execute(
+            "INSERT INTO scenes VALUES (?,?,?,?,?,?,?)",
+            (scope, "face-v2:7", 1, 2, 0., None, "needs_review"),
+        )
+        db.execute("CREATE TABLE projects (name TEXT PRIMARY KEY, n INTEGER, next REAL)")
+        db.execute("INSERT INTO projects VALUES (?,?,?)", ("legacy-project", 2, 0.))
+        db.execute(
+            "CREATE TABLE attempts (id TEXT PRIMARY KEY, scope TEXT, scene TEXT, "
+            "project TEXT, completed INTEGER DEFAULT 0)"
+        )
+        db.execute(
+            "INSERT INTO attempts VALUES (?,?,?,?,?)",
+            ("legacy-second", scope, "face-v2:7", "legacy-project", 1),
+        )
+    monkeypatch.setitem(runtime_config._state, "gemini_request_state_path", str(state_path))
+    monkeypatch.setitem(runtime_config._state, "gemini_project_scope", "legacy-project")
+    audit = ProviderRequestAudit.for_path(
+        path=ledger_path, scene_key="face-v2:7", model="gemini-3-pro-image",
+        unit_usd=1.6, usd_krw=1000, budget_limit_krw=3200,
+        request_metadata={
+            "contract_fingerprint": "same-contract",
+            "approved_retry_of": "legacy-second",
+            "approved_retry_prior_count": 1,
+            "approved_retry_failure_n": 2,
+            "approved_reopen_after_cooldown": True,
+            "approved_reopen_first_needs_review_at": datetime.fromisoformat(completed_at).timestamp() - 1,
+            "approved_reopen_override_cooldown": True,
+            "provider_status_check": _provider_status_check(),
+        },
+    )
+    before = ledger_path.read_bytes()
+    with pytest.raises(ImageRequestHeld, match="완료 시각"):
+        audit.before_attempt(attempt=1, evidence=evidence)
+    assert ledger_path.read_bytes() == before
 
 
 @pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval", "status_check"])
