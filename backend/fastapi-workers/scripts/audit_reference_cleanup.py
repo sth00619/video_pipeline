@@ -18,6 +18,7 @@ TOOL_INPUTS = {
 }
 REASONS = {
     "runtime_required": "기본 로더가 존재를 강제하는 활성 자산. 현재 문맥별 선택 여부와 무관하게 보존.",
+    "superseded_face_reference": "v2 비교·롤백 근거인 이전 얼굴 참조. 운영 기본 입력은 아니지만 삭제하지 않음.",
     "tool_input": "별도 검증/검토 스크립트가 직접 읽음. 운영 기본 참조로 재활성화하지 않고 도구 의존성으로 보존.",
     "rebuild_input": "구형 참조 재생성기의 frames[0] 픽셀 입력. 원본 영상은 외부 Windows 경로여서 대체 가능성을 단정하지 않음.",
     "unused_rebuild_output": "재생성기가 출력/캐시 목록에 넣지만 이후 픽셀 소비가 없음. 백업 후 Git 이력 정리 후보.",
@@ -44,6 +45,8 @@ def runtime_names(provider: Path) -> set[str]:
 def classify(name: str, active: set[str]) -> str:
     if name in active:
         return "runtime_required"
+    if name == "channel_character_face_range_v1.png":
+        return "superseded_face_reference"
     if name in TOOL_INPUTS:
         return "tool_input"
     if name == "source_05s.png":
@@ -64,12 +67,16 @@ def audit(repo: Path, old_filter: Path) -> dict:
     old_manifest = repo / "docs/evidence/history_cleanup_20260826/generated-files.sha256"
     old_hashes = dict((path, digest) for line in old_manifest.read_text().splitlines()
                       for digest, path in [line.split("  ", 1)])
-    paths = [p.removeprefix("literal:") for p in old_filter.read_text().splitlines()
-             if p.startswith("literal:" + PREFIX)]
-    if len(paths) != 25 or len(set(paths)) != 25:
+    historical_paths = [p.removeprefix("literal:") for p in old_filter.read_text().splitlines()
+                        if p.startswith("literal:" + PREFIX)]
+    if len(historical_paths) != 25 or len(set(historical_paths)) != 25:
         raise ValueError("기존 필터의 참조 25개 집합이 바뀌었습니다. 분류를 재검토하세요.")
-    if not active <= {Path(p).name for p in paths}:
-        raise ValueError("새 활성 참조가 생겼습니다. 보존 목록을 재검토하세요.")
+    paths = list(historical_paths)
+    for name in sorted(active - {Path(p).name for p in historical_paths}):
+        active_path = PREFIX + name
+        if not (repo / active_path).is_file():
+            raise ValueError(f"새 활성 참조 파일이 없습니다: {active_path}")
+        paths.append(active_path)
     # 코드, 보조 스크립트, 테스트, 파일럿 입력, 참조 매니페스트만 읽는다.
     # .env, 인증 헤더, DB 비밀번호 또는 임의 서비스 응답은 수집하지 않는다.
     sources = sorted({p for sub in ("app", "scripts", "tests", "pilot-inputs", "out/references")
@@ -89,7 +96,7 @@ def audit(repo: Path, old_filter: Path) -> dict:
             hits.extend({"file": str(builder.relative_to(repo)), "line": n, "kind": "dynamic_builder_path"}
                         for n, line in enumerate(lines[builder], 1)
                         if 'f"source_' in line or "frames[0]" in line)
-        preserve = category in {"runtime_required", "tool_input", "rebuild_input"}
+        preserve = category in {"runtime_required", "superseded_face_reference", "tool_input", "rebuild_input"}
         actual_hash = sha256(path)
         rows.append({"path": relative, "sha256": actual_hash, "bytes": path.stat().st_size,
                      "backup_manifest_sha256": old_hashes.get(relative),
@@ -98,7 +105,7 @@ def audit(repo: Path, old_filter: Path) -> dict:
                      "action": "preserve" if preserve else "archive_candidate_pending_dynamic_path_check",
                      "reason": REASONS[category], "static_mentions_not_all_consumers": hits})
     return {
-        "schema_version": 1, "scope": "현재 작업 트리의 25개 참조 경로, Git/자산 변경 없음",
+        "schema_version": 2, "scope": "역사 필터의 25개 참조와 현재 활성 추가 참조를 함께 조사, Git/자산 변경 없음",
         "filter_source": str(old_filter.relative_to(repo)), "filter_source_sha256": sha256(old_filter),
         "provider_source_sha256": sha256(provider), "counts": dict(Counter(r["category"] for r in rows)),
         "preserve_count": sum(r["preserve_in_git"] for r in rows),
@@ -124,11 +131,11 @@ def main() -> int:
     (args.output / "reference-assets.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     for filename, categories in (
         ("runtime-reference-whitelist.txt", {"runtime_required"}),
-        ("reference-preserve-whitelist.txt", {"runtime_required", "tool_input", "rebuild_input"}),
+        ("reference-preserve-whitelist.txt", {"runtime_required", "superseded_face_reference", "tool_input", "rebuild_input"}),
     ):
         paths = [r["path"] for r in report["assets"] if r["category"] in categories]
         (args.output / filename).write_text("\n".join(paths) + "\n", encoding="utf-8")
-    table = ["# 참조 25개 분류", "", "| 파일 | 분류 | Git 보존 |", "|---|---|---|"]
+    table = ["# 참조 자산 분류", "", "| 파일 | 분류 | Git 보존 |", "|---|---|---|"]
     table.extend(f"| `{Path(r['path']).name}` | {r['category']} | {'보존' if r['preserve_in_git'] else '조건부 정리 후보'} |" for r in report["assets"])
     table.extend(["", *[f"- {v}" for v in report["limitations"]]])
     (args.output / "reference-assets.md").write_text("\n".join(table) + "\n", encoding="utf-8")

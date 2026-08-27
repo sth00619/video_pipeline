@@ -66,9 +66,10 @@ def apply_character_integrity_contract(
     ).strip()
     suffix = (
         " FINAL CHARACTER QUALITY BOUNDARY: keep the figure recognizably in the same round gold-coin mascot design family and 2D drawing language as the channel references. "
-        "Use the approved scenes as a range, not as one mandatory face: expression, eye construction and openness, pupil or iris detail, brow angle, mouth shape, blush, "
-        "costume, headwear, pose, and scale may change with the scene. Reject only a genuinely different character species, incompatible face language, or an accidental featureless emoji. "
-        "Do not freeze one reference face. Expression, eye openness, and scene-specific acting remain free inside that family range. "
+        "Preserve the approved face construction while expression and acting change: large readable eyes with visible white sclera, warm brown pupil or iris detail, "
+        "layered white catchlights, a soft forehead reflection highlight, and gently curved eyebrows rather than sharply angled or deeply furrowed eyebrows. "
+        "Costume, headwear, pose, mouth shape, scale, and framing remain scene-specific; do not force one outfit or one neutral expression. "
+        "Reject a different character species, incompatible face language, or an accidental featureless emoji. "
         "Use natural connected anatomy with no extra, duplicated, detached, or fused limb or hand. Resolve the pose as one physically coherent action. "
     )
     if wardrobe:
@@ -87,7 +88,7 @@ def apply_character_integrity_contract(
             + ". "
         )
     return cleaned + suffix, {
-        "version": "character-integrity-v3-face-construction-contextual",
+        "version": "character-integrity-v4-job52-face-range",
         "changes": changes,
         "scene_wardrobe": wardrobe,
         "bubble_policy": bubble_policy,

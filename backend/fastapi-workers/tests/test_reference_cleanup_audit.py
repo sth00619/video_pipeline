@@ -28,3 +28,7 @@ def test_rebuild_pixel_source_is_distinct_from_unused_extracted_frames():
 def test_new_asset_is_not_silently_classified_for_cleanup():
     with pytest.raises(ValueError, match="미분류"):
         classify("new_character.png", set())
+
+
+def test_v1_face_reference_is_preserved_as_superseded_rollback_asset():
+    assert classify("channel_character_face_range_v1.png", set()) == "superseded_face_reference"

@@ -72,7 +72,7 @@ def test_provider_selects_scene_relevant_job52_references_when_callers_omit_them
     import app.v5.providers.gemini_provider as provider_module
 
     monkeypatch.setattr(image_module, "NanaBananaProvider", FakeNanaBananaProvider)
-    face_range = tmp_path / "channel_character_face_range_v1.png"
+    face_range = tmp_path / "channel_character_face_range_v2.png"
     semiconductor = tmp_path / "channel_style_semiconductor_production_scene_v1.png"
     lab = tmp_path / "channel_style_semiconductor_growth_scene_v1.png"
     briefing = tmp_path / "channel_style_job52_briefing.png"
@@ -89,8 +89,8 @@ def test_provider_selects_scene_relevant_job52_references_when_callers_omit_them
     GeminiProvider(api_key="test-key").generate("semiconductor wafer production line", model=GeminiModel.PRO)
 
     assert observed["character_image_paths"] == [str(face_range), str(semiconductor), str(lab)]
-    assert "broader gold-coin character family" in observed["prompt"]
-    assert "not a mandatory model sheet" in observed["prompt"].lower()
+    assert "shared face construction as the identity contract" in observed["prompt"]
+    assert "Costume and headwear remain scene-specific" in observed["prompt"]
     assert "detached translucent glass card" in observed["prompt"].lower()
 
 
@@ -120,7 +120,7 @@ def test_default_reference_bank_uses_job52_scene_range_not_mismatched_single_she
     names = [Path(path).name for path in _load_default_references()]
 
     assert len(names) == 8
-    assert names[0] == "channel_character_face_range_v1.png"
+    assert names[0] == "channel_character_face_range_v2.png"
     assert "channel_style_semiconductor_growth_scene_v1.png" in names
     assert "channel_style_semiconductor_production_scene_v1.png" in names
     assert "character_reference_v4_identity_clean.png" not in names
@@ -134,7 +134,7 @@ def test_semiconductor_context_uses_approved_production_scenes_not_hologram_data
     )
 
     assert [Path(path).name for path in selected] == [
-        "channel_character_face_range_v1.png",
+        "channel_character_face_range_v2.png",
         "channel_style_semiconductor_production_scene_v1.png",
         "channel_style_semiconductor_growth_scene_v1.png",
     ]
@@ -165,6 +165,6 @@ def test_contextual_reference_selection_can_reduce_only_the_second_style_referen
     )
 
     assert [Path(path).name for path in selected] == [
-        "channel_character_face_range_v1.png",
+        "channel_character_face_range_v2.png",
         "channel_style_semiconductor_production_scene_v1.png",
     ]

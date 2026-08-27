@@ -3,6 +3,7 @@ from pathlib import Path
 
 from app.v5.providers import gemini_provider
 from app.v5.providers.gemini_provider import GeminiModel, GeminiProvider
+from scripts.audit_character_face_contract import build_report
 
 
 def test_default_face_reference_uses_user_approved_six_scene_v2():
@@ -41,3 +42,15 @@ def test_face_reference_prompt_prioritizes_measured_face_without_freezing_costum
     assert "face construction takes priority over background and prop detail" in prompt
     assert "Costume and headwear remain scene-specific" in prompt
     assert "Do not force one outfit" in prompt
+
+
+def test_existing_pilot_face_failures_are_quantitatively_reproduced():
+    # archive 격리 테스트는 외부 대형 산출물 없이 좌표·산술 계약을 검증한다.
+    # 실제 파일 해시는 증거 생성 스크립트의 기본 경로에서 별도로 강제한다.
+    report = build_report(verify_sources=False)
+    assert report["source_hashes_verified"] is False
+    assert report["approved_reference_pass_count"] == 6
+    assert report["pilot_failure_reproduced_count"] == 3
+    pilot_rows = [row for row in report["samples"] if row["kind"] == "pilot_failure"]
+    assert {row["scene"] for row in pilot_rows} == {2, 7, 35}
+    assert all(not row["face_contract_pass"] for row in pilot_rows)

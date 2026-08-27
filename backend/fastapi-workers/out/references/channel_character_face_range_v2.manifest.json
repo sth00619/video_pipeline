@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "purpose": "Job52 승인 장면 03/04/05/09/13/14의 얼굴 표현 범위",
+  "build_method": "고정 좌표 크롭, Lanczos 리사이즈, 얼굴 밖 중성색 마스크만 사용, 생성형 보정 없음",
+  "layout": {
+    "columns": 3,
+    "rows": 2,
+    "panel_size": [
+      512,
+      512
+    ]
+  },
+  "face_mask": {
+    "ellipse_xyxy": [
+      12,
+      105,
+      500,
+      510
+    ],
+    "background_rgb": [
+      232,
+      238,
+      244
+    ]
+  },
+  "sources": [
+    {
+      "scene_number": 3,
+      "source": "artifacts/job52_full_audit_20260824/images/scene_003.png",
+      "source_sha256": "fad619f51fbef7f6b87636e2c33c3fde584b2576ec26c4b05011452e0eb1c024",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "crop_box_xyxy": [
+        725,
+        190,
+        1085,
+        550
+      ],
+      "panel_size": [
+        512,
+        512
+      ]
+    },
+    {
+      "scene_number": 4,
+      "source": "artifacts/job52_full_audit_20260824/images/scene_004.png",
+      "source_sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "crop_box_xyxy": [
+        755,
+        195,
+        1115,
+        555
+      ],
+      "panel_size": [
+        512,
+        512
+      ]
+    },
+    {
+      "scene_number": 5,
+      "source": "artifacts/job52_full_audit_20260824/images/scene_005.png",
+      "source_sha256": "f38142ec185ddab03e08d5baacdf9fbbda3659c168ecbeaa225f75483e92d46e",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "crop_box_xyxy": [
+        700,
+        180,
+        1060,
+        540
+      ],
+      "panel_size": [
+        512,
+        512
+      ]
+    },
+    {
+      "scene_number": 9,
+      "source": "artifacts/job52_full_audit_20260824/images/scene_009.png",
+      "source_sha256": "80c6ba98deb097119ae911b607df164e1a54d6859772f5db65a2f2452664654b",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "crop_box_xyxy": [
+        1175,
+        330,
+        1535,
+        690
+      ],
+      "panel_size": [
+        512,
+        512
+      ]
+    },
+    {
+      "scene_number": 13,
+      "source": "artifacts/job52_full_audit_20260824/images/scene_013.png",
+      "source_sha256": "cd6502b7879fdd2a283238ae29513151890b782ed9a227defc03205121d8da59",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "crop_box_xyxy": [
+        765,
+        250,
+        1125,
+        610
+      ],
+      "panel_size": [
+        512,
+        512
+      ]
+    },
+    {
+      "scene_number": 14,
+      "source": "artifacts/job52_full_audit_20260824/images/scene_014.png",
+      "source_sha256": "e584e57951bad80307e01b921f58177d92853a81fafeb0c9942a8cf1813f45c7",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "crop_box_xyxy": [
+        740,
+        280,
+        1100,
+        640
+      ],
+      "panel_size": [
+        512,
+        512
+      ]
+    }
+  ],
+  "output": "backend/fastapi-workers/out/references/channel_character_face_range_v2.png",
+  "output_size": [
+    1536,
+    1024
+  ],
+  "output_sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+}

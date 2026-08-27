@@ -13,14 +13,15 @@ def test_pointing_and_arms_crossed_conflict_keeps_one_action():
     assert reasons == ["removed_conflicting_arms_crossed_action"]
 
 
-def test_unplanned_speech_bubble_is_removed_without_freezing_face_or_outfit():
+def test_unplanned_speech_bubble_is_removed_without_freezing_expression_or_outfit():
     prompt, report = apply_character_integrity_contract(
         "Goldie beside a speech bubble reading the result",
         {"art_direction": {"wardrobe": "navy analyst suit"}},
     )
 
     assert "speech bubble reading" not in prompt.lower()
-    assert "do not freeze one reference face" in prompt.lower()
+    assert "do not force one outfit or one neutral expression" in prompt.lower()
+    assert "soft forehead reflection highlight" in prompt.lower()
     assert "natural connected anatomy" in prompt.lower()
     assert "unrelated police or law-enforcement costume" in prompt.lower()
     assert "generic finance-presenter uniform" in prompt.lower()
@@ -35,5 +36,6 @@ def test_scene_specific_costume_and_expression_are_not_replaced_by_navy_uniform(
 
     assert "white laboratory coat and optional goggles" in prompt
     assert "navy finance-presenter suit" not in prompt
-    assert "expression, eye openness" in prompt.lower()
+    assert "expression and acting change" in prompt.lower()
+    assert report["version"] == "character-integrity-v4-job52-face-range"
     assert report["scene_wardrobe"] == "white laboratory coat and optional goggles"

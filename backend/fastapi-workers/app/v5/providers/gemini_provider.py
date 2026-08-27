@@ -42,7 +42,7 @@ _SCENE_STYLE_REF_NAMES = [
     "channel_style_semiconductor_production_scene_v1.png",
 ]
 
-_FACE_RANGE_REF_NAME = "channel_character_face_range_v1.png"
+_FACE_RANGE_REF_NAME = "channel_character_face_range_v2.png"
 
 _CONTEXTUAL_REFERENCE_GROUPS = {
     "semiconductor": (
@@ -69,7 +69,7 @@ def _load_default_references() -> list[str]:
 
     단독 캐릭터 시트와 추상 붓자국 시트는 실제 Job 52 장면의 얼굴·의상·색감과
     달라 결과를 한 가지 잘못된 캐릭터로 끌어당겼다. 기본 경로에서는 이들을
-    보내지 않고, 실제 장면 다섯 장이 공유하는 그림 언어만 참조한다.
+    보내지 않고, 지정된 얼굴 여섯 장과 실제 장면들이 공유하는 그림 언어만 참조한다.
     """
     root = Path(__file__).resolve().parents[3] / "out" / "references"
     paths = [root / _FACE_RANGE_REF_NAME, *(root / name for name in _SCENE_STYLE_REF_NAMES)]
@@ -177,11 +177,12 @@ class GeminiProvider:
         elif face_range_indices:
             face_index = face_range_indices[0]
             reference_contract = (
-                f"Reference image {face_index} is a contact strip cropped without generative alteration from several approved channel scenes. "
-                "Treat it as examples inside a broader gold-coin character family, not a mandatory model sheet. Preserve the round coin species, embossed rim, "
-                "readable expressive face, compact cartoon anatomy, and compatible dark-ink language. Eye construction, pupil or iris detail, blush, nose, mouth, "
-                "costume, headwear, action, scale, and placement remain scene-specific. Deliberate shock or action simplification is allowed; avoid only a genuinely "
-                "different character design or accidental featureless emoji. "
+                f"Reference image {face_index} contains exact, non-generatively altered face crops from approved Job52 scenes 03, 04, 05, 09, 13, and 14. "
+                "Use their shared face construction as the identity contract: preserve large readable eyes with warm brown pupils or irises whose diameter stays "
+                "within 38% to 58% of the full visible eye width, visible white sclera, and layered white catchlights. A soft forehead reflection highlight is required. "
+                "Use gently curved eyebrows that can rise or soften with the emotion; do not use sharply angled or deeply furrowed eyebrows. Keep subtle cheek blush "
+                "when compatible with the scene lighting. The round gold-coin species, embossed rim, compact anatomy, and face construction takes priority over background and prop detail. "
+                "Costume and headwear remain scene-specific, as the six approved examples intentionally use different outfits. Do not force one outfit, hat, pose, expression, scale, or framing. "
             )
         elif len(reference_names) == 1 and not style_indices:
             # 기존 단일 캐릭터 참조 호출과의 호환성이다. 파일명이 명확한 스타일
@@ -196,11 +197,20 @@ class GeminiProvider:
                 "character design range from the channel scene references without copying one scene's face, outfit, pose, or scale. "
             )
         if style_indices:
+            face_priority = (
+                "Keep the earlier face-construction identity contract. "
+                if face_range_indices
+                else "Keep any explicitly requested mascot identity while varying the scene expression and staging. "
+            )
             reference_contract += (
                 f"Reference images {', '.join(str(index) for index in style_indices)} collectively define the channel's acceptable visual range. "
                 "Preserve their 2D editorial-comic line language, scene-dependent palette, cel shading, information density, and varied use of the "
                 "gold-coin mascot. They intentionally show different expressions, costumes, character sizes, compositions, text surfaces, and color moods. "
-                "Do not collapse that range into one fixed face, navy outfit, studio, board, or camera angle. Do not copy any reference's literal text, "
+                "Do not collapse that range into one fixed expression, navy outfit, studio, board, or camera angle. "
+            )
+            reference_contract += face_priority
+            reference_contract += (
+                "Do not copy any reference's literal text, "
                 "numbers, speech bubbles, props, or composition into a different narration. When the current scene allows text or values, borrow the "
                 "references' structural treatment—solid scene-mounted monitors, printed wall boards, machine gauges, engraved or painted prop faces—rather "
                 "than inventing a detached translucent glass card. A floating holographic surface is allowed only when the scene-local surface plan explicitly requests one. "

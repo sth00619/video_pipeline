@@ -91,7 +91,8 @@ def test_retry_keeps_information_props_and_targets_only_bad_surface():
     assert "silver" not in prompt
     assert "do not remove screens, boards, diagrams, arrows" in prompt
     assert "natural connected anatomy" in prompt
-    assert "do not freeze one reference face" in prompt
+    assert "soft forehead reflection highlight" in prompt
+    assert "do not force one outfit or one neutral expression" in prompt
     assert "one giant board" in prompt
     assert "solid opaque scene-native monitor" in prompt
     assert "detached glass card" in prompt
