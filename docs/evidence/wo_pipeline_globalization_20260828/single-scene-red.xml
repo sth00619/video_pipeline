@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="1.304" timestamp="2026-08-27T23:29:39.071572+00:00" hostname="991d8b38246a"><testcase classname="tests.test_single_scene_operational_contract" name="test_single_scene_request_preserves_complete_scene_contract" time="0.002"><failure message="AssertionError: assert 'scene_meta' in {'character_image_path': FieldInfo(annotation=Union[str, NoneType], required=False, default=None), 'character_poses_di...annotation=Union[str, NoneType], required=False, default=None), 'index': FieldInfo(annotation=int, required=True), ...}">def test_single_scene_request_preserves_complete_scene_contract() -&gt; None:
+        fields = SingleImageGenerateRequest.model_fields
+    
+&gt;       assert "scene_meta" in fields
+E       AssertionError: assert 'scene_meta' in {'character_image_path': FieldInfo(annotation=Union[str, NoneType], required=False, default=None), 'character_poses_di...annotation=Union[str, NoneType], required=False, default=None), 'index': FieldInfo(annotation=int, required=True), ...}
+
+tests/test_single_scene_operational_contract.py:22: AssertionError</failure></testcase><testcase classname="tests.test_single_scene_operational_contract" name="test_single_scene_regeneration_uses_the_operational_image_contract" time="0.001"><failure message="AttributeError: 'ImagesWorker' object has no attribute 'generate_single_scene'. Did you mean: '_generate_parallel_scenes'?">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_single_scene_regeneration0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff4eb89760&gt;
+
+    def test_single_scene_regeneration_uses_the_operational_image_contract(
+        tmp_path: Path,
+        monkeypatch,
+    ) -&gt; None:
+        provider = _Provider()
+        worker = ImagesWorker()
+        inspections: list[str] = []
+    
+        monkeypatch.setattr(
+            "app.providers.factory.get_image_provider",
+            lambda: provider,
+        )
+        monkeypatch.setattr(
+            "app.workers.images_worker._inspect_generated_textless_image",
+            lambda scene, path: inspections.append(f"base:{Path(path).name}") or {"passed": True},
+        )
+        monkeypatch.setattr(
+            "app.workers.images_worker._inspect_generated_visual_image",
+            lambda scene, path: inspections.append(f"final:{Path(path).name}") or {"passed": True},
+        )
+        monkeypatch.setattr(
+            "app.workers.images_worker._apply_fal_motion_safety_contract",
+            lambda scenes: {"eligible": 0, "blocked": len(scenes)},
+        )
+        monkeypatch.setattr(
+            "app.workers.images_worker._load_default_references",
+            lambda: [],
+        )
+        monkeypatch.setattr(
+            "app.workers.images_worker.ProviderRequestAudit.for_job",
+            lambda **kwargs: object(),
+        )
+    
+&gt;       result = worker.generate_single_scene(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            scene={
+                "index": 7,
+                "text": "반도체 생산라인의 수익 구조를 확인합니다.",
+                "prompt_en": "A semiconductor production line with one gold coin analyst.",
+                "section": "data",
+                "screen_texts": [],
+                "screen_text_plan": [],
+                "bubble_policy": "forbidden",
+                "art_direction": {"character_required": True},
+            },
+            job_id=9007,
+            output_dir=tmp_path,
+            character_image_path=None,
+            character_style_prompt=None,
+        )
+E       AttributeError: 'ImagesWorker' object has no attribute 'generate_single_scene'. Did you mean: '_generate_parallel_scenes'?
+
+tests/test_single_scene_operational_contract.py:58: AttributeError</failure></testcase><testcase classname="tests.test_single_scene_operational_contract" name="test_single_scene_regeneration_does_not_silently_fallback_to_a_chart" time="0.001"><failure message="assert 'Matplotlib 차트 폴백' not in '(request: S...tr(e)}&quot;)\n\n'&#10;  &#10;  'Matplotlib 차트 폴백' is contained here:&#10;            # Matplotlib 차트 폴백&#10;            import matplotlib&#10;            matplotlib.use(&quot;Agg&quot;)&#10;            import matplotlib.pyplot as plt&#10;            images_worker._render_section(request.section, source_text, img_path, plt)...&#10;  &#10;  ...Full output truncated (6 lines hidden), use '-vv' to show">def test_single_scene_regeneration_does_not_silently_fallback_to_a_chart() -&gt; None:
+        source = Path("app/main.py").read_text(encoding="utf-8")
+        endpoint = source.split("async def generate_single_image", 1)[1].split(
+            "# ============================\n# [S2-2]", 1
+        )[0]
+    
+&gt;       assert "Matplotlib 차트 폴백" not in endpoint
+E       assert 'Matplotlib 차트 폴백' not in '(request: S...tr(e)}")\n\n'
+E         
+E         'Matplotlib 차트 폴백' is contained here:
+E                   # Matplotlib 차트 폴백
+E                   import matplotlib
+E                   matplotlib.use("Agg")
+E                   import matplotlib.pyplot as plt
+E                   images_worker._render_section(request.section, source_text, img_path, plt)...
+E         
+E         ...Full output truncated (6 lines hidden), use '-vv' to show
+
+tests/test_single_scene_operational_contract.py:91: AssertionError</failure></testcase></testsuite></testsuites>
