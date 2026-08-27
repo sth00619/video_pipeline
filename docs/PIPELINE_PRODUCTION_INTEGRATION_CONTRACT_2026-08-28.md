@@ -2,7 +2,7 @@
 
 - 작성일: 2026-08-28 KST
 - 적용 범위: 신규 Job, 과거 Job 재개, 단일 장면 재생성, 병렬/순차 이미지 생성
-- 기준 커밋: `5dd8b83`(운영 누락 선행 실패), `ce2e15f`(공통 경로 수정)
+- 기준 커밋: `5dd8b83`/`ce2e15f`(실 API 참조 계약), `ffd8130`/`cbe75f8`(단일 장면 공통화), `4484687` 이후(전 단계 운영 감사)
 - 목적: Job52와 파일럿은 재현 fixture로만 사용하고, 검증된 수정은 모든 주제의 실제 영상 생성 경로에 적용한다.
 
 ## 1. 가장 중요한 결론
@@ -49,7 +49,9 @@ flowchart LR
 | 정지 이미지 QA | `inspect_visible_text()` 및 V5 표면/오버레이 게이트 | 비승인 문자, 훼손 수치, 잘못된 위치, 빈 물리 표면을 fail-closed 처리 |
 | 모션/조립 | `fal_motion_safety.py`, `longform_worker.py` | 문자·수치 모션 차단, 조립 직전 SCRIPT/TTS/자막/장면 계보 재검증 |
 
-`JobDetail.jsx`의 수동 재생성 버튼도 같은 Spring/FastAPI 경로를 호출한다. 따라서 자동 Workflow, 수동 단계 실행, 과거 Job 재개가 서로 다른 품질 규칙을 사용하지 않는다.
+`JobDetail.jsx`의 수동 재생성 버튼은 별도 HTTP endpoint를 사용하지만, 이제 같은 `ImagesWorker` 공통 계약을 호출한다. 따라서 자동 Workflow, 수동 단계 실행, 과거 Job 재개, 단일 장면 재생성이 서로 다른 품질 규칙을 사용하지 않는다.
+
+각 단계 응답과 manifest에는 `operational_contract_audit`가 저장된다. 버전은 `video-button-global-v1-20260828`, 범위는 `all_jobs_all_topics`, `job_specific_patch`는 항상 `false`다. 이 필드는 코드가 존재한다는 주장보다 강한 사후 증거로, 새 Job의 실제 자산이 어느 계약과 판정을 거쳤는지 확인하는 용도다.
 
 ## 3. 이번 추적에서 발견한 실제 운영 누락과 수정
 
@@ -136,3 +138,12 @@ scene42 동결과 기존 예산·냉각·재도전 통제는 유지한다. Gemin
 - 공통 운영 경로 수정 커밋: `ce2e15f`
 
 선행 실패 테스트는 실제 `NanaBananaProvider._generate_gemini_api()`를 호출하고 HTTP 전송 payload를 가로채 확인했다. 즉 파일럿 래퍼의 문자열만 검사한 것이 아니라 영상 생성 버튼이 도달하는 공급자 전송 경계에서 누락을 증명하고 수정했다.
+
+### 8.1 2026-08-28 추가 운영 경로 감사
+
+- 단일 장면 red: `ffd8130`, 3 failed
+- 단일 장면 green: `cbe75f8`, 공통 worker/실 provider/양단 QA/Fal preflight 연결
+- 전 단계 감사 red: `4484687`, 공통 레지스트리 부재로 수집 실패
+- 전 단계 감사 green: `operational-audit-green.xml`, `operational-audit-focused-green.xml`
+- 최종 전체 회귀: FastAPI 1,115 passed/1 deselected, Spring 54 passed
+- 전체 분류와 근거: `docs/DEVELOPER_AUG20_GLOBAL_PIPELINE_AUDIT_2026-08-28.md`
