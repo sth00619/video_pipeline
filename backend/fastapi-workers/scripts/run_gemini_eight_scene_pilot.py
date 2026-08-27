@@ -131,6 +131,12 @@ def prepare_pilot_scene(source: dict, spec: dict) -> dict:
             for text in exact
         ]
         scene["pilot_text_lane"] = "gemini_short_approved_label_measurement_only"
+        scene["generated_text_ocr_policy"] = {
+            "version": "strict-scene-local-generated-text-v1",
+            "require_all_approved": True,
+            "reject_unapproved": True,
+            "targeted_exact_retry": "local_2x3_tiles_psm6",
+        }
     else:
         raise ValueError(f"알 수 없는 파일럿 레인: {spec['lane']}")
     return scene

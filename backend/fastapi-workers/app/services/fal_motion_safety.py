@@ -174,6 +174,57 @@ def _confirmed_numeric_tokens(
     return confirmed
 
 
+def _compact_exact_text(value: Any) -> str:
+    """정확 문구 OCR에서는 표시용 공백만 제거하고 글자는 보존한다."""
+    return re.sub(r"\s+", "", str(value or ""))
+
+
+def _exact_text_hits(rows: Iterable[dict[str, Any]], expected_texts: Iterable[str]) -> list[str]:
+    """같은 OCR 행의 완전한 연속 토큰만 승인 문구로 인정한다.
+
+    ``비`` + ``영업이익``처럼 이웃 글자를 잘라 부분 문자열을 승인하지 않는다.
+    한글을 글자별로 분할한 Tesseract 출력은 같은 행의 연속열이면 복원한다.
+    """
+    expected = [str(value).strip() for value in expected_texts if str(value).strip()]
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for row in rows:
+        text = str(row.get("text") or "").strip()
+        if not text:
+            continue
+        key = tuple(str(row.get(field) or "") for field in ("block_num", "par_num", "line_num"))
+        grouped.setdefault(key, []).append(row)
+
+    hits: list[str] = []
+    for target_text in expected:
+        target = _compact_exact_text(target_text)
+        if not target:
+            continue
+        for line_rows in grouped.values():
+            ordered = sorted(line_rows, key=lambda row: int(row.get("word_num") or 0))
+            tokens = [_compact_exact_text(row.get("text")) for row in ordered]
+            matched = False
+            for start in range(len(tokens)):
+                joined = ""
+                for end in range(start, len(tokens)):
+                    joined += tokens[end]
+                    if not target.startswith(joined):
+                        break
+                    if joined != target:
+                        continue
+                    before = tokens[start - 1] if start else ""
+                    after = tokens[end + 1] if end + 1 < len(tokens) else ""
+                    if re.search(r"[A-Za-z가-힣\d]$", before) or re.match(r"^[A-Za-z가-힣\d]", after):
+                        continue
+                    matched = True
+                    break
+                if matched:
+                    break
+            if matched:
+                hits.append(target_text)
+                break
+    return list(dict.fromkeys(hits))
+
+
 def _read_tesseract_rows(image_path: str, *, psm: int = 11) -> tuple[str, list[dict[str, str]]]:
     executable = shutil.which("tesseract")
     if not executable:
@@ -222,10 +273,89 @@ def _read_tesseract_rows(image_path: str, *, psm: int = 11) -> tuple[str, list[d
     ))
 
 
+def _read_tesseract_region_rows(
+    image_path: str,
+    box: tuple[int, int, int, int],
+    *,
+    psm: int = 6,
+) -> tuple[str, list[dict[str, str]]]:
+    """복잡한 전체 장면에서 놓친 큰 라벨을 국소 타일로 다시 읽는다."""
+    temp_path = ""
+    try:
+        with Image.open(image_path) as source:
+            crop = source.crop(box)
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
+                temp_path = handle.name
+            crop.save(temp_path, "PNG", optimize=True)
+        return _read_tesseract_rows(temp_path, psm=psm)
+    except OSError:
+        return "failed", []
+    finally:
+        if temp_path:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+
+
+def _targeted_exact_text_retry(
+    image_path: str,
+    expected_texts: Iterable[str],
+) -> tuple[str, list[str], list[dict[str, Any]]]:
+    """2열×3행 국소 타일에서 누락 승인 문구만 PSM 6으로 재검증한다.
+
+    이미지 생성 모델이 쓴 짧은 승인 문구에만 사용하는 선택 경로다. 일반
+    장면의 OCR 정책이나 결정론 렌더 경로를 전역적으로 바꾸지 않는다.
+    """
+    remaining = [str(value).strip() for value in expected_texts if str(value).strip()]
+    if not remaining:
+        return "not_required", [], []
+    try:
+        with Image.open(image_path) as source:
+            width, height = source.size
+    except OSError:
+        return "failed", [], []
+
+    evidence: list[dict[str, Any]] = []
+    found: list[str] = []
+    statuses: list[str] = []
+    for row_index in range(3):
+        for column_index in range(2):
+            # 경계를 넓혀 주변 선화를 다시 끌어들이면 큰 승인 라벨도 재차
+            # 사라졌다. 먼저 겹침 없는 국소 타일로 배경 복잡도를 확실히
+            # 낮춘다. 경계에 걸친 글자는 전체 프레임 판독이 보조한다.
+            left = round(column_index * width / 2)
+            right = round((column_index + 1) * width / 2)
+            top = round(row_index * height / 3)
+            bottom = round((row_index + 1) * height / 3)
+            box = (left, top, right, bottom)
+            status, rows = _read_tesseract_region_rows(image_path, box, psm=6)
+            statuses.append(status)
+            hits = _exact_text_hits(rows, remaining)
+            if hits:
+                found.extend(hits)
+                evidence.append({
+                    "source": "local_tile_psm6",
+                    "tile": [left, top, right, bottom],
+                    "texts": hits,
+                })
+                remaining = [value for value in remaining if value not in hits]
+                if not remaining:
+                    break
+        if not remaining:
+            break
+    status = "completed" if any(value == "completed" for value in statuses) else (
+        "unavailable" if statuses and all(value == "unavailable" for value in statuses) else "failed"
+    )
+    return status, list(dict.fromkeys(found)), evidence
+
+
 def inspect_visible_text(
     image_path: str,
     *,
     ocr_rows: Iterable[dict[str, Any]] | None = None,
+    expected_texts: Iterable[str] | None = None,
+    targeted_exact_retry: bool = False,
 ) -> dict[str, Any]:
     """최종 래스터에서 모델이 만든 읽을 수 있는 문자·숫자를 검사한다.
 
@@ -233,6 +363,9 @@ def inspect_visible_text(
     단계에서 허용한 글자를 다음 단계가 다르게 해석하지 않는다.
     """
     confirmation_status = "not_required"
+    confirmation_rows: list[dict[str, Any]] = []
+    expected = [str(value).strip() for value in (expected_texts or []) if str(value).strip()]
+    exact_evidence: list[dict[str, Any]] = []
     if ocr_rows is None:
         status, rows = _read_tesseract_rows(image_path)
         tokens = _meaningful_ocr_tokens(rows) if status == "completed" else []
@@ -249,10 +382,42 @@ def inspect_visible_text(
         # 단위 테스트와 외부 OCR 주입은 이미 한 번 검증된 행으로 취급한다.
         tokens = _meaningful_ocr_tokens(rows)
         confirmation_status = "provided_rows"
+    exact_texts = _exact_text_hits(rows, expected) if status == "completed" else []
+    if exact_texts:
+        exact_evidence.append({
+            "source": "provided_rows" if ocr_rows is not None else "full_frame_psm11",
+            "texts": exact_texts,
+        })
+    missing_exact = [value for value in expected if value not in exact_texts]
+    full_psm6_status = "not_required"
+    if ocr_rows is None and missing_exact:
+        if confirmation_status == "completed":
+            full_psm6_status = "reused_numeric_confirmation"
+        else:
+            full_psm6_status, confirmation_rows = _read_tesseract_rows(image_path, psm=6)
+        if full_psm6_status in {"completed", "reused_numeric_confirmation"}:
+            full_psm6_hits = _exact_text_hits(confirmation_rows, missing_exact)
+            if full_psm6_hits:
+                exact_texts = list(dict.fromkeys([*exact_texts, *full_psm6_hits]))
+                exact_evidence.append({"source": "full_frame_psm6", "texts": full_psm6_hits})
+                missing_exact = [value for value in expected if value not in exact_texts]
+    targeted_status = "not_required"
+    if ocr_rows is None and targeted_exact_retry and missing_exact:
+        targeted_status, targeted_hits, targeted_evidence = _targeted_exact_text_retry(
+            image_path, missing_exact,
+        )
+        exact_texts = list(dict.fromkeys([*exact_texts, *targeted_hits]))
+        exact_evidence.extend(targeted_evidence)
+        missing_exact = [value for value in expected if value not in exact_texts]
     return {
         "status": status,
         "visible_tokens": tokens,
         "numeric_confirmation_status": confirmation_status,
+        "exact_generated_texts": exact_texts,
+        "missing_generated_texts": missing_exact,
+        "targeted_exact_ocr_status": targeted_status,
+        "full_frame_psm6_status": full_psm6_status,
+        "exact_text_evidence": exact_evidence,
     }
 
 

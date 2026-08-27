@@ -435,11 +435,28 @@ def _inspect_generated_textless_image_impl(
     """OCR 결과가 현재 장면 허용 문자열 밖으로 새지 않았는지 확인한다."""
     if _article_evidence_path(scene):
         return {"passed": True, "status": "skipped_article_evidence", "visible_tokens": []}
-    inspection = inspect_visible_text(image_path, ocr_rows=ocr_rows)
+    text_contract = build_scene_text_contract(scene)
+    generated_ocr_policy = scene.get("generated_text_ocr_policy") or {}
+    require_exact_generated = bool(
+        isinstance(generated_ocr_policy, dict)
+        and generated_ocr_policy.get("require_all_approved") is True
+    )
+    expected_generated = list(text_contract.get("generated_texts") or []) if require_exact_generated else []
+    inspection = inspect_visible_text(
+        image_path,
+        ocr_rows=ocr_rows,
+        expected_texts=expected_generated,
+        targeted_exact_retry=bool(expected_generated and ocr_rows is None),
+    )
     status = str(inspection.get("status") or "failed")
     tokens = list(inspection.get("visible_tokens") or [])
     if status != "completed":
         raise NonRetryableImageGenerationError(f"생성 이미지 OCR을 실행할 수 없음: status={status}")
+    missing_generated = list(inspection.get("missing_generated_texts") or [])
+    if missing_generated:
+        raise GeneratedImageTextDetectedError(
+            "현재 장면의 승인 문구 누락: " + ", ".join(missing_generated)
+        )
     generated_financial_texts = detected_deterministic_texts(tokens, scene)
     if generated_financial_texts:
         review = {
@@ -460,7 +477,7 @@ def _inspect_generated_textless_image_impl(
             + ", ".join(result["unexpected_texts"][:8])
             + duplicate_summary
         )
-    return {**result, "status": status, "visible_tokens": tokens}
+    return {**result, **inspection, "status": status, "visible_tokens": tokens}
 
 
 def _inspect_generated_visual_image(scene: dict, image_path: str) -> dict:

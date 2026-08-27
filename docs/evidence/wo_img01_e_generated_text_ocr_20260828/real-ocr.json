@@ -1,0 +1,125 @@
+{
+  "version": "wo-img01-e-real-ocr-audit-v1",
+  "paid_api_calls": 0,
+  "scenes": [
+    {
+      "index": 2,
+      "source_sha256": "9a6821a14fd175d2af2f76aad24c98a35bb2de5053c530a4a640e50521aeaf3a",
+      "expected": [
+        "경고"
+      ],
+      "result": {
+        "status": "completed",
+        "visible_tokens": [
+          "RISK",
+          "ill"
+        ],
+        "numeric_confirmation_status": "completed",
+        "exact_generated_texts": [],
+        "missing_generated_texts": [
+          "경고"
+        ],
+        "targeted_exact_ocr_status": "completed",
+        "full_frame_psm6_status": "reused_numeric_confirmation",
+        "exact_text_evidence": []
+      }
+    },
+    {
+      "index": 15,
+      "source_sha256": "c02f2b052666fb9af5f3a00c21333d73c76f8ffe9266cf1d2dd007aeeeeb4515",
+      "expected": [
+        "엇갈림"
+      ],
+      "result": {
+        "status": "completed",
+        "visible_tokens": [],
+        "numeric_confirmation_status": "completed",
+        "exact_generated_texts": [
+          "엇갈림"
+        ],
+        "missing_generated_texts": [],
+        "targeted_exact_ocr_status": "not_required",
+        "full_frame_psm6_status": "reused_numeric_confirmation",
+        "exact_text_evidence": [
+          {
+            "source": "full_frame_psm6",
+            "texts": [
+              "엇갈림"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 35,
+      "source_sha256": "800ebc51b1ea91894eab4fe808fdb0c63ec00a61f1b080055275fe30c1799428",
+      "expected": [
+        "경고",
+        "전망치"
+      ],
+      "result": {
+        "status": "completed",
+        "visible_tokens": [],
+        "numeric_confirmation_status": "completed",
+        "exact_generated_texts": [
+          "경고",
+          "전망치"
+        ],
+        "missing_generated_texts": [],
+        "targeted_exact_ocr_status": "completed",
+        "full_frame_psm6_status": "reused_numeric_confirmation",
+        "exact_text_evidence": [
+          {
+            "source": "full_frame_psm11",
+            "texts": [
+              "경고"
+            ]
+          },
+          {
+            "source": "local_tile_psm6",
+            "tile": [
+              0,
+              1024,
+              1376,
+              1536
+            ],
+            "texts": [
+              "전망치"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": 47,
+      "source_sha256": "17f66cd3739e1b54e4352838018480e9c2c512f39ff17cec1bfbe31eec8cec16",
+      "expected": [
+        "상반기 실적",
+        "질문"
+      ],
+      "result": {
+        "status": "completed",
+        "visible_tokens": [
+          "상반기"
+        ],
+        "numeric_confirmation_status": "not_required",
+        "exact_generated_texts": [
+          "상반기 실적"
+        ],
+        "missing_generated_texts": [
+          "질문"
+        ],
+        "targeted_exact_ocr_status": "completed",
+        "full_frame_psm6_status": "completed",
+        "exact_text_evidence": [
+          {
+            "source": "full_frame_psm11",
+            "texts": [
+              "상반기 실적"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

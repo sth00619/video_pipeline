@@ -306,6 +306,11 @@ def visible_text_contract_result(
         or ""
     )
     narration_compact = _compact(narration)
+    generated_ocr_policy = source.get("generated_text_ocr_policy") or {}
+    reject_unapproved = bool(
+        isinstance(generated_ocr_policy, dict)
+        and generated_ocr_policy.get("reject_unapproved") is True
+    )
     raw_detected = [str(value or "").strip() for value in visible_tokens if str(value or "").strip()]
     detected = _dedupe(raw_detected)
     unexpected = []
@@ -316,13 +321,19 @@ def visible_text_contract_result(
         token_key = _compact(token)
         if not token_key:
             continue
-        if any(token_key in value or value in token_key for value in approved_compact):
+        if (
+            any(token_key == value for value in approved_compact)
+            if reject_unapproved
+            else any(token_key in value or value in token_key for value in approved_compact)
+        ):
             continue
         # 사용자가 승인한 장면 내레이션에 실제로 있는 비수치 용어는 생성 모델이
         # 그대로 써도 된다. 번역·파생어·일련번호까지 느슨하게 허용하지 않도록
         # NFKC 정규화 후 완전한 부분 문자열일 때만 통과시킨다. 금융 수치는 계속
         # screen_texts/결정론 렌더러 계약만 허용한다.
         if (
+            not reject_unapproved
+            and
             not contains_financial_number(token)
             and len(token_key) >= 2
             and token_key in narration_compact
@@ -336,6 +347,11 @@ def visible_text_contract_result(
             review_required_numeric.append(token)
         else:
             review_required_nonnumeric.append(token)
+    if reject_unapproved:
+        unexpected = _dedupe([
+            *review_required_nonnumeric,
+            *review_required_numeric,
+        ])
     planned_counts: dict[str, int] = {}
     for item in contract.get("surface_plan") or []:
         key = _compact(item.get("text") or "")
