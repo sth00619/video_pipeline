@@ -187,8 +187,9 @@ def test_pre_policy_needs_review_database_recovers_timestamp_only_from_matching_
     """정책 도입 전 DB의 빈 시각은 직전 완료 원장 시각으로만 복원한다."""
     ledger_path = tmp_path / "ledger.json"
     state_path = tmp_path / "legacy.sqlite3"
+    first_completed_at = "2026-08-27T16:42:49.574858+00:00"
     completed_at = "2026-08-27T17:41:06.077450+00:00"
-    review_at = datetime.fromisoformat(completed_at).timestamp()
+    review_at = datetime.fromisoformat(first_completed_at).timestamp()
     evidence = {
         "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
         "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
@@ -202,7 +203,8 @@ def test_pre_policy_needs_review_database_recovers_timestamp_only_from_matching_
     }
     ledger_path.write_text(json.dumps({
         "items": [
-            {**previous, "attempt_id": "legacy-first", "request_control": {"failure_n": 1, "status": "needs_review"}},
+            {**previous, "attempt_id": "legacy-first", "completed_at": first_completed_at,
+             "request_control": {"failure_n": 1, "status": "needs_review"}},
             previous,
         ],
         "total_krw": 0,
@@ -259,7 +261,7 @@ def test_pre_policy_needs_review_database_recovers_timestamp_only_from_matching_
 
 
 def test_pre_policy_needs_review_timestamp_cannot_be_invented_by_approval(tmp_path, monkeypatch):
-    """원장 완료 시각과 다른 승인 시각으로 기존 검수 상태를 열 수 없다."""
+    """현재 구간 최초 검수 완료 시각과 다른 승인 시각으로 상태를 열 수 없다."""
     ledger_path = tmp_path / "ledger.json"
     state_path = tmp_path / "legacy.sqlite3"
     completed_at = "2026-08-27T17:41:06.077450+00:00"
