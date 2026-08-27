@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="63" time="1.316" timestamp="2026-08-28T03:53:56.887672" hostname="Mac"><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[image:21]" time="0.002" /><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[template_regen:21]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[background:21]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[scene-021]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[pilot:image:21]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[image:21:variation:1]" time="0.006" /><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[scene_021]" time="0.006" /><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[pilot:gemini-3-pro-image:scene_021]" time="0.000" /><testcase classname="tests.test_image_request_control" name="test_scene_aliases_share_one_limit[image:00021:variation:1]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_unrecognized_scene_names_are_not_merged[forecast_021]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_unrecognized_scene_names_are_not_merged[scene_021_details]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_unrecognized_scene_names_are_not_merged[company:21]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_unrecognized_scene_names_are_not_merged[scene-21a]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_resume_contract_and_model_changes_cannot_reset_total_limit" time="0.009" /><testcase classname="tests.test_image_request_control" name="test_legacy_ledger_counts_cannot_be_reset_by_new_controller[image:21-image:21]" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_legacy_ledger_counts_cannot_be_reset_by_new_controller[image:21-scene-021]" time="0.002" /><testcase classname="tests.test_image_request_control" name="test_legacy_ledger_counts_cannot_be_reset_by_new_controller[scene-021-image:21]" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_legacy_ledger_counts_cannot_be_reset_by_new_controller[image:21-pilot:gemini-3-pro-image:scene_021]" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_legacy_ledger_counts_cannot_be_reset_by_new_controller[pilot:gemini-3-pro-image:scene_021-image:21]" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_unresolved_reservation_is_not_expired_or_reissued" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_post_completion_deadline_persists_with_injected_clock_and_rng" time="0.004" /><testcase classname="tests.test_image_request_control" name="test_needs_review_records_first_timestamp_and_never_reopens_automatically" time="0.005"><failure message="KeyError: 'first_needs_review_at'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-19/test_needs_review_records_firs0')
+
+    def test_needs_review_records_first_timestamp_and_never_reopens_automatically(tmp_path):
+        now = [1000.]
+        control = ImageRequestControl(
+            path=tmp_path / "control.sqlite3",
+            clock=lambda: now[0],
+            uniform=lambda low, high: high,
+        )
+        result = _exhaust_scene_window(control, now)
+    
+        assert result["status"] == "needs_review"
+&gt;       assert result["first_needs_review_at"] == 1060.
+E       KeyError: 'first_needs_review_at'
+
+tests/test_image_request_control.py:114: KeyError</failure></testcase><testcase classname="tests.test_image_request_control" name="test_explicit_reopen_warns_before_24_hours_and_override_is_audited" time="0.005"><failure message="KeyError: 'first_needs_review_at'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-19/test_explicit_reopen_warns_bef0')
+
+    def test_explicit_reopen_warns_before_24_hours_and_override_is_audited(tmp_path):
+        now = [1000.]
+        control = ImageRequestControl(
+            path=tmp_path / "control.sqlite3",
+            clock=lambda: now[0],
+            uniform=lambda low, high: high,
+        )
+        result = _exhaust_scene_window(control, now)
+&gt;       review_at = result["first_needs_review_at"]
+E       KeyError: 'first_needs_review_at'
+
+tests/test_image_request_control.py:130: KeyError</failure></testcase><testcase classname="tests.test_image_request_control" name="test_explicit_reopen_after_24_hours_starts_new_three_attempt_window" time="0.004"><failure message="KeyError: 'first_needs_review_at'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-19/test_explicit_reopen_after_24_0')
+
+    def test_explicit_reopen_after_24_hours_starts_new_three_attempt_window(tmp_path):
+        now = [1000.]
+        control = ImageRequestControl(
+            path=tmp_path / "control.sqlite3",
+            clock=lambda: now[0],
+            uniform=lambda low, high: high,
+        )
+        result = _exhaust_scene_window(control, now)
+&gt;       review_at = result["first_needs_review_at"]
+E       KeyError: 'first_needs_review_at'
+
+tests/test_image_request_control.py:157: KeyError</failure></testcase><testcase classname="tests.test_image_request_control" name="test_shared_project_backoff_caps_at_300_but_jitter_remains" time="0.010" /><testcase classname="tests.test_image_request_control" name="test_retry_after_beyond_local_cap_and_http_date[900]" time="0.002" /><testcase classname="tests.test_image_request_control" name="test_retry_after_beyond_local_cap_and_http_date[Thu, 01 Jan 1970 00:31:40 GMT]" time="0.002" /><testcase classname="tests.test_image_request_control" name="test_invalid_retry_after_does_not_create_unbounded_or_negative_sleep[None]" time="0.000" /><testcase classname="tests.test_image_request_control" name="test_invalid_retry_after_does_not_create_unbounded_or_negative_sleep[invalid]" time="0.000" /><testcase classname="tests.test_image_request_control" name="test_invalid_retry_after_does_not_create_unbounded_or_negative_sleep[NaN]" time="0.000" /><testcase classname="tests.test_image_request_control" name="test_invalid_retry_after_does_not_create_unbounded_or_negative_sleep[inf]" time="0.000" /><testcase classname="tests.test_image_request_control" name="test_invalid_retry_after_does_not_create_unbounded_or_negative_sleep[-4]" time="0.000" /><testcase classname="tests.test_image_request_control" name="test_concurrent_processes_cannot_double_reserve" time="0.692" /><testcase classname="tests.test_image_request_control" name="test_ledger_cross_thread_reservation_and_budget_remain_atomic" time="0.011" /><testcase classname="tests.test_image_request_control" name="test_corrupt_ledger_fails_closed_without_new_request" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_audit_is_required_and_does_not_fall_back" time="0.038" /><testcase classname="tests.test_image_request_control" name="test_redis_stop_or_unavailable_blocks_post[True-True]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_redis_stop_or_unavailable_blocks_post[False-False]" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_exact_payload_reference_output_hash_and_qa_join" time="0.016" /><testcase classname="tests.test_image_request_control" name="test_http_200_without_image_is_not_qa_rejection" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_failure_does_not_refund_unknown_billing_exposure" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_post_reservation_rechecks_shared_project_cooldown" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_invalid_runtime_limit_cannot_raise_cap_or_switch_state_database" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_worker_shared_cooldown_skips_scenes_without_recovery_or_false_completion" time="0.085" /><testcase classname="tests.test_image_request_control" name="test_assembly_guard_blocks_held_scenes_and_accepts_only_cleared_gate" time="0.001" /><testcase classname="tests.test_image_request_control" name="test_direct_assembly_is_blocked_before_loading_tts_or_invoking_motion" time="0.019" /><testcase classname="tests.test_image_request_control" name="test_v5_router_qa_uses_exact_request_hash" time="0.003" /><testcase classname="tests.test_image_request_control" name="test_audit_metadata_does_not_invalidate_scene_lineage" time="0.001" /><testcase classname="tests.test_gemini_approved_retry" name="test_one_approved_post_preserves_history_usage_and_blocks_reuse[200]" time="0.005" /><testcase classname="tests.test_gemini_approved_retry" name="test_one_approved_post_preserves_history_usage_and_blocks_reuse[503]" time="0.005"><failure message="assert 1020 &lt;= 1010.4894941071843">retry_case = (&lt;function retry_case.&lt;locals&gt;.owner at 0x108777e20&gt;, &lt;function retry_case.&lt;locals&gt;.run at 0x108777ba0&gt;, {'approved_re...t': 1, 'attempt_id': 'd56d249643e84f4990fef75a22b6c893', 'completed_at': '2026-08-27T18:53:58.132492+00:00', ...}, ...)
+response_status = 503
+
+    @pytest.mark.parametrize("response_status", [200, 503])
+    def test_one_approved_post_preserves_history_usage_and_blocks_reuse(retry_case, response_status):
+        owner, run, metadata, calls, status, old, path = retry_case
+        status[0] = response_status
+        second = owner(metadata)
+        if response_status == 503:
+            with pytest.raises(ImageRequestHeld):
+                run(second)
+        else:
+            assert run(second) is True
+        entries = second.summary()["entries"]
+        assert len(calls) == len(entries) == 2
+        assert calls[0] == calls[1]
+        assert entries[0] == old
+        assert entries[1]["request_control"]["scene_attempt"] == 2
+        assert entries[1]["request_control"]["failure_n"] == (2 if response_status == 503 else 1)
+        if response_status == 503:
+            assert entries[1]["request_control"]["status"] == "needs_review"
+&gt;           assert 1020 &lt;= entries[1]["request_control"]["next_allowed_at"] &lt;= 1040
+E           assert 1020 &lt;= 1010.4894941071843
+
+tests/test_gemini_approved_retry.py:86: AssertionError</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[prompt]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[contract]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[previous]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[failure_n]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[count]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[budget]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[cooldown]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[unresolved]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_exact_ledger_contract_and_explicit_approval" time="0.005"><failure message="KeyError: 'first_needs_review_at'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-19/test_cooldown_reopen_requires_0')
+
+    def test_cooldown_reopen_requires_exact_ledger_contract_and_explicit_approval(tmp_path):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        last = None
+        for index in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            last = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = last["next_allowed_at"]
+        ledger = json.loads(path.read_text())
+        previous = ledger["items"][-1]
+&gt;       review_at = previous["request_control"]["first_needs_review_at"]
+E       KeyError: 'first_needs_review_at'
+
+tests/test_gemini_approved_retry.py:150: KeyError</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[timestamp]" time="0.005"><failure message="KeyError: 'first_needs_review_at'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-19/test_invalid_cooldown_reopen_n0')
+change = 'timestamp'
+
+    @pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval"])
+    def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, change):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        for _ in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = state["next_allowed_at"]
+        before = path.read_bytes()
+        previous = json.loads(before)["items"][-1]
+&gt;       review_at = previous["request_control"]["first_needs_review_at"]
+E       KeyError: 'first_needs_review_at'
+
+tests/test_gemini_approved_retry.py:200: KeyError</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[contract]" time="0.005"><failure message="KeyError: 'first_needs_review_at'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-19/test_invalid_cooldown_reopen_n1')
+change = 'contract'
+
+    @pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval"])
+    def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, change):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        for _ in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = state["next_allowed_at"]
+        before = path.read_bytes()
+        previous = json.loads(before)["items"][-1]
+&gt;       review_at = previous["request_control"]["first_needs_review_at"]
+E       KeyError: 'first_needs_review_at'
+
+tests/test_gemini_approved_retry.py:200: KeyError</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[payload]" time="0.006"><failure message="KeyError: 'first_needs_review_at'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-19/test_invalid_cooldown_reopen_n2')
+change = 'payload'
+
+    @pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval"])
+    def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, change):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        for _ in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = state["next_allowed_at"]
+        before = path.read_bytes()
+        previous = json.loads(before)["items"][-1]
+&gt;       review_at = previous["request_control"]["first_needs_review_at"]
+E       KeyError: 'first_needs_review_at'
+
+tests/test_gemini_approved_retry.py:200: KeyError</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[approval]" time="0.006"><failure message="KeyError: 'first_needs_review_at'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-19/test_invalid_cooldown_reopen_n3')
+change = 'approval'
+
+    @pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval"])
+    def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, change):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        for _ in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = state["next_allowed_at"]
+        before = path.read_bytes()
+        previous = json.loads(before)["items"][-1]
+&gt;       review_at = previous["request_control"]["first_needs_review_at"]
+E       KeyError: 'first_needs_review_at'
+
+tests/test_gemini_approved_retry.py:200: KeyError</failure></testcase></testsuite></testsuites>

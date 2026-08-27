@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.668" timestamp="2026-08-28T04:01:41.768963" hostname="Mac"><testcase classname="tests.test_image_request_control" name="test_historical_two_attempt_needs_review_cannot_bypass_cooldown_when_limit_is_three" time="0.020"><failure message="Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-23/test_historical_two_attempt_ne0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x1077ecc50&gt;
+
+    def test_historical_two_attempt_needs_review_cannot_bypass_cooldown_when_limit_is_three(
+        tmp_path, monkeypatch,
+    ):
+        monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 2)
+        now = [1000.]
+        path = tmp_path / "control.sqlite3"
+        control = ImageRequestControl(
+            path=path, clock=lambda: now[0], uniform=lambda low, high: high,
+        )
+        for index in range(2):
+            token = f"historical-{index}"
+            control.reserve(scope="job", scene="image:7", token=token)
+            state = control.finish(token, retryable=True)
+            now[0] = state["next_allowed_at"]
+        review_at = state["first_needs_review_at"]
+        assert state["status"] == "needs_review"
+    
+        monkeypatch.setitem(runtime_config._state, "gemini_scene_request_limit", 3)
+        resumed = ImageRequestControl(path=path, clock=lambda: now[0])
+&gt;       with pytest.raises(ImageRequestHeld, match="냉각 재도전"):
+E       Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;
+
+tests/test_image_request_control.py:228: Failed</failure></testcase></testsuite></testsuites>

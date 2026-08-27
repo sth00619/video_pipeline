@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="19" time="0.502" timestamp="2026-08-28T03:53:56.882344" hostname="Mac"><testcase classname="tests.test_gemini_approved_retry" name="test_one_approved_post_preserves_history_usage_and_blocks_reuse[200]" time="0.181" /><testcase classname="tests.test_gemini_approved_retry" name="test_one_approved_post_preserves_history_usage_and_blocks_reuse[503]" time="0.007" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[prompt]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[contract]" time="0.004" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[previous]" time="0.004" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[failure_n]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[count]" time="0.003" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[budget]" time="0.004" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[cooldown]" time="0.004" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_retry_never_posts_or_changes_first_record[unresolved]" time="0.004" /><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_exact_ledger_contract_and_explicit_approval" time="0.008" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[timestamp]" time="0.007" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[contract]" time="0.011" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[payload]" time="0.010" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[approval]" time="0.013" /><testcase classname="tests.test_gemini_approved_retry" name="test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt[status_check]" time="0.011"><failure message="Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-18/test_invalid_cooldown_reopen_n4')
+change = 'status_check'
+
+    @pytest.mark.parametrize("change", ["timestamp", "contract", "payload", "approval", "status_check"])
+    def test_invalid_cooldown_reopen_never_reserves_a_fourth_attempt(tmp_path, change):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        for _ in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = state["next_allowed_at"]
+        before = path.read_bytes()
+        previous = json.loads(before)["items"][-1]
+        review_at = previous["request_control"]["first_needs_review_at"]
+        now[0] = review_at + 86400
+        metadata = {
+            "contract_fingerprint": "same-contract",
+            "approved_retry_of": previous["attempt_id"],
+            "approved_retry_prior_count": 3,
+            "approved_retry_failure_n": 3,
+            "approved_reopen_after_cooldown": True,
+            "approved_reopen_first_needs_review_at": review_at,
+            "approved_reopen_override_cooldown": False,
+            "provider_status_check": _provider_status_check(),
+        }
+        request_evidence = evidence
+        if change == "timestamp":
+            metadata["approved_reopen_first_needs_review_at"] += 1
+        elif change == "contract":
+            metadata["contract_fingerprint"] = "different"
+        elif change == "payload":
+            request_evidence = {**evidence, "payload_sha256": "different"}
+        elif change == "approval":
+            metadata["approved_reopen_after_cooldown"] = False
+        elif change == "status_check":
+            metadata["provider_status_check"] = {
+                **_provider_status_check(), "source": "https://example.com/unverified",
+            }
+    
+&gt;       with pytest.raises(ImageRequestHeld):
+E       Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;
+
+tests/test_gemini_approved_retry.py:237: Failed</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_auditable_manual_provider_status_check[None]" time="0.011"><failure message="Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-18/test_cooldown_reopen_requires_1')
+status_check = None
+
+    @pytest.mark.parametrize("status_check", [
+        None,
+        {"source": "https://status.cloud.google.com/", "checked_at": "not-a-date",
+         "result": "no_official_incident", "incident_url": None},
+        {"source": "https://status.cloud.google.com/", "checked_at": "2026-08-28T09:00:00+09:00",
+         "result": "official_incident_posted", "incident_url": None},
+    ])
+    def test_cooldown_reopen_requires_auditable_manual_provider_status_check(tmp_path, status_check):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        for _ in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = state["next_allowed_at"]
+        before = path.read_bytes()
+        previous = json.loads(before)["items"][-1]
+        review_at = previous["request_control"]["first_needs_review_at"]
+        now[0] = review_at + 86400
+        metadata = {
+            "contract_fingerprint": "same-contract",
+            "approved_retry_of": previous["attempt_id"],
+            "approved_retry_prior_count": 3,
+            "approved_retry_failure_n": 3,
+            "approved_reopen_after_cooldown": True,
+            "approved_reopen_first_needs_review_at": review_at,
+            "approved_reopen_override_cooldown": False,
+            "provider_status_check": status_check,
+        }
+&gt;       with pytest.raises(ImageRequestHeld, match="공급자 상태"):
+E       Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;
+
+tests/test_gemini_approved_retry.py:286: Failed</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_auditable_manual_provider_status_check[status_check1]" time="0.009"><failure message="Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-18/test_cooldown_reopen_requires_2')
+status_check = {'checked_at': 'not-a-date', 'incident_url': None, 'result': 'no_official_incident', 'source': 'https://status.cloud.google.com/'}
+
+    @pytest.mark.parametrize("status_check", [
+        None,
+        {"source": "https://status.cloud.google.com/", "checked_at": "not-a-date",
+         "result": "no_official_incident", "incident_url": None},
+        {"source": "https://status.cloud.google.com/", "checked_at": "2026-08-28T09:00:00+09:00",
+         "result": "official_incident_posted", "incident_url": None},
+    ])
+    def test_cooldown_reopen_requires_auditable_manual_provider_status_check(tmp_path, status_check):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        for _ in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = state["next_allowed_at"]
+        before = path.read_bytes()
+        previous = json.loads(before)["items"][-1]
+        review_at = previous["request_control"]["first_needs_review_at"]
+        now[0] = review_at + 86400
+        metadata = {
+            "contract_fingerprint": "same-contract",
+            "approved_retry_of": previous["attempt_id"],
+            "approved_retry_prior_count": 3,
+            "approved_retry_failure_n": 3,
+            "approved_reopen_after_cooldown": True,
+            "approved_reopen_first_needs_review_at": review_at,
+            "approved_reopen_override_cooldown": False,
+            "provider_status_check": status_check,
+        }
+&gt;       with pytest.raises(ImageRequestHeld, match="공급자 상태"):
+E       Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;
+
+tests/test_gemini_approved_retry.py:286: Failed</failure></testcase><testcase classname="tests.test_gemini_approved_retry" name="test_cooldown_reopen_requires_auditable_manual_provider_status_check[status_check2]" time="0.010"><failure message="Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-18/test_cooldown_reopen_requires_3')
+status_check = {'checked_at': '2026-08-28T09:00:00+09:00', 'incident_url': None, 'result': 'official_incident_posted', 'source': 'https://status.cloud.google.com/'}
+
+    @pytest.mark.parametrize("status_check", [
+        None,
+        {"source": "https://status.cloud.google.com/", "checked_at": "not-a-date",
+         "result": "no_official_incident", "incident_url": None},
+        {"source": "https://status.cloud.google.com/", "checked_at": "2026-08-28T09:00:00+09:00",
+         "result": "official_incident_posted", "incident_url": None},
+    ])
+    def test_cooldown_reopen_requires_auditable_manual_provider_status_check(tmp_path, status_check):
+        path = tmp_path / "ledger.json"
+        evidence = {
+            "payload_sha256": "payload", "prompt_sha256": "prompt", "references": [],
+            "endpoint": "generateContent", "model": "gemini-3-pro-image", "service_tier": "standard",
+        }
+        now = [1000.]
+    
+        def owner(metadata=None):
+            audit = ProviderRequestAudit.for_path(
+                path=path, scene_key="image:7", model="gemini-3-pro-image",
+                unit_usd=.1, usd_krw=1000, budget_limit_krw=1000,
+                request_metadata=metadata or {"contract_fingerprint": "same-contract"},
+            )
+            audit._control.clock = lambda: now[0]
+            audit._control.uniform = lambda low, high: high
+            return audit
+    
+        for _ in range(3):
+            audit = owner()
+            token = audit.before_attempt(attempt=1, evidence=evidence)
+            state = audit.after_attempt(token, status_code=503, outcome="http_503", retryable=True)
+            now[0] = state["next_allowed_at"]
+        before = path.read_bytes()
+        previous = json.loads(before)["items"][-1]
+        review_at = previous["request_control"]["first_needs_review_at"]
+        now[0] = review_at + 86400
+        metadata = {
+            "contract_fingerprint": "same-contract",
+            "approved_retry_of": previous["attempt_id"],
+            "approved_retry_prior_count": 3,
+            "approved_retry_failure_n": 3,
+            "approved_reopen_after_cooldown": True,
+            "approved_reopen_first_needs_review_at": review_at,
+            "approved_reopen_override_cooldown": False,
+            "provider_status_check": status_check,
+        }
+&gt;       with pytest.raises(ImageRequestHeld, match="공급자 상태"):
+E       Failed: DID NOT RAISE &lt;class 'app.utils.image_request_control.ImageRequestHeld'&gt;
+
+tests/test_gemini_approved_retry.py:286: Failed</failure></testcase></testsuite></testsuites>
