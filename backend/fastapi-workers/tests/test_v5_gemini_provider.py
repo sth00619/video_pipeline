@@ -119,8 +119,9 @@ def test_style_only_reference_does_not_turn_into_a_mascot_identity(tmp_path: Pat
 def test_default_reference_bank_uses_job52_scene_range_not_mismatched_single_sheets():
     names = [Path(path).name for path in _load_default_references()]
 
-    assert len(names) == 8
+    assert len(names) == 9
     assert names[0] == "channel_character_face_range_v2.png"
+    assert names[1] == "channel_character_face_scene05_v1.png"
     assert "channel_style_semiconductor_growth_scene_v1.png" in names
     assert "channel_style_semiconductor_production_scene_v1.png" in names
     assert "character_reference_v4_identity_clean.png" not in names
@@ -188,3 +189,39 @@ def test_goggles_scene_uses_scene05_face_anchor_without_freezing_costume(tmp_pat
         "channel_character_face_scene05_v1.png",
         "channel_style_job52_briefing.png",
     ]
+
+
+def test_goggles_face_anchor_contract_is_larger_face_evidence_not_costume_lock(tmp_path: Path, monkeypatch):
+    observed = {}
+
+    class FakeNanaBananaProvider:
+        def generate(self, **kwargs):
+            observed.update(kwargs)
+            Path(kwargs["output_path"]).write_bytes(b"test-image")
+
+    import app.providers.real.image as image_module
+    monkeypatch.setattr(image_module, "NanaBananaProvider", FakeNanaBananaProvider)
+    refs = []
+    for name in (
+        "channel_character_face_range_v2.png",
+        "channel_character_face_scene05_v1.png",
+        "channel_style_job52_briefing.png",
+        "channel_style_job52_market_flow.png",
+    ):
+        path = tmp_path / name
+        path.write_bytes(name.encode())
+        refs.append(str(path))
+
+    GeminiProvider(api_key="test-key").generate(
+        "white lab coat and round scientist goggles in a data laboratory",
+        model=GeminiModel.PRO,
+        reference_image_paths=refs,
+    )
+
+    assert [Path(path).name for path in observed["character_image_paths"]] == [
+        "channel_character_face_range_v2.png",
+        "channel_character_face_scene05_v1.png",
+        "channel_style_job52_briefing.png",
+    ]
+    assert "larger role-matched face crop" in observed["prompt"]
+    assert "Do not copy or freeze its expression, costume, goggles, pose" in observed["prompt"]

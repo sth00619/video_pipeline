@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "purpose": "고글 장면에서 6장 얼굴 범위 중 Job52 scene05를 확대해 보는 역할 기준점",
+  "build_method": "face range v2와 동일한 고정 좌표 크롭·중성 배경 마스크, 생성형 보정 없음",
+  "selection_policy": "고글 역할 장면에서만 전체 6장 범위와 함께 사용하며 의상·표정·포즈를 고정하지 않음",
+  "source": {
+    "scene_number": 5,
+    "source": "artifacts/job52_full_audit_20260824/images/scene_005.png",
+    "source_sha256": "f38142ec185ddab03e08d5baacdf9fbbda3659c168ecbeaa225f75483e92d46e",
+    "source_size": [
+      1920,
+      1080
+    ],
+    "crop_box_xyxy": [
+      700,
+      180,
+      1060,
+      540
+    ],
+    "panel_size": [
+      512,
+      512
+    ]
+  },
+  "output": "backend/fastapi-workers/out/references/channel_character_face_scene05_v1.png",
+  "output_size": [
+    512,
+    512
+  ],
+  "output_sha256": "7b6c97c2713bb70d34f0a3d71022bda16bd9a032a6d0417457bce6083bfae6e2"
+}

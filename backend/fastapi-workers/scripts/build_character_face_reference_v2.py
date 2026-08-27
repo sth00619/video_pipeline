@@ -15,6 +15,9 @@ SOURCE_DIR = REPO / "artifacts/job52_full_audit_20260824/images"
 OUTPUT_DIR = REPO / "backend/fastapi-workers/out/references"
 OUTPUT = OUTPUT_DIR / "channel_character_face_range_v2.png"
 MANIFEST = OUTPUT_DIR / "channel_character_face_range_v2.manifest.json"
+SCENE05_ANCHOR_OUTPUT = OUTPUT_DIR / "channel_character_face_scene05_v1.png"
+SCENE05_ANCHOR_MANIFEST = OUTPUT_DIR / "channel_character_face_scene05_v1.manifest.json"
+APPROVED_RANGE_SHA256 = "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
 PANEL_SIZE = 512
 FACE_MASK_BOX = (12, 105, 500, 510)
 FACE_BACKGROUND = (232, 238, 244)
@@ -36,9 +39,15 @@ def sha256(path: Path) -> str:
 
 
 def main() -> int:
-    panels: list[Image.Image] = []
-    rows: list[dict] = []
+    # 이미 승인·전송 원장에 연결된 v2 시트는 현재 Pillow 버전으로 재인코딩하지
+    # 않는다. 바이트가 달라지면 같은 픽셀이어도 참조 계보가 끊긴다.
+    if not OUTPUT.is_file() or sha256(OUTPUT) != APPROVED_RANGE_SHA256:
+        raise RuntimeError("승인 얼굴 v2 시트가 없거나 SHA-256이 달라 scene05 기준점을 만들 수 없습니다.")
+    scene05_panel: Image.Image | None = None
+    scene05_row: dict | None = None
     for scene_number, expected_sha256, crop_box in SOURCES:
+        if scene_number != 5:
+            continue
         source = SOURCE_DIR / f"scene_{scene_number:03d}.png"
         actual_sha256 = sha256(source)
         if actual_sha256 != expected_sha256:
@@ -57,9 +66,7 @@ def main() -> int:
             mask = Image.new("L", (PANEL_SIZE, PANEL_SIZE), 0)
             ImageDraw.Draw(mask).ellipse(FACE_MASK_BOX, fill=255)
             panel = Image.composite(crop, Image.new("RGB", crop.size, FACE_BACKGROUND), mask)
-            panels.append(panel)
-        rows.append(
-            {
+        row = {
                 "scene_number": scene_number,
                 "source": str(source.relative_to(REPO)),
                 "source_sha256": actual_sha256,
@@ -67,26 +74,33 @@ def main() -> int:
                 "crop_box_xyxy": list(crop_box),
                 "panel_size": [PANEL_SIZE, PANEL_SIZE],
             }
-        )
+        scene05_panel = panel.copy()
+        scene05_row = dict(row)
 
-    sheet = Image.new("RGB", (PANEL_SIZE * 3, PANEL_SIZE * 2))
-    for index, panel in enumerate(panels):
-        sheet.paste(panel, ((index % 3) * PANEL_SIZE, (index // 3) * PANEL_SIZE))
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    sheet.save(OUTPUT, format="PNG", optimize=True)
-    manifest = {
+    if scene05_panel is None or scene05_row is None:
+        raise RuntimeError("scene05 얼굴 기준점 원본을 만들지 못했습니다.")
+    scene05_panel.save(SCENE05_ANCHOR_OUTPUT, format="PNG", optimize=True)
+    anchor_manifest = {
         "schema_version": 1,
-        "purpose": "Job52 승인 장면 03/04/05/09/13/14의 얼굴 표현 범위",
-        "build_method": "고정 좌표 크롭, Lanczos 리사이즈, 얼굴 밖 중성색 마스크만 사용, 생성형 보정 없음",
-        "layout": {"columns": 3, "rows": 2, "panel_size": [PANEL_SIZE, PANEL_SIZE]},
-        "face_mask": {"ellipse_xyxy": list(FACE_MASK_BOX), "background_rgb": list(FACE_BACKGROUND)},
-        "sources": rows,
-        "output": str(OUTPUT.relative_to(REPO)),
-        "output_size": list(sheet.size),
-        "output_sha256": sha256(OUTPUT),
+        "purpose": "고글 장면에서 6장 얼굴 범위 중 Job52 scene05를 확대해 보는 역할 기준점",
+        "build_method": "face range v2와 동일한 고정 좌표 크롭·중성 배경 마스크, 생성형 보정 없음",
+        "selection_policy": "고글 역할 장면에서만 전체 6장 범위와 함께 사용하며 의상·표정·포즈를 고정하지 않음",
+        "source": scene05_row,
+        "output": str(SCENE05_ANCHOR_OUTPUT.relative_to(REPO)),
+        "output_size": list(scene05_panel.size),
+        "output_sha256": sha256(SCENE05_ANCHOR_OUTPUT),
     }
-    MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"output": str(OUTPUT), "sha256": manifest["output_sha256"]}, ensure_ascii=False))
+    SCENE05_ANCHOR_MANIFEST.write_text(
+        json.dumps(anchor_manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps({
+        "approved_range": str(OUTPUT),
+        "approved_range_sha256": APPROVED_RANGE_SHA256,
+        "scene05_anchor": str(SCENE05_ANCHOR_OUTPUT),
+        "scene05_anchor_sha256": anchor_manifest["output_sha256"],
+    }, ensure_ascii=False))
     return 0
 
 

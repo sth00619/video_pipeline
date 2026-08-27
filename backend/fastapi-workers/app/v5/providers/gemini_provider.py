@@ -43,6 +43,9 @@ _SCENE_STYLE_REF_NAMES = [
 ]
 
 _FACE_RANGE_REF_NAME = "channel_character_face_range_v2.png"
+_FACE_ROLE_REF_NAMES = {
+    "goggles": "channel_character_face_scene05_v1.png",
+}
 
 _CONTEXTUAL_REFERENCE_GROUPS = {
     "semiconductor": (
@@ -72,7 +75,11 @@ def _load_default_references() -> list[str]:
     보내지 않고, 지정된 얼굴 여섯 장과 실제 장면들이 공유하는 그림 언어만 참조한다.
     """
     root = Path(__file__).resolve().parents[3] / "out" / "references"
-    paths = [root / _FACE_RANGE_REF_NAME, *(root / name for name in _SCENE_STYLE_REF_NAMES)]
+    paths = [
+        root / _FACE_RANGE_REF_NAME,
+        *(root / name for name in _FACE_ROLE_REF_NAMES.values()),
+        *(root / name for name in _SCENE_STYLE_REF_NAMES),
+    ]
     missing = [p for p in paths if not p.is_file()]
     if missing:
         raise ReferenceAssetMissingError(
@@ -97,10 +104,12 @@ def select_contextual_reference_paths(
     if not candidates:
         return []
     by_name = {Path(path).name: path for path in candidates}
+    system_identity_names = {_FACE_RANGE_REF_NAME, *_FACE_ROLE_REF_NAMES.values()}
     explicit = [
         path for path in candidates
         if not Path(path).name.startswith("channel_style_job52_")
         and not Path(path).name.startswith("channel_style_")
+        and Path(path).name not in system_identity_names
     ]
     source = str(prompt or "").casefold()
     if any(token in source for token in ("semiconductor", "wafer", "microchip", "chip sample", "production line", "data-lab")):
@@ -112,10 +121,18 @@ def select_contextual_reference_paths(
     else:
         group = "briefing"
     selected = [by_name[name] for name in _CONTEXTUAL_REFERENCE_GROUPS[group] if name in by_name]
+    if explicit:
+        identity = explicit[:1]
+    else:
+        identity = [by_name[_FACE_RANGE_REF_NAME]] if _FACE_RANGE_REF_NAME in by_name else []
+        if any(token in source for token in ("goggles", "safety glasses", "scientist glasses")):
+            anchor_name = _FACE_ROLE_REF_NAMES["goggles"]
+            if anchor_name in by_name:
+                identity.append(by_name[anchor_name])
     # 명시 캐릭터 1장 + 장면 화풍 2장이 기본 상한이다. 중복은 입력 순서를
     # 보존하며 제거한다.
     limit = max(1, min(int(max_references), 3))
-    return list(dict.fromkeys([*explicit[:1], *selected]))[:limit]
+    return list(dict.fromkeys([*identity, *selected]))[:limit]
 
 
 class GeminiProvider:
@@ -163,6 +180,7 @@ class GeminiProvider:
         reference_names = [Path(path).name.lower() for path in reference_image_paths or []]
         character_indices = [index + 1 for index, name in enumerate(reference_names) if "character_reference" in name]
         face_range_indices = [index + 1 for index, name in enumerate(reference_names) if "channel_character_face_range" in name]
+        face_anchor_indices = [index + 1 for index, name in enumerate(reference_names) if "channel_character_face_scene" in name]
         style_indices = [
             index + 1 for index, name in enumerate(reference_names)
             if "style_reference" in name or "style_scene_ref" in name or "channel_style_" in name
@@ -184,6 +202,13 @@ class GeminiProvider:
                 "when compatible with the scene lighting. The round gold-coin species, embossed rim, compact anatomy, and face construction takes priority over background and prop detail. "
                 "Costume and headwear remain scene-specific, as the six approved examples intentionally use different outfits. Do not force one outfit, hat, pose, expression, scale, or framing. "
             )
+            if face_anchor_indices:
+                anchor_index = face_anchor_indices[0]
+                reference_contract += (
+                    f"Reference image {anchor_index} is a larger role-matched face crop taken without generative alteration from one of those same six approved scenes. "
+                    "Use it only to resolve the shared eye, iris, catchlight, forehead-highlight, and line construction at readable scale. "
+                    "Do not copy or freeze its expression, costume, goggles, pose, scale, or framing when the written scene requests something else. "
+                )
         elif len(reference_names) == 1 and not style_indices:
             # 기존 단일 캐릭터 참조 호출과의 호환성이다. 파일명이 명확한 스타일
             # 참조인 경우에는 이 분기로 들어오지 않는다.
