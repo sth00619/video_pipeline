@@ -34,6 +34,7 @@ from app.workers.pronunciation_manager import PronunciationManager
 from app.config import APP_MODE, BFL_API_KEY, CLAUDE_MODEL, V5_BFL_ENABLED
 from app import runtime_config
 from app.utils.budget import load_cost_ledger_summary
+from app.utils.image_request_control import ImageRequestHeld
 from app.utils.art_direction import compile_editorial_prompt
 from app.models.article_evidence import EvidenceCaptureRequest, QuoteCardRequest, UserImageEvidenceRequest
 from app.services.article_discovery import ArticleDiscoveryService, ArticleDiscoveryUnavailable
@@ -1169,15 +1170,16 @@ class SingleImageGenerateRequest(BaseModel):
     character_image_path: Optional[str] = None
     character_style_prompt: Optional[str] = None
     character_poses_dir: Optional[str] = None  # [S2-4]
+    # 기존 장면의 문자·수치·표면·캐릭터·모션 계약 전체를 보존한다.
+    # source_text/prompt_en만 전송하면 단일 재생성이 전체 Job의 품질
+    # 게이트를 우회하므로 Spring이 저장한 scene metadata를 함께 보낸다.
+    scene_meta: Optional[Dict[str, Any]] = None
 
 @app.post("/workers/images/generate-single")
 async def generate_single_image(request: SingleImageGenerateRequest):
     try:
         job_dir = DATA_DIR / "jobs" / str(request.job_id) / "images"
         job_dir.mkdir(parents=True, exist_ok=True)
-        img_path = str(job_dir / f"scene_{request.index:03d}.png")
-
-        images_worker = get_images_worker()
         source_text = (request.source_text or request.text or "").strip()
         if not source_text:
             raise HTTPException(422, "source_text is required")
@@ -1201,75 +1203,32 @@ async def generate_single_image(request: SingleImageGenerateRequest):
                 },
                 f'Visually explain this Korean financial narration: "{source_text}"',
             )
-
-        # [S2-3] 이중 레이어 합성 모드 (poses_dir 제공 시)
-        if request.character_poses_dir and Path(request.character_poses_dir).exists():
-            ai_provider = None
-            try:
-                from app.providers.factory import get_image_provider
-                ai_provider = get_image_provider()
-            except Exception:
-                pass
-            if ai_provider:
-                bg_path = str(job_dir / f"scene_{request.index:03d}_bg.png")
-                images_worker._generate_background_layer(
-                    ai_provider, prompt_en, bg_path, request.section, "neutral"
-                )
-                images_worker._compose_layered_scene(
-                    {
-                        "index": request.index,
-                        "section": request.section,
-                        "art_direction": {
-                            "character_required": True,
-                            "character_placement": "right third",
-                            "layer_pipeline": {
-                                "version": "3.0",
-                                "z_order": ["clean_background", "verified_info_surface", "character_foreground", "editorial_text"],
-                            },
-                        },
-                    },
-                    bg_path, request.character_poses_dir, "neutral", img_path, request.job_id,
-                )
-                return {"status": "ok", "index": request.index, "image_path": img_path,
-                        "prompt_en": prompt_en, "prompt_ko": source_text}
-
-        # AI 이미지 생성 시도 (일러스트 모드)
-        ai_provider = None
-        try:
-            from app.providers.factory import get_image_provider
-            ai_provider = get_image_provider()
-        except Exception:
-            pass
-
-        if ai_provider:
-            try:
-                ai_provider.generate_image(
-                    prompt=prompt_en,
-                    output_path=img_path,
-                    section=request.section,
-                    keyword=source_text[:30],
-                    character_image_path=request.character_image_path,
-                    character_style_prompt=request.character_style_prompt,
-                    image_provider=runtime_config.value("image_provider"),
-                    gemini_model="gemini-3-pro-image",
-                    gemini_image_size="2K",
-                    gemini_service_tier=runtime_config.value("gemini_service_tier"),
-                    gemini_max_attempts=runtime_config.value("gemini_pro_max_attempts"),
-                    gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
-                    style_locked=True,
-                )
-                return {"status": "ok", "index": request.index, "image_path": img_path,
-                        "prompt_en": prompt_en, "prompt_ko": source_text}
-            except Exception as e:
-                logger.warning(f"단일 AI 이미지 생성 실패, Matplotlib 폴백: {e}")
-
-        # Matplotlib 차트 폴백
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        images_worker._render_section(request.section, source_text, img_path, plt)
-        return {"status": "ok", "index": request.index, "image_path": img_path,
-                "prompt_en": prompt_en, "prompt_ko": source_text}
+        scene = dict(request.scene_meta or {})
+        scene.update({
+            "index": request.index,
+            "text": source_text,
+            "prompt_ko": source_text,
+            "prompt_en": prompt_en,
+            "prompt": prompt_en,
+            "section": request.section,
+        })
+        return get_images_worker().generate_single_scene(
+            scene=scene,
+            job_id=request.job_id,
+            output_dir=job_dir,
+            character_image_path=request.character_image_path,
+            character_style_prompt=request.character_style_prompt,
+            character_poses_dir=request.character_poses_dir,
+        )
+    except ImageRequestHeld as e:
+        raise HTTPException(
+            409,
+            {"error_code": "IMAGE_REQUEST_HELD", "message": str(e), "retryable": False},
+        )
+    except ImageProviderCreditRequiredError as e:
+        raise HTTPException(422, {"error_code": "IMAGE_PROVIDER_CREDIT_REQUIRED", "message": str(e)})
+    except ImageProviderTemporarilyUnavailableError as e:
+        raise HTTPException(503, {"error_code": "IMAGE_PROVIDER_TEMPORARILY_UNAVAILABLE", "message": str(e)})
     except Exception as e:
         logger.exception("단일 이미지 생성 실패")
         raise HTTPException(500, f"단일 이미지 생성 실패: {str(e)}")

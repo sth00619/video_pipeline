@@ -411,7 +411,7 @@ public class ImagesService {
         String approvedEnglishPrompt = "image_only".equalsIgnoreCase(mode) ? scene.getPromptEn() : null;
         SceneImageDto rendered = fastApiClient.regenerateSceneImage(
                 jobId, index, scene.getText(), approvedEnglishPrompt, scene.getSection(),
-                characterImagePath, characterStylePrompt, characterPosesDir);
+                characterImagePath, characterStylePrompt, characterPosesDir, scene);
         if (rendered.getImagePath() != null && !rendered.getImagePath().isBlank()) {
             scene.setImagePath(rendered.getImagePath());
             target.setLocalPath(rendered.getImagePath());

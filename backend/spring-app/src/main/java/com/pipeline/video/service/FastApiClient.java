@@ -403,45 +403,6 @@ public class FastApiClient {
         }
     }
 
-    // Phase 3-4B — 단일 이미지 재생성
-    public void generateSingleImage(Long jobId, int index, String text, String section,
-                                     String characterImagePath, String characterStylePrompt,
-                                     String characterPosesDir) {
-        generateSingleImage(jobId, index, text, section, characterImagePath,
-                characterStylePrompt, characterPosesDir, null, null, null);
-    }
-
-    /** [Sprint 3] LoRA 지정 단일 이미지 재생성 */
-    public void generateSingleImage(Long jobId, int index, String text, String section,
-                                     String characterImagePath, String characterStylePrompt,
-                                     String characterPosesDir,
-                                     String loraModelId, String loraTriggerWord, Float loraScale) {
-        try {
-            Map<String, Object> bodyMap = new HashMap<>();
-            bodyMap.put("job_id", jobId);
-            bodyMap.put("index", index);
-            bodyMap.put("text", text);
-            bodyMap.put("section", section);
-            bodyMap.put("character_image_path", characterImagePath);
-            bodyMap.put("character_style_prompt", characterStylePrompt);
-            // [S2-4] 캐릭터 포즈 라이브러리 디렉토리
-            if (characterPosesDir != null && !characterPosesDir.isBlank()) {
-                bodyMap.put("character_poses_dir", characterPosesDir);
-            }
-            // [Sprint 3] LoRA 파라미터
-            if (loraModelId != null && !loraModelId.isBlank()) {
-                bodyMap.put("lora_model_id", loraModelId);
-                if (loraTriggerWord != null && !loraTriggerWord.isBlank()) {
-                    bodyMap.put("lora_trigger_word", loraTriggerWord);
-                }
-                bodyMap.put("lora_scale", loraScale != null ? loraScale : 1.0f);
-            }
-            postJson(fastApiUrl + "/workers/images/generate-single", bodyMap);
-        } catch (Exception e) {
-            throw new RuntimeException("단일 이미지 생성 오류: " + e.getMessage(), e);
-        }
-    }
-
     // Phase 3-5 — 롱폼
     /**
      * Regenerates a scene and returns the resulting image metadata. A caller
@@ -452,7 +413,8 @@ public class FastApiClient {
     public SceneImageDto regenerateSceneImage(Long jobId, int index, String sourceText,
                                               String promptEn, String section,
                                               String characterImagePath, String characterStylePrompt,
-                                              String characterPosesDir) {
+                                              String characterPosesDir,
+                                              SceneImageDto sceneMeta) {
         try {
             Map<String, Object> bodyMap = new HashMap<>();
             bodyMap.put("job_id", jobId);
@@ -462,6 +424,9 @@ public class FastApiClient {
             bodyMap.put("section", section);
             bodyMap.put("character_image_path", characterImagePath);
             bodyMap.put("character_style_prompt", characterStylePrompt);
+            // 단일 재생성도 전체 생성과 동일한 장면 로컬 문자·수치·표면·
+            // 캐릭터 계약을 적용하도록 저장된 메타데이터 전체를 전달한다.
+            bodyMap.put("scene_meta", objectMapper.convertValue(sceneMeta, Map.class));
             if (characterPosesDir != null && !characterPosesDir.isBlank()) {
                 bodyMap.put("character_poses_dir", characterPosesDir);
             }

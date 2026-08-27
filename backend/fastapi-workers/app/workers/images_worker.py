@@ -1104,6 +1104,154 @@ Rules:
         finally:
             release_image_job_lock(job_id, lock_token)
 
+    def generate_single_scene(
+        self,
+        *,
+        scene: dict,
+        job_id: int,
+        output_dir: Path | None = None,
+        character_image_path: str | None = None,
+        character_style_prompt: str | None = None,
+        character_poses_dir: str | None = None,
+    ) -> dict:
+        """UI의 장면 재생성도 전체 이미지와 같은 생성·검수 계약으로 처리한다.
+
+        이 경로는 과거에 장면 메타데이터와 공통 QA를 버린 뒤 공급자 실패를
+        Matplotlib 차트로 조용히 대체했다. 명시 재생성은 기존 승인 이미지를
+        성공 전까지 보존하고, 문자·수치·캐릭터·표면·Fal 안전 계약을 모두
+        통과한 새 PNG만 게시한다.
+        """
+        import shutil
+
+        ctx = dict(scene or {})
+        index = int(ctx.get("index", 0))
+        section = str(ctx.get("section") or f"scene_{index}")
+        narration = str(
+            ctx.get("text_for_tts")
+            or ctx.get("narration")
+            or ctx.get("script")
+            or ctx.get("content")
+            or ctx.get("text")
+            or ""
+        ).strip()
+        if not narration:
+            raise ValueError("단일 장면 재생성에는 승인 장면 원문이 필요합니다.")
+
+        base_prompt = str(ctx.get("prompt_en") or ctx.get("prompt") or "").strip()
+        if not base_prompt:
+            base_prompt = compile_editorial_prompt(
+                ctx,
+                f'Visually explain this Korean financial narration: "{narration}"',
+            )
+        ctx.update({
+            "index": index,
+            "section": section,
+            "text": narration,
+            "prompt_ko": str(ctx.get("prompt_ko") or narration),
+            "prompt_en": base_prompt,
+            "prompt": base_prompt,
+            "_request_job_id": job_id,
+        })
+
+        lock_token = acquire_image_job_lock(job_id)
+        try:
+            from app.providers.factory import get_image_provider
+
+            provider = get_image_provider()
+            if provider is None:
+                raise RuntimeError("운영 이미지 공급자를 불러올 수 없습니다.")
+
+            target_dir = output_dir or Path(f"/app/data/jobs/{job_id}/images")
+            target_dir.mkdir(parents=True, exist_ok=True)
+            final_path = target_dir / f"scene_{index:03d}.png"
+            raw_path = target_dir / f"scene_{index:03d}_regenerate_raw.png"
+            ctx["_request_raw_path"] = str(raw_path)
+            generation_prompt = _bounded_text_generation_prompt(
+                base_prompt,
+                audit_target=ctx,
+            )
+
+            all_references: list[str] = []
+            if character_image_path and Path(character_image_path).is_file():
+                all_references.append(character_image_path)
+            all_references.extend(_load_default_references())
+            character_required = bool((ctx.get("art_direction") or {}).get("character_required", True))
+            selected_references = (
+                select_contextual_reference_paths(generation_prompt, all_references)
+                if character_required else []
+            )
+
+            if character_poses_dir and Path(character_poses_dir).is_dir():
+                background_path = target_dir / f"scene_{index:03d}_regenerate_bg.png"
+                self._generate_background_layer(
+                    provider,
+                    generation_prompt,
+                    str(background_path),
+                    section,
+                    str(ctx.get("pose") or "neutral"),
+                    ctx.get("image_profile") or {},
+                    job_id=job_id,
+                    scene_key=f"background:{index}",
+                )
+                self._normalize_canvas(str(background_path))
+                self._compose_layered_scene(
+                    ctx,
+                    str(background_path),
+                    character_poses_dir,
+                    str(ctx.get("pose") or "neutral"),
+                    str(raw_path),
+                    job_id,
+                )
+                generation_method = "single_scene_operational_composite"
+            else:
+                provider.generate_image(
+                    prompt=generation_prompt,
+                    output_path=str(raw_path),
+                    section=section,
+                    keyword=narration[:30],
+                    character_image_path=selected_references[0] if selected_references else None,
+                    character_image_paths=selected_references,
+                    character_style_prompt=character_style_prompt,
+                    image_provider=runtime_config.value("image_provider"),
+                    gemini_model=str((ctx.get("image_profile") or {}).get("model") or "gemini-3-pro-image"),
+                    gemini_image_size=str((ctx.get("image_profile") or {}).get("image_size") or "2K"),
+                    gemini_service_tier=runtime_config.value("gemini_service_tier"),
+                    gemini_max_attempts=1,
+                    gemini_retry_base_seconds=runtime_config.value("gemini_pro_retry_base_seconds"),
+                    gemini_request_audit=ProviderRequestAudit.for_job(
+                        job_id=job_id,
+                        scene_key=f"image:{index}",
+                        model=str((ctx.get("image_profile") or {}).get("model") or "gemini-3-pro-image"),
+                    ),
+                    style_locked=True,
+                    gemini_reference_contract_declared=True,
+                )
+                generation_method = "single_scene_operational"
+
+            if not raw_path.is_file() or raw_path.stat().st_size <= 15_000:
+                raise RuntimeError("단일 장면 공급자가 검증 가능한 이미지를 반환하지 않았습니다.")
+            self._normalize_canvas(str(raw_path))
+            _inspect_generated_textless_image(ctx, str(raw_path))
+
+            staged_final = target_dir / f"scene_{index:03d}_regenerate_final.png"
+            shutil.copy2(raw_path, staged_final)
+            self._apply_image_overlays(ctx, str(staged_final))
+            _inspect_generated_visual_image(ctx, str(staged_final))
+            os.replace(staged_final, final_path)
+
+            ctx.update({
+                "image_path": str(final_path),
+                "generation_method": generation_method,
+                "quality_score": 90,
+                "prompt_en": generation_prompt,
+                "prompt": generation_prompt,
+            })
+            _apply_fal_motion_safety_contract([ctx])
+            ctx["character_regions"] = _character_regions(ctx)
+            return ctx
+        finally:
+            release_image_job_lock(job_id, lock_token)
+
     def _generate(self, scenes_meta: list = None, job_id: int = 0,
                   tts_meta_json: str = None, script_meta_json: str = None,
                   character_image_path: str = None, character_style_prompt: str = None,

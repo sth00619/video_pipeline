@@ -12,7 +12,7 @@ class _Provider:
 
     def generate_image(self, **kwargs) -> bool:
         self.calls.append(kwargs)
-        Image.new("RGB", (1920, 1080), "#244052").save(kwargs["output_path"])
+        Image.effect_noise((1920, 1080), 24).convert("RGB").save(kwargs["output_path"])
         return True
 
 
@@ -54,6 +54,14 @@ def test_single_scene_regeneration_uses_the_operational_image_contract(
         "app.workers.images_worker.ProviderRequestAudit.for_job",
         lambda **kwargs: object(),
     )
+    monkeypatch.setattr(
+        "app.workers.images_worker.acquire_image_job_lock",
+        lambda job_id: "test-lock",
+    )
+    monkeypatch.setattr(
+        "app.workers.images_worker.release_image_job_lock",
+        lambda job_id, token: None,
+    )
 
     result = worker.generate_single_scene(
         scene={
@@ -79,7 +87,10 @@ def test_single_scene_regeneration_uses_the_operational_image_contract(
     assert provider.calls
     assert "FINAL CHARACTER QUALITY BOUNDARY" in provider.calls[0]["prompt"]
     assert provider.calls[0]["gemini_request_audit"] is not None
-    assert inspections == ["base:scene_007_regenerate_raw.png", "final:scene_007.png"]
+    assert inspections == [
+        "base:scene_007_regenerate_raw.png",
+        "final:scene_007_regenerate_final.png",
+    ]
 
 
 def test_single_scene_regeneration_does_not_silently_fallback_to_a_chart() -> None:
@@ -90,3 +101,12 @@ def test_single_scene_regeneration_does_not_silently_fallback_to_a_chart() -> No
 
     assert "Matplotlib 차트 폴백" not in endpoint
     assert "_render_section" not in endpoint
+
+
+def test_spring_has_no_metadata_free_single_scene_bypass() -> None:
+    source = Path(
+        "/repo/backend/spring-app/src/main/java/com/pipeline/video/service/FastApiClient.java"
+    ).read_text(encoding="utf-8")
+
+    assert source.count('postJson(fastApiUrl + "/workers/images/generate-single"') == 1
+    assert 'bodyMap.put("scene_meta"' in source
