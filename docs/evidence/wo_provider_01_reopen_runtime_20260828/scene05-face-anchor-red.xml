@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.114" timestamp="2026-08-27T22:14:43.083977+00:00" hostname="7762e7957501"><testcase classname="tests.test_v5_gemini_provider" name="test_goggles_scene_uses_scene05_face_anchor_without_freezing_costume" time="0.003"><failure message="AssertionError: assert ['channel_cha...ket_flow.png'] == ['channel_cha...briefing.png']&#10;  &#10;  At index 1 diff: 'channel_style_job52_briefing.png' != 'channel_character_face_scene05_v1.png'&#10;  Use -v to get more diff">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_goggles_scene_uses_scene00')
+
+    def test_goggles_scene_uses_scene05_face_anchor_without_freezing_costume(tmp_path: Path):
+        face_range = tmp_path / "channel_character_face_range_v2.png"
+        face_anchor = tmp_path / "channel_character_face_scene05_v1.png"
+        briefing = tmp_path / "channel_style_job52_briefing.png"
+        market = tmp_path / "channel_style_job52_market_flow.png"
+        for path in (face_range, face_anchor, briefing, market):
+            path.write_bytes(path.name.encode())
+    
+        selected = select_contextual_reference_paths(
+            "white lab coat and round scientist goggles in a data laboratory",
+            [str(face_range), str(face_anchor), str(briefing), str(market)],
+        )
+    
+&gt;       assert [Path(path).name for path in selected] == [
+            "channel_character_face_range_v2.png",
+            "channel_character_face_scene05_v1.png",
+            "channel_style_job52_briefing.png",
+        ]
+E       AssertionError: assert ['channel_cha...ket_flow.png'] == ['channel_cha...briefing.png']
+E         
+E         At index 1 diff: 'channel_style_job52_briefing.png' != 'channel_character_face_scene05_v1.png'
+E         Use -v to get more diff
+
+tests/test_v5_gemini_provider.py:186: AssertionError</failure></testcase></testsuite></testsuites>
