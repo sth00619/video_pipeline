@@ -16,6 +16,9 @@ from pathlib import Path
 from app import runtime_config
 
 
+NEEDS_REVIEW_COOLDOWN_SECONDS = 24 * 60 * 60
+
+
 class ImageRequestHeld(RuntimeError):
     """새 POST 없이 영속 상태를 보존하고 호출자를 반환한다."""
 
@@ -111,7 +114,18 @@ class ImageRequestControl:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             db = sqlite3.connect(self.path, timeout=10, isolation_level=None)
             db.execute("PRAGMA synchronous=FULL")
-            db.execute("CREATE TABLE IF NOT EXISTS scenes (scope TEXT, scene TEXT, count INTEGER, n INTEGER, next REAL, active TEXT, status TEXT, PRIMARY KEY(scope, scene))")
+            db.execute(
+                "CREATE TABLE IF NOT EXISTS scenes ("
+                "scope TEXT, scene TEXT, count INTEGER, n INTEGER, next REAL, active TEXT, status TEXT, "
+                "first_needs_review_at REAL, review_cycle INTEGER NOT NULL DEFAULT 0, "
+                "PRIMARY KEY(scope, scene))"
+            )
+            # 기존 운영 DB를 삭제하거나 새 경로로 우회하지 않고 제자리에서 확장한다.
+            columns = {row[1] for row in db.execute("PRAGMA table_info(scenes)")}
+            if "first_needs_review_at" not in columns:
+                db.execute("ALTER TABLE scenes ADD COLUMN first_needs_review_at REAL")
+            if "review_cycle" not in columns:
+                db.execute("ALTER TABLE scenes ADD COLUMN review_cycle INTEGER NOT NULL DEFAULT 0")
             db.execute("CREATE TABLE IF NOT EXISTS projects (name TEXT PRIMARY KEY, n INTEGER, next REAL)")
             db.execute("CREATE TABLE IF NOT EXISTS attempts (id TEXT PRIMARY KEY, scope TEXT, scene TEXT, project TEXT, completed INTEGER DEFAULT 0)")
             db.execute("BEGIN IMMEDIATE")
@@ -122,19 +136,63 @@ class ImageRequestControl:
             raise ImageRequestHeld("영속 요청 상태 저장소를 사용할 수 없음") from exc
 
     def reserve(self, *, scope: str, scene: str, token: str, legacy_count: int = 0,
-                review_retry_of: str | None = None, expected_failure_n: int | None = None) -> dict:
+                review_retry_of: str | None = None, expected_failure_n: int | None = None,
+                review_reopen_of: str | None = None,
+                review_reopen_first_needs_review_at: float | None = None,
+                review_reopen_override_cooldown: bool = False) -> dict:
         scene = canonical_scene(scene)
         db = self._db()
         try:
-            row = db.execute("SELECT count,n,next,active,status FROM scenes WHERE scope=? AND scene=?", (scope, scene)).fetchone()
-            count, n, deadline, active, status = row or (0, 0, 0, None, "ready")
+            row = db.execute(
+                "SELECT count,n,next,active,status,first_needs_review_at,review_cycle "
+                "FROM scenes WHERE scope=? AND scene=?", (scope, scene),
+            ).fetchone()
+            count, n, deadline, active, status, first_review_at, review_cycle = (
+                row or (0, 0, 0, None, "ready", None, 0)
+            )
             count = max(count, legacy_count)
-            if count >= self.limit:
-                db.execute("INSERT OR REPLACE INTO scenes VALUES (?,?,?,?,?,?,?)", (scope, scene, count, n, deadline, active, "needs_review"))
+            reopen_requested = bool(review_reopen_of)
+            if count >= self.limit and not reopen_requested:
+                first_review_at = first_review_at if first_review_at is not None else self.clock()
+                db.execute(
+                    "INSERT OR REPLACE INTO scenes "
+                    "(scope,scene,count,n,next,active,status,first_needs_review_at,review_cycle) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
+                    (scope, scene, count, n, deadline, active, "needs_review", first_review_at, review_cycle),
+                )
                 db.commit()
                 raise ImageRequestHeld("장면 누적 요청 상한 도달")
             if active:
                 raise ImageRequestHeld("응답 미확정 예약 존재; 자동 재요청 금지")
+            reopened_from = None
+            cooldown_override_used = False
+            if reopen_requested:
+                previous = db.execute(
+                    "SELECT id,completed,project FROM attempts WHERE scope=? AND scene=? ORDER BY rowid DESC LIMIT 1",
+                    (scope, scene),
+                ).fetchone()
+                if (
+                    count < self.limit
+                    or status != "needs_review"
+                    or previous != (review_reopen_of, 1, self.project)
+                    or n != expected_failure_n
+                    or n < 1
+                    or first_review_at is None
+                    or review_reopen_first_needs_review_at != first_review_at
+                ):
+                    raise ImageRequestHeld("냉각 후 재도전 승인과 검수 이력 불일치")
+                reopen_at = first_review_at + NEEDS_REVIEW_COOLDOWN_SECONDS
+                if self.clock() < reopen_at and not review_reopen_override_cooldown:
+                    raise ImageRequestHeld(
+                        "24시간 냉각 미경과; 즉시 재도전은 사용자 명시 승인이 필요함",
+                        status="needs_review", next_allowed_at=reopen_at,
+                    )
+                reopened_from = first_review_at
+                cooldown_override_used = self.clock() < reopen_at
+                count = 0
+                first_review_at = None
+                review_cycle += 1
+                status = "ready"
             if review_retry_of:
                 # 감사 원장이 검증한 단일 승인만 받는다. 상태 삭제/카운터 리셋 없이
                 # 직전 완료 요청의 다음 슬롯을 같은 트랜잭션에서 점유한다.
@@ -150,10 +208,21 @@ class ImageRequestControl:
             deadline = max(deadline, project[1] if project else 0)
             if self.clock() < deadline:
                 raise ImageRequestHeld("냉각시간 미경과", status="deferred", next_allowed_at=deadline)
-            db.execute("INSERT OR REPLACE INTO scenes VALUES (?,?,?,?,?,?,?)", (scope, scene, count + 1, n, deadline, token, "reserved"))
+            db.execute(
+                "INSERT OR REPLACE INTO scenes "
+                "(scope,scene,count,n,next,active,status,first_needs_review_at,review_cycle) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
+                (scope, scene, count + 1, n, deadline, token, "reserved", first_review_at, review_cycle),
+            )
             db.execute("INSERT INTO attempts(id,scope,scene,project) VALUES (?,?,?,?)", (token, scope, scene, self.project))
             db.commit()
-            return {"scene_attempt": count + 1, "failure_n": n, "scene": scene, "project_scope": self.project}
+            return {
+                "scene_attempt": count + 1, "failure_n": n, "scene": scene,
+                "project_scope": self.project, "review_cycle": review_cycle,
+                "reopened_after_cooldown": reopen_requested,
+                "reopened_from_first_needs_review_at": reopened_from,
+                "cooldown_override_used": cooldown_override_used,
+            }
         finally:
             db.close()
 
@@ -164,7 +233,10 @@ class ImageRequestControl:
             if not attempt:
                 raise ImageRequestHeld("영속 예약 식별자 없음")
             scope, scene, project, completed = attempt
-            count, n, deadline, active, status = db.execute("SELECT count,n,next,active,status FROM scenes WHERE scope=? AND scene=?", (scope, scene)).fetchone()
+            count, n, deadline, active, status, first_review_at, review_cycle = db.execute(
+                "SELECT count,n,next,active,status,first_needs_review_at,review_cycle "
+                "FROM scenes WHERE scope=? AND scene=?", (scope, scene),
+            ).fetchone()
             if not completed:
                 if active != token:
                     raise ImageRequestHeld("예약 소유권 불일치")
@@ -177,10 +249,20 @@ class ImageRequestControl:
                     n += 1
                     db.execute("INSERT OR REPLACE INTO projects VALUES (?,?,?)", (project, pn + 1, deadline))
                 status = "needs_review" if permanent or (retryable and count >= self.limit) else ("deferred" if retryable else "ready")
-                db.execute("UPDATE scenes SET n=?,next=?,active=NULL,status=? WHERE scope=? AND scene=?", (n, deadline, status, scope, scene))
+                if status == "needs_review" and first_review_at is None:
+                    first_review_at = self.clock()
+                db.execute(
+                    "UPDATE scenes SET n=?,next=?,active=NULL,status=?,first_needs_review_at=? "
+                    "WHERE scope=? AND scene=?",
+                    (n, deadline, status, first_review_at, scope, scene),
+                )
                 db.execute("UPDATE attempts SET completed=1 WHERE id=?", (token,))
                 db.commit()
-            return {"scene_attempt": count, "failure_n": n, "next_allowed_at": deadline, "status": status}
+            return {
+                "scene_attempt": count, "failure_n": n, "next_allowed_at": deadline,
+                "status": status, "first_needs_review_at": first_review_at,
+                "review_cycle": review_cycle,
+            }
         finally:
             db.close()
 

@@ -47,6 +47,7 @@ def retry_case(tmp_path, monkeypatch):
             unit_usd=1.6, usd_krw=1000, budget_limit_krw=budget,
             request_metadata=metadata or {"contract_fingerprint": "same-contract"})
         result._control.clock = lambda: 1000.
+        result._control.uniform = lambda low, high: high
         return result
 
     def run(audit, prompt="same prompt"):

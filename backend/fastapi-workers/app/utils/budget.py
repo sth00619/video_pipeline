@@ -179,6 +179,11 @@ class ProviderRequestAudit:
                 if any(i.get("status") == "reserved" for i in prior):
                     raise ImageRequestHeld("원장에 응답 미확정 예약 존재")
                 retry_of = self._request_metadata.get("approved_retry_of")
+                reopen_after_cooldown = self._request_metadata.get("approved_reopen_after_cooldown")
+                if reopen_after_cooldown not in (None, False, True):
+                    raise ImageRequestHeld("냉각 후 재도전 승인 값이 boolean이 아님")
+                if reopen_after_cooldown is True and not retry_of:
+                    raise ImageRequestHeld("냉각 후 재도전에는 직전 503 승인 식별자가 필요함")
                 if retry_of:
                     previous = prior[-1] if prior else {}
                     if (len(prior) != self._request_metadata.get("approved_retry_prior_count")
@@ -189,10 +194,39 @@ class ProviderRequestAudit:
                             or self._request_metadata.get("contract_fingerprint") != previous.get("contract_fingerprint")
                             or previous.get("request_control", {}).get("failure_n") != self._request_metadata.get("approved_retry_failure_n")):
                         raise ImageRequestHeld("단일 503 재시도 승인과 원장/요청 계약 불일치")
+                    if reopen_after_cooldown is True and (
+                        previous.get("request_control", {}).get("status") != "needs_review"
+                        or previous.get("request_control", {}).get("first_needs_review_at")
+                        != self._request_metadata.get("approved_reopen_first_needs_review_at")
+                        or not isinstance(self._request_metadata.get("approved_reopen_override_cooldown", False), bool)
+                    ):
+                        raise ImageRequestHeld("냉각 후 재도전 승인과 최초 검수 시각 불일치")
+                # 원장은 평생 이력을 보존하지만 장면 상한은 승인된 재도전 이후의
+                # 현재 냉각 구간만 센다. 상태 DB가 유실돼도 원장 마커로 복원한다.
+                reopen_indices = [
+                    index for index, item in enumerate(prior)
+                    if (item.get("request_metadata") or {}).get("approved_reopen_after_cooldown") is True
+                ]
+                window_legacy_count = (
+                    len(prior) - reopen_indices[-1]
+                    if reopen_indices else len(prior)
+                )
+                if reopen_after_cooldown is True:
+                    window_legacy_count = 0
                 control = self._control.reserve(
-                    scope=str(self._path.resolve()), scene=scene, token=token, legacy_count=len(prior),
+                    scope=str(self._path.resolve()), scene=scene, token=token,
+                    legacy_count=window_legacy_count,
                     review_retry_of=retry_of,
                     expected_failure_n=self._request_metadata.get("approved_retry_failure_n"),
+                    review_reopen_of=retry_of if reopen_after_cooldown is True else None,
+                    review_reopen_first_needs_review_at=(
+                        self._request_metadata.get("approved_reopen_first_needs_review_at")
+                        if reopen_after_cooldown is True else None
+                    ),
+                    review_reopen_override_cooldown=(
+                        self._request_metadata.get("approved_reopen_override_cooldown", False)
+                        if reopen_after_cooldown is True else False
+                    ),
                 )
             item = {
                 "kind": self._request_kind,

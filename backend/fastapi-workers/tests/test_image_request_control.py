@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import multiprocessing
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from email.utils import format_datetime
@@ -101,7 +102,8 @@ def _exhaust_scene_window(control, now):
     return result
 
 
-def test_needs_review_records_first_timestamp_and_never_reopens_automatically(tmp_path):
+def test_needs_review_records_first_timestamp_and_never_reopens_automatically(tmp_path, monkeypatch):
+    monkeypatch.setitem(runtime_config._state, "gemini_pro_retry_base_seconds", 20.)
     now = [1000.]
     control = ImageRequestControl(
         path=tmp_path / "control.sqlite3",
@@ -119,7 +121,8 @@ def test_needs_review_records_first_timestamp_and_never_reopens_automatically(tm
         control.reserve(scope="job", scene="image:7", token="automatic-reopen")
 
 
-def test_explicit_reopen_warns_before_24_hours_and_override_is_audited(tmp_path):
+def test_explicit_reopen_warns_before_24_hours_and_override_is_audited(tmp_path, monkeypatch):
+    monkeypatch.setitem(runtime_config._state, "gemini_pro_retry_base_seconds", 20.)
     now = [1000.]
     control = ImageRequestControl(
         path=tmp_path / "control.sqlite3",
@@ -146,7 +149,8 @@ def test_explicit_reopen_warns_before_24_hours_and_override_is_audited(tmp_path)
     assert reopened["cooldown_override_used"] is True
 
 
-def test_explicit_reopen_after_24_hours_starts_new_three_attempt_window(tmp_path):
+def test_explicit_reopen_after_24_hours_starts_new_three_attempt_window(tmp_path, monkeypatch):
+    monkeypatch.setitem(runtime_config._state, "gemini_pro_retry_base_seconds", 20.)
     now = [1000.]
     control = ImageRequestControl(
         path=tmp_path / "control.sqlite3",
@@ -179,6 +183,27 @@ def test_explicit_reopen_after_24_hours_starts_new_three_attempt_window(tmp_path
     assert third["scene_attempt"] == 3
     assert third["review_cycle"] == 1
     assert third["first_needs_review_at"] == now[0]
+
+
+def test_existing_request_database_is_migrated_without_resetting_counts(tmp_path):
+    path = tmp_path / "legacy.sqlite3"
+    with sqlite3.connect(path) as db:
+        db.execute(
+            "CREATE TABLE scenes (scope TEXT, scene TEXT, count INTEGER, n INTEGER, "
+            "next REAL, active TEXT, status TEXT, PRIMARY KEY(scope, scene))"
+        )
+        db.execute(
+            "INSERT INTO scenes VALUES (?,?,?,?,?,?,?)",
+            ("job", "scene:7", 2, 2, 0., None, "deferred"),
+        )
+    control = ImageRequestControl(path=path, clock=lambda: 1000.)
+    reserved = control.reserve(scope="job", scene="image:7", token="third")
+    assert reserved["scene_attempt"] == 3
+    assert reserved["failure_n"] == 2
+    assert reserved["review_cycle"] == 0
+    with sqlite3.connect(path) as db:
+        columns = {row[1] for row in db.execute("PRAGMA table_info(scenes)")}
+    assert {"first_needs_review_at", "review_cycle"} <= columns
 
 
 def test_shared_project_backoff_caps_at_300_but_jitter_remains(tmp_path, monkeypatch):
