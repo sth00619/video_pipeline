@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 import sys
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +51,34 @@ def _reference_role(name: str) -> str:
     if name in _SCENE_STYLE_REF_NAMES:
         return "scene_style_candidate"
     return "explicit_user_reference"
+
+
+def render_reference_contact_sheet(references: list[dict], output: Path) -> None:
+    """현재 활성 9개와 scene07 선택 순서를 한 장에서 육안 대조한다."""
+    cell_w, cell_h, header_h = 480, 320, 54
+    sheet = Image.new("RGB", (cell_w * 3, cell_h * 3), (15, 22, 36))
+    draw = ImageDraw.Draw(sheet)
+    font = ImageFont.load_default(size=16)
+    small = ImageFont.load_default(size=13)
+    root = ROOT / "out/references"
+    for index, row in enumerate(references):
+        col, line = index % 3, index // 3
+        x, y = col * cell_w, line * cell_h
+        with Image.open(root / row["name"]) as source:
+            thumb = ImageOps.contain(source.convert("RGB"), (cell_w - 16, cell_h - header_h - 16))
+        tx = x + (cell_w - thumb.width) // 2
+        ty = y + header_h + (cell_h - header_h - thumb.height) // 2
+        sheet.paste(thumb, (tx, ty))
+        selected = row["selected_order"]
+        color = (92, 220, 140) if selected else (190, 200, 215)
+        draw.rectangle((x + 3, y + 3, x + cell_w - 4, y + cell_h - 4), outline=color, width=4 if selected else 1)
+        prefix = f"SELECTED {selected} | " if selected else "ACTIVE | "
+        draw.text((x + 10, y + 8), prefix + row["name"], fill=color, font=font)
+        sources = row["job52_exact_source_matches"]
+        source_label = Path(sources[0]).stem if sources else "derived face reference"
+        draw.text((x + 10, y + 30), f"{row['role']} | {source_label}", fill=(175, 185, 205), font=small)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(output, "PNG")
 
 
 def build_report(spec_path: Path) -> tuple[dict, str, str]:
@@ -118,6 +146,7 @@ def build_report(spec_path: Path) -> tuple[dict, str, str]:
                 "context_group_candidates": list(_CONTEXTUAL_REFERENCE_GROUPS["data_lab"]),
                 "selected": row["references"],
                 "all_active_candidates": references,
+                "contact_sheet": "active-reference-contact-sheet.png",
             },
             "final_generate_content_prompt": {
                 "path": "final-gemini-prompt.txt",
@@ -175,6 +204,10 @@ def main() -> int:
     args = parser.parse_args()
     report, bounded, final = build_report(args.spec.resolve())
     output = args.output_dir.resolve()
+    render_reference_contact_sheet(
+        report["stages"]["reference_selection"]["all_active_candidates"],
+        output / "active-reference-contact-sheet.png",
+    )
     _write(output / "lineage.json", json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     _write(output / "bounded-pre-provider-prompt.txt", bounded + "\n")
     _write(output / "final-gemini-prompt.txt", final + "\n")

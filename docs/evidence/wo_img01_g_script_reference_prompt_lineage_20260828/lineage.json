@@ -1,0 +1,456 @@
+{
+  "schema_version": 1,
+  "scope": "scene07 representative read-only reconstruction; no external API call",
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "image_size": "2K",
+  "stages": {
+    "approved_script": {
+      "text": "삼성전자와 SK하이닉스를 제외해도요. 코스피 영업이익이 143조 원에 달했죠.",
+      "sha256": "143e208a9e08b8b0cd335b3084dd9bf88af17b6ac68576af0ae206ed147a6d23",
+      "screen_texts": [
+        "삼성전자",
+        "SK하이닉스",
+        "코스피",
+        "143조 원"
+      ],
+      "verified_local_fact_matches": [
+        {
+          "index": 3,
+          "fact": "상반기 코스피 영업이익이 역대 최대를 기록했으며, 삼전닉스를 제외하더라도 코스피 영업이익이 143조 원에 달했다",
+          "figure": "삼전닉스 제외 코스피 영업이익 143조 원 (단일 출처)",
+          "confidence": 0.7,
+          "source_ref": [
+            "이데일리(마켓인) 2026-08-19"
+          ],
+          "source_field": "keyword_news_evidence",
+          "cross_verified": false,
+          "contradiction_detected": false
+        },
+        {
+          "index": 4,
+          "fact": "상반기 반도체 주도 실적 호조(현금 증가·순이익 급증·영업이익 역대 최대)는 복수 매체에서 방향성이 일치하여 확인된다. 단, 각 개별 수치(117조·4배·143조)는 출처별로 상이한 지표를 사용하므로 수치 간 직접 교차검증은 불가",
+          "figure": "방향성 CONFIRMED, 개별 수치는 각각 단일 출처",
+          "confidence": 0.85,
+          "source_ref": [
+            "조선일보 2026-08-17",
+            "연합뉴스 2026-08-19",
+            "이데일리 2026-08-19"
+          ],
+          "source_field": "keyword_news_evidence",
+          "cross_verified": true,
+          "contradiction_detected": false
+        }
+      ]
+    },
+    "original_scene_prompt": {
+      "text": "The 2D gold coin mascot character (Goldie), Goldie, wearing a crisp white lab coat and round scientist goggles, stands confidently in a glowing data laboratory. Behind Goldie, a massive central monitor displays \"KOSPI Operating Profit: 143조\" in bold digits. Labeled containers marked \"Samsung Electronics\" and \"SK Hynix\" sit visibly set aside on a side shelf, excluded from the glowing profit calculation on screen. Goldie gestures proudly toward the impressive result.\n\noriginal 2D Korean finance comic, bold ink outlines, cel shading, single round gold coin mascot character only, no secondary mascot, no teal mint card mascot, no secondary people",
+      "sha256": "2055521c78708bc0408785670690ae70f25956eccf69d2d61724ab6835ce582b"
+    },
+    "bounded_pre_provider_prompt": {
+      "path": "bounded-pre-provider-prompt.txt",
+      "sha256": "7630d5f5697b20de4f10c67a972b2f39d06345014afba459f47dc62e49a3f984",
+      "character_count": 3306,
+      "text_contract": {
+        "version": "scene-local-text-contract-v5-approved-scene-surface",
+        "approved_texts": [
+          "삼성전자",
+          "SK하이닉스",
+          "코스피",
+          "143조 원"
+        ],
+        "generated_texts": [],
+        "deterministic_texts": [
+          "삼성전자",
+          "SK하이닉스",
+          "코스피",
+          "143조 원"
+        ],
+        "surface_plan": [
+          {
+            "text": "삼성전자",
+            "surface": "main",
+            "surface_kind": "board",
+            "purpose": "information",
+            "region": [
+              0.05,
+              0.08,
+              0.42,
+              0.38
+            ]
+          },
+          {
+            "text": "SK하이닉스",
+            "surface": "main",
+            "surface_kind": "board",
+            "purpose": "information",
+            "region": [
+              0.53,
+              0.08,
+              0.42,
+              0.38
+            ]
+          },
+          {
+            "text": "코스피",
+            "surface": "main",
+            "surface_kind": "board",
+            "purpose": "information",
+            "region": [
+              0.05,
+              0.54,
+              0.42,
+              0.38
+            ]
+          },
+          {
+            "text": "143조 원",
+            "surface": "main",
+            "surface_kind": "board",
+            "purpose": "information",
+            "region": [
+              0.53,
+              0.54,
+              0.42,
+              0.38
+            ],
+            "source_ref": "facts[3]"
+          }
+        ],
+        "surface_count": 1,
+        "placement_mode": "explicit_plan",
+        "hierarchy_policy": "follow_explicit_scene_plan",
+        "surface_material_policy": "integrated_opaque_scene_surface",
+        "detached_translucent_card_allowed": false,
+        "bubble_policy": "unplanned",
+        "bubble_allowed": false,
+        "bubble_text": "",
+        "sources": [
+          "scene.screen_texts",
+          "scene.screen_text_plan"
+        ],
+        "text_render_policy": "semantic_roles_v1",
+        "semantic_routing": [
+          {
+            "text": "삼성전자",
+            "purpose": "information",
+            "route": "deterministic",
+            "reason": "informational_text_exact",
+            "measured_min_character_height_ratio": null
+          },
+          {
+            "text": "SK하이닉스",
+            "purpose": "information",
+            "route": "deterministic",
+            "reason": "informational_text_exact",
+            "measured_min_character_height_ratio": null
+          },
+          {
+            "text": "코스피",
+            "purpose": "information",
+            "route": "deterministic",
+            "reason": "informational_text_exact",
+            "measured_min_character_height_ratio": null
+          },
+          {
+            "text": "143조 원",
+            "purpose": "information",
+            "route": "deterministic",
+            "reason": "informational_text_exact",
+            "measured_min_character_height_ratio": null
+          }
+        ]
+      },
+      "prompt_text_contract": {
+        "version": "scene-local-text-contract-v5-approved-scene-surface",
+        "changed": true,
+        "allowed_generated_texts": [],
+        "violations_before": [
+          {
+            "kind": "unapproved_quoted_text",
+            "text": "\"KOSPI Operating Profit: 143조\"",
+            "value": "KOSPI Operating Profit: 143조",
+            "start": 211
+          },
+          {
+            "kind": "unapproved_quoted_text",
+            "text": "\"Samsung Electronics\"",
+            "value": "Samsung Electronics",
+            "start": 284
+          },
+          {
+            "kind": "unapproved_quoted_text",
+            "text": "\"SK Hynix\"",
+            "value": "SK Hynix",
+            "start": 310
+          }
+        ],
+        "violations_after": [],
+        "retry_contract": false,
+        "retry_failure_categories": []
+      },
+      "character_integrity_contract": {
+        "version": "character-integrity-v5-coin-silhouette",
+        "changes": [],
+        "scene_wardrobe": "white lab coat and data goggles",
+        "bubble_policy": "unplanned",
+        "bubble_allowed": false
+      }
+    },
+    "reference_selection": {
+      "selection_limit": 3,
+      "context_group": "data_lab",
+      "context_group_candidates": [
+        "channel_style_job52_data_lab.png",
+        "channel_style_job52_briefing.png"
+      ],
+      "selected": [
+        {
+          "name": "channel_character_face_range_v2.png",
+          "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+        },
+        {
+          "name": "channel_character_face_scene05_v1.png",
+          "sha256": "7b6c97c2713bb70d34f0a3d71022bda16bd9a032a6d0417457bce6083bfae6e2"
+        },
+        {
+          "name": "channel_style_job52_data_lab.png",
+          "sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6"
+        }
+      ],
+      "all_active_candidates": [
+        {
+          "name": "channel_character_face_range_v2.png",
+          "role": "identity_face_range",
+          "selected_for_scene07": true,
+          "selected_order": 1,
+          "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e",
+          "byte_count": 1350934,
+          "size": [
+            1536,
+            1024
+          ],
+          "job52_exact_source_matches": []
+        },
+        {
+          "name": "channel_character_face_scene05_v1.png",
+          "role": "identity_role_face_anchor",
+          "selected_for_scene07": true,
+          "selected_order": 2,
+          "sha256": "7b6c97c2713bb70d34f0a3d71022bda16bd9a032a6d0417457bce6083bfae6e2",
+          "byte_count": 253347,
+          "size": [
+            512,
+            512
+          ],
+          "job52_exact_source_matches": []
+        },
+        {
+          "name": "channel_style_job52_data_lab.png",
+          "role": "scene_style_candidate",
+          "selected_for_scene07": true,
+          "selected_order": 3,
+          "sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6",
+          "byte_count": 3055386,
+          "size": [
+            1920,
+            1080
+          ],
+          "job52_exact_source_matches": [
+            "artifacts/job52_full_audit_20260824/images/scene_004.png"
+          ]
+        },
+        {
+          "name": "channel_style_job52_briefing.png",
+          "role": "scene_style_candidate",
+          "selected_for_scene07": false,
+          "selected_order": null,
+          "sha256": "b31b98d6b761534cdfcac5e1ac747e8a2be69c4bf168ac35b0e06b596c15c46a",
+          "byte_count": 2511872,
+          "size": [
+            1920,
+            1080
+          ],
+          "job52_exact_source_matches": [
+            "artifacts/job52_full_audit_20260824/images/scene_006.png"
+          ]
+        },
+        {
+          "name": "channel_style_job52_risk_map.png",
+          "role": "scene_style_candidate",
+          "selected_for_scene07": false,
+          "selected_order": null,
+          "sha256": "f9fd75a1622f865d3e81c4618ec3b4d8d35839c2de4c96daaba593beecda4337",
+          "byte_count": 2706220,
+          "size": [
+            1920,
+            1080
+          ],
+          "job52_exact_source_matches": [
+            "artifacts/job52_full_audit_20260824/images/scene_018.png"
+          ]
+        },
+        {
+          "name": "channel_style_job52_semiconductor.png",
+          "role": "scene_style_candidate",
+          "selected_for_scene07": false,
+          "selected_order": null,
+          "sha256": "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+          "byte_count": 2897733,
+          "size": [
+            1920,
+            1080
+          ],
+          "job52_exact_source_matches": [
+            "artifacts/job52_full_audit_20260824/images/scene_029.png"
+          ]
+        },
+        {
+          "name": "channel_style_job52_market_flow.png",
+          "role": "scene_style_candidate",
+          "selected_for_scene07": false,
+          "selected_order": null,
+          "sha256": "c9e821d51a44d7184f84de92962e76b244c8794d49c87ea009f143948a303a74",
+          "byte_count": 2926728,
+          "size": [
+            1920,
+            1080
+          ],
+          "job52_exact_source_matches": [
+            "artifacts/job52_full_audit_20260824/images/scene_043.png"
+          ]
+        },
+        {
+          "name": "channel_style_semiconductor_growth_scene_v1.png",
+          "role": "scene_style_candidate",
+          "selected_for_scene07": false,
+          "selected_order": null,
+          "sha256": "a2d2fee40b190d0efa1f78e30440db3fefffd2fe61a1b291d81cf7cfbf20c92c",
+          "byte_count": 2878510,
+          "size": [
+            1920,
+            1080
+          ],
+          "job52_exact_source_matches": [
+            "artifacts/job52_full_audit_20260824/images/scene_025.png"
+          ]
+        },
+        {
+          "name": "channel_style_semiconductor_production_scene_v1.png",
+          "role": "scene_style_candidate",
+          "selected_for_scene07": false,
+          "selected_order": null,
+          "sha256": "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d",
+          "byte_count": 2897733,
+          "size": [
+            1920,
+            1080
+          ],
+          "job52_exact_source_matches": [
+            "artifacts/job52_full_audit_20260824/images/scene_029.png"
+          ]
+        }
+      ],
+      "contact_sheet": "active-reference-contact-sheet.png"
+    },
+    "final_generate_content_prompt": {
+      "path": "final-gemini-prompt.txt",
+      "sha256": "5be5bc1982ea2ceed15301a858569634ae17173ee25f785fb8972555dd2ebdec",
+      "character_count": 6282,
+      "reference_parts_before_text": [
+        "channel_character_face_range_v2.png",
+        "channel_character_face_scene05_v1.png",
+        "channel_style_job52_data_lab.png"
+      ]
+    },
+    "post_generation": {
+      "order": [
+        "Gemini raw PNG",
+        "generated text/OCR gate",
+        "deterministic Pillow surface text",
+        "final OCR exact-match gate",
+        "holistic visual QA",
+        "user visual review for paid canary",
+        "Fal eligibility only after all still-image gates"
+      ]
+    }
+  },
+  "findings": {
+    "pilot_surface_plan_unique_surfaces": [
+      "main"
+    ],
+    "pilot_surface_plan": [
+      {
+        "text": "삼성전자",
+        "surface": "main",
+        "surface_kind": "board",
+        "purpose": "information",
+        "region": [
+          0.05,
+          0.08,
+          0.42,
+          0.38
+        ]
+      },
+      {
+        "text": "SK하이닉스",
+        "surface": "main",
+        "surface_kind": "board",
+        "purpose": "information",
+        "region": [
+          0.53,
+          0.08,
+          0.42,
+          0.38
+        ]
+      },
+      {
+        "text": "코스피",
+        "surface": "main",
+        "surface_kind": "board",
+        "purpose": "information",
+        "region": [
+          0.05,
+          0.54,
+          0.42,
+          0.38
+        ]
+      },
+      {
+        "text": "143조 원",
+        "surface": "main",
+        "surface_kind": "board",
+        "purpose": "information",
+        "region": [
+          0.53,
+          0.54,
+          0.42,
+          0.38
+        ],
+        "source_ref": "facts[3]"
+      }
+    ],
+    "pilot_surface_semantic_mismatch": true,
+    "pilot_only_plan_source": "scripts/run_gemini_eight_scene_pilot.py::prepare_pilot_scene",
+    "common_pipeline_gap": "automatic screen-text extraction does not create object-level semantic surface bindings",
+    "duplicate_active_reference_hashes": [
+      [
+        "channel_style_job52_semiconductor.png",
+        "channel_style_semiconductor_production_scene_v1.png",
+        "17ae053e86a9c99b2eda45d03c3ac9ae176f19a44e8b9cb5b0d0cb42be97479d"
+      ]
+    ],
+    "style_reference_is_full_scene_not_clean_style_only": true,
+    "style_reference_risks": [
+      "approved Job52 visual language and unwanted literal text/numbers coexist in the same raster",
+      "full-body anatomy varies across style scenes, so face-only identity references cannot fully disambiguate silhouette",
+      "the written reference contract forbids literal copying but cannot erase conflicting pixels from the visual input"
+    ],
+    "deterministic_surface_prompt_conflict_after_fix": false
+  },
+  "limitations": [
+    "This reconstructs the current code path; it is not the immutable historical payload sent by Job52.",
+    "No Gemini request was made, so no new image or usageMetadata exists.",
+    "Style/anatomy risk classification requires human review of the reference rasters and is not a provider-causality proof."
+  ]
+}
