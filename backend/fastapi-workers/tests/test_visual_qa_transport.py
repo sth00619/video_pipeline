@@ -125,6 +125,35 @@ def test_visual_qa_rejects_long_human_proportions_but_not_job52_costume_wrap(tmp
     assert "character_costume_wrap" not in failures
 
 
+def test_visual_qa_rejects_catchlight_without_separate_sclera_region(tmp_path: Path):
+    image = tmp_path / "black-oval-catchlight.png"
+    Image.new("RGB", (1920, 1080), "navy").save(image)
+    verdict = _accepted_verdict()
+    verdict.update({
+        "face_construction_quality_pass": True,
+        "separate_sclera_region_visible": False,
+        "warm_brown_iris_region_visible": False,
+        "decision": "review",
+        "reason": "검은 타원 안 캐치라이트만 있고 흰자와 갈색 홍채가 분리되지 않음",
+    })
+    scene = {
+        "index": 7,
+        "image_path": str(image),
+        "scene_spec": {"character_costume": "laboratory coat and goggles"},
+        "art_direction": {"character_required": True},
+    }
+
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), patch(
+        "app.utils.visual_qa._post_visual_review",
+        return_value=_visual_response(verdict),
+    ):
+        report = assess_visual_alignment([scene], enabled=True, max_scenes=1)
+
+    failures = report["reviewed"][0]["failure_categories"]
+    assert "character_sclera_structure" in failures
+    assert "character_warm_brown_iris" in failures
+
+
 def test_explicit_max_occurrences_one_rejects_two_visible_approved_labels(tmp_path: Path):
     image = tmp_path / "duplicate-label.png"
     Image.new("RGB", (1920, 1080), "navy").save(image)

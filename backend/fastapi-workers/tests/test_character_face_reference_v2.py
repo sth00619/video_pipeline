@@ -36,6 +36,10 @@ def test_face_reference_prompt_prioritizes_measured_face_without_freezing_costum
 
     prompt = observed["prompt"]
     assert "38% to 58% of the full visible eye width" in prompt
+    assert "white sclera is a surrounding eye region" in prompt
+    assert "catchlight dot inside an otherwise solid black oval does not count as sclera" in prompt
+    assert "warm brown iris inside the sclera" in prompt
+    assert "darker pupil inside that iris" in prompt
     assert "soft forehead reflection highlight is required" in prompt
     assert "gently curved eyebrows" in prompt
     assert "sharply angled or deeply furrowed eyebrows" in prompt
@@ -80,4 +84,16 @@ def test_scene07_promptfix_candidate_improves_sclera_but_still_fails_face_contra
     assert rows[0]["checks"]["warm_brown_iris"] is False
     assert rows[0]["checks"]["layered_catchlights"] is False
     assert rows[0]["checks"]["eyebrow_shape_allowed"] is False
+    assert rows[0]["face_contract_pass"] is False
+
+
+def test_common_quality_floor_scene07_reproduces_black_oval_without_sclera():
+    report = build_report(verify_sources=False)
+    rows = [row for row in report["samples"] if row["kind"] == "common_quality_floor_candidate"]
+    assert report["common_quality_floor_candidate_failure_count"] == 1
+    assert len(rows) == 1
+    assert rows[0]["scene"] == 7
+    assert rows[0]["checks"]["sclera_visible"] is False
+    assert rows[0]["checks"]["warm_brown_iris"] is False
+    assert rows[0]["observation"].startswith("흰 캐치라이트 점은 있으나")
     assert rows[0]["face_contract_pass"] is False

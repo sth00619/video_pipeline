@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="0.195" timestamp="2026-08-28T14:36:20.057756+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_character_face_reference_v2" name="test_face_reference_prompt_prioritizes_measured_face_without_freezing_costume" time="0.007"><failure message="AssertionError: assert 'white sclera is a surrounding eye region' in 'FINAL GEMINI REFERENCE CONTRACT [job52-range-v2-operational-v2]: Reference image 1 contains exact, non-generatively a...o one studio template. Do not reproduce marks from any reference image.\n\neconomic briefing with the gold coin mascot'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-136/test_face_reference_prompt_pri0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0xffff80af2630&gt;
+
+    def test_face_reference_prompt_prioritizes_measured_face_without_freezing_costume(tmp_path: Path, monkeypatch):
+        observed = {}
+    
+        class FakeNanaBananaProvider:
+            def generate(self, **kwargs):
+                observed.update(kwargs)
+                Path(kwargs["output_path"]).write_bytes(b"test-image")
+    
+        import app.providers.real.image as image_module
+    
+        monkeypatch.setattr(image_module, "NanaBananaProvider", FakeNanaBananaProvider)
+        face_range = tmp_path / "channel_character_face_range_v2.png"
+        style = tmp_path / "channel_style_job52_briefing.png"
+        face_range.write_bytes(b"face-range-v2")
+        style.write_bytes(b"style")
+    
+        GeminiProvider(api_key="test-key").generate(
+            "economic briefing with the gold coin mascot",
+            model=GeminiModel.PRO,
+            reference_image_paths=[str(face_range), str(style)],
+        )
+    
+        prompt = observed["prompt"]
+        assert "38% to 58% of the full visible eye width" in prompt
+&gt;       assert "white sclera is a surrounding eye region" in prompt
+E       AssertionError: assert 'white sclera is a surrounding eye region' in 'FINAL GEMINI REFERENCE CONTRACT [job52-range-v2-operational-v2]: Reference image 1 contains exact, non-generatively a...o one studio template. Do not reproduce marks from any reference image.\n\neconomic briefing with the gold coin mascot'
+
+tests/test_character_face_reference_v2.py:39: AssertionError</failure></testcase><testcase classname="tests.test_character_face_reference_v2" name="test_common_quality_floor_scene07_reproduces_black_oval_without_sclera" time="0.001"><failure message="KeyError: 'common_quality_floor_candidate_failure_count'">def test_common_quality_floor_scene07_reproduces_black_oval_without_sclera():
+        report = build_report(verify_sources=False)
+        rows = [row for row in report["samples"] if row["kind"] == "common_quality_floor_candidate"]
+&gt;       assert report["common_quality_floor_candidate_failure_count"] == 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'common_quality_floor_candidate_failure_count'
+
+tests/test_character_face_reference_v2.py:93: KeyError</failure></testcase><testcase classname="tests.test_visual_qa_transport" name="test_visual_qa_rejects_catchlight_without_separate_sclera_region" time="0.064"><failure message="AssertionError: assert 'character_sclera_structure' in ['visual_quality_floor']">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-136/test_visual_qa_rejects_catchli0')
+
+    def test_visual_qa_rejects_catchlight_without_separate_sclera_region(tmp_path: Path):
+        image = tmp_path / "black-oval-catchlight.png"
+        Image.new("RGB", (1920, 1080), "navy").save(image)
+        verdict = _accepted_verdict()
+        verdict.update({
+            "face_construction_quality_pass": True,
+            "separate_sclera_region_visible": False,
+            "warm_brown_iris_region_visible": False,
+            "decision": "review",
+            "reason": "검은 타원 안 캐치라이트만 있고 흰자와 갈색 홍채가 분리되지 않음",
+        })
+        scene = {
+            "index": 7,
+            "image_path": str(image),
+            "scene_spec": {"character_costume": "laboratory coat and goggles"},
+            "art_direction": {"character_required": True},
+        }
+    
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), patch(
+            "app.utils.visual_qa._post_visual_review",
+            return_value=_visual_response(verdict),
+        ):
+            report = assess_visual_alignment([scene], enabled=True, max_scenes=1)
+    
+        failures = report["reviewed"][0]["failure_categories"]
+&gt;       assert "character_sclera_structure" in failures
+E       AssertionError: assert 'character_sclera_structure' in ['visual_quality_floor']
+
+tests/test_visual_qa_transport.py:153: AssertionError</failure></testcase></testsuite></testsuites>
