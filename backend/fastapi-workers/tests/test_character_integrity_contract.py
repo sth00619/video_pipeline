@@ -37,7 +37,7 @@ def test_scene_specific_costume_and_expression_are_not_replaced_by_navy_uniform(
     assert "white laboratory coat and optional goggles" in prompt
     assert "navy finance-presenter suit" not in prompt
     assert "expression and acting change" in prompt.lower()
-    assert report["version"] == "character-integrity-v6-dominant-coin-silhouette"
+    assert report["version"] == "character-integrity-v7-explicit-open-eye-layers"
     assert report["scene_wardrobe"] == "white laboratory coat and optional goggles"
 
 

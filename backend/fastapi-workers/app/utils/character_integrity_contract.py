@@ -76,8 +76,10 @@ def apply_character_integrity_contract(
     ).strip()
     suffix = (
         " FINAL CHARACTER QUALITY BOUNDARY: keep the figure recognizably in the same round gold-coin mascot design family and 2D drawing language as the channel references. "
-        "Preserve the approved face construction while expression and acting change: large readable eyes with visible white sclera, warm brown pupil or iris detail, "
-        "layered white catchlights, a soft forehead reflection highlight, and gently curved eyebrows rather than sharply angled or deeply furrowed eyebrows. "
+        "Preserve the approved face construction while expression and acting change. Every materially open eye has four separate nested regions: "
+        "the white sclera is a surrounding eye region, a warm brown iris sits inside the sclera, a darker pupil sits inside that iris, and white catchlights sit inside the iris or pupil. "
+        "A catchlight dot inside an otherwise solid black oval does not count as sclera. Goggles or glasses must not erase these layers from an open eye. "
+        "Keep a soft forehead reflection highlight and gently curved eyebrows rather than sharply angled or deeply furrowed eyebrows. "
         "Costume, headwear, pose, mouth shape, scale, and framing remain scene-specific; do not force one outfit or one neutral expression. "
         "Reject a different character species, incompatible face language, or an accidental featureless emoji. "
         + COIN_SILHOUETTE_CONTRACT
@@ -99,7 +101,7 @@ def apply_character_integrity_contract(
             + ". "
         )
     return cleaned + suffix, {
-        "version": "character-integrity-v6-dominant-coin-silhouette",
+        "version": "character-integrity-v7-explicit-open-eye-layers",
         "changes": changes,
         "scene_wardrobe": wardrobe,
         "bubble_policy": bubble_policy,

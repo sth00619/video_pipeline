@@ -69,4 +69,4 @@ def test_preflight_removes_conflicting_legacy_surface_and_wardrobe_signals():
 
 
 def test_prompt_policy_change_invalidates_legacy_image_cache():
-    assert IMAGE_LINEAGE_FINGERPRINT_VERSION == 10
+    assert IMAGE_LINEAGE_FINGERPRINT_VERSION == 11

@@ -19,7 +19,7 @@ from app.utils.scene_visual_quality_contract import build_scene_visual_quality_c
 
 logger = logging.getLogger(__name__)
 VISUAL_QA_MODEL = "gemini-3.7-flash"
-VISUAL_QA_POLICY_VERSION = 17
+VISUAL_QA_POLICY_VERSION = 18
 _VISUAL_QA_GEMINI_OPEN_UNTIL = 0.0
 _VISUAL_QA_GEMINI_COOLDOWN_SECONDS = 600.0
 
@@ -328,8 +328,9 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 "DIVIDEND, or their accurate Korean equivalents are allowed even when they are not verbatim narration substrings. Do not call a coherent relevant label unexpected merely because it is unlisted. "
                 "Inspect whether the mascot remains within the broad character range visible across the Job52-style channel scenes: a round gold coin species, embossed rim, "
                 "compact cartoon anatomy, expressive readable face, and compatible 2D ink language. This is a family-range check, not a fixed model-sheet check. "
-                "Do not require one exact iris color, catchlight pattern, blush, nose, eye openness, costume, or presenter face. Simplified pupils in a deliberate shock or action "
-                "expression are allowed when the eyes retain coherent whites, brows, mouth, and channel drawing language. Flag only a genuinely different species/design or a "
+                "Do not require one frozen expression, blush, nose, eye openness, costume, or presenter face. For every materially open eye, separately inspect the broad white sclera surrounding "
+                "a discernible warm-brown iris, the darker pupil inside that iris, and the small white catchlight inside the iris or pupil. A white catchlight dot inside an otherwise solid black oval "
+                "is not sclera and fails the open-eye construction. Deliberately closed eyes remain allowed as expressive lines when brows, mouth, and channel drawing language are coherent. Flag only a genuinely different species/design or a "
                 "nearly featureless accidental emoji face. "
                 "Do not penalize scene-appropriate changes in expression, eye openness, brows, mouth, costume, headwear, pose, scale, or placement, "
                 "except when this scene supplies an explicit composition, camera, position, or occupancy plan. "
@@ -350,6 +351,8 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 "composition_plan_match (boolean); speech_bubble_present (boolean); anatomy_pass (boolean, legacy whole-scene field); "
                 "extra_limbs_or_hands (boolean, legacy whole-scene field); main_mascot_anatomy_pass (boolean); main_mascot_extra_limbs_or_hands (boolean); "
                 "wardrobe_match (boolean); wardrobe_role_match (boolean); face_identity_match (boolean); face_construction_quality_pass (boolean); "
+                "separate_sclera_region_visible (boolean; true when every materially open eye has a broad white region outside the iris, or when both eyes are deliberately closed; a catchlight dot alone is false); "
+                "warm_brown_iris_region_visible (boolean; true when every materially open eye has a discernible warm-brown iris separate from its darker pupil, or when both eyes are deliberately closed); "
                 "expression_role_match (boolean); style_family_match (boolean); scene_information_density_match (boolean); "
                 "coin_disc_dominant_silhouette (boolean; true when the round coin remains the dominant unified head-and-upper-body identity even if a scene costume wraps modestly below it); "
                 "compact_leg_proportion_match (boolean; true when each visible mascot leg is compact and roughly half the coin diameter or shorter, not a long human leg); "
@@ -544,6 +547,10 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 hard_failures.append("character_wardrobe")
             if character_required and not bool(verdict.get("face_construction_quality_pass", False)):
                 hard_failures.append("character_face_quality")
+            if character_required and not bool(verdict.get("separate_sclera_region_visible", False)):
+                hard_failures.append("character_sclera_structure")
+            if character_required and not bool(verdict.get("warm_brown_iris_region_visible", False)):
+                hard_failures.append("character_warm_brown_iris")
             if (
                 character_required
                 and (scene_variables.get("emotion") or scene_variables.get("action"))

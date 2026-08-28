@@ -17,7 +17,7 @@ def test_scene07_lineage_reconstructs_actual_reference_order_and_final_prompt():
         "channel_character_face_scene05_v1.png",
         "channel_style_job52_data_lab.png",
     ]
-    assert "FINAL GEMINI REFERENCE CONTRACT [job52-range-v2-operational-v2]" in final
+    assert "FINAL GEMINI REFERENCE CONTRACT [job52-range-v2-operational-v3-eye-layers]" in final
     assert final.endswith(bounded)
     assert "non-linguistic shapes" not in bounded
     assert report["findings"]["deterministic_surface_prompt_conflict_after_fix"] is False

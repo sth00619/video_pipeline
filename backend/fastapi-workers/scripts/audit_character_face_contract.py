@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from statistics import mean
 
+from PIL import Image
+
 
 REPO = Path(__file__).resolve().parents[3]
 MIN_RATIO = 0.38
@@ -116,6 +118,19 @@ SAMPLES = (
         "attempt_id": "a259e66e5bdd462997a639dade7dd77e",
         "observation": "검은 타원 눈은 해소됐지만 홍채가 작고 회청색이며 캐치라이트가 한 겹이고 눈썹이 각짐",
     },
+    {
+        "kind": "common_quality_floor_candidate", "scene": 7,
+        "path": "artifacts/common_quality_floor_canary_20260828/scene_07_raw.png",
+        "sha256": "b230878c7b685b18c118f47a9ba84deda554d0c18dfe9b34464475180861d493",
+        "eyes": [
+            ((1785, 540, 1855, 655), (1785, 540, 1855, 655)),
+            ((2028, 535, 2095, 655), (2028, 535, 2095, 655)),
+        ],
+        "sclera_visible": False, "warm_brown_iris": False, "layered_catchlights": False,
+        "forehead_highlight": True, "eyebrow_shape": "gentle_curve", "blush": False,
+        "attempt_id": "97931aa419cf4a7ea5fad1016f6a071d",
+        "observation": "흰 캐치라이트 점은 있으나 별도 흰자 영역과 갈색 홍채가 없는 검은 타원 눈",
+    },
 )
 
 
@@ -127,12 +142,45 @@ def bbox_width(box: tuple[int, int, int, int]) -> int:
     return box[2] - box[0]
 
 
+def eye_layer_pixel_ratios(
+    image_path: Path,
+    box: tuple[int, int, int, int],
+) -> dict[str, float]:
+    """수동 눈 ROI 안의 흰 영역·갈색 영역 비율을 보조 증거로 계산한다.
+
+    ROI 좌표가 필요한 감사용 계측이며 일반 장면의 눈 위치를 자동 추정하지
+    않는다. 따라서 운영 하드 게이트가 아니라 육안 판정 전 보조 근거다.
+    """
+    with Image.open(image_path) as source:
+        pixels = list(source.convert("RGB").crop(box).getdata())
+    count = max(1, len(pixels))
+    white = sum(
+        min(red, green, blue) >= 205 and max(red, green, blue) - min(red, green, blue) <= 45
+        for red, green, blue in pixels
+    )
+    warm_brown = sum(
+        45 <= red <= 210
+        and red >= green * 1.18
+        and green >= blue * 1.05
+        and red - blue >= 25
+        for red, green, blue in pixels
+    )
+    return {
+        "white_region_ratio": round(white / count, 4),
+        "warm_brown_region_ratio": round(warm_brown / count, 4),
+    }
+
+
 def evaluate(sample: dict, *, verify_source: bool = True) -> dict:
     path = REPO / sample["path"]
     actual_sha256 = sha256(path) if verify_source else sample["sha256"]
     if verify_source and actual_sha256 != sample["sha256"]:
         raise RuntimeError(f"원본 해시 불일치: {path}")
     ratios = [bbox_width(iris) / bbox_width(eye) for eye, iris in sample["eyes"]]
+    pixel_layers = (
+        [eye_layer_pixel_ratios(path, eye) for eye, _ in sample["eyes"]]
+        if verify_source else []
+    )
     checks = {
         "iris_width_ratio_in_range": all(MIN_RATIO <= value <= MAX_RATIO for value in ratios),
         "sclera_visible": sample["sclera_visible"],
@@ -150,6 +198,7 @@ def evaluate(sample: dict, *, verify_source: bool = True) -> dict:
             for (eye, iris), ratio in zip(sample["eyes"], ratios)
         ],
         "mean_iris_eye_width_ratio": round(mean(ratios), 4),
+        "eye_layer_pixel_ratios": pixel_layers,
         "checks": checks,
         "face_contract_pass": all(checks.values()),
     }
@@ -161,6 +210,9 @@ def build_report(*, verify_sources: bool = True) -> dict:
     pilots = [row for row in rows if row["kind"] == "pilot_failure"]
     reopen_candidates = [row for row in rows if row["kind"] == "reopen_candidate"]
     promptfix_candidates = [row for row in rows if row["kind"] == "promptfix_candidate"]
+    common_quality_floor_candidates = [
+        row for row in rows if row["kind"] == "common_quality_floor_candidate"
+    ]
     return {
         "schema_version": 1,
         "measurement_method": "원본 PNG의 눈/홍채 경계를 사람이 픽셀 좌표로 선택하고 비율은 코드로 계산",
@@ -181,6 +233,9 @@ def build_report(*, verify_sources: bool = True) -> dict:
         ),
         "promptfix_candidate_failure_count": sum(
             not row["face_contract_pass"] for row in promptfix_candidates
+        ),
+        "common_quality_floor_candidate_failure_count": sum(
+            not row["face_contract_pass"] for row in common_quality_floor_candidates
         ),
         "samples": rows,
     }

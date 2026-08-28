@@ -303,9 +303,11 @@ def test_operational_generate_content_injects_the_same_face_reference_contract_a
 
     prompt = captured["payload"]["contents"][0]["parts"][-1]["text"]
     assert "38% to 58% of the full visible eye width" in prompt
-    assert "visible white sclera" in prompt
-    assert "warm brown pupils or irises" in prompt
-    assert "layered white catchlights" in prompt
+    assert "white sclera is a surrounding eye region" in prompt
+    assert "warm brown iris inside the sclera" in prompt
+    assert "darker pupil inside that iris" in prompt
+    assert "white catchlights inside the iris or pupil" in prompt
+    assert "solid black oval does not count as sclera" in prompt
     assert "larger role-matched face crop" in prompt
     assert "Do not copy or freeze its expression, costume, goggles, pose" in prompt
 

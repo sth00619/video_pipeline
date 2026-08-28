@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "scope": "WO-IMG-01-H-B offline reference/prompt/eye-layer investigation",
+  "paid_api_calls": 0,
+  "references": [
+    {
+      "path": "backend/fastapi-workers/out/references/channel_character_face_range_v2.png",
+      "byte_count": 1350934,
+      "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+    },
+    {
+      "path": "backend/fastapi-workers/out/references/channel_character_face_scene05_v1.png",
+      "byte_count": 253347,
+      "sha256": "7b6c97c2713bb70d34f0a3d71022bda16bd9a032a6d0417457bce6083bfae6e2"
+    }
+  ],
+  "manifest_reference_hashes_match": true,
+  "historical_final_prompt": {
+    "path": "artifacts/common_quality_floor_canary_20260828/scene_07_final_prompt.txt",
+    "sha256": "c78a0ac909ad5f54bafa9f67676d8b1084b7dad2fa25baaf4eb1248896310500",
+    "had_visible_white_sclera": true,
+    "had_explicit_four_nested_regions": false
+  },
+  "pixel_comparison": {
+    "approved_reference:5": {
+      "kind": "approved_reference",
+      "scene": 5,
+      "path": "artifacts/job52_full_audit_20260824/images/scene_005.png",
+      "sha256": "f38142ec185ddab03e08d5baacdf9fbbda3659c168ecbeaa225f75483e92d46e",
+      "sclera_visible": true,
+      "warm_brown_iris": true,
+      "layered_catchlights": true,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": true,
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            765,
+            320,
+            830,
+            410
+          ],
+          "iris_bbox_xyxy": [
+            788,
+            335,
+            820,
+            398
+          ],
+          "iris_eye_width_ratio": 0.4923
+        },
+        {
+          "eye_bbox_xyxy": [
+            890,
+            310,
+            950,
+            400
+          ],
+          "iris_bbox_xyxy": [
+            907,
+            326,
+            936,
+            390
+          ],
+          "iris_eye_width_ratio": 0.4833
+        }
+      ],
+      "mean_iris_eye_width_ratio": 0.4878,
+      "eye_layer_pixel_ratios": [
+        {
+          "white_region_ratio": 0.2756,
+          "warm_brown_region_ratio": 0.0634
+        },
+        {
+          "white_region_ratio": 0.3317,
+          "warm_brown_region_ratio": 0.0046
+        }
+      ],
+      "checks": {
+        "iris_width_ratio_in_range": true,
+        "sclera_visible": true,
+        "warm_brown_iris": true,
+        "layered_catchlights": true,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": true
+    },
+    "common_quality_floor_candidate:7": {
+      "kind": "common_quality_floor_candidate",
+      "scene": 7,
+      "path": "artifacts/common_quality_floor_canary_20260828/scene_07_raw.png",
+      "sha256": "b230878c7b685b18c118f47a9ba84deda554d0c18dfe9b34464475180861d493",
+      "sclera_visible": false,
+      "warm_brown_iris": false,
+      "layered_catchlights": false,
+      "forehead_highlight": true,
+      "eyebrow_shape": "gentle_curve",
+      "blush": false,
+      "attempt_id": "97931aa419cf4a7ea5fad1016f6a071d",
+      "observation": "흰 캐치라이트 점은 있으나 별도 흰자 영역과 갈색 홍채가 없는 검은 타원 눈",
+      "source_hash_verified": true,
+      "eye_annotations": [
+        {
+          "eye_bbox_xyxy": [
+            1785,
+            540,
+            1855,
+            655
+          ],
+          "iris_bbox_xyxy": [
+            1785,
+            540,
+            1855,
+            655
+          ],
+          "iris_eye_width_ratio": 1.0
+        },
+        {
+          "eye_bbox_xyxy": [
+            2028,
+            535,
+            2095,
+            655
+          ],
+          "iris_bbox_xyxy": [
+            2028,
+            535,
+            2095,
+            655
+          ],
+          "iris_eye_width_ratio": 1.0
+        }
+      ],
+      "mean_iris_eye_width_ratio": 1.0,
+      "eye_layer_pixel_ratios": [
+        {
+          "white_region_ratio": 0.0516,
+          "warm_brown_region_ratio": 0.0053
+        },
+        {
+          "white_region_ratio": 0.0614,
+          "warm_brown_region_ratio": 0.0078
+        }
+      ],
+      "checks": {
+        "iris_width_ratio_in_range": false,
+        "sclera_visible": false,
+        "warm_brown_iris": false,
+        "layered_catchlights": false,
+        "forehead_highlight": true,
+        "eyebrow_shape_allowed": true
+      },
+      "face_contract_pass": false
+    }
+  },
+  "finding": {
+    "reference_missing": false,
+    "role_matched_reference_has_visible_sclera": true,
+    "historical_prompt_ambiguity": "pupil or iris wording did not distinguish sclera, iris, pupil, and catchlight as nested regions",
+    "production_pixel_hard_gate_added": false,
+    "reason_no_pixel_hard_gate": "general generated frames do not provide trustworthy eye ROIs; the ROI pixel metric remains offline evidence and visual QA plus mandatory user review remain the operational gates"
+  }
+}

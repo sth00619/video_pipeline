@@ -72,6 +72,8 @@ def _accepted_verdict() -> dict:
         "wardrobe_role_match": True,
         "face_identity_match": True,
         "face_construction_quality_pass": True,
+        "separate_sclera_region_visible": True,
+        "warm_brown_iris_region_visible": True,
         "expression_role_match": True,
         "style_family_match": True,
         "scene_information_density_match": True,

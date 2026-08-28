@@ -49,7 +49,7 @@ _FACE_ROLE_REF_NAMES = {
     "goggles": "channel_character_face_scene05_v1.png",
 }
 
-GEMINI_REFERENCE_CONTRACT_VERSION = "job52-range-v2-operational-v2"
+GEMINI_REFERENCE_CONTRACT_VERSION = "job52-range-v2-operational-v3-eye-layers"
 _REFERENCE_CONTRACT_MARKER = (
     f"FINAL GEMINI REFERENCE CONTRACT [{GEMINI_REFERENCE_CONTRACT_VERSION}]:"
 )
@@ -205,8 +205,10 @@ def ensure_gemini_reference_contract(
         face_index = face_range_indices[0]
         clauses.append(
             f"Reference image {face_index} contains exact, non-generatively altered face crops from approved Job52 scenes 03, 04, 05, 09, 13, and 14. "
-            "Use their shared face construction as the identity contract: preserve large readable eyes with warm brown pupils or irises whose diameter stays "
-            "within 38% to 58% of the full visible eye width, visible white sclera, and layered white catchlights. A soft forehead reflection highlight is required. "
+            "Use their shared face construction as the identity contract. For every materially open eye, render four visually separate nested regions: the white sclera is a surrounding eye region; "
+            "place a warm brown iris inside the sclera, a darker pupil inside that iris, and one or more white catchlights inside the iris or pupil. "
+            "A catchlight dot inside an otherwise solid black oval does not count as sclera. Keep the warm brown iris diameter within 38% to 58% of the full visible eye width. "
+            "Closed eyes may remain expressive lines, but goggles or glasses must not erase these layers from an open eye. A soft forehead reflection highlight is required. "
             "Use gently curved eyebrows that can rise or soften with the emotion; do not use sharply angled or deeply furrowed eyebrows. Keep subtle cheek blush "
             "when compatible with the scene lighting. The round gold-coin species, embossed rim, compact anatomy, and face construction takes priority over background and prop detail. "
             + COIN_SILHOUETTE_CONTRACT
