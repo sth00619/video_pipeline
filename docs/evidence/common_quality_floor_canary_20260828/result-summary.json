@@ -1,0 +1,73 @@
+{
+  "version": "common-quality-floor-canary-result-v1",
+  "execution_commit": "64bc136",
+  "policy_fix_commits": {
+    "red_specification": "48f0f88",
+    "green_implementation": "f0b5d01"
+  },
+  "execution": {
+    "model": "gemini-3-pro-image",
+    "service_tier": "standard",
+    "external_image_posts": 3,
+    "http_200": 3,
+    "retries": 0,
+    "reserved_cap_krw": 4800,
+    "usage_based_estimate_usd": 0.43288,
+    "usage_based_estimate_krw_at_1400": 606.032,
+    "billing_status": "unverified_until_console_reconciliation"
+  },
+  "usage_totals": {
+    "promptTokenCount": 6794,
+    "candidatesTokenCount": 4013,
+    "thoughtsTokenCount": 688,
+    "imageOutputTokenCount": 3360,
+    "nonImageCandidateTokenCount": 653,
+    "totalTokenCount": 11495
+  },
+  "scenes": [
+    {
+      "index": 7,
+      "attempt_id": "97931aa419cf4a7ea5fad1016f6a071d",
+      "image_sha256": "b230878c7b685b18c118f47a9ba84deda554d0c18dfe9b34464475180861d493",
+      "verdict": "rejected",
+      "failures": [
+        "character_face_identity",
+        "character_leg_proportion",
+        "deterministic_surface_not_bindable",
+        "scene_meaning_underexplained"
+      ]
+    },
+    {
+      "index": 28,
+      "attempt_id": "129ddb6efbdd4b4fadb8952d5781c565",
+      "image_sha256": "26396c0099b571d1a0946ace277d84b818bbfe82e10234cc43d5f8840be5974e",
+      "verdict": "rejected",
+      "failures": [
+        "approved_text_duplicate_three_times",
+        "ocr_false_negative_zero_hits"
+      ]
+    },
+    {
+      "index": 36,
+      "attempt_id": "276c94f50f6548b086e49a3bbda3255f",
+      "image_sha256": "4e27e597291de561878bfad04a84d6621d20ade5e7fe9972ac6e68f6c6691679",
+      "verdict": "rejected",
+      "failures": [
+        "approved_text_detached_as_bottom_caption",
+        "face_identity_outside_reference_range"
+      ],
+      "correction": "A costume extending below the coin rim is not itself an anatomy failure; approved Job52 references allow that variation."
+    }
+  ],
+  "validation": {
+    "red_archive": "10 failed, 39 passed",
+    "green_archive_focused": "77 passed",
+    "full_fastapi": "1143 passed, 20 warnings",
+    "paid_calls_after_policy_fix": 0
+  },
+  "production_effect": {
+    "image_lineage_fingerprint": 10,
+    "visual_qa_policy": 17,
+    "scope": "common generation and single-scene regeneration paths, not Job52-only"
+  }
+}
