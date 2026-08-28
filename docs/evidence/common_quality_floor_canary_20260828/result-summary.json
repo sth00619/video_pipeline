@@ -31,11 +31,11 @@
       "image_sha256": "b230878c7b685b18c118f47a9ba84deda554d0c18dfe9b34464475180861d493",
       "verdict": "rejected",
       "failures": [
-        "character_face_identity",
-        "character_leg_proportion",
+        "face_has_black_oval_eye_fill_and_white_catchlight_but_no_separate_sclera_or_brown_iris",
         "deterministic_surface_not_bindable",
         "scene_meaning_underexplained"
-      ]
+      ],
+      "manual_review_correction": "The raw file matches the request ledger. The earlier long-leg claim is withdrawn because the feet are frame-cropped and the visible proportion is not enough to establish a violation. Anatomy and style are improved versus the prior canary."
     },
     {
       "index": 28,
@@ -43,9 +43,11 @@
       "image_sha256": "26396c0099b571d1a0946ace277d84b818bbfe82e10234cc43d5f8840be5974e",
       "verdict": "rejected",
       "failures": [
-        "approved_text_duplicate_three_times",
+        "approved_text_exact_once",
+        "altered_suffix_variant_twice:대형주수",
         "ocr_false_negative_zero_hits"
-      ]
+      ],
+      "manual_review_correction": "The monitors read 대형주수, 대형주수, 대형주. This is an exact-string mutation plus multi-surface duplication, not three exact duplicates."
     },
     {
       "index": 36,
@@ -62,8 +64,9 @@
   "validation": {
     "red_archive": "10 failed, 39 passed",
     "green_archive_focused": "77 passed",
-    "full_fastapi": "1143 passed, 20 warnings",
-    "paid_calls_after_policy_fix": 0
+    "full_fastapi": "1144 passed, 20 warnings",
+    "paid_calls_after_policy_fix": 0,
+    "manual_review_correction_verified_at": "2026-08-28"
   },
   "production_effect": {
     "image_lineage_fingerprint": 10,

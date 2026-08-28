@@ -146,6 +146,25 @@ def test_strict_generated_text_lane_rejects_every_unapproved_word_and_number():
     assert result["passed"] is False
 
 
+def test_strict_generated_text_lane_rejects_canary_suffix_variant_when_ocr_reads_it():
+    scene = {
+        "screen_texts": ["대형주"],
+        "screen_text_plan": [{"text": "대형주", "max_occurrences": 1}],
+        "screen_text_validation": {"passed": True},
+        "generated_text_ocr_policy": {
+            "version": "strict-scene-local-generated-text-v1",
+            "require_all_approved": True,
+            "reject_unapproved": True,
+        },
+    }
+
+    result = visible_text_contract_result(["대형주", "대형주수"], scene)
+
+    assert result["occurrence_counts"] == {"대형주": 1}
+    assert result["unexpected_texts"] == ["대형주수"]
+    assert result["passed"] is False
+
+
 def test_ocr_fast_gate_rejects_unplanned_duplicate_even_when_spelling_is_approved():
     scene = {
         "screen_texts": ["영업이익"],

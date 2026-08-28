@@ -16,6 +16,9 @@ def test_exact_korean_label_can_span_complete_ocr_tokens():
 def test_prefix_or_suffix_hangul_cannot_hide_altered_approved_text():
     assert _find_exact_token_sequence([_row("비", 1), _row("영업이익", 2, 30)], "영업이익", 400) is None
     assert _find_exact_token_sequence([_row("영업이익", 1), _row("률", 2, 30)], "영업이익", 400) is None
+    # 실제 다장면 canary에서 생성된 `대형주수`는 OCR이 그 문자열을 읽기만
+    # 한다면 승인 문구 `대형주`의 정확 적중으로 절대 계산하면 안 된다.
+    assert _find_exact_token_sequence([_row("대형주수", 1)], "대형주", 400) is None
 
 
 def test_short_approved_label_lane_explicitly_enables_strict_ocr_policy():
