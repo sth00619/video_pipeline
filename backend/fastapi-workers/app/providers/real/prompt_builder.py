@@ -9,15 +9,16 @@ STYLE_LOCK = SHARED_STYLE_LOCK_PROMPT
 # 전역 스타일 계약도 이제 장면이 지정한 물리 표면 하나를 허용한다. 템플릿은
 # 그 허용 범위를 "정확히 하나"로 더 좁혀 보드 검출과 화풍 보존을 함께 고정한다.
 TEMPLATE_STYLE_LOCK = STYLE_LOCK + (
-    " Depict exactly one large unlabeled physical information board or screen specified by the scene template. "
+    " Depict exactly one bounded unlabeled physical information board or screen specified by the scene template. "
     "It must be a real prop with a matte interior and dark border, never a UI card, dashboard, document, title card, or floating rectangle. "
-    "Keep every other area as a continuous full-bleed illustrated background."
+    "Keep it subordinate to the economic story and keep every other area as a dense continuous full-bleed illustrated background."
 )
 
 CHARACTER_LOCK = (
     "Goldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, "
-    "rosy cheeks, white-gloved four-fingered hands, and thin dark legs. Preserve the exact face, silhouette, palette and line "
-    "language of the attached reference sheet; do not create a second mascot."
+    "rosy cheeks, white-gloved four-fingered hands, two short compact arms, and two short compact legs. One round coin disc forms the complete head-and-torso. "
+    "Preserve the broad face-construction, silhouette, palette and 2D line-language range across the attached channel references while allowing the scene-specific expression and outfit; "
+    "do not create a second mascot or attach a separate human torso or long human legs."
 )
 
 
@@ -29,8 +30,8 @@ def build_prompt(spec: SceneSpec, market_chart: dict | None = None, template=Non
     if market_chart:
         data_surface_clause = (
             " The mascot character stands entirely within the LEFT third of the frame."
-            " The RIGHT half of the frame contains a large blank illustrated charcoal chalkboard or painted cartoon panel,"
-            " completely empty inside, with hand-drawn frame edges and subtle chalk texture; no text, numbers, chart,"
+            " The RIGHT side contains one bounded illustrated charcoal chalkboard or painted cartoon panel occupying no more than roughly 22 percent of the frame,"
+            " completely empty inside, with hand-drawn frame edges and subtle chalk texture; the remaining frame stays dense with narration-specific economic context. No text, numbers, chart,"
             " or character parts overlapping the panel."
         )
         

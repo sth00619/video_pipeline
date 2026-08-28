@@ -24,15 +24,15 @@ def _reset_visual_qa_circuit():
     visual_qa_module._VISUAL_QA_GEMINI_OPEN_UNTIL = 0.0
 
 
-def test_policy15_reuses_policy14_review_unrelated_to_card_material():
-    assert _cached_review_policy_compatible({
+def test_policy16_rechecks_policy14_review_without_cross_scene_quality_floor():
+    assert not _cached_review_policy_compatible({
         "policy_version": 14,
         "failure_categories": [],
         "raw": {"detached_translucent_text_card_present": False},
     })
 
 
-def test_policy15_rechecks_policy14_detached_card_verdict():
+def test_policy16_rechecks_policy14_detached_card_verdict():
     assert not _cached_review_policy_compatible({
         "policy_version": 14,
         "failure_categories": ["text_surface_detached_translucent_card"],
@@ -66,7 +66,14 @@ def _accepted_verdict() -> dict:
         "main_mascot_anatomy_pass": True,
         "main_mascot_extra_limbs_or_hands": False,
         "wardrobe_match": True,
+        "wardrobe_role_match": True,
         "face_identity_match": True,
+        "face_construction_quality_pass": True,
+        "expression_role_match": True,
+        "style_family_match": True,
+        "scene_information_density_match": True,
+        "deterministic_surface_scale_match": True,
+        "scene_causal_story_match": True,
         "minimal_dot_eye_face": False,
         "detached_translucent_text_card_present": False,
         "detached_unmounted_text_card_present": False,
@@ -83,6 +90,50 @@ def _accepted_verdict() -> dict:
         "number_panel_only": False,
         "decision": "accept",
         "reason": "장면 계약 일치",
+    }
+
+
+def test_visual_qa_enforces_common_floor_while_preserving_scene_variation(tmp_path: Path):
+    image = tmp_path / "role-specific.png"
+    Image.new("RGB", (1920, 1080), "navy").save(image)
+    verdict = _accepted_verdict()
+    verdict.update({
+        "face_construction_quality_pass": False,
+        "expression_role_match": False,
+        "wardrobe_role_match": False,
+        "style_family_match": False,
+        "scene_information_density_match": False,
+        "deterministic_surface_scale_match": False,
+        "scene_causal_story_match": False,
+        "decision": "review",
+    })
+    scene = {
+        "index": 7,
+        "image_path": str(image),
+        "screen_texts": ["143조 원"],
+        "screen_text_validation": {"passed": True},
+        "scene_spec": {
+            "character_costume": "semiconductor laboratory coat",
+            "character_emotion": "curious surprise",
+            "character_action": "examining two chips",
+        },
+        "art_direction": {"character_required": True},
+    }
+
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), patch(
+        "app.utils.visual_qa._post_visual_review",
+        return_value=_visual_response(verdict),
+    ):
+        report = assess_visual_alignment([scene], enabled=True, max_scenes=1)
+
+    assert set(report["reviewed"][0]["failure_categories"]) >= {
+        "character_face_quality",
+        "character_expression_role",
+        "character_wardrobe",
+        "style_family_mismatch",
+        "scene_information_density",
+        "deterministic_surface_oversized",
+        "scene_semantic_underexplained",
     }
 
 

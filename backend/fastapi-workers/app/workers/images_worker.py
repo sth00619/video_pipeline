@@ -29,6 +29,10 @@ from app import runtime_config
 from app.utils.quality_gate import enrich_scene_plan, assess_images, persist_quality_report
 from app.utils.art_direction import direct_scenes, plan_image_quality_tiers, compile_editorial_prompt, assess_art_diversity, flag_archetype_content_mismatch
 from app.utils.scene_entity_binder import bind_scene_entities, compute_grounding_score
+from app.utils.scene_visual_quality_contract import (
+    build_scene_visual_quality_contract,
+    scene_visual_quality_prompt,
+)
 from app.utils.visual_qa import assess_local_edit_preservation, assess_visual_alignment
 from app.utils import gemini_batch
 from app.pipeline.scene_director import SceneDirector, SceneSpec, fallback_spec
@@ -100,7 +104,7 @@ STYLE_SUFFIX = (
 # LLM이 같은 승인 장면을 조금 다르게 표현해도 재개 실행이 이미 승인된 PNG를
 # 전부 다시 과금하지 않도록, 생성 문장 자체가 아니라 안정적인 장면 계약에
 # 지문을 묶는다. 프롬프트 정책을 의도적으로 바꾸면 이 버전을 올린다.
-IMAGE_LINEAGE_FINGERPRINT_VERSION = 7
+IMAGE_LINEAGE_FINGERPRINT_VERSION = 8
 PROMPT_CACHE_POLICY_VERSION = 7
 PROMPT_CACHE_COMPATIBLE_VERSIONS = (6,)
 
@@ -278,6 +282,10 @@ def _bounded_text_generation_prompt(
     """승인 문자열은 보존하고 비승인 문자열만 이미지 프롬프트에서 제거한다."""
     cleaned = str(prompt or "")
     text_contract = build_scene_text_contract(audit_target)
+    visual_quality_contract = build_scene_visual_quality_contract(
+        audit_target,
+        text_contract=text_contract,
+    )
     generated_texts = list(text_contract["generated_texts"])
     cleaned, report = require_sanitized_generated_text_prompt(
         cleaned,
@@ -286,6 +294,7 @@ def _bounded_text_generation_prompt(
     cleaned = _sanitize_unplanned_prompt_structure(cleaned, text_contract)
     if isinstance(audit_target, dict):
         audit_target["image_text_contract"] = text_contract
+        audit_target["scene_visual_quality_contract"] = visual_quality_contract
         audit_target["image_prompt_text_contract"] = {
             **report,
             "retry_contract": bool(retry),
@@ -337,6 +346,7 @@ def _bounded_text_generation_prompt(
             "Do not draw, imitate, translate, or guess any of the withheld deterministic strings or values yourself. Do not add a second placard, detached card, empty safe zone, "
             "or generic panel merely to hold the later typography."
         )
+    suffix += scene_visual_quality_prompt(visual_quality_contract)
     if retry:
         categories = set((retry_feedback or {}).get("failure_categories") or ["text_unexpected_or_malformed"])
         reason = str((retry_feedback or {}).get("reason") or "").strip()
@@ -352,11 +362,16 @@ def _bounded_text_generation_prompt(
             )
         if categories & {"character_anatomy", "character_extra_limbs"}:
             suffix += " Correct only the main mascot anatomy: one connected body, exactly two arms and two hands, with no detached or duplicate limb."
-        if categories & {"character_face_identity", "character_face_simplified"}:
+        if categories & {"character_face_identity", "character_face_simplified", "character_face_quality"}:
             suffix += (
-                " Correct only the mascot into the broad round gold-coin 2D family shown across the channel scene references: embossed rim, coherent expressive face, "
-                "compact cartoon anatomy, and compatible dark ink language. Do not copy one reference face, iris treatment, blush, costume, pose, or action."
+                " Correct only the mascot face into the broad round gold-coin 2D family shown across the channel scene references: embossed rim and an intentional readable expression at this scale. "
+                "Preserve this scene's emotion; deliberate closed or simplified action eyes are valid when brows, mouth, whites, and acting remain coherent. "
+                "Do not copy one reference expression, iris treatment, blush, costume, pose, or action."
             )
+        if "character_expression_role" in categories:
+            suffix += " Correct only the face and body acting so they clearly perform this scene's supplied emotion and action role; do not replace them with one default presenter expression."
+        if "character_wardrobe" in categories:
+            suffix += " Correct only the wardrobe so it serves this scene's supplied role and location; do not impose one recurring suit, hat, police uniform, or laboratory coat across unrelated scenes."
         if "speech_bubble_unapproved" in categories:
             suffix += " Remove only the unplanned speech or thought bubble and restore the background behind it."
         if "text_surface_detached_translucent_card" in categories:
@@ -370,6 +385,11 @@ def _bounded_text_generation_prompt(
                 " Recompose one storyboard-essential existing object in this exact setting so its physical monitor, gauge, product face, board, or document includes "
                 "a calm readable region occupying roughly 6 to 14 percent of the frame. Keep that object causally connected to the narration, fully visible, and clear of every character and hand. "
                 "Do not add a second placard, floating card, title card, giant board, hologram, or empty studio composition."
+            )
+        if "deterministic_surface_oversized" in categories:
+            suffix += (
+                " Shrink only the text-bearing physical surface to the scene contract's frame budget and restore the released area with narration-specific props, mechanisms, depth, and causal action. "
+                "Do not remove the physical surface or write withheld deterministic values yourself."
             )
         if "local_edit_blur_smear_artifact" in categories:
             suffix += (
@@ -385,6 +405,14 @@ def _bounded_text_generation_prompt(
             suffix += " Correct only the explicit scene composition, camera, or placement mismatch while preserving all successful content."
         if "scene_semantic_mismatch" in categories:
             suffix += " Replace only the off-topic visual metaphor with concrete objects and actions that directly explain this scene's narration."
+        if "scene_semantic_underexplained" in categories:
+            suffix += " Strengthen only the narration's missing causal relationship using concrete scene-specific objects and action; avoid generic finance decoration."
+        if "scene_information_density" in categories:
+            suffix += " Restore useful Job-52-like information density outside the bounded text surface with relevant layered props, mechanisms, context, and depth; do not fill space with random labels or numbers."
+        if "style_family_mismatch" in categories:
+            suffix += " Restore the shared original 2D editorial-comic family while preserving this scene's unique location, palette, costume, and emotion."
+        if "visual_quality_floor" in categories:
+            suffix += " Raise the weak reviewed dimensions above the common acceptance floor without changing scene variables that already passed."
         if "style_severe_mismatch" in categories:
             suffix += " Restore the original Job-52-like 2D editorial comic language: bold variable ink, cel shading, colorful layered finance context; no glossy 3D or empty studio."
         if reason:
@@ -516,6 +544,8 @@ def _inspect_generated_visual_image_impl(scene: dict, image_path: str) -> dict:
 
     review = reviewed[0]
     failures = list(review.get("failure_categories") or [])
+    if bool(review.get("retry_recommended")) and not failures:
+        failures.append("visual_quality_floor")
     failures = list(dict.fromkeys(failures))
     review["failure_categories"] = failures
     scene["visual_qa_review"] = review

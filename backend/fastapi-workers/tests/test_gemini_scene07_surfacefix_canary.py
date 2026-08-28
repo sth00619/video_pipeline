@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pytest
 
-from app.v5.providers.gemini_provider import ensure_gemini_reference_contract
 from scripts.run_gemini_scene07_surfacefix_canary import prepare_row, validate_spec
 
 
@@ -24,20 +23,12 @@ def test_surfacefix_canary_allows_one_post_and_stops_for_user_review():
     assert value["authorization"]["continuation"] == "stop_after_one_for_user_visual_review"
 
 
-def test_surfacefix_canary_isolates_two_fixes_and_preserves_known_surface_mismatch():
+def test_historical_surfacefix_canary_refuses_replay_after_common_prompt_contract_changes():
     value = spec()
-    row = prepare_row(value)
-    assert row["references"] == value["expected_references"]
-    assert "calm uniform interior" in row["prompt"]
-    assert "non-linguistic shapes" not in row["prompt"]
-    assert "Two unlettered containers" in row["prompt"]
-    assert {item["surface"] for item in row["scene"]["screen_text_plan"]} == {"main"}
-    assert [item["text"] for item in row["scene"]["screen_text_plan"]] == [
-        "삼성전자", "SK하이닉스", "코스피", "143조 원"
-    ]
-    assert row["final_prompt"] == ensure_gemini_reference_contract(
-        row["prompt"], row["reference_paths"]
-    )
+    # 이 사양은 당시 두 변수만 격리한 유료 canary의 불변 증거다. 이후 공통
+    # 운영 프롬프트가 바뀌면 과거 해시를 새 결과처럼 재사용하지 않아야 한다.
+    with pytest.raises(RuntimeError, match="bounded 프롬프트 해시"):
+        prepare_row(value)
 
 
 def test_surfacefix_canary_rejects_semantic_binding_or_budget_drift():

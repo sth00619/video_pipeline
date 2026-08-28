@@ -139,6 +139,29 @@ def test_visual_gate_rejects_only_reported_scene_categories(tmp_path, monkeypatc
     assert raised.value.review["failure_categories"] == ["character_extra_limbs"]
 
 
+def test_visual_gate_does_not_accept_unclassified_review_recommendation(tmp_path, monkeypatch):
+    image = _png(tmp_path)
+    monkeypatch.setattr("app.workers.images_worker.runtime_config.value", lambda key: True)
+    monkeypatch.setattr(
+        "app.workers.images_worker.assess_visual_alignment",
+        lambda scenes, enabled, max_scenes: {
+            "warnings": [],
+            "reviewed": [{
+                "index": 0,
+                "retry_recommended": True,
+                "failure_categories": [],
+                "reason": "공통 품질 하한선 미달",
+                "raw": {"scene_match": 72, "style_adherence": 76},
+            }],
+        },
+    )
+
+    with pytest.raises(GeneratedImageVisualContractError) as raised:
+        _inspect_generated_visual_image({"index": 0}, str(image))
+
+    assert raised.value.review["failure_categories"] == ["visual_quality_floor"]
+
+
 def test_retry_keeps_information_props_and_targets_only_bad_surface():
     scene = {
         "screen_texts": ["영업이익"],

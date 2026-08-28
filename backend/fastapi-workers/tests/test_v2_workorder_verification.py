@@ -63,4 +63,4 @@ def test_qa_gates_all_four_items():
 def test_template_style_lock_preserves_textless_numeric_ban():
     assert "NO image-model-generated financial numbers" in STYLE_LOCK
     assert "NO image-model-generated financial numbers" in TEMPLATE_STYLE_LOCK
-    assert "Depict exactly one large unlabeled physical information board" in TEMPLATE_STYLE_LOCK
+    assert "Depict exactly one bounded unlabeled physical information board" in TEMPLATE_STYLE_LOCK

@@ -49,8 +49,8 @@ _ROLES = [
 ]
 
 _SYSTEM = """You are the scene director for an original Korean finance YouTube channel.
-Goldie is an anthropomorphic GOLD COIN mascot: embossed dot rim, expressive cartoon eyes,
-rosy cheeks, white-gloved hands and thin dark legs. Do not copy any existing channel mascot.
+Goldie is an anthropomorphic GOLD COIN mascot: one round coin disc forms the complete head-and-torso,
+with an embossed dot rim, expressive cartoon eyes, white-gloved hands, two short compact arms, and two short compact legs. Do not copy any existing channel mascot.
 Convert each narration line into the most suitable 2D editorial scene. Preserve the channel's shared
 gold-coin mascot drawing language, but do not freeze one face, navy outfit, hat, character size, or
 presenter pose across the video. Costume and expression may change substantially when the metaphor

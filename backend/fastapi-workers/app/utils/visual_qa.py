@@ -15,10 +15,11 @@ import requests
 from PIL import Image
 
 from app.utils.image_text_contract import contains_financial_number, visible_text_contract_result
+from app.utils.scene_visual_quality_contract import build_scene_visual_quality_contract
 
 logger = logging.getLogger(__name__)
 VISUAL_QA_MODEL = "gemini-3.7-flash"
-VISUAL_QA_POLICY_VERSION = 15
+VISUAL_QA_POLICY_VERSION = 16
 _VISUAL_QA_GEMINI_OPEN_UNTIL = 0.0
 _VISUAL_QA_GEMINI_COOLDOWN_SECONDS = 600.0
 
@@ -43,18 +44,9 @@ def _image_sha256(image_path: Path) -> str:
 
 
 def _cached_review_policy_compatible(review: dict[str, Any]) -> bool:
-    """카드 판정과 무관한 v14 합격 프레임은 정책 15에서도 재사용한다."""
+    """공통 품질 하한선까지 판정한 현재 정책 결과만 재사용한다."""
     version = int(review.get("policy_version") or 0)
-    if version == VISUAL_QA_POLICY_VERSION:
-        return True
-    if version != 14:
-        return False
-    raw = review.get("raw") if isinstance(review.get("raw"), dict) else {}
-    failures = set(review.get("failure_categories") or [])
-    return (
-        "text_surface_detached_translucent_card" not in failures
-        and not bool(raw.get("detached_translucent_text_card_present"))
-    )
+    return version == VISUAL_QA_POLICY_VERSION
 
 
 def _encode_review_image(image_path: Path) -> str:
@@ -256,6 +248,12 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
             direction = scene.get("art_direction") or {}
             render_contract = scene.get("v5_render_contract") or {}
             text_contract = scene.get("image_text_contract") or {}
+            visual_quality_contract = scene.get("scene_visual_quality_contract") or build_scene_visual_quality_contract(
+                scene,
+                text_contract=text_contract or None,
+            )
+            scene_variables = visual_quality_contract.get("scene_variables") or {}
+            deterministic_surface_contract = visual_quality_contract.get("deterministic_surface") or {}
             approved_texts = list(text_contract.get("approved_texts") or scene.get("screen_texts") or [])
             bubble_policy = str(text_contract.get("bubble_policy") or scene.get("bubble_policy") or "unplanned")
             bubble_allowed = bubble_policy in {"allowed", "required"} or bool(text_contract.get("bubble_allowed") or scene.get("allow_speech_bubble"))
@@ -335,6 +333,10 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 "nearly featureless accidental emoji face. "
                 "Do not penalize scene-appropriate changes in expression, eye openness, brows, mouth, costume, headwear, pose, scale, or placement, "
                 "except when this scene supplies an explicit composition, camera, position, or occupancy plan. "
+                "Apply one shared acceptance floor without forcing identical scene direction. The face construction must be intentional and readable at the shown scale; "
+                "closed or simplified eyes are allowed only when coherent whites, brows, mouth, and acting make the expression deliberate. Judge wardrobe and expression by whether "
+                "they perform this scene's supplied role, not by pixel similarity to one reference. Require the same original 2D editorial-comic family, narration-specific causal story, "
+                "and information-rich economic setting in every scene. A deterministic typography surface must remain a bounded subordinate in-world prop rather than dominating the frame. "
                 "Detect a genuinely different character design and inspect MAIN GOLD-COIN MASCOT anatomy separately from supporting people. Audience members may have their own hands, "
                 "and a foreground person's arm naturally cropped by the frame is not an extra mascot limb. Flag only extra, detached, fused, or contradictory limbs belonging to the main mascot. "
                 "Detect speech or thought bubbles. "
@@ -345,7 +347,9 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 "missing_approved_texts (string array); approved_text_occurrence_counts (object string-to-integer); "
                 "composition_plan_match (boolean); speech_bubble_present (boolean); anatomy_pass (boolean, legacy whole-scene field); "
                 "extra_limbs_or_hands (boolean, legacy whole-scene field); main_mascot_anatomy_pass (boolean); main_mascot_extra_limbs_or_hands (boolean); "
-                "wardrobe_match (boolean); face_identity_match (boolean); "
+                "wardrobe_match (boolean); wardrobe_role_match (boolean); face_identity_match (boolean); face_construction_quality_pass (boolean); "
+                "expression_role_match (boolean); style_family_match (boolean); scene_information_density_match (boolean); "
+                "deterministic_surface_scale_match (boolean); scene_causal_story_match (boolean); "
                 "minimal_dot_eye_face (boolean; true only for a nearly featureless accidental emoji, not expressive shock pupils); detached_translucent_text_card_present "
                 "(boolean; true only for a floating glass/UI card without physical mounting; an opaque wall sign, monitor, chalkboard, paper, gauge, or stage board is false); "
                 "detached_unmounted_text_card_present (boolean; true only when the text rectangle has no visible frame attachment, wall attachment, stand, legs, poles, truss, desk/device body, or other physical support); "
@@ -374,7 +378,10 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 f"Scene family: {direction.get('family') or ''}\n"
                 f"Required setting: {direction.get('setting') or ''}\n"
                 f"Required props (strict only): {', '.join(required_props)}\n"
-                f"Scene-specific wardrobe reference, informational unless strict: {expected_wardrobe}\n"
+                f"Scene-specific wardrobe role: {expected_wardrobe or scene_variables.get('wardrobe') or ''}\n"
+                f"Scene-specific expression role: {scene_variables.get('emotion') or ''}\n"
+                f"Scene-specific action role: {scene_variables.get('action') or ''}\n"
+                f"Shared visual quality contract: {json.dumps(visual_quality_contract, ensure_ascii=False)}\n"
                 f"Wardrobe strict: {wardrobe_strict}\n"
                 f"Explicit composition, empty means unrestricted: {expected_composition}\n"
                 f"Explicit camera, empty means unrestricted: {expected_camera}\n"
@@ -517,6 +524,20 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 hard_failures.append("character_wardrobe")
             if (
                 character_required
+                and (expected_wardrobe or scene_variables.get("wardrobe"))
+                and not bool(verdict.get("wardrobe_role_match", False))
+            ):
+                hard_failures.append("character_wardrobe")
+            if character_required and not bool(verdict.get("face_construction_quality_pass", False)):
+                hard_failures.append("character_face_quality")
+            if (
+                character_required
+                and (scene_variables.get("emotion") or scene_variables.get("action"))
+                and not bool(verdict.get("expression_role_match", False))
+            ):
+                hard_failures.append("character_expression_role")
+            if (
+                character_required
                 and not bool(verdict.get("face_identity_match", False))
                 and float(verdict.get("character_identity", 0) or 0) < 60
             ):
@@ -552,6 +573,17 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 and float(verdict.get("style_adherence", 0) or 0) < 45
             ):
                 hard_failures.append("style_severe_mismatch")
+            if not bool(verdict.get("style_family_match", False)):
+                hard_failures.append("style_family_mismatch")
+            if not bool(verdict.get("scene_information_density_match", False)):
+                hard_failures.append("scene_information_density")
+            if (
+                bool(deterministic_surface_contract.get("required"))
+                and not bool(verdict.get("deterministic_surface_scale_match", False))
+            ):
+                hard_failures.append("deterministic_surface_oversized")
+            if not bool(verdict.get("scene_causal_story_match", False)):
+                hard_failures.append("scene_semantic_underexplained")
             if (
                 bool(verdict.get("semantic_contradiction"))
                 and float(verdict.get("scene_match", 0) or 0) < 50
@@ -567,6 +599,8 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
             ):
                 hard_failures.append("scene_composition_plan_mismatch")
             retry = bool(hard_failures) or score < 78 or str(verdict.get("decision", "")).lower() == "review"
+            if retry and not hard_failures:
+                hard_failures.append("visual_quality_floor")
             report["reviewed"].append({
                 "index": index,
                 "score": score,

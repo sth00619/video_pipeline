@@ -35,7 +35,7 @@ def test_template_prompt_has_no_board_prohibition():
     template = select_template(_scene(stage_items=[{"label":"1","source_refs":["x"]}, {"label":"2","source_refs":["x"]}]))
     prompt = build_prompt(fallback_spec("0", "검증"), None, template)
     assert "Do not depict screens" not in prompt
-    assert "large unlabeled physical information board" in prompt
+    assert "bounded unlabeled physical information board" in prompt
 
 
 @pytest.mark.parametrize("kind", ["stage_locks", "blueprint_callouts", "map_clouds", "flow_chalk"])
