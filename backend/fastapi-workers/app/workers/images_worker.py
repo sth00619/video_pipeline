@@ -104,7 +104,7 @@ STYLE_SUFFIX = (
 # LLM이 같은 승인 장면을 조금 다르게 표현해도 재개 실행이 이미 승인된 PNG를
 # 전부 다시 과금하지 않도록, 생성 문장 자체가 아니라 안정적인 장면 계약에
 # 지문을 묶는다. 프롬프트 정책을 의도적으로 바꾸면 이 버전을 올린다.
-IMAGE_LINEAGE_FINGERPRINT_VERSION = 8
+IMAGE_LINEAGE_FINGERPRINT_VERSION = 9
 PROMPT_CACHE_POLICY_VERSION = 7
 PROMPT_CACHE_COMPATIBLE_VERSIONS = (6,)
 
@@ -229,6 +229,18 @@ def _sanitize_unplanned_prompt_structure(prompt: str, text_contract: dict) -> st
         )
 
     has_deterministic_text = bool(text_contract.get("deterministic_texts"))
+    has_approved_text = bool(text_contract.get("approved_texts"))
+    if has_approved_text:
+        # 과거 장면 프롬프트의 거대 모니터 지시는 공통 표면 예산(16~24%)과
+        # 정면으로 충돌한다. 문자 표면을 뜻하는 경우에만 크기 형용사를
+        # 중립화하고, 터빈·항만·공장 같은 의미 전달 소품의 크기는 보존한다.
+        cleaned = re.sub(
+            r"\b(?:massive|giant|oversized|huge|enormous|large)\s+"
+            r"((?:central\s+|wall(?:-mounted)?\s+)?(?:monitor|screen|display|board|panel)(?:\s+wall)?)\b",
+            r"bounded \1",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
     if has_deterministic_text:
         # 문자 제거기가 따옴표 속 수치를 중립화할 때 쓰는 일반 장면 표현은
         # 비수치 씬에서는 유용하지만, 같은 위치에 결정론 문자를 합성해야 하는

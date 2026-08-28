@@ -1,0 +1,96 @@
+{
+  "version": "common-scene-visual-quality-floor-canary-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "basis": "사용자 2026-08-28: 서로 다른 장면 유형 2~3개 canary 진행 승인",
+    "approved_total_reserved_krw": 4800,
+    "reserved_per_scene_krw": 1600,
+    "external_image_post_limit": 3,
+    "attempts_per_scene": 1,
+    "retry_on_failure": false,
+    "stop_remaining_after_provider_failure": true
+  },
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "image_size": "2K",
+  "scene42_frozen_and_excluded": true,
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "face_reference": {
+    "name": "channel_character_face_range_v2.png",
+    "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+  },
+  "provider_status_check": {
+    "source": "https://status.cloud.google.com/",
+    "checked_at": "2026-08-28T13:44:00+09:00",
+    "result": "no_broad_severe_incidents_model_capacity_unverified",
+    "dashboard_observation": "No broad severe incidents",
+    "dashboard_last_updated": "27 Aug 2026, 21:31 PDT",
+    "interpretation": "광범위 Cloud 장애 부재만 뜻하며 gemini-3-pro-image 개별 용량을 보증하지 않음"
+  },
+  "causal_scope": {
+    "under_test": [
+      "shared_cross_scene_visual_quality_floor",
+      "bounded_text_surface_budget",
+      "scene_specific_costume_expression_setting",
+      "current_reference_selection",
+      "user_visual_review_hold"
+    ],
+    "not_changed": [
+      "semantic_object_surface_binding",
+      "tts",
+      "subtitle_timing",
+      "fal_motion",
+      "video_assembly"
+    ]
+  },
+  "scenes": [
+    {
+      "index": 7,
+      "scene_key": "quality-floor-v1:7",
+      "scene_type_group": "semiconductor_data_laboratory",
+      "lane": "deterministic_information",
+      "exact_texts": ["삼성전자", "SK하이닉스", "코스피", "143조 원"],
+      "scene_spec_override": {
+        "character_costume": "crisp white laboratory coat and round data goggles",
+        "character_emotion": "confident analytical pride",
+        "character_action": "physically setting two company containers aside and pointing to the remaining market total",
+        "setting": "dense glowing semiconductor earnings data laboratory",
+        "wardrobe_strict": true
+      },
+      "visual_contract": "A dense semiconductor data laboratory physically explains that the market total remains large after the two named companies are excluded. Keep two clearly set-aside company containers, one bounded in-world result monitor, calculation machinery, and the scientist mascot acting confidently."
+    },
+    {
+      "index": 28,
+      "scene_key": "quality-floor-v1:28",
+      "scene_type_group": "market_risk_control_room",
+      "lane": "pilot_only_short_approved_label_measurement",
+      "exact_texts": ["대형주"],
+      "scene_spec_override": {
+        "character_costume": "sharp navy market analyst jacket and dark peaked cap",
+        "character_emotion": "visible unease with narrowed focused eyes",
+        "character_action": "watching unstable large-cap clusters and guarding the risk console",
+        "setting": "dense multi-screen market risk control room",
+        "wardrobe_strict": true
+      },
+      "visual_contract": "A dense market risk control room physically communicates unease about large-cap stocks through unstable clustered indicators, warning lamps, analyst consoles, and a defensive analyst mascot. The approved label belongs on one existing subordinate opaque monitor."
+    },
+    {
+      "index": 36,
+      "scene_key": "quality-floor-v1:36",
+      "scene_type_group": "split_outcome_theatrical_stage",
+      "lane": "pilot_only_short_approved_label_measurement",
+      "exact_texts": ["같은 현상"],
+      "scene_spec_override": {
+        "character_costume": "sharp magician tailcoat and top hat suited to the theatrical metaphor",
+        "character_emotion": "knowing confident grin",
+        "character_action": "revealing with two coherent gestures that opposite-looking outcomes share one root",
+        "setting": "dense theatrical split stage with contrasting economic outcomes",
+        "wardrobe_strict": true
+      },
+      "visual_contract": "A theatrical split-stage physical metaphor shows two apparently opposite outcomes sharing one root mechanism, with a magician-presenter mascot revealing the linkage. Keep the stage, mirror divide, causal symmetry, and rich contrasting props; the approved phrase belongs once on the existing central stage structure."
+    }
+  ]
+}

@@ -109,3 +109,43 @@ def test_targeted_retry_repairs_only_failed_quality_dimensions():
     assert "restore useful job-52-like information density" in prompt
     assert "preserve every element that was not named" in prompt
     assert "rainproof field reporter coat" in prompt
+
+
+def test_approved_text_surface_budget_removes_legacy_massive_monitor_conflict():
+    scene = _scene(
+        costume="white laboratory coat and goggles",
+        emotion="confident",
+        action="comparing two excluded companies with the market total",
+        texts=["삼성전자", "SK하이닉스", "코스피", "143조 원"],
+    )
+
+    prompt = _bounded_text_generation_prompt(
+        "A dense data laboratory. Behind the mascot, a massive central monitor shows the result. "
+        "Two excluded-company containers remain on a side shelf.",
+        audit_target=scene,
+    ).lower()
+
+    assert "massive central monitor" not in prompt
+    assert "bounded central monitor" in prompt
+    assert "two excluded-company containers remain" in prompt
+    assert "no more than 22 percent of the frame" in prompt
+
+
+def test_surface_budget_does_not_shrink_non_text_storytelling_props():
+    scene = _scene(
+        costume="navy analyst jacket",
+        emotion="uneasy",
+        action="watching unstable large-cap indicators",
+        texts=["대형주"],
+    )
+
+    prompt = _bounded_text_generation_prompt(
+        "A risk control room with a large monitor wall and huge industrial turbines outside. "
+        "The mascot studies the market mechanism.",
+        audit_target=scene,
+    ).lower()
+
+    assert "large monitor wall" not in prompt
+    assert "bounded monitor wall" in prompt
+    assert "huge industrial turbines" in prompt
+    assert "no more than 16 percent of the frame" in prompt
