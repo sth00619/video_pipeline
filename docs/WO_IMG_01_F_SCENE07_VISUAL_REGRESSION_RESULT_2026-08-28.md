@@ -108,6 +108,7 @@
 - green 집중: 23 passed (`green-focused.xml`)
 - green 운영 경계: 실 provider audit·단일 재생성·전체 시각 QA 포함 71 passed (`green-operational.xml`)
 - 전체 오프라인: 1,121 passed, 20 warnings (`full-offline.xml`)
+- green 커밋 `e03f6b6` archive 격리 재검증: 23 passed (`archive-green.xml`)
 - scene42 동결 유지
 - TTS, Fal/Kling, MP4 조립, 썸네일 미실행
 - 이번 교정 중 Gemini 포함 유료 API 호출 0회
