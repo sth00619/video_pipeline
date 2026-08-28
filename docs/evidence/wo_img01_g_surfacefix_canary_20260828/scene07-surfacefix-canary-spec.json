@@ -1,0 +1,82 @@
+{
+  "version": "wo-img01-g-scene07-surfacefix-canary-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "standing_authorization": true,
+    "basis": "사용자 2026-08-28: Gemini 이미지 재도전은 중간에 한 번씩 섞어 별도 허락 없이 진행 가능",
+    "incremental_reserved_krw": 1600,
+    "prior_ledger_exposure_krw": 9600,
+    "cumulative_exposure_cap_krw": 11200,
+    "external_post_limit": 1,
+    "continuation": "stop_after_one_for_user_visual_review"
+  },
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "image_size": "2K",
+  "scene42_frozen_and_excluded": true,
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "original_three_scene_spec": {
+    "path": "docs/evidence/wo_img01_d_face_reference_20260828/face-pilot-spec.json",
+    "sha256": "bf83d52ddb68eae22448cd83f00cb909dce46fbcaca7eb407133bf016783ff29"
+  },
+  "prior_ledgers": [
+    {
+      "path": "artifacts/wo_img01_d_face_reference_pilot_20260828/request_ledger.json",
+      "sha256": "99c4252cd6afdb754cac025022e488f0a2959d008011f51f9d8ba7f62176bdf8",
+      "reserved_exposure_krw": 8000,
+      "latest_attempt_id": "dfbf4c89677f4a63a58c3212d5245a93"
+    },
+    {
+      "path": "artifacts/wo_scene07_promptfix_canary_v3_20260828/request_ledger.json",
+      "sha256": "04c3f75fff3d5c9d6b709ab147e017f0101c6a001c23acad8e95ed6a123c80e8",
+      "reserved_exposure_krw": 1600,
+      "latest_attempt_id": "a259e66e5bdd462997a639dade7dd77e"
+    }
+  ],
+  "scene42_frozen_ledger": {
+    "path": "artifacts/gemini_usage_pilot_20260827/request_ledger.json",
+    "sha256": "79a7e345f796824e1db409cd24bd3089d26bb502ef912bd221252a4d2a8cbc4f"
+  },
+  "scene": {
+    "index": 7,
+    "scene_key": "wo-img01-g-surfacefix:7"
+  },
+  "expected_prompt_sha256": "7630d5f5697b20de4f10c67a972b2f39d06345014afba459f47dc62e49a3f984",
+  "expected_final_prompt_sha256": "5be5bc1982ea2ceed15301a858569634ae17173ee25f785fb8972555dd2ebdec",
+  "expected_scene_contract_sha256": "a03ea4cc0335e486235d7e6ffefa5800771929cb8e497928a359ca4f1c86a5ba",
+  "expected_surface_plan_sha256": "2606e0b98cd8d661d86d2f774f225e05122a06a8cf294fada1fd99fe76b1ffa9",
+  "expected_references": [
+    {
+      "name": "channel_character_face_range_v2.png",
+      "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+    },
+    {
+      "name": "channel_character_face_scene05_v1.png",
+      "sha256": "7b6c97c2713bb70d34f0a3d71022bda16bd9a032a6d0417457bce6083bfae6e2"
+    },
+    {
+      "name": "channel_style_job52_data_lab.png",
+      "sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6"
+    }
+  ],
+  "causal_isolation": {
+    "only_changes_under_test": [
+      "deterministic_surface_prompt_conflict_removed",
+      "current_reference_preservation_and_selection"
+    ],
+    "semantic_object_surface_binding_change_forbidden": true,
+    "expected_single_surface_id": "main",
+    "known_surface_semantic_mismatch_preserved_for_later_track": true
+  },
+  "provider_status_check": {
+    "source": "https://status.cloud.google.com/",
+    "checked_at": "2026-08-28T12:18:38+09:00",
+    "result": "no_broad_severe_incidents_model_capacity_unverified",
+    "dashboard_observation": "No broad severe incidents",
+    "dashboard_last_updated": "27 Aug 2026, 19:59 PDT",
+    "interpretation": "광범위 장애 부재만 뜻하며 gemini-3-pro-image 개별 용량을 보증하지 않음"
+  }
+}
