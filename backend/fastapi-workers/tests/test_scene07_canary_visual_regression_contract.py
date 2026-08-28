@@ -6,6 +6,10 @@ from app.v5.providers.gemini_provider import (
     ensure_gemini_reference_contract,
     select_contextual_reference_paths,
 )
+from app.utils.canary_visual_review import (
+    build_canary_visual_review_packet,
+    record_canary_user_visual_review,
+)
 
 
 REPO = Path(__file__).resolve().parents[3]
@@ -44,6 +48,27 @@ def test_scene07_canary_runner_requires_user_visual_review_packet():
     assert "build_canary_visual_review_packet" in source
     assert "pending_user_visual_review" in source
     assert "approval_blocked" in source
+
+
+def test_canary_visual_review_stays_blocked_until_every_user_check_passes(tmp_path: Path):
+    image = tmp_path / "candidate.png"
+    image.write_bytes(b"candidate")
+    import hashlib
+
+    packet = build_canary_visual_review_packet(
+        image,
+        hashlib.sha256(b"candidate").hexdigest(),
+        automated_findings={"ocr": "pass"},
+    )
+
+    assert packet["status"] == "pending_user_visual_review"
+    assert packet["approval_blocked"] is True
+    assert packet["image_attachment_required"] is True
+    decisions = {row["name"]: True for row in packet["required_checks"]}
+    decisions["scene_meaning_legibility"] = False
+    reviewed = record_canary_user_visual_review(packet, decisions, reviewer="user")
+    assert reviewed["status"] == "rejected_by_user_visual_review"
+    assert reviewed["approval_blocked"] is True
 
 
 def test_scene07_report_and_global_rules_record_visual_regression_and_review_hold():

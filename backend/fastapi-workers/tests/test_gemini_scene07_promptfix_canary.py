@@ -23,8 +23,12 @@ def test_promptfix_canary_spec_keeps_one_call_and_cumulative_budget():
 
 
 def test_promptfix_canary_uses_clean_prompt_and_preserves_two_excluded_props():
-    row = prepare_row(spec())
-    assert row["prompt_sha256"] == spec()["expected_prompt_sha256"]
+    # 이 spec은 이미 실행된 과거 canary의 승인 입력이다. 공통 해부학 계약이
+    # 변경되면 같은 spec으로 조용히 재실행하지 않고 새 spec을 발급해야 한다.
+    with pytest.raises(RuntimeError, match="프롬프트 해시"):
+        prepare_row(spec())
+    row = prepare_row(spec(), verify_expected_hash=False)
+    assert row["prompt_sha256"] != spec()["expected_prompt_sha256"]
     assert "Two unlettered containers" in row["prompt"]
     assert "shapesinguistic" not in row["prompt"]
     assert "bold digits" not in row["prompt"]

@@ -1,0 +1,22 @@
+{
+  "version": "canary-visual-review-v1",
+  "attempt_id": "a259e66e5bdd462997a639dade7dd77e",
+  "image_path": "artifacts/wo_scene07_promptfix_canary_v3_20260828/scene_07_raw.png",
+  "image_sha256": "93eea450aea1fd398fb4774f9c303c3acedaed0d44ef46dbe84f4710fa2834c3",
+  "status": "rejected_by_user_visual_review",
+  "approval_blocked": true,
+  "reviewer": "user",
+  "checks": {
+    "character_anatomy": false,
+    "style_fidelity": false,
+    "scene_meaning_legibility": false,
+    "text_and_physical_surface": false,
+    "unexpected_visual_artifacts": false
+  },
+  "notes": [
+    "동전 몸체 아래에 긴 사람형 다리가 붙어 채널 캐릭터 실루엣과 다름",
+    "굵은 잉크 아웃라인과 셀 셰이딩 대신 가는 선과 부드러운 그라데이션이 나타남",
+    "병 두 개가 존재해도 두 기업 제외라는 대본 의미는 이미지에서 식별되지 않음",
+    "결정론 텍스트를 놓을 빈 물리 표면이 없어 정보가 완성되지 않음"
+  ]
+}

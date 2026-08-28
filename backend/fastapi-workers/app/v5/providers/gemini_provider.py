@@ -13,6 +13,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Optional
 
+from app.utils.character_integrity_contract import COIN_SILHOUETTE_CONTRACT
+
 from .bfl_flux_provider import ImageResult
 
 logger = logging.getLogger(__name__)
@@ -47,12 +49,16 @@ _FACE_ROLE_REF_NAMES = {
     "goggles": "channel_character_face_scene05_v1.png",
 }
 
-GEMINI_REFERENCE_CONTRACT_VERSION = "job52-range-v2-operational-v1"
+GEMINI_REFERENCE_CONTRACT_VERSION = "job52-range-v2-operational-v2"
 _REFERENCE_CONTRACT_MARKER = (
     f"FINAL GEMINI REFERENCE CONTRACT [{GEMINI_REFERENCE_CONTRACT_VERSION}]:"
 )
 
 _CONTEXTUAL_REFERENCE_GROUPS = {
+    "data_lab": (
+        "channel_style_job52_data_lab.png",
+        "channel_style_job52_briefing.png",
+    ),
     "semiconductor": (
         "channel_style_semiconductor_production_scene_v1.png",
         "channel_style_semiconductor_growth_scene_v1.png",
@@ -117,8 +123,10 @@ def select_contextual_reference_paths(
         and Path(path).name not in system_identity_names
     ]
     source = str(prompt or "").casefold()
-    if any(token in source for token in ("semiconductor", "wafer", "microchip", "chip sample", "production line", "data-lab")):
+    if any(token in source for token in ("semiconductor", "wafer", "microchip", "chip sample", "production line")):
         group = "semiconductor"
+    elif any(token in source for token in ("data laboratory", "data lab", "data-lab", "data_lab", "earnings laboratory", "lab coat")):
+        group = "data_lab"
     elif any(token in source for token in ("market-flow", "market flow", "inflow", "outflow", "foreign investor", "매수", "매도")):
         group = "market_flow"
     elif any(token in source for token in ("weather-map", "weather map", "storm", "forecast", "outlook", "downgrade", "risk map")):
@@ -201,7 +209,8 @@ def ensure_gemini_reference_contract(
             "within 38% to 58% of the full visible eye width, visible white sclera, and layered white catchlights. A soft forehead reflection highlight is required. "
             "Use gently curved eyebrows that can rise or soften with the emotion; do not use sharply angled or deeply furrowed eyebrows. Keep subtle cheek blush "
             "when compatible with the scene lighting. The round gold-coin species, embossed rim, compact anatomy, and face construction takes priority over background and prop detail. "
-            "Costume and headwear remain scene-specific, as the six approved examples intentionally use different outfits. Do not force one outfit, hat, pose, expression, scale, or framing."
+            + COIN_SILHOUETTE_CONTRACT
+            + "Costume and headwear remain scene-specific, as the six approved examples intentionally use different outfits. Do not force one outfit, hat, pose, expression, scale, or framing."
         )
         if face_anchor_indices:
             anchor_index = face_anchor_indices[0]

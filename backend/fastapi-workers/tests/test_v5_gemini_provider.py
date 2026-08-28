@@ -176,20 +176,20 @@ def test_contextual_reference_selection_can_reduce_only_the_second_style_referen
 def test_goggles_scene_uses_scene05_face_anchor_without_freezing_costume(tmp_path: Path):
     face_range = tmp_path / "channel_character_face_range_v2.png"
     face_anchor = tmp_path / "channel_character_face_scene05_v1.png"
-    briefing = tmp_path / "channel_style_job52_briefing.png"
+    data_lab = tmp_path / "channel_style_job52_data_lab.png"
     market = tmp_path / "channel_style_job52_market_flow.png"
-    for path in (face_range, face_anchor, briefing, market):
+    for path in (face_range, face_anchor, data_lab, market):
         path.write_bytes(path.name.encode())
 
     selected = select_contextual_reference_paths(
         "white lab coat and round scientist goggles in a data laboratory",
-        [str(face_range), str(face_anchor), str(briefing), str(market)],
+        [str(face_range), str(face_anchor), str(data_lab), str(market)],
     )
 
     assert [Path(path).name for path in selected] == [
         "channel_character_face_range_v2.png",
         "channel_character_face_scene05_v1.png",
-        "channel_style_job52_briefing.png",
+        "channel_style_job52_data_lab.png",
     ]
 
 
@@ -207,7 +207,7 @@ def test_goggles_face_anchor_contract_is_larger_face_evidence_not_costume_lock(t
     for name in (
         "channel_character_face_range_v2.png",
         "channel_character_face_scene05_v1.png",
-        "channel_style_job52_briefing.png",
+        "channel_style_job52_data_lab.png",
         "channel_style_job52_market_flow.png",
     ):
         path = tmp_path / name
@@ -223,7 +223,7 @@ def test_goggles_face_anchor_contract_is_larger_face_evidence_not_costume_lock(t
     assert [Path(path).name for path in observed["character_image_paths"]] == [
         "channel_character_face_range_v2.png",
         "channel_character_face_scene05_v1.png",
-        "channel_style_job52_briefing.png",
+        "channel_style_job52_data_lab.png",
     ]
     assert "larger role-matched face crop" in observed["prompt"]
     assert "Do not copy or freeze its expression, costume, goggles, pose" in observed["prompt"]

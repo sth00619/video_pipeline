@@ -22,7 +22,9 @@
 > scene02/07/35/47은 회귀 fixture일 뿐이며, 얼굴·텍스트·수치·OCR·Fal 안전 수정은
 > UI 영상 생성 버튼이 타는 신규 Job/재개/병렬/순차/단일 장면 공통 경로에 적용한다.
 > 특히 얼굴 참조 의미 계약은 파일럿 래퍼가 아니라 실제 Gemini POST 직전 계층에
-> `job52-range-v2-operational-v1` 버전으로 연결돼 있다.
+> `job52-range-v2-operational-v2` 버전으로 연결돼 있다. v2는 scene07 canary의 해부학·
+> 화풍·장면 의미 회귀를 반영한 계약이다. 최신 판정과 진행률 정정은
+> `docs/WO_IMG_01_F_SCENE07_VISUAL_REGRESSION_RESULT_2026-08-28.md`를 함께 본다.
 
 ---
 

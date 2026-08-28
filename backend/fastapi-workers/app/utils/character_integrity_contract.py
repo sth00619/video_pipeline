@@ -26,6 +26,14 @@ _POSITIVE_BUBBLE_CLAUSE_RE = re.compile(
 )
 
 
+COIN_SILHOUETTE_CONTRACT = (
+    "The same one round coin disc forms the complete head-and-torso silhouette; "
+    "do not add a separate human torso. Attach exactly two short compact arms at the side rim "
+    "and exactly two short compact legs with small feet at the lower rim. Keep the limbs short "
+    "and rounded, with no separate human torso or long human legs hanging from a coin head. "
+)
+
+
 def resolve_pose_conflicts(prompt: str) -> tuple[str, list[str]]:
     """`가리키기+팔짱`처럼 동시에 수행할 수 없는 보조 자세를 제거한다."""
     source = str(prompt or "")
@@ -70,7 +78,8 @@ def apply_character_integrity_contract(
         "layered white catchlights, a soft forehead reflection highlight, and gently curved eyebrows rather than sharply angled or deeply furrowed eyebrows. "
         "Costume, headwear, pose, mouth shape, scale, and framing remain scene-specific; do not force one outfit or one neutral expression. "
         "Reject a different character species, incompatible face language, or an accidental featureless emoji. "
-        "Use natural connected anatomy with no extra, duplicated, detached, or fused limb or hand. Resolve the pose as one physically coherent action. "
+        + COIN_SILHOUETTE_CONTRACT
+        + "Use natural connected anatomy with no extra, duplicated, detached, or fused limb or hand. Resolve the pose as one physically coherent action. "
     )
     if wardrobe:
         suffix += f"The scene-specific costume direction is: {wardrobe}. Do not replace it with a generic finance-presenter uniform. "
@@ -88,7 +97,7 @@ def apply_character_integrity_contract(
             + ". "
         )
     return cleaned + suffix, {
-        "version": "character-integrity-v4-job52-face-range",
+        "version": "character-integrity-v5-coin-silhouette",
         "changes": changes,
         "scene_wardrobe": wardrobe,
         "bubble_policy": bubble_policy,

@@ -52,7 +52,7 @@ def validate_spec(spec: dict) -> None:
         raise RuntimeError("상태판의 범위를 과장하지 않은 판정이 필요합니다.")
 
 
-def prepare_row(spec: dict) -> dict:
+def prepare_row(spec: dict, *, verify_expected_hash: bool = True) -> dict:
     """Job52 보존 장면에서 현재 코드가 만드는 새 payload 입력을 재구성한다."""
     # 실행 시 GEMINI_REQUEST_STATE_PATH가 먼저 정해진 뒤에만 이미지 worker를
     # 불러와야 runtime_config가 다른 상태 DB 경로로 조기에 고정되지 않는다.
@@ -71,7 +71,7 @@ def prepare_row(spec: dict) -> dict:
             raise RuntimeError(f"수정된 프롬프트에 금지 잔여물이 있습니다: {forbidden}")
     if "Two unlettered containers" not in prompt:
         raise RuntimeError("두 제외 기업을 뜻하는 소품 수량이 보존되지 않았습니다.")
-    if row["prompt_sha256"] != spec["expected_prompt_sha256"]:
+    if verify_expected_hash and row["prompt_sha256"] != spec["expected_prompt_sha256"]:
         raise RuntimeError("검증한 새 프롬프트 해시와 현재 코드 출력이 다릅니다.")
     return row
 
@@ -141,6 +141,7 @@ def main() -> int:
 
     from app import runtime_config
     from app.utils.budget import ProviderRequestAudit
+    from app.utils.canary_visual_review import build_canary_visual_review_packet
     from app.utils.image_request_control import ImageRequestHeld
     from app.v5.providers.gemini_provider import GeminiModel, GeminiProvider
 
@@ -176,13 +177,25 @@ def main() -> int:
         final_path = output / "scene_07_final.png"
         raw_path.write_bytes(result.image_bytes)
         final_path.write_bytes(result.image_bytes)
+        raw_sha256 = _sha(result.image_bytes)
+        visual_review = build_canary_visual_review_packet(
+            raw_path,
+            raw_sha256,
+            automated_findings={
+                "face_contract": "awaiting_quantitative_review",
+                "text_gate": "awaiting_deterministic_render",
+                "production_holistic_visual_qa": "not_executed_by_canary_user_review_required",
+            },
+        )
         manifest.update(
-            status="http_200_awaiting_quality_review",
+            status="pending_user_visual_review",
             provider_status="http_200",
             raw_path=str(raw_path),
-            raw_sha256=_sha(result.image_bytes),
+            raw_sha256=raw_sha256,
             final_path=str(final_path),
             face_contract_status="awaiting_manual_and_quantitative_review",
+            holistic_visual_review=visual_review,
+            approval_blocked=True,
             continuation_allowed=False,
         )
         try:
@@ -195,7 +208,7 @@ def main() -> int:
             )
         except Exception as exc:
             manifest.update(
-                status="http_200_text_gate_needs_review",
+                automated_quality_status="http_200_text_gate_needs_review",
                 text_gate_status="needs_review",
                 text_gate_error_type=type(exc).__name__,
                 text_gate_error=str(exc),
