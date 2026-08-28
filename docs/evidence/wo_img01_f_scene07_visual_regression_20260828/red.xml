@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="4" time="0.182" timestamp="2026-08-28T11:20:34.463847" hostname="Mac"><testcase classname="tests.test_scene07_canary_visual_regression_contract" name="test_data_laboratory_routes_to_job52_data_lab_style_reference" time="0.009"><failure message="AssertionError: assert 'channel_style_job52_data_lab.png' in {'channel_character_face_range_v2.png', 'channel_character_face_scene05_v1.png', 'channel_style_job52_briefing.png'}">def test_data_laboratory_routes_to_job52_data_lab_style_reference():
+        selected = select_contextual_reference_paths(
+            "white lab coat and round scientist goggles in a data laboratory",
+            _load_default_references(),
+        )
+    
+&gt;       assert "channel_style_job52_data_lab.png" in {
+            Path(path).name for path in selected
+        }
+E       AssertionError: assert 'channel_style_job52_data_lab.png' in {'channel_character_face_range_v2.png', 'channel_character_face_scene05_v1.png', 'channel_style_job52_briefing.png'}
+
+tests/test_scene07_canary_visual_regression_contract.py:23: AssertionError</failure></testcase><testcase classname="tests.test_scene07_canary_visual_regression_contract" name="test_reference_contract_defines_coin_as_complete_head_and_torso_silhouette" time="0.001"><failure message="AssertionError: assert 'one round coin disc forms the complete head-and-torso silhouette' in 'FINAL GEMINI REFERENCE CONTRACT [job52-range-v2-operational-v1]: Reference image 1 contains exact, non-generatively a...Do not force every scene into one studio template. Do not reproduce marks from any reference image.\n\ndata laboratory'">tmp_path = PosixPath('/private/var/folders/2t/97vrh06x4t5c6tb1bc6_jb_c0000gn/T/pytest-of-songtaeho/pytest-25/test_reference_contract_define0')
+
+    def test_reference_contract_defines_coin_as_complete_head_and_torso_silhouette(tmp_path: Path):
+        face = tmp_path / "channel_character_face_range_v2.png"
+        style = tmp_path / "channel_style_job52_data_lab.png"
+        face.write_bytes(b"face")
+        style.write_bytes(b"style")
+    
+        prompt = ensure_gemini_reference_contract("data laboratory", [str(face), str(style)])
+    
+&gt;       assert "one round coin disc forms the complete head-and-torso silhouette" in prompt
+E       AssertionError: assert 'one round coin disc forms the complete head-and-torso silhouette' in 'FINAL GEMINI REFERENCE CONTRACT [job52-range-v2-operational-v1]: Reference image 1 contains exact, non-generatively a...Do not force every scene into one studio template. Do not reproduce marks from any reference image.\n\ndata laboratory'
+
+tests/test_scene07_canary_visual_regression_contract.py:36: AssertionError</failure></testcase><testcase classname="tests.test_scene07_canary_visual_regression_contract" name="test_scene07_canary_runner_requires_user_visual_review_packet" time="0.001"><failure message="assert 'build_canary_visual_review_packet' in '#!/usr/bin/env python3\n&quot;&quot;&quot;문자 프롬프트 연쇄 훼손 수정 뒤 scene07 한 장만 새 계보로 검증한다.&quot;&quot;&quot;\nfrom __future__ import annotations\n\nimpo...,\n    }, ensure_ascii=False, indent=2))\n    return 0\n\n\nif __name__ == &quot;__main__&quot;:\n    raise SystemExit(main())\n'">def test_scene07_canary_runner_requires_user_visual_review_packet():
+        source = RUNNER.read_text(encoding="utf-8")
+    
+&gt;       assert "build_canary_visual_review_packet" in source
+E       assert 'build_canary_visual_review_packet' in '#!/usr/bin/env python3\n"""문자 프롬프트 연쇄 훼손 수정 뒤 scene07 한 장만 새 계보로 검증한다."""\nfrom __future__ import annotations\n\nimpo...,\n    }, ensure_ascii=False, indent=2))\n    return 0\n\n\nif __name__ == "__main__":\n    raise SystemExit(main())\n'
+
+tests/test_scene07_canary_visual_regression_contract.py:44: AssertionError</failure></testcase><testcase classname="tests.test_scene07_canary_visual_regression_contract" name="test_scene07_report_and_global_rules_record_visual_regression_and_review_hold" time="0.001"><failure message="AssertionError: assert 'WO-IMG-01-F 판정 정정' in '# WO-PROVIDER-01 후속 — scene07 의미 보존·얼굴 기준점·scene47 OCR 결과\n\n작성일: 2026-08-28 KST\n\n범위: Gemini 이미지 단건 재도전, 이미지 프롬프트 정...안정된 뒤에만 텍스트·수치 표면을 제외한 캐릭터·사물·배경의 Fal 초반부 파일럿으로 이동한다.\n\nscene42는 계속 동결한다. 이번 작업에서는 TTS, Fal, MP4 조립, 썸네일을 실행하지 않았다.\n'">def test_scene07_report_and_global_rules_record_visual_regression_and_review_hold():
+        report = REPORT.read_text(encoding="utf-8")
+        agents = AGENTS.read_text(encoding="utf-8")
+    
+&gt;       assert "WO-IMG-01-F 판정 정정" in report
+E       AssertionError: assert 'WO-IMG-01-F 판정 정정' in '# WO-PROVIDER-01 후속 — scene07 의미 보존·얼굴 기준점·scene47 OCR 결과\n\n작성일: 2026-08-28 KST\n\n범위: Gemini 이미지 단건 재도전, 이미지 프롬프트 정...안정된 뒤에만 텍스트·수치 표면을 제외한 캐릭터·사물·배경의 Fal 초반부 파일럿으로 이동한다.\n\nscene42는 계속 동결한다. 이번 작업에서는 TTS, Fal, MP4 조립, 썸네일을 실행하지 않았다.\n'
+
+tests/test_scene07_canary_visual_regression_contract.py:53: AssertionError</failure></testcase></testsuite></testsuites>
