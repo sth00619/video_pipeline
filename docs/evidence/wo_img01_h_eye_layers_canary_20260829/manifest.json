@@ -1,0 +1,204 @@
+{
+  "version": "wo-img01-h-scene07-eye-layers-canary-v1",
+  "status": "provider_request_failed",
+  "created_at": "2026-08-28T16:02:35.844782+00:00",
+  "spec_sha256": "7a197bc9b6efb6eb0ec3b782499ef8985b9b4175304aa69222e86df9fd9f6362",
+  "scene_index": 7,
+  "scene_key": "wo-img01-h-eye-layers:7",
+  "prompt_sha256": "4eb7d08d86be67841ff6041f39f731657f7154e23ba16e2c154aceb0d80baf5c",
+  "final_prompt_sha256": "5c117fad51214e6cd4b66953b3d8717066dd0f454bd39e2959a41edcb9555595",
+  "references": [
+    {
+      "name": "channel_character_face_range_v2.png",
+      "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+    },
+    {
+      "name": "channel_character_face_scene05_v1.png",
+      "sha256": "7b6c97c2713bb70d34f0a3d71022bda16bd9a032a6d0417457bce6083bfae6e2"
+    },
+    {
+      "name": "channel_style_job52_data_lab.png",
+      "sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6"
+    }
+  ],
+  "screen_text_plan": [
+    {
+      "text": "삼성전자",
+      "surface": "main",
+      "surface_kind": "board",
+      "purpose": "information",
+      "region": [
+        0.05,
+        0.08,
+        0.42,
+        0.38
+      ]
+    },
+    {
+      "text": "SK하이닉스",
+      "surface": "main",
+      "surface_kind": "board",
+      "purpose": "information",
+      "region": [
+        0.53,
+        0.08,
+        0.42,
+        0.38
+      ]
+    },
+    {
+      "text": "코스피",
+      "surface": "main",
+      "surface_kind": "board",
+      "purpose": "information",
+      "region": [
+        0.05,
+        0.54,
+        0.42,
+        0.38
+      ]
+    },
+    {
+      "text": "143조 원",
+      "surface": "main",
+      "surface_kind": "board",
+      "purpose": "information",
+      "region": [
+        0.53,
+        0.54,
+        0.42,
+        0.38
+      ],
+      "source_ref": "facts[3]"
+    }
+  ],
+  "surface_plan_sha256": "2606e0b98cd8d661d86d2f774f225e05122a06a8cf294fada1fd99fe76b1ffa9",
+  "known_surface_semantic_mismatch_preserved": true,
+  "provider_status_check": {
+    "source": "https://status.cloud.google.com/",
+    "checked_at": "2026-08-29T00:59:20+09:00",
+    "result": "no_broad_severe_incidents_model_capacity_unverified",
+    "dashboard_observation": "No broad severe incidents",
+    "dashboard_last_updated": "28 Aug 2026, 08:38 PDT",
+    "interpretation": "광범위 Cloud 장애 부재만 뜻하며 gemini-3-pro-image 개별 용량을 보증하지 않음"
+  },
+  "incremental_reserved_krw": 1600,
+  "prior_ledger_exposure_krw": 28800,
+  "cumulative_exposure_cap_krw": 30400,
+  "reservation_interpretation": "보수적 노출 상한이며 예상 비용 또는 확정 지출이 아님",
+  "scene42_frozen_and_excluded": true,
+  "continuation_allowed": false,
+  "started_at": "2026-08-28T16:02:35.845532+00:00",
+  "provider_status": "held",
+  "error_type": "ImageRequestHeld",
+  "error": "이미지 요청 보류: HTTP 503 UNAVAILABLE; 상태=needs_review; 재개가능시각=1787932983.679",
+  "request_summary": {
+    "attempt_count": 1,
+    "entries": [
+      {
+        "kind": "gemini_pro_request",
+        "provider": "gemini",
+        "model": "gemini-3-pro-image",
+        "scene_key": "wo-img01-h-eye-layers:7",
+        "attempt": 1,
+        "attempt_id": "3c0811b897854419bdb726ce36631ff6",
+        "estimated_usd": 1.1428571428571428,
+        "amount_krw": 0,
+        "reserved_amount_krw": 1600,
+        "cost_status": "excluded_from_success_estimate_billing_unverified",
+        "status": "http_503",
+        "reserved_at": "2026-08-28T16:02:35.900869+00:00",
+        "run_id": "wo_img01_h_eye_layers_canary_20260829",
+        "run_id_source": "caller",
+        "request_control": {
+          "scene_attempt": 1,
+          "failure_n": 1,
+          "scene": "wo-img01-h-eye-layers:7",
+          "project_scope": "wo-img01-h-eye-layers-7a197bc9b6ef",
+          "review_cycle": 0,
+          "reopened_after_cooldown": false,
+          "reopened_from_first_needs_review_at": null,
+          "cooldown_override_used": false,
+          "legacy_first_needs_review_at_recovered": false,
+          "next_allowed_at": 1787932983.678923,
+          "status": "needs_review",
+          "first_needs_review_at": 1787932964.1136334
+        },
+        "request_evidence": {
+          "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent",
+          "model": "gemini-3-pro-image",
+          "service_tier": "standard",
+          "payload_hash_basis": "canonical_json_utf8_sorted_keys",
+          "payload_sha256": "00088ee50d8cb3a134c96f6f7c1303a03c5490e5613359672a7784d7f677beca",
+          "prompt_sha256": "5c117fad51214e6cd4b66953b3d8717066dd0f454bd39e2959a41edcb9555595",
+          "references": [
+            {
+              "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e",
+              "byte_count": 1350934,
+              "mime_type": "image/png"
+            },
+            {
+              "sha256": "7b6c97c2713bb70d34f0a3d71022bda16bd9a032a6d0417457bce6083bfae6e2",
+              "byte_count": 253347,
+              "mime_type": "image/png"
+            },
+            {
+              "sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6",
+              "byte_count": 3055386,
+              "mime_type": "image/png"
+            }
+          ]
+        },
+        "contract_fingerprint": "8bfc06d61ac529437a31f3990fc5bb1d25c2f43095ad5c7599b4dff7f5ba157a",
+        "contract_fingerprint_source": "caller",
+        "request_metadata": {
+          "pilot_id": "wo_img01_h_eye_layers_canary_20260829",
+          "run_id": "wo_img01_h_eye_layers_canary_20260829",
+          "contract_fingerprint": "8bfc06d61ac529437a31f3990fc5bb1d25c2f43095ad5c7599b4dff7f5ba157a",
+          "attempt_policy": "one_eye_layers_canary_then_user_visual_review",
+          "prior_ledger_sha256s": [
+            "f5f4f707af031203fd3e2b9c7fe7019d0677751443ef8c772c67ff03d4b102d8",
+            "99c4252cd6afdb754cac025022e488f0a2959d008011f51f9d8ba7f62176bdf8",
+            "04c3f75fff3d5c9d6b709ab147e017f0101c6a001c23acad8e95ed6a123c80e8",
+            "0f793512d8e623d86f0d8850adddf7c61dc760c9803ca91406dea19dcecc4f52",
+            "8428375a6e7f97a53415c71d4c83e3cb2b3db63afa1f0e84336643c44e49d3d2"
+          ],
+          "prior_ledger_exposure_krw": 28800,
+          "cumulative_exposure_cap_krw": 30400,
+          "provider_status_check": {
+            "source": "https://status.cloud.google.com/",
+            "checked_at": "2026-08-29T00:59:20+09:00",
+            "result": "no_broad_severe_incidents_model_capacity_unverified",
+            "dashboard_observation": "No broad severe incidents",
+            "dashboard_last_updated": "28 Aug 2026, 08:38 PDT",
+            "interpretation": "광범위 Cloud 장애 부재만 뜻하며 gemini-3-pro-image 개별 용량을 보증하지 않음"
+          },
+          "standing_authorization_basis": "사용자 2026-08-28: Gemini 이미지 재도전은 중간에 한 번씩 별도 허락 없이 진행 가능; 사용자 2026-08-29: scene07 한 장 재시도 권장",
+          "known_surface_semantic_mismatch_preserved": true
+        },
+        "completed_at": "2026-08-28T16:02:44.116933+00:00",
+        "duration_seconds": 8.2105557120085,
+        "error_code": "UNAVAILABLE",
+        "image_sha256": null,
+        "usage_metadata_status": "absent",
+        "usage_metadata": null,
+        "usage_metadata_source": "generateContent.response.usageMetadata",
+        "usage_metadata_sha256": null,
+        "status_code": 503
+      }
+    ],
+    "qa_events": [],
+    "failure_counts": {
+      "http": 1,
+      "network": 0,
+      "invalid_image": 0,
+      "qa": 0,
+      "surface_composition": 0
+    }
+  },
+  "external_post_count": 1,
+  "latest_attempt_id": "3c0811b897854419bdb726ce36631ff6",
+  "latest_usage_metadata": null,
+  "latest_usage_metadata_status": "absent",
+  "finished_at": "2026-08-28T16:02:44.120571+00:00"
+}

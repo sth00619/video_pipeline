@@ -1,0 +1,103 @@
+{
+  "version": "wo-img01-h-scene07-eye-layers-canary-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "standing_authorization": true,
+    "basis": "사용자 2026-08-28: Gemini 이미지 재도전은 중간에 한 번씩 별도 허락 없이 진행 가능; 사용자 2026-08-29: scene07 한 장 재시도 권장",
+    "incremental_reserved_krw": 1600,
+    "prior_ledger_exposure_krw": 28800,
+    "cumulative_exposure_cap_krw": 30400,
+    "external_post_limit": 1,
+    "continuation": "stop_after_one_for_user_visual_review"
+  },
+  "model": "gemini-3-pro-image",
+  "service_tier": "standard",
+  "image_size": "2K",
+  "scene42_frozen_and_excluded": true,
+  "project_scope_prefix": "wo-img01-h-eye-layers",
+  "attempt_policy": "one_eye_layers_canary_then_user_visual_review",
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "original_three_scene_spec": {
+    "path": "docs/evidence/wo_img01_d_face_reference_20260828/face-pilot-spec.json",
+    "sha256": "bf83d52ddb68eae22448cd83f00cb909dce46fbcaca7eb407133bf016783ff29"
+  },
+  "prior_ledgers": [
+    {
+      "path": "artifacts/wo_img01_c3_eight_scene_pilot/request_ledger.json",
+      "sha256": "f5f4f707af031203fd3e2b9c7fe7019d0677751443ef8c772c67ff03d4b102d8",
+      "reserved_exposure_krw": 12800,
+      "latest_attempt_id": "8d5e5682c43047eda32d6626fbf21437"
+    },
+    {
+      "path": "artifacts/wo_img01_d_face_reference_pilot_20260828/request_ledger.json",
+      "sha256": "99c4252cd6afdb754cac025022e488f0a2959d008011f51f9d8ba7f62176bdf8",
+      "reserved_exposure_krw": 8000,
+      "latest_attempt_id": "dfbf4c89677f4a63a58c3212d5245a93"
+    },
+    {
+      "path": "artifacts/wo_scene07_promptfix_canary_v3_20260828/request_ledger.json",
+      "sha256": "04c3f75fff3d5c9d6b709ab147e017f0101c6a001c23acad8e95ed6a123c80e8",
+      "reserved_exposure_krw": 1600,
+      "latest_attempt_id": "a259e66e5bdd462997a639dade7dd77e"
+    },
+    {
+      "path": "artifacts/wo_scene07_surfacefix_canary_v4_20260828/request_ledger.json",
+      "sha256": "0f793512d8e623d86f0d8850adddf7c61dc760c9803ca91406dea19dcecc4f52",
+      "reserved_exposure_krw": 1600,
+      "latest_attempt_id": "f53191be75134394af3ad67b3e8d95ea"
+    },
+    {
+      "path": "artifacts/common_quality_floor_canary_20260828/request_ledger.json",
+      "sha256": "8428375a6e7f97a53415c71d4c83e3cb2b3db63afa1f0e84336643c44e49d3d2",
+      "reserved_exposure_krw": 4800,
+      "latest_attempt_id": "276c94f50f6548b086e49a3bbda3255f"
+    }
+  ],
+  "scene42_frozen_ledger": {
+    "path": "artifacts/gemini_usage_pilot_20260827/request_ledger.json",
+    "sha256": "79a7e345f796824e1db409cd24bd3089d26bb502ef912bd221252a4d2a8cbc4f"
+  },
+  "scene": {
+    "index": 7,
+    "scene_key": "wo-img01-h-eye-layers:7"
+  },
+  "expected_prompt_sha256": "4eb7d08d86be67841ff6041f39f731657f7154e23ba16e2c154aceb0d80baf5c",
+  "expected_final_prompt_sha256": "5c117fad51214e6cd4b66953b3d8717066dd0f454bd39e2959a41edcb9555595",
+  "expected_scene_contract_sha256": "8bfc06d61ac529437a31f3990fc5bb1d25c2f43095ad5c7599b4dff7f5ba157a",
+  "expected_surface_plan_sha256": "2606e0b98cd8d661d86d2f774f225e05122a06a8cf294fada1fd99fe76b1ffa9",
+  "expected_references": [
+    {
+      "name": "channel_character_face_range_v2.png",
+      "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+    },
+    {
+      "name": "channel_character_face_scene05_v1.png",
+      "sha256": "7b6c97c2713bb70d34f0a3d71022bda16bd9a032a6d0417457bce6083bfae6e2"
+    },
+    {
+      "name": "channel_style_job52_data_lab.png",
+      "sha256": "87c52f3ef3c0bdd0bfddeb3ed08f15f7038c38c48fc5ebf291db625d8aed05e6"
+    }
+  ],
+  "causal_isolation": {
+    "only_changes_under_test": [
+      "explicit_sclera_iris_pupil_catchlight_contract",
+      "visual_qa_sclera_and_warm_brown_iris_fields",
+      "image_lineage_fingerprint_11"
+    ],
+    "semantic_object_surface_binding_change_forbidden": true,
+    "expected_single_surface_id": "main",
+    "known_surface_semantic_mismatch_preserved_for_later_track": true
+  },
+  "provider_status_check": {
+    "source": "https://status.cloud.google.com/",
+    "checked_at": "2026-08-29T00:59:20+09:00",
+    "result": "no_broad_severe_incidents_model_capacity_unverified",
+    "dashboard_observation": "No broad severe incidents",
+    "dashboard_last_updated": "28 Aug 2026, 08:38 PDT",
+    "interpretation": "광범위 Cloud 장애 부재만 뜻하며 gemini-3-pro-image 개별 용량을 보증하지 않음"
+  }
+}

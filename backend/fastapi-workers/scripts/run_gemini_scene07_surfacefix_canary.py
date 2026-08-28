@@ -44,9 +44,9 @@ def validate_spec(spec: dict) -> None:
     if auth.get("incremental_reserved_krw") != INCREMENTAL_RESERVED_KRW:
         raise RuntimeError("신규 canary 예약액은 ₩1,600이어야 합니다.")
     if auth.get("prior_ledger_exposure_krw") != PRIOR_LEDGER_EXPOSURE_KRW:
-        raise RuntimeError("기존 예약 노출 ₩9,600을 보존해야 합니다.")
+        raise RuntimeError(f"기존 예약 노출 ₩{PRIOR_LEDGER_EXPOSURE_KRW:,}을 보존해야 합니다.")
     if auth.get("cumulative_exposure_cap_krw") != CUMULATIVE_EXPOSURE_CAP_KRW:
-        raise RuntimeError("누적 예약 노출 상한은 ₩11,200이어야 합니다.")
+        raise RuntimeError(f"누적 예약 노출 상한은 ₩{CUMULATIVE_EXPOSURE_CAP_KRW:,}이어야 합니다.")
     if auth.get("external_post_limit") != 1:
         raise RuntimeError("외부 POST는 정확히 한 번이어야 합니다.")
     if auth.get("continuation") != "stop_after_one_for_user_visual_review":
@@ -158,7 +158,8 @@ def main() -> int:
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
     os.environ["GEMINI_REQUEST_STATE_PATH"] = str(output / "request_state.sqlite3")
-    os.environ["GEMINI_PROJECT_SCOPE"] = f"wo-img01-g-surfacefix-{_sha(spec_bytes)[:12]}"
+    project_scope_prefix = str(spec.get("project_scope_prefix") or "wo-img01-g-surfacefix")
+    os.environ["GEMINI_PROJECT_SCOPE"] = f"{project_scope_prefix}-{_sha(spec_bytes)[:12]}"
     row = prepare_row(spec)
     _, usd_krw = _read_prices(args.pricing_config)
     (output / "bounded-prompt.txt").write_text(row["prompt"], encoding="utf-8")
@@ -217,7 +218,9 @@ def main() -> int:
             "pilot_id": output.name,
             "run_id": output.name,
             "contract_fingerprint": contract_fingerprint,
-            "attempt_policy": "one_surfacefix_canary_then_user_visual_review",
+            "attempt_policy": str(
+                spec.get("attempt_policy") or "one_surfacefix_canary_then_user_visual_review"
+            ),
             "prior_ledger_sha256s": [item["sha256"] for item in spec["prior_ledgers"]],
             "prior_ledger_exposure_krw": PRIOR_LEDGER_EXPOSURE_KRW,
             "cumulative_exposure_cap_krw": CUMULATIVE_EXPOSURE_CAP_KRW,
