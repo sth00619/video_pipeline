@@ -24,15 +24,15 @@ def _reset_visual_qa_circuit():
     visual_qa_module._VISUAL_QA_GEMINI_OPEN_UNTIL = 0.0
 
 
-def test_policy16_rechecks_policy14_review_without_cross_scene_quality_floor():
+def test_policy17_rechecks_policy16_review_without_proportion_and_occurrence_fix():
     assert not _cached_review_policy_compatible({
-        "policy_version": 14,
+        "policy_version": 16,
         "failure_categories": [],
         "raw": {"detached_translucent_text_card_present": False},
     })
 
 
-def test_policy16_rechecks_policy14_detached_card_verdict():
+def test_policy17_rechecks_policy14_detached_card_verdict():
     assert not _cached_review_policy_compatible({
         "policy_version": 14,
         "failure_categories": ["text_surface_detached_translucent_card"],
@@ -65,6 +65,9 @@ def _accepted_verdict() -> dict:
         "extra_limbs_or_hands": False,
         "main_mascot_anatomy_pass": True,
         "main_mascot_extra_limbs_or_hands": False,
+        "coin_disc_dominant_silhouette": True,
+        "compact_leg_proportion_match": True,
+        "costume_wrap_preserves_coin_dominance": True,
         "wardrobe_match": True,
         "wardrobe_role_match": True,
         "face_identity_match": True,
@@ -91,6 +94,64 @@ def _accepted_verdict() -> dict:
         "decision": "accept",
         "reason": "장면 계약 일치",
     }
+
+
+def test_visual_qa_rejects_long_human_proportions_but_not_job52_costume_wrap(tmp_path: Path):
+    image = tmp_path / "long-legs.png"
+    Image.new("RGB", (1920, 1080), "navy").save(image)
+    verdict = _accepted_verdict()
+    verdict.update({
+        "coin_disc_dominant_silhouette": True,
+        "compact_leg_proportion_match": False,
+        "costume_wrap_preserves_coin_dominance": True,
+        "decision": "review",
+        "reason": "의상은 허용 범위지만 다리가 동전 지름보다 길다",
+    })
+    scene = {
+        "index": 7,
+        "image_path": str(image),
+        "scene_spec": {"character_costume": "laboratory coat"},
+        "art_direction": {"character_required": True},
+    }
+
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), patch(
+        "app.utils.visual_qa._post_visual_review",
+        return_value=_visual_response(verdict),
+    ):
+        report = assess_visual_alignment([scene], enabled=True, max_scenes=1)
+
+    failures = report["reviewed"][0]["failure_categories"]
+    assert "character_leg_proportion" in failures
+    assert "character_costume_wrap" not in failures
+
+
+def test_explicit_max_occurrences_one_rejects_two_visible_approved_labels(tmp_path: Path):
+    image = tmp_path / "duplicate-label.png"
+    Image.new("RGB", (1920, 1080), "navy").save(image)
+    verdict = _accepted_verdict()
+    verdict.update({"visible_texts": ["대형주", "대형주"]})
+    scene = {
+        "index": 28,
+        "image_path": str(image),
+        "text": "대형주 흐름을 살펴봅니다.",
+        "screen_texts": ["대형주"],
+        "screen_text_plan": [{
+            "text": "대형주",
+            "purpose": "decorative",
+            "max_occurrences": 1,
+        }],
+        "art_direction": {"character_required": True},
+    }
+
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), patch(
+        "app.utils.visual_qa._post_visual_review",
+        return_value=_visual_response(verdict),
+    ):
+        report = assess_visual_alignment([scene], enabled=True, max_scenes=1)
+
+    reviewed = report["reviewed"][0]
+    assert reviewed["raw"]["approved_text_occurrence_counts"] == {"대형주": 2}
+    assert "text_approved_duplicate" in reviewed["failure_categories"]
 
 
 def test_visual_qa_enforces_common_floor_while_preserving_scene_variation(tmp_path: Path):

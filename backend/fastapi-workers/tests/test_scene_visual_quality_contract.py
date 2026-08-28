@@ -33,7 +33,7 @@ def test_diverse_scenes_share_quality_floor_without_freezing_scene_variables():
     laboratory_contract = build_scene_visual_quality_contract(laboratory)
     field_contract = build_scene_visual_quality_contract(field)
 
-    assert laboratory_contract["version"] == field_contract["version"]
+    assert laboratory_contract["version"] == field_contract["version"] == "scene-visual-quality-floor-v2"
     assert laboratory_contract["shared_quality_floor"] == field_contract["shared_quality_floor"]
     assert laboratory_contract["scene_variables"]["wardrobe"] != field_contract["scene_variables"]["wardrobe"]
     assert laboratory_contract["scene_variables"]["emotion"] != field_contract["scene_variables"]["emotion"]
@@ -80,6 +80,24 @@ def test_generation_prompt_carries_shared_floor_and_scene_specific_roles():
     assert "no more than 16 percent of the frame" in prompt
     assert "information-rich economic storytelling" in prompt
     assert scene["scene_visual_quality_contract"]["version"]
+
+
+def test_common_silhouette_floor_allows_costume_wrap_but_caps_leg_proportion():
+    contract = build_scene_visual_quality_contract(
+        _scene(
+            costume="magician tailcoat and top hat",
+            emotion="knowing grin",
+            action="revealing a split-stage mechanism",
+            texts=["같은 현상"],
+        )
+    )
+
+    assert contract["silhouette_policy"] == {
+        "coin_disc_must_remain_dominant": True,
+        "costume_wrap_below_rim_allowed": True,
+        "independent_narrow_neck_human_trunk_forbidden": True,
+        "maximum_visible_leg_to_coin_diameter_ratio": 0.50,
+    }
 
 
 def test_targeted_retry_repairs_only_failed_quality_dimensions():

@@ -39,7 +39,7 @@ def test_preflight_uses_one_common_floor_with_three_distinct_scene_roles():
 
     assert [row["index"] for row in rows] == [7, 28, 36]
     assert {row["quality_contract"]["version"] for row in rows} == {
-        "scene-visual-quality-floor-v1"
+        "scene-visual-quality-floor-v2"
     }
     assert len({row["quality_contract"]["scene_variables"]["wardrobe"] for row in rows}) == 3
     assert len({row["quality_contract"]["scene_variables"]["emotion"] for row in rows}) == 3
@@ -69,4 +69,4 @@ def test_preflight_removes_conflicting_legacy_surface_and_wardrobe_signals():
 
 
 def test_prompt_policy_change_invalidates_legacy_image_cache():
-    assert IMAGE_LINEAGE_FINGERPRINT_VERSION == 9
+    assert IMAGE_LINEAGE_FINGERPRINT_VERSION == 10

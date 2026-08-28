@@ -29,7 +29,7 @@ def test_data_laboratory_routes_to_job52_data_lab_style_reference():
     }
 
 
-def test_reference_contract_defines_coin_as_complete_head_and_torso_silhouette(tmp_path: Path):
+def test_reference_contract_keeps_coin_dominant_but_allows_job52_costume_wrap(tmp_path: Path):
     face = tmp_path / "channel_character_face_range_v2.png"
     style = tmp_path / "channel_style_job52_data_lab.png"
     face.write_bytes(b"face")
@@ -37,9 +37,11 @@ def test_reference_contract_defines_coin_as_complete_head_and_torso_silhouette(t
 
     prompt = ensure_gemini_reference_contract("data laboratory", [str(face), str(style)])
 
-    assert "one round coin disc forms the complete head-and-torso silhouette" in prompt
+    assert "round coin disc remains the dominant unified head-and-upper-body silhouette" in prompt
+    assert "costume may wrap around and extend modestly below the coin rim" in prompt
     assert "two short compact legs" in prompt
-    assert "no separate human torso or long human legs" in prompt
+    assert "roughly half of the coin diameter" in prompt
+    assert "long human legs" in prompt
 
 
 def test_scene07_canary_runner_requires_user_visual_review_packet():
