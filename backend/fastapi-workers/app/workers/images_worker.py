@@ -226,6 +226,14 @@ def _sanitize_unplanned_prompt_structure(prompt: str, text_contract: dict) -> st
 
     has_deterministic_text = bool(text_contract.get("deterministic_texts"))
     if has_deterministic_text:
+        # 문자 제거기가 따옴표 속 수치를 중립화할 때 쓰는 일반 장면 표현은
+        # 비수치 씬에서는 유용하지만, 같은 위치에 결정론 문자를 합성해야 하는
+        # 씬에서는 뒤의 "아무 표시 없는 고른 내부" 계약과 충돌한다. 실제
+        # 물리 소품은 보존하되 그 한 표면 내부만 차분한 재질로 명확히 만든다.
+        cleaned = cleaned.replace(
+            "an unlettered scene-integrated visual surface with non-linguistic shapes",
+            "an unlettered scene-integrated physical surface with a calm uniform interior",
+        )
         # 과거 Claude 프롬프트가 수치마다 별도의 빈 플래카드·카드를
         # 추가하도록 만든 문장을 먼저 제거한다. 장면에 이미 존재하는 메인
         # 모니터·계기·제품 면을 쓰는 것이 원칙이며, 안전한 면이 실제로 없으면

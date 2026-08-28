@@ -37,9 +37,17 @@ def runtime_names(provider: Path) -> set[str]:
     for node in ast.parse(provider.read_text(encoding="utf-8")).body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
-                if isinstance(target, ast.Name) and target.id in {"_SCENE_STYLE_REF_NAMES", "_FACE_RANGE_REF_NAME"}:
+                if isinstance(target, ast.Name) and target.id in {
+                    "_SCENE_STYLE_REF_NAMES",
+                    "_FACE_RANGE_REF_NAME",
+                    "_FACE_ROLE_REF_NAMES",
+                }:
                     values[target.id] = ast.literal_eval(node.value)
-    return {values["_FACE_RANGE_REF_NAME"], *values["_SCENE_STYLE_REF_NAMES"]}
+    return {
+        values["_FACE_RANGE_REF_NAME"],
+        *values["_FACE_ROLE_REF_NAMES"].values(),
+        *values["_SCENE_STYLE_REF_NAMES"],
+    }
 
 
 def classify(name: str, active: set[str]) -> str:
