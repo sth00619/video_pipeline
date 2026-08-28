@@ -7,7 +7,7 @@ from app.utils.image_text_contract import build_scene_text_contract
 
 
 _SHARED_QUALITY_FLOOR = (
-    "recognizable round gold-coin mascot silhouette and sound anatomy",
+    "dominant round gold-coin silhouette, compact limbs, and sound anatomy while scene costumes may wrap modestly below the rim",
     "intentional readable face construction at the presented scale",
     "scene-role-appropriate expression, action, and wardrobe",
     "original 2D editorial-comic ink and cel-shading family",
@@ -50,7 +50,7 @@ def build_scene_visual_quality_contract(
     direction = source.get("art_direction") or {}
     character_required = bool(direction.get("character_required", True))
     return {
-        "version": "scene-visual-quality-floor-v1",
+        "version": "scene-visual-quality-floor-v2",
         "shared_quality_floor": list(_SHARED_QUALITY_FLOOR),
         "character_required": character_required,
         "scene_variables": {
@@ -64,6 +64,12 @@ def build_scene_visual_quality_contract(
             "allow_closed_or_simplified_eyes_when_expression_is_intentional": True,
             "allow_scale_appropriate_detail_reduction": True,
             "forbid_accidental_featureless_or_foreign_face_language": character_required,
+        },
+        "silhouette_policy": {
+            "coin_disc_must_remain_dominant": character_required,
+            "costume_wrap_below_rim_allowed": True,
+            "independent_narrow_neck_human_trunk_forbidden": character_required,
+            "maximum_visible_leg_to_coin_diameter_ratio": 0.50,
         },
         "deterministic_surface": {
             # 생성 허용 짧은 문구와 결정론 문구 모두 장면을 압도하는 거대 보드에
@@ -89,7 +95,7 @@ def scene_visual_quality_prompt(contract: dict[str, Any]) -> str:
     ratio_percent = round(float(surface.get("max_single_surface_frame_ratio") or 0.16) * 100)
     clauses = [
         "COMMON CROSS-SCENE ACCEPTANCE FLOOR: this is a quality floor, not a fixed costume, expression, pose, or background template.",
-        "Keep the round gold-coin mascot anatomy and an intentional readable face at its presented scale; deliberate closed eyes or simplified action eyes are allowed only when the full expression remains coherent.",
+        "Keep the round gold-coin disc as the dominant unified head-and-upper-body identity and keep each visible leg roughly half the coin diameter or shorter. A scene costume may wrap modestly below the rim, but it must not become an independent narrow-necked human trunk. Keep an intentional readable face at its presented scale; deliberate closed eyes or simplified action eyes are allowed only when the full expression remains coherent.",
         "Keep the original 2D editorial-comic family with variable dark ink outlines, cel shading, layered color, and narration-specific physical economic storytelling.",
         "Outside any text-bearing surface, preserve information-rich economic storytelling with relevant props, mechanisms, depth, and causal action rather than generic decoration or empty studio space.",
     ]

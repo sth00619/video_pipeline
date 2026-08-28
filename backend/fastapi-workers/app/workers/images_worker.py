@@ -104,7 +104,7 @@ STYLE_SUFFIX = (
 # LLM이 같은 승인 장면을 조금 다르게 표현해도 재개 실행이 이미 승인된 PNG를
 # 전부 다시 과금하지 않도록, 생성 문장 자체가 아니라 안정적인 장면 계약에
 # 지문을 묶는다. 프롬프트 정책을 의도적으로 바꾸면 이 버전을 올린다.
-IMAGE_LINEAGE_FINGERPRINT_VERSION = 9
+IMAGE_LINEAGE_FINGERPRINT_VERSION = 10
 PROMPT_CACHE_POLICY_VERSION = 7
 PROMPT_CACHE_COMPATIBLE_VERSIONS = (6,)
 

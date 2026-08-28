@@ -19,7 +19,7 @@ from app.utils.scene_visual_quality_contract import build_scene_visual_quality_c
 
 logger = logging.getLogger(__name__)
 VISUAL_QA_MODEL = "gemini-3.7-flash"
-VISUAL_QA_POLICY_VERSION = 16
+VISUAL_QA_POLICY_VERSION = 17
 _VISUAL_QA_GEMINI_OPEN_UNTIL = 0.0
 _VISUAL_QA_GEMINI_COOLDOWN_SECONDS = 600.0
 
@@ -337,7 +337,9 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 "closed or simplified eyes are allowed only when coherent whites, brows, mouth, and acting make the expression deliberate. Judge wardrobe and expression by whether "
                 "they perform this scene's supplied role, not by pixel similarity to one reference. Require the same original 2D editorial-comic family, narration-specific causal story, "
                 "and information-rich economic setting in every scene. A deterministic typography surface must remain a bounded subordinate in-world prop rather than dominating the frame. "
-                "Detect a genuinely different character design and inspect MAIN GOLD-COIN MASCOT anatomy separately from supporting people. Audience members may have their own hands, "
+                "Detect a genuinely different character design and inspect MAIN GOLD-COIN MASCOT anatomy separately from supporting people. A scene costume may wrap modestly below the coin rim, "
+                "so do not reject that accepted Job52-style costume extension by itself. Reject when the coin is no longer the dominant unified head-and-upper-body identity, when a narrow-necked independent human trunk appears, "
+                "or when visible mascot legs are long human proportions instead of compact legs roughly half the coin diameter or shorter. Audience members may have their own hands, "
                 "and a foreground person's arm naturally cropped by the frame is not an extra mascot limb. Flag only extra, detached, fused, or contradictory limbs belonging to the main mascot. "
                 "Detect speech or thought bubbles. "
                 "Also flag when the main idea is merely one giant number/word panel with little physical economic storytelling. "
@@ -349,6 +351,9 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 "extra_limbs_or_hands (boolean, legacy whole-scene field); main_mascot_anatomy_pass (boolean); main_mascot_extra_limbs_or_hands (boolean); "
                 "wardrobe_match (boolean); wardrobe_role_match (boolean); face_identity_match (boolean); face_construction_quality_pass (boolean); "
                 "expression_role_match (boolean); style_family_match (boolean); scene_information_density_match (boolean); "
+                "coin_disc_dominant_silhouette (boolean; true when the round coin remains the dominant unified head-and-upper-body identity even if a scene costume wraps modestly below it); "
+                "compact_leg_proportion_match (boolean; true when each visible mascot leg is compact and roughly half the coin diameter or shorter, not a long human leg); "
+                "costume_wrap_preserves_coin_dominance (boolean; true when an allowed coat, suit, robe, or tailcoat extension does not become a narrow-necked independent human trunk or displace the coin identity); "
                 "deterministic_surface_scale_match (boolean); scene_causal_story_match (boolean); "
                 "minimal_dot_eye_face (boolean; true only for a nearly featureless accidental emoji, not expressive shock pupils); detached_translucent_text_card_present "
                 "(boolean; true only for a floating glass/UI card without physical mounting; an opaque wall sign, monitor, chalkboard, paper, gauge, or stage board is false); "
@@ -502,7 +507,10 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
             # 같은 승인 라벨이 서로 다른 실제 소품 두 곳에 반복되는 것은 Job 52의
             # 비교 장면 문법에 포함된다. 명시적 strict 계약이 없으면 2회까지 허용하고,
             # 그보다 많은 도배만 중복 오류로 막는다.
-            occurrence_strict = bool(scene.get("screen_text_occurrence_strict"))
+            occurrence_strict = bool(scene.get("screen_text_occurrence_strict")) or any(
+                isinstance(item, dict) and item.get("max_occurrences") is not None
+                for item in surface_plan
+            )
             if any(
                 occurrence_counts.get(value, 0) > (allowed if occurrence_strict else max(2, allowed))
                 for value, allowed in allowed_text_occurrences.items()
@@ -520,6 +528,12 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 hard_failures.append("character_anatomy")
             if character_required and bool(main_extra_limbs):
                 hard_failures.append("character_extra_limbs")
+            if character_required and not bool(verdict.get("coin_disc_dominant_silhouette", False)):
+                hard_failures.append("character_coin_silhouette")
+            if character_required and not bool(verdict.get("compact_leg_proportion_match", False)):
+                hard_failures.append("character_leg_proportion")
+            if character_required and not bool(verdict.get("costume_wrap_preserves_coin_dominance", False)):
+                hard_failures.append("character_costume_wrap")
             if character_required and wardrobe_strict and expected_wardrobe and not bool(verdict.get("wardrobe_match", False)):
                 hard_failures.append("character_wardrobe")
             if (

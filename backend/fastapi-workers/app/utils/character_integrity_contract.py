@@ -27,10 +27,12 @@ _POSITIVE_BUBBLE_CLAUSE_RE = re.compile(
 
 
 COIN_SILHOUETTE_CONTRACT = (
-    "The same one round coin disc forms the complete head-and-torso silhouette; "
-    "do not add a separate human torso. Attach exactly two short compact arms at the side rim "
-    "and exactly two short compact legs with small feet at the lower rim. Keep the limbs short "
-    "and rounded, with no separate human torso or long human legs hanging from a coin head. "
+    "The same round coin disc remains the dominant unified head-and-upper-body silhouette. "
+    "A scene-specific costume may wrap around and extend modestly below the coin rim, as it does in the approved channel examples; "
+    "do not reject that accepted costume extension as a separate torso. The costume must not become a narrow-necked independent human trunk "
+    "or displace the coin as the dominant body identity. Attach exactly two short compact arms at the side rim and exactly two short compact legs "
+    "with small feet at the lower rim. Keep each visible leg roughly half of the coin diameter or shorter, compact, and rounded; "
+    "never hang long human legs from a coin head. "
 )
 
 
@@ -97,7 +99,7 @@ def apply_character_integrity_contract(
             + ". "
         )
     return cleaned + suffix, {
-        "version": "character-integrity-v5-coin-silhouette",
+        "version": "character-integrity-v6-dominant-coin-silhouette",
         "changes": changes,
         "scene_wardrobe": wardrobe,
         "bubble_policy": bubble_policy,

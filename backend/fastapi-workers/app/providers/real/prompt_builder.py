@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from app.pipeline.scene_director import SceneSpec
 from app.utils.art_direction import SHARED_STYLE_LOCK_PROMPT
+from app.utils.character_integrity_contract import COIN_SILHOUETTE_CONTRACT
 
 STYLE_LOCK = SHARED_STYLE_LOCK_PROMPT
 
@@ -16,9 +17,11 @@ TEMPLATE_STYLE_LOCK = STYLE_LOCK + (
 
 CHARACTER_LOCK = (
     "Goldie is an original anthropomorphic gold coin mascot with an embossed dotted rim, expressive cartoon eyes and eyebrows, "
-    "rosy cheeks, white-gloved four-fingered hands, two short compact arms, and two short compact legs. One round coin disc forms the complete head-and-torso. "
+    "rosy cheeks and white-gloved four-fingered hands. "
+    + COIN_SILHOUETTE_CONTRACT
+    +
     "Preserve the broad face-construction, silhouette, palette and 2D line-language range across the attached channel references while allowing the scene-specific expression and outfit; "
-    "do not create a second mascot or attach a separate human torso or long human legs."
+    "do not create a second mascot."
 )
 
 
