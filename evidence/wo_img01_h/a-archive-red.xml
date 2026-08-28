@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.127" timestamp="2026-08-28T14:32:26.023162+00:00" hostname="d5a88d4849c2"><testcase classname="tests.test_multi_surface_ocr_recall" name="test_original_resolution_surface_recall_reads_suffix_variant_and_exact_label" time="0.082"><failure message="TypeError: inspect_visible_text() got an unexpected keyword argument 'surface_text_recall'">tmp_path = PosixPath('/tmp/pytest-of-root/pytest-135/test_original_resolution_surfa0')
+
+    @pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract가 없습니다.")
+    def test_original_resolution_surface_recall_reads_suffix_variant_and_exact_label(tmp_path: Path):
+        image_path = tmp_path / "multi-monitor.png"
+        _multi_monitor_fixture(image_path)
+    
+&gt;       inspection = inspect_visible_text(
+            str(image_path),
+            expected_texts=["대형주"],
+            targeted_exact_retry=True,
+            surface_text_recall=True,
+        )
+E       TypeError: inspect_visible_text() got an unexpected keyword argument 'surface_text_recall'
+
+tests/test_multi_surface_ocr_recall.py:53: TypeError</failure></testcase></testsuite></testsuites>

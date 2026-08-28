@@ -27,7 +27,9 @@ def _multi_monitor_fixture(path: Path) -> None:
     plans = (
         ("대형주수", 14, (160, 100)),
         ("대형주수", -4, (1050, 250)),
-        ("대형주", -8, (1880, 100)),
+        # 오른쪽 승인 표면은 정면에 가깝고, 왼쪽·가운데 이탈 표면은 서로
+        # 다른 기울기를 가져 한 프레임의 다중 표면 경로를 함께 검증한다.
+        ("대형주", 0, (1880, 100)),
     )
     for text, angle, position in plans:
         panel = Image.new("RGB", (620, 360), (218, 239, 242))
@@ -71,4 +73,3 @@ def test_original_resolution_surface_recall_reads_suffix_variant_and_exact_label
     })
     assert contract["passed"] is False
     assert "대형주수" in contract["unexpected_texts"]
-

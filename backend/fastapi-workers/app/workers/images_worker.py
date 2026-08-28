@@ -496,6 +496,9 @@ def _inspect_generated_textless_image_impl(
         ocr_rows=ocr_rows,
         expected_texts=expected_generated,
         targeted_exact_retry=bool(expected_generated and ocr_rows is None),
+        # 생성 모델에 짧은 승인 문구를 맡긴 엄격 레인은 여러 모니터의
+        # 접두·접미 이탈자까지 원본 표면별 OCR로 찾아야 한다.
+        surface_text_recall=bool(expected_generated and ocr_rows is None),
     )
     status = str(inspection.get("status") or "failed")
     tokens = list(inspection.get("visible_tokens") or [])

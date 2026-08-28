@@ -1,0 +1,163 @@
+{
+  "source": "artifacts/common_quality_floor_canary_20260828/scene_28_raw.png",
+  "visible_tokens": [
+    "대형주",
+    "대형주수"
+  ],
+  "exact_generated_texts": [
+    "대형주"
+  ],
+  "missing_generated_texts": [],
+  "surface_text_ocr_status": "completed",
+  "surface_text_evidence": [
+    {
+      "source": "original_surface_deskew_ocr",
+      "variant": "upper_right_extended",
+      "box": [
+        1868,
+        120,
+        2498,
+        417
+      ],
+      "angle_degrees": -10.139,
+      "texts": [
+        "대형주"
+      ]
+    },
+    {
+      "source": "original_surface_deskew_ocr",
+      "variant": "upper",
+      "box": [
+        201,
+        504,
+        631,
+        816
+      ],
+      "angle_degrees": 9.387,
+      "texts": [
+        "124"
+      ]
+    },
+    {
+      "source": "original_surface_deskew_ocr",
+      "variant": "interior_upper",
+      "box": [
+        218,
+        526,
+        695,
+        799
+      ],
+      "angle_degrees": 9.387,
+      "texts": [
+        "1246"
+      ]
+    },
+    {
+      "source": "original_surface_deskew_ocr",
+      "variant": "upper_right_extended",
+      "box": [
+        201,
+        504,
+        734,
+        816
+      ],
+      "angle_degrees": 9.387,
+      "texts": [
+        "1246"
+      ]
+    },
+    {
+      "source": "original_surface_deskew_ocr",
+      "variant": "interior_upper",
+      "box": [
+        242,
+        102,
+        742,
+        380
+      ],
+      "angle_degrees": 13.0,
+      "texts": [
+        "형주수",
+        "대형주수"
+      ]
+    },
+    {
+      "source": "original_surface_deskew_ocr",
+      "variant": "upper",
+      "box": [
+        1204,
+        288,
+        1619,
+        488
+      ],
+      "angle_degrees": -3.72,
+      "texts": [
+        "2",
+        "형주수"
+      ]
+    },
+    {
+      "source": "original_surface_deskew_ocr",
+      "variant": "interior_upper",
+      "box": [
+        1221,
+        302,
+        1681,
+        477
+      ],
+      "angle_degrees": -3.72,
+      "texts": [
+        "4",
+        "형주수",
+        "하즈스"
+      ]
+    }
+  ],
+  "contract": {
+    "version": "scene-local-text-contract-v5-approved-scene-surface",
+    "approved_texts": [
+      "대형주"
+    ],
+    "generated_texts": [
+      "대형주"
+    ],
+    "deterministic_texts": [],
+    "surface_plan": [
+      {
+        "text": "대형주",
+        "max_occurrences": 1
+      }
+    ],
+    "surface_count": 1,
+    "placement_mode": "explicit_plan",
+    "hierarchy_policy": "follow_explicit_scene_plan",
+    "surface_material_policy": "integrated_opaque_scene_surface",
+    "detached_translucent_card_allowed": false,
+    "bubble_policy": "unplanned",
+    "bubble_allowed": false,
+    "bubble_text": "",
+    "sources": [
+      "scene.screen_texts",
+      "scene.screen_text_plan"
+    ],
+    "text_render_policy": "legacy",
+    "semantic_routing": [],
+    "detected_texts": [
+      "대형주",
+      "대형주수"
+    ],
+    "narration_grounded_texts": [],
+    "review_required_nonnumeric_texts": [
+      "대형주수"
+    ],
+    "review_required_numeric_texts": [],
+    "occurrence_counts": {
+      "대형주": 1
+    },
+    "duplicate_texts": [],
+    "unexpected_texts": [
+      "대형주수"
+    ],
+    "passed": false
+  }
+}

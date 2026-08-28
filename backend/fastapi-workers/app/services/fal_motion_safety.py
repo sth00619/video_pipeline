@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import math
 import os
 import re
 import shutil
@@ -100,6 +101,65 @@ def _meaningful_ocr_tokens(rows: Iterable[dict[str, Any]]) -> list[str]:
         if len(letters) >= 3 and confidence >= 70:
             tokens.append(raw)
     return list(dict.fromkeys(tokens))[:20]
+
+
+def _meaningful_surface_sequences(rows: Iterable[dict[str, Any]]) -> list[str]:
+    """표면 OCR이 한글을 글자별로 쪼갠 경우 같은 행의 연속열을 복원한다.
+
+    전체 장면 OCR에는 적용하지 않는다. 원본 해상도의 물리 표면 후보를
+    따로 판독한 행만 입력받아, 승인 문구의 접두·접미 이탈자도 엄격 문자
+    게이트가 실제 문자열로 비교할 수 있게 한다.
+    """
+    grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = {}
+    for row in rows:
+        text = str(row.get("text") or "").strip()
+        if not text:
+            continue
+        key = tuple(str(row.get(field) or "") for field in (
+            "surface_scan", "block_num", "par_num", "line_num",
+        ))
+        grouped.setdefault(key, []).append(row)
+
+    sequences: list[str] = []
+    for line_rows in grouped.values():
+        ordered = sorted(line_rows, key=lambda row: int(row.get("word_num") or 0))
+        run: list[tuple[str, float]] = []
+
+        def flush() -> None:
+            if not run:
+                return
+            value = "".join(text for text, _ in run)
+            confidences = [confidence for _, confidence in run]
+            # 모델 생성 한글은 한 글자만 낮은 신뢰도로 흔들리는 경우가 있다.
+            # 전체 평균과 적어도 한 개의 강한 글자 근거를 함께 요구해 선화
+            # 노이즈를 문구로 승격하지 않는다.
+            if (
+                len(value) >= 3
+                and sum(confidences) / len(confidences) >= 55
+                and max(confidences) >= 80
+            ):
+                sequences.append(value)
+            run.clear()
+
+        for row in ordered:
+            raw_text = re.sub(r"\s+", "", str(row.get("text") or ""))
+            # 글자 외곽선이나 모니터 테두리를 쉼표·따옴표로 붙여 읽어도
+            # 한글 본문 자체는 보존한다. 영문·숫자가 섞인 토큰은 임의로
+            # 제거하지 않고 여기서는 연속 한글 복원 대상에서 제외한다.
+            if re.search(r"[A-Za-z\d]", raw_text):
+                flush()
+                continue
+            text = "".join(re.findall(r"[가-힣]", raw_text))
+            if not text:
+                flush()
+                continue
+            try:
+                confidence = float(row.get("conf") or -1)
+            except (TypeError, ValueError):
+                confidence = -1
+            run.append((text, confidence))
+        flush()
+    return list(dict.fromkeys(sequences))[:20]
 
 
 def _row_box(row: dict[str, Any]) -> tuple[int, int, int, int] | None:
@@ -225,7 +285,12 @@ def _exact_text_hits(rows: Iterable[dict[str, Any]], expected_texts: Iterable[st
     return list(dict.fromkeys(hits))
 
 
-def _read_tesseract_rows(image_path: str, *, psm: int = 11) -> tuple[str, list[dict[str, str]]]:
+def _read_tesseract_rows(
+    image_path: str,
+    *,
+    psm: int = 11,
+    languages: str = "kor+eng",
+) -> tuple[str, list[dict[str, str]]]:
     executable = shutil.which("tesseract")
     if not executable:
         return "unavailable", []
@@ -249,7 +314,7 @@ def _read_tesseract_rows(image_path: str, *, psm: int = 11) -> tuple[str, list[d
             prepared.save(temp_path, "PNG", optimize=True)
             ocr_path = temp_path
         completed = subprocess.run(
-            [executable, ocr_path, "stdout", "-l", "kor+eng", "--psm", str(psm), "tsv"],
+            [executable, ocr_path, "stdout", "-l", languages, "--psm", str(psm), "tsv"],
             capture_output=True,
             text=True,
             timeout=12,
@@ -296,6 +361,166 @@ def _read_tesseract_region_rows(
                 os.unlink(temp_path)
             except OSError:
                 pass
+
+
+def _box_iou(
+    first: tuple[int, int, int, int],
+    second: tuple[int, int, int, int],
+) -> float:
+    ax1, ay1, ax2, ay2 = first
+    bx1, by1, bx2, by2 = second
+    width = max(0, min(ax2, bx2) - max(ax1, bx1))
+    height = max(0, min(ay2, by2) - max(ay1, by1))
+    intersection = width * height
+    if not intersection:
+        return 0.0
+    union = (ax2 - ax1) * (ay2 - ay1) + (bx2 - bx1) * (by2 - by1) - intersection
+    return intersection / union if union else 0.0
+
+
+def _read_tesseract_surface_rows(
+    image_path: str,
+) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
+    """밝은 물리 화면 후보를 원본 해상도·표면 기울기로 다시 읽는다.
+
+    scene28 전용 좌표를 사용하지 않는다. 같은 프레임에 여러 모니터·보드가
+    있는 장면 전반에서 사각형 표면을 찾고, 전체 960px 축소 OCR이 잃은
+    접미 이탈자까지 실제 Tesseract 행으로 복원하는 공통 보조 경로다.
+    """
+    try:
+        import cv2
+    except ImportError:
+        return "unavailable", [], []
+    image = cv2.imread(image_path)
+    if image is None:
+        return "failed", [], []
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    height, width = gray.shape
+    frame_area = height * width
+    candidates: list[dict[str, Any]] = []
+    # 동일 표면을 여러 임계값에서 중복 판독하면 비용만 늘고 OCR 노이즈가
+    # 누적된다. 실제 scene28과 합성 회귀 양쪽에서 밝은 화면 내부를 안정적으로
+    # 분리한 중간 임계값 하나를 사용한다.
+    for threshold in (140,):
+        _, mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+        contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            area = float(cv2.contourArea(contour))
+            if not frame_area * 0.01 <= area <= frame_area * 0.35:
+                continue
+            x, y, box_width, box_height = cv2.boundingRect(contour)
+            if box_width < width * 0.09 or box_height < height * 0.07:
+                continue
+            hull = cv2.convexHull(contour)
+            perimeter = cv2.arcLength(hull, True)
+            approximation = cv2.approxPolyDP(hull, 0.025 * perimeter, True)
+            if len(approximation) != 4:
+                continue
+            points = approximation.reshape(4, 2)
+            ordered = sorted(points.tolist(), key=lambda point: (point[1], point[0]))
+            top = sorted(ordered[:2], key=lambda point: point[0])
+            angle = math.degrees(math.atan2(top[1][1] - top[0][1], top[1][0] - top[0][0]))
+            # 밝은 연결 성분 경계를 소폭 확장하되, 옆 모니터와 한 타일로
+            # 합쳐질 정도로 넓히지는 않는다. 아래쪽 차트 간섭은 별도의 upper
+            # 변형에서 제거한다.
+            pad_x = round(box_width * 0.08)
+            pad_y = round(box_height * 0.08)
+            box = (
+                max(0, x - pad_x), max(0, y - pad_y),
+                min(width, x + box_width + pad_x), min(height, y + box_height + pad_y),
+            )
+            candidate = {
+                "box": box,
+                # Tesseract 한글은 14~15도 보정에서 획을 합치는 경우가 있어
+                # 과도한 기울기 추정을 13도로 제한한다. 더 큰 왜곡은 임의
+                # 추정하지 않고 멀티모달/육안 게이트로 남긴다.
+                "angle": max(-13.0, min(13.0, angle)),
+                "area_ratio": round(area / frame_area, 6),
+            }
+            if any(_box_iou(box, other["box"]) >= 0.65 for other in candidates):
+                continue
+            candidates.append(candidate)
+    candidates.sort(key=lambda item: item["area_ratio"], reverse=True)
+    candidates = candidates[:8]
+    if not candidates:
+        return "completed", [], []
+
+    all_rows: list[dict[str, Any]] = []
+    evidence: list[dict[str, Any]] = []
+    statuses: list[str] = []
+    with Image.open(image_path) as source:
+        grayscale = source.convert("L")
+        for candidate_index, candidate in enumerate(candidates):
+            left, top, right, bottom = candidate["box"]
+            box_height = bottom - top
+            box_width = right - left
+            scan_variants = (
+                ("upper", (left, top, right, top + round(box_height * 0.72))),
+                # 화면 프레임·하단 그래프를 덜어낸 내부 상단. scene28 원본의
+                # 기울어진 라벨과 합성 다중 모니터 회귀가 모두 이 상대 좌표로
+                # 복원되며, 절대 scene 좌표는 사용하지 않는다.
+                ("interior_upper", (
+                    left + round(box_width * 0.04),
+                    top + round(box_height * 0.05),
+                    min(width, right + round(box_width * 0.15)),
+                    top + round(box_height * 0.68),
+                )),
+                # 글자 획이 밝은 연결 성분의 오른쪽 경계를 끊은 경우를 위해
+                # 같은 표면의 오른쪽만 제한적으로 확장한다. 장면 좌표가 아닌
+                # 검출된 표면 크기에 비례하므로 특정 scene 패치가 아니다.
+                ("upper_right_extended", (
+                    left,
+                    top,
+                    min(width, right + round(box_width * 0.24)),
+                    top + round(box_height * 0.72),
+                )),
+            )
+            for variant, scan_box in scan_variants:
+                crop = grayscale.crop(scan_box)
+                prepared = crop.rotate(
+                    candidate["angle"], expand=True, fillcolor=255,
+                ).resize(
+                    (crop.width * 2, crop.height * 2), Image.Resampling.LANCZOS,
+                )
+                prepared = ImageOps.autocontrast(prepared)
+                temp_path = ""
+                try:
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
+                        temp_path = handle.name
+                    prepared.save(temp_path, "PNG", optimize=True)
+                    scan_rows: list[dict[str, Any]] = []
+                    for psm in (6, 11):
+                        status, rows = _read_tesseract_rows(
+                            temp_path, psm=psm, languages="kor",
+                        )
+                        statuses.append(status)
+                        for row in rows:
+                            copied = dict(row)
+                            copied["surface_scan"] = f"{candidate_index}:{variant}:{psm}"
+                            scan_rows.append(copied)
+                    all_rows.extend(scan_rows)
+                    tokens = list(dict.fromkeys([
+                        *_meaningful_ocr_tokens(scan_rows),
+                        *_meaningful_surface_sequences(scan_rows),
+                    ]))
+                    if tokens:
+                        evidence.append({
+                            "source": "original_surface_deskew_ocr",
+                            "variant": variant,
+                            "box": list(scan_box),
+                            "angle_degrees": round(candidate["angle"], 3),
+                            "texts": tokens,
+                        })
+                finally:
+                    if temp_path:
+                        try:
+                            os.unlink(temp_path)
+                        except OSError:
+                            pass
+    status = "completed" if any(value == "completed" for value in statuses) else (
+        "unavailable" if statuses and all(value == "unavailable" for value in statuses) else "failed"
+    )
+    return status, all_rows, evidence
 
 
 def _targeted_exact_text_retry(
@@ -378,6 +603,7 @@ def inspect_visible_text(
     ocr_rows: Iterable[dict[str, Any]] | None = None,
     expected_texts: Iterable[str] | None = None,
     targeted_exact_retry: bool = False,
+    surface_text_recall: bool = False,
 ) -> dict[str, Any]:
     """최종 래스터에서 모델이 만든 읽을 수 있는 문자·숫자를 검사한다.
 
@@ -404,7 +630,46 @@ def inspect_visible_text(
         # 단위 테스트와 외부 OCR 주입은 이미 한 번 검증된 행으로 취급한다.
         tokens = _meaningful_ocr_tokens(rows)
         confirmation_status = "provided_rows"
+    surface_status = "not_required"
+    surface_evidence: list[dict[str, Any]] = []
+    surface_tokens: list[str] = []
+    if ocr_rows is None and surface_text_recall:
+        surface_status, surface_rows, surface_evidence = _read_tesseract_surface_rows(image_path)
+        if surface_status == "completed":
+            surface_candidates = list(dict.fromkeys([
+                *_meaningful_ocr_tokens(surface_rows),
+                *_meaningful_surface_sequences(surface_rows),
+            ]))
+            expected_keys = [_compact_exact_text(value) for value in expected]
+            surface_tokens = [
+                token for token in surface_candidates
+                if not expected_keys or any(
+                    _compact_exact_text(token) == key
+                    or _compact_exact_text(token).startswith(key)
+                    or _compact_exact_text(token).endswith(key)
+                    or (
+                        len(_compact_exact_text(token)) >= 3
+                        and _compact_exact_text(token) in key
+                    )
+                    for key in expected_keys if key
+                )
+            ]
+            tokens = list(dict.fromkeys([
+                *tokens,
+                *surface_tokens,
+            ]))[:40]
+            rows = [*rows, *surface_rows]
     exact_texts = _exact_text_hits(rows, expected) if status == "completed" else []
+    # 표면 재판독의 한 행이 승인 문자열과 완전히 같다면 주변 테두리를 별도
+    # 토큰으로 읽었더라도 정확 문구로 인정한다. 접미 이탈자 `대형주수`는
+    # compact equality가 아니므로 이 경로를 절대 통과하지 않는다.
+    exact_texts = list(dict.fromkeys([
+        *exact_texts,
+        *[
+            value for value in expected
+            if any(_compact_exact_text(token) == _compact_exact_text(value) for token in surface_tokens)
+        ],
+    ]))
     if exact_texts:
         exact_evidence.append({
             "source": "provided_rows" if ocr_rows is not None else "full_frame_psm11",
@@ -440,6 +705,8 @@ def inspect_visible_text(
         "targeted_exact_ocr_status": targeted_status,
         "full_frame_psm6_status": full_psm6_status,
         "exact_text_evidence": exact_evidence,
+        "surface_text_ocr_status": surface_status,
+        "surface_text_evidence": surface_evidence,
     }
 
 
