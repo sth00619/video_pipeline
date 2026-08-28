@@ -9,8 +9,12 @@ from app.v5.providers import gemini_provider
 
 def test_runtime_whitelist_matches_real_loader():
     active = runtime_names(Path(gemini_provider.__file__))
-    assert len(active) == 8
-    assert active == {gemini_provider._FACE_RANGE_REF_NAME, *gemini_provider._SCENE_STYLE_REF_NAMES}
+    assert len(active) == 9
+    assert active == {
+        gemini_provider._FACE_RANGE_REF_NAME,
+        *gemini_provider._FACE_ROLE_REF_NAMES.values(),
+        *gemini_provider._SCENE_STYLE_REF_NAMES,
+    }
     assert all(classify(name, active) == "runtime_required" for name in active)
 
 

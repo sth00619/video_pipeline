@@ -209,6 +209,23 @@ def test_semantic_deterministic_values_are_not_reintroduced_into_model_prompt():
     assert "other props remain detailed" in prompt.lower()
 
 
+def test_sanitized_deterministic_surface_does_not_keep_conflicting_diagram_marks():
+    """문자 제거 자리와 후속 결정론 표면 계약이 서로 반대 지시를 내리면 안 된다."""
+    scene = {
+        "screen_texts": ["143조 원"],
+        "screen_text_validation": {"passed": True},
+    }
+
+    prompt = _bounded_text_generation_prompt(
+        'A central monitor displays "143조 원" in bold digits.',
+        audit_target=scene,
+    )
+
+    assert "non-linguistic shapes" not in prompt
+    assert "calm uniform interior" in prompt
+    assert "no marks, symbols, line art" in prompt
+
+
 def test_reference_file_content_changes_resume_fingerprint(tmp_path):
     reference = tmp_path / "style.png"
     Image.new("RGB", (8, 8), "red").save(reference)
