@@ -3,6 +3,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.utils.composition_density_profile import (
+    composition_density_profile_for_scene,
+    composition_density_prompt,
+)
 from app.utils.image_text_contract import build_scene_text_contract
 
 
@@ -49,6 +53,7 @@ def build_scene_visual_quality_contract(
         max_surface_ratio = 0.24
     direction = source.get("art_direction") or {}
     character_required = bool(direction.get("character_required", True))
+    density_profile = composition_density_profile_for_scene(source)
     return {
         "version": "scene-visual-quality-floor-v2",
         "shared_quality_floor": list(_SHARED_QUALITY_FLOOR),
@@ -81,6 +86,7 @@ def build_scene_visual_quality_contract(
             "minimum_storytelling_frame_ratio": 0.60,
             "must_be_scene_integrated": True,
         },
+        "composition_density_profile": density_profile.as_dict(),
         "variation_policy": (
             "not a fixed costume, expression, pose, camera, or background template; "
             "variation is required when the approved narration calls for it"
@@ -110,4 +116,9 @@ def scene_visual_quality_prompt(contract: dict[str, Any]) -> str:
             f"The single largest calm deterministic typography surface may occupy no more than {ratio_percent} percent of the frame; "
             "it must remain a subordinate in-world prop, while at least 60 percent of the frame communicates the scene's economic story."
         )
+    density = contract.get("composition_density_profile") or {}
+    density_id = str(density.get("id") or "").strip()
+    if density_id:
+        profile = composition_density_profile_for_scene({"archetype": density_id})
+        clauses.append(composition_density_prompt(profile))
     return " " + " ".join(clauses)

@@ -319,6 +319,11 @@ def _bounded_text_generation_prompt(
     if isinstance(audit_target, dict):
         audit_target["image_text_contract"] = text_contract
         audit_target["scene_visual_quality_contract"] = visual_quality_contract
+        # archetype 밀도 레이어는 텍스트 계약과 별도 계보로도 노출한다.
+        # 그래야 운영 원장에서 문자 정확성 실패와 구성 밀도 실패를 섞지 않는다.
+        audit_target["composition_density_profile"] = dict(
+            visual_quality_contract.get("composition_density_profile") or {}
+        )
         audit_target["image_prompt_text_contract"] = {
             **report,
             "financial_redaction": financial_redaction,

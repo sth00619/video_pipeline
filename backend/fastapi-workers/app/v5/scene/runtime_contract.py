@@ -12,6 +12,7 @@ import re
 from app.postprocess.text_overlay import script_visual_plan
 from app.utils.entity_english_map import ENTITY_REGISTRY, get_entity_english_name
 from app.utils.image_text_contract import build_scene_text_contract, contains_financial_number
+from app.utils.composition_density_profile import composition_density_profile_for_scene
 
 from app.v5.providers.router import RENDER_BLOCKED_ARCHETYPES
 from app.v5.overlay.fact_value_contract import (
@@ -445,6 +446,7 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
     # hero/body는 Router가 Gemini Pro 우선 lane을 선택한다. draft에서만 klein
     # 후보가 될 수 있으며, 운영 계획은 draft를 지정하지 않는다.
     tier = "hero" if information_scene else "body"
+    density_profile = composition_density_profile_for_scene({"archetype": selection.archetype})
     return {
         "scene_id": spec.scene_id,
         "scene_type": scene_type,
@@ -468,6 +470,7 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
             spec.character_required,
         ),
         "style_contract_version": V5_STYLE_CONTRACT_VERSION,
+        "composition_density_profile": density_profile.as_dict(),
         "primary_surface_region": primary_surface_region(selection.archetype),
         "surface_caption": {
             "english": semantic_caption,

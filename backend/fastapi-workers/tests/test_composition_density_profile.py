@@ -10,11 +10,8 @@ from app.v5.scene.prompt_builder import ARCHETYPES
 from app.workers.images_worker import _bounded_text_generation_prompt
 
 
-ROOT = Path(__file__).resolve().parents[3]
-
-
 def _job52_scenes() -> dict[int, dict]:
-    path = ROOT / "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json"
+    path = Path(__file__).resolve().parent / "fixtures/job52_sparse_density_scenes.json"
     return {int(scene["index"]): scene for scene in json.loads(path.read_text(encoding="utf-8"))}
 
 
@@ -68,4 +65,3 @@ def test_split_comparison_legacy_scene_gets_density_without_becoming_an_archetyp
 
     assert profile.id == "split_comparison"
     assert "legacy scene" not in composition_density_prompt(profile).lower()
-
