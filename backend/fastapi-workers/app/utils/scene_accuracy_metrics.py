@@ -22,10 +22,16 @@ def aggregate_scene_accuracy(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """pass/fail만 항목 정확도에 넣고 pending은 장면 승인을 차단한다."""
     scene_rows: list[dict[str, Any]] = []
     counts = {name: 0 for name in _VALID_STATUSES}
+    per_item_counts: dict[str, dict[str, int]] = {}
     for row in rows:
         items = {str(key): _status(value) for key, value in (row.get("items") or {}).items()}
-        for status in items.values():
+        for name, status in items.items():
             counts[status] += 1
+            item_counts = per_item_counts.setdefault(
+                name,
+                {state: 0 for state in _VALID_STATUSES},
+            )
+            item_counts[status] += 1
         evaluated = [status for status in items.values() if status in {"pass", "fail"}]
         fully_accurate = bool(evaluated) and all(
             status in {"pass", "not_applicable"} for status in items.values()
@@ -39,6 +45,18 @@ def aggregate_scene_accuracy(rows: list[dict[str, Any]]) -> dict[str, Any]:
     evaluated_count = counts["pass"] + counts["fail"]
     scene_count = len(scene_rows)
     fully_accurate_count = sum(1 for row in scene_rows if row["fully_accurate"])
+    per_item = {}
+    for name in sorted(per_item_counts):
+        item_counts = per_item_counts[name]
+        item_evaluated = item_counts["pass"] + item_counts["fail"]
+        per_item[name] = {
+            "evaluated_count": item_evaluated,
+            "passed_count": item_counts["pass"],
+            "failed_count": item_counts["fail"],
+            "pending_count": item_counts["pending"],
+            "not_applicable_count": item_counts["not_applicable"],
+            "accuracy": item_counts["pass"] / item_evaluated if item_evaluated else None,
+        }
     return {
         "contract": "scene-accuracy-metrics-v1",
         "scene_count": scene_count,
@@ -50,6 +68,7 @@ def aggregate_scene_accuracy(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "item_accuracy": counts["pass"] / evaluated_count if evaluated_count else None,
         "fully_accurate_scene_count": fully_accurate_count,
         "fully_accurate_scene_rate": fully_accurate_count / scene_count if scene_count else None,
+        "per_item": per_item,
         "scenes": scene_rows,
     }
 
@@ -67,12 +86,21 @@ def visual_qa_item_results(failure_categories: list[str]) -> dict[str, str]:
 
     return {
         "text_integrity": verdict("text_", "speech_bubble_"),
+        "deterministic_numeric_integrity": verdict(
+            "text_missing_approved_numeric",
+            "text_unapproved_numeric",
+            "deterministic_numeric_",
+        ),
         "scene_meaning": verdict("scene_semantic", "scene_required_props", "number_panel_only"),
         "character_anatomy_and_face": verdict("character_"),
         "style_fidelity": verdict("style_", "visual_medium"),
         "composition_and_density": verdict("scene_information_density", "scene_composition"),
         "physical_text_surface": verdict("text_surface_", "deterministic_surface_"),
         "unexpected_visual_anomaly": verdict(
+            "unexpected_or_ambiguous_prop",
+            "local_edit_blur_smear_artifact",
+        ),
+        "unlisted_failure_scan": verdict(
             "unexpected_or_ambiguous_prop",
             "local_edit_blur_smear_artifact",
         ),

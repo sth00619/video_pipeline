@@ -1,4 +1,7 @@
-from scripts.run_wo_img02a_before_after_canary import _validate_spec
+from scripts.run_wo_img02a_before_after_canary import (
+    _quality_checklist_for_result,
+    _validate_spec,
+)
 
 
 def _spec(scenes: list[int]) -> dict:
@@ -35,3 +38,16 @@ def test_canary_cannot_expand_beyond_reviewed_four_scenes() -> None:
     else:
         raise AssertionError("허용되지 않은 장면이 canary 범위를 우회했습니다.")
 
+
+def test_canary_keeps_text_and_surface_gates_as_separate_accuracy_items() -> None:
+    checklist = _quality_checklist_for_result({
+        "index": 0,
+        "base_raster_text_gate": {"status": "passed"},
+        "deterministic_surface_gate": {"status": "failed"},
+    })
+
+    assert checklist["items"]["text_integrity"] == "pass"
+    assert checklist["items"]["deterministic_numeric_integrity"] == "fail"
+    assert checklist["items"]["physical_text_surface"] == "fail"
+    assert checklist["items"]["scene_meaning"] == "pending"
+    assert checklist["approval_blocked"] is True

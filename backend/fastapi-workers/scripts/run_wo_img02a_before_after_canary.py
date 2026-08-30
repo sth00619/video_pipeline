@@ -22,6 +22,10 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.run_gemini_eight_scene_pilot import _measure_generated_labels, _sha, _write_json  # noqa: E402
 from scripts.run_gemini_provider_stage2_full_comparison import _model_prices, prepare_rows  # noqa: E402
+from app.utils.visual_quality_checklist import (  # noqa: E402
+    aggregate_visual_quality_checklists,
+    build_visual_quality_checklist,
+)
 
 
 MODEL = "gemini-3-pro-image"
@@ -36,6 +40,28 @@ def _git_head() -> str:
     return subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=REPO, text=True,
     ).strip()
+
+
+def _quality_checklist_for_result(result: dict) -> dict:
+    automated: dict[str, str] = {}
+    base_gate = result.get("base_raster_text_gate") or {}
+    if base_gate.get("status") in {"passed", "failed"}:
+        automated["text_integrity"] = "pass" if base_gate["status"] == "passed" else "fail"
+
+    surface_gate = result.get("deterministic_surface_gate") or {}
+    surface_status = surface_gate.get("status")
+    if surface_status == "not_applicable":
+        automated["deterministic_numeric_integrity"] = "not_applicable"
+        automated["physical_text_surface"] = "not_applicable"
+    elif surface_status in {"passed", "failed"}:
+        status = "pass" if surface_status == "passed" else "fail"
+        automated["deterministic_numeric_integrity"] = status
+        automated["physical_text_surface"] = status
+
+    return build_visual_quality_checklist(
+        f"scene:{int(result['index']):02d}",
+        automated=automated,
+    )
 
 
 def _validate_spec(spec: dict) -> tuple[int, ...]:
@@ -201,6 +227,7 @@ def main() -> int:
             "final_prompt_sha256": row["final_prompt_sha256"],
             "references": row["references"],
         }
+        result["visual_quality_checklist"] = _quality_checklist_for_result(result)
         manifest["results"].append(result)
         audit = ProviderRequestAudit.for_path(
             path=ledger,
@@ -269,8 +296,24 @@ def main() -> int:
             else:
                 result["deterministic_surface_gate"] = {"status": "not_applicable"}
                 result.update(final_path=str(final), final_sha256=_sha(final.read_bytes()))
+
+            from app.utils.canary_visual_review import build_canary_visual_review_packet
+
+            result["visual_quality_checklist"] = _quality_checklist_for_result(result)
+            checklist_items = result["visual_quality_checklist"]["items"]
+            result["holistic_visual_review"] = build_canary_visual_review_packet(
+                raw,
+                result["raw_sha256"],
+                automated_findings={
+                    "text_and_physical_surface": (
+                        checklist_items["text_integrity"] == "pass"
+                        and checklist_items["physical_text_surface"] in {"pass", "not_applicable"}
+                    ),
+                },
+            )
         except Exception as exc:
             result.update(status="provider_request_failed", error_type=type(exc).__name__, error=str(exc))
+        result["visual_quality_checklist"] = _quality_checklist_for_result(result)
         result["request_summary"] = audit.summary()
         result["completed_at"] = datetime.now(timezone.utc).isoformat()
         _write_json(output / "manifest.json", manifest)
@@ -285,6 +328,10 @@ def main() -> int:
         contact_sheet_sha256=_sha(sheet.read_bytes()),
         automatic_and_visual_judgment_are_separate=True,
     )
+    manifest["accuracy_metrics"] = aggregate_visual_quality_checklists([
+        row["visual_quality_checklist"]
+        for row in manifest["results"]
+    ])
     _write_json(output / "manifest.json", manifest)
     print(json.dumps({
         "status": manifest["status"],
