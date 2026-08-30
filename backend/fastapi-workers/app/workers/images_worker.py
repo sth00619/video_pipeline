@@ -107,8 +107,8 @@ STYLE_SUFFIX = (
 # LLM이 같은 승인 장면을 조금 다르게 표현해도 재개 실행이 이미 승인된 PNG를
 # 전부 다시 과금하지 않도록, 생성 문장 자체가 아니라 안정적인 장면 계약에
 # 지문을 묶는다. 프롬프트 정책을 의도적으로 바꾸면 이 버전을 올린다.
-IMAGE_LINEAGE_FINGERPRINT_VERSION = 11
-PROMPT_CACHE_POLICY_VERSION = 7
+IMAGE_LINEAGE_FINGERPRINT_VERSION = 12
+PROMPT_CACHE_POLICY_VERSION = 8
 PROMPT_CACHE_COMPATIBLE_VERSIONS = (6,)
 
 
@@ -342,7 +342,11 @@ def _bounded_text_generation_prompt(
         wording_rules = []
         for position, value in enumerate(generated_texts, start=1):
             item = plan_by_text.get(value) or {}
-            surface = str(item.get("surface") or "an existing subordinate scene-native physical surface")
+            surface = str(
+                item.get("surface_description")
+                or item.get("surface")
+                or "an existing subordinate scene-native physical surface"
+            )
             purpose = str(item.get("purpose") or "scene information")
             max_occurrences = max(1, int(item.get("max_occurrences") or 1))
             wording_rules.append(
@@ -388,10 +392,26 @@ def _bounded_text_generation_prompt(
             "certificates, newspapers, and labels must use clearly non-linguistic blank lines or graphic blocks, never microprint or serial numbers."
         )
     if deterministic:
+        deterministic_plan = [
+            item for item in (text_contract.get("surface_plan") or [])
+            if isinstance(item, dict) and str(item.get("text") or "") in deterministic
+        ]
+        reserved_surfaces = list(dict.fromkeys(
+            str(item.get("surface_description") or item.get("surface_id") or item.get("surface") or "").strip()
+            for item in deterministic_plan
+            if str(item.get("surface_description") or item.get("surface_id") or item.get("surface") or "").strip()
+        ))
+        reserved_surface_note = (
+            " The later deterministic typography is bound specifically to "
+            + "; ".join(reserved_surfaces)
+            + ". Build that exact scene object and keep only its planned typography region calm, axis-aligned, fully visible, and clear of every hand or character."
+            if reserved_surfaces else ""
+        )
         suffix += (
             " Use a calm region inside an existing storyboard-essential physical screen, gauge, board, product face, or document for later deterministic typography. "
             "Do not draw, imitate, translate, or guess any of the withheld deterministic strings or values yourself. Do not add a second placard, detached card, empty safe zone, "
             "or generic panel merely to hold the later typography."
+            + reserved_surface_note
         )
     suffix += scene_visual_quality_prompt(visual_quality_contract)
     if retry:
@@ -553,7 +573,11 @@ def _inspect_generated_textless_image_impl(
             "raw": {"generated_deterministic_texts": generated_financial_texts},
         }
         raise GeneratedImageVisualContractError(review["reason"], review)
-    result = visible_text_contract_result(tokens, scene)
+    result = visible_text_contract_result(
+        tokens,
+        scene,
+        occurrence_counts=inspection.get("surface_occurrence_counts"),
+    )
     if not result["passed"]:
         duplicate_summary = (
             " 승인 문구 중복: " + ", ".join(result.get("duplicate_texts") or [])
@@ -3711,15 +3735,19 @@ Rules:
             for item in surface_plan
             if str(item.get("surface_id") or item.get("surface") or "").strip()
         ))
+        if len(surface_plan) > 1:
+            raise ValueError("한 번의 결정론 문구 합성에 여러 의미 표면 계획이 섞여 있습니다.")
+        planned_item = surface_plan[0] if surface_plan else None
         from app.postprocess.text_overlay import add_surface_caption
-        from app.services.overlay.surface_detector import detect_surface
+        from app.services.overlay.surface_detector import detect_surface_for_plan
 
         # 아키타입 좌표는 생성 프롬프트의 구도 가이드일 뿐 실제 생성 결과의
         # 모니터 위치가 아니다. 최종 PNG 안에서 빈 물리 표면을 다시 찾아야
         # 지구본·캐릭터 위에 거대한 글자가 얹히는 일을 막을 수 있다.
-        detection = detect_surface(
+        detection = detect_surface_for_plan(
             img_path,
             planned_surface_kind,
+            plan_item=planned_item,
             job_id=int(scene.get("_job_id") or 0) or None,
             scene_key=f"deterministic_surface:{scene.get('index', scene.get('scene_id', 'unknown'))}",
         )
@@ -3742,6 +3770,9 @@ Rules:
                 "resolved_region": list(region),
                 "planned_surface_kind": planned_surface_kind,
                 "planned_surface_ids": planned_surface_ids,
+                "planned_surface_description": (
+                    str((planned_item or {}).get("surface_description") or "").strip()
+                ),
             }
         else:
             scene["deterministic_surface_detection"] = {
@@ -3749,6 +3780,9 @@ Rules:
                 "confidence": 0.0,
                 "planned_surface_kind": planned_surface_kind,
                 "planned_surface_ids": planned_surface_ids,
+                "planned_surface_description": (
+                    str((planned_item or {}).get("surface_description") or "").strip()
+                ),
             }
             raise DeterministicSurfaceMissingError(
                 "캐릭터·기존 글자와 겹치지 않는 테두리 있는 빈 물리 표면을 찾지 못했습니다.",

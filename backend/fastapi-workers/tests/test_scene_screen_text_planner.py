@@ -131,9 +131,10 @@ def test_common_auto_surface_plan_reaches_final_gemini_prompt_without_financial_
     )
 
     assert "143조" not in final_prompt
-    assert "comparison_prop_left" in final_prompt
-    assert "comparison_prop_right" in final_prompt
-    assert "summary_monitor" in final_prompt
+    assert "left comparison prop" in final_prompt
+    assert "right comparison prop" in final_prompt
+    assert "central framed summary monitor" in final_prompt
+    assert "lower reserved region" in final_prompt
     assert contracted["image_profile"]["model"] == "gemini-3-pro-image"
 
 
@@ -156,3 +157,24 @@ def test_trade_calculator_uses_one_balance_device_instead_of_a_duplicate_summary
         "balance_scale_right_pan_label",
     }
     assert "summary_monitor" not in {item["surface_id"] for item in surface_plan}
+    metric = next(item for item in surface_plan if item["surface_id"] == "balance_scale_plinth")
+    assert metric["locator_region"] == [0.18, 0.62, 0.42, 0.36]
+    assert "scale base" in metric["surface_description"]
+
+
+def test_shared_summary_monitor_reserves_a_distinct_lower_region_for_numeric_post_render():
+    scene = {
+        "content": "삼성전자와 SK하이닉스를 제외해도 코스피 전체 영업이익은 143조 원입니다.",
+    }
+
+    plan = derive_scene_screen_text_plan(
+        scene, ["삼성전자", "SK하이닉스", "코스피", "143조 원"],
+    )
+    label = next(item for item in plan if item["text"] == "코스피")
+    value = next(item for item in plan if item["text"] == "143조 원")
+
+    assert label["surface_id"] == value["surface_id"] == "summary_monitor"
+    assert label["region"] == [0.08, 0.08, 0.84, 0.4]
+    assert value["region"] == [0.08, 0.52, 0.84, 0.4]
+    assert value["locator_region"] == [0.35, 0.08, 0.5, 0.62]
+    assert "lower reserved region" in value["surface_description"]

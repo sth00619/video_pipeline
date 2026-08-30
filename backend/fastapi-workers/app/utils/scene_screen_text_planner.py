@@ -117,6 +117,43 @@ def _shared_surface_regions(count: int) -> list[list[float]]:
     ]
 
 
+def _surface_contract_fields(surface_id: str, *, role: str = "") -> dict[str, Any]:
+    """의미 표면 ID를 모델과 로컬 검출기가 공유하는 물리 계약으로 바꾼다.
+
+    좌표는 최종 픽셀을 단정하는 렌더 좌표가 아니라, 서로 다른 장면 사물을
+    혼동하지 않도록 후보 탐색 범위를 제한하는 넓은 정규화 영역이다.
+    """
+    if surface_id == "balance_scale_plinth":
+        return {
+            "surface_description": (
+                "a front-facing axis-aligned unlettered inset label plate physically attached "
+                "to the balance scale base, below the scale column"
+            ),
+            "locator_region": [0.18, 0.62, 0.42, 0.36],
+        }
+    if surface_id == "summary_monitor":
+        description = (
+            "the lower reserved region inside the same central framed summary monitor"
+            if role == "numeric_fact" else
+            "the upper label region inside the central framed summary monitor"
+        )
+        return {
+            "surface_description": description,
+            "locator_region": [0.35, 0.08, 0.5, 0.62],
+        }
+    if surface_id.endswith("_pan_label"):
+        side = "left" if "_left_" in surface_id else "right"
+        return {
+            "surface_description": f"the opaque label plate physically resting on the {side} scale pan",
+        }
+    if surface_id.startswith("comparison_prop_"):
+        side = "left" if surface_id.endswith("left") else "right"
+        return {
+            "surface_description": f"the opaque label face physically attached to the {side} comparison prop",
+        }
+    return {}
+
+
 def derive_scene_screen_text_plan(
     scene: dict[str, Any],
     screen_texts: list[str] | None = None,
@@ -173,6 +210,7 @@ def derive_scene_screen_text_plan(
                     "surface_kind": "prop_panel",
                     "capacity": 1,
                     "max_occurrences": 1,
+                    **_surface_contract_fields(f"balance_scale_{side}_pan_label", role=role),
                 })
                 continue
             if role == "numeric_fact":
@@ -186,6 +224,7 @@ def derive_scene_screen_text_plan(
                     "surface_kind": "prop_panel",
                     "capacity": 1,
                     "max_occurrences": 1,
+                    **_surface_contract_fields("balance_scale_plinth", role=role),
                 })
                 continue
         if role == "company":
@@ -205,6 +244,7 @@ def derive_scene_screen_text_plan(
                 "surface_kind": "prop_panel",
                 "capacity": 1,
                 "max_occurrences": 1,
+                **_surface_contract_fields(surface_id, role=role),
             }
         elif role in {"market_index", "numeric_fact"}:
             item = {
@@ -216,6 +256,7 @@ def derive_scene_screen_text_plan(
                 "surface_kind": "device_screen",
                 "capacity": summary_total,
                 "max_occurrences": 1,
+                **_surface_contract_fields("summary_monitor", role=role),
             }
             if summary_total > 1:
                 item["region"] = next(summary_regions)

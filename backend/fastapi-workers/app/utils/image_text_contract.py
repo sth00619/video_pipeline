@@ -475,6 +475,8 @@ def require_sanitized_generated_text_prompt(
 def visible_text_contract_result(
     visible_tokens: Iterable[str],
     scene: dict[str, Any] | None,
+    *,
+    occurrence_counts: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """OCR 토큰을 장면 허용 문자열과 비교하는 빠른 1차 게이트."""
     contract = build_scene_text_contract(scene)
@@ -547,10 +549,12 @@ def visible_text_contract_result(
         if key:
             planned_counts[key] = planned_counts.get(key, 0) + 1
     duplicate_texts: list[str] = []
-    occurrence_counts: dict[str, int] = {}
+    measured_occurrences = occurrence_counts if isinstance(occurrence_counts, dict) else {}
+    resolved_occurrence_counts: dict[str, int] = {}
     for value, value_key in zip(approved, approved_compact):
-        count = sum(1 for token in raw_detected if _compact(token) == value_key)
-        occurrence_counts[value] = count
+        token_count = sum(1 for token in raw_detected if _compact(token) == value_key)
+        count = max(token_count, int(measured_occurrences.get(value, 0) or 0))
+        resolved_occurrence_counts[value] = count
         allowed_count = max(1, planned_counts.get(value_key, 0))
         if count > allowed_count:
             duplicate_texts.append(value)
@@ -560,7 +564,7 @@ def visible_text_contract_result(
         "narration_grounded_texts": narration_grounded,
         "review_required_nonnumeric_texts": review_required_nonnumeric,
         "review_required_numeric_texts": review_required_numeric,
-        "occurrence_counts": occurrence_counts,
+        "occurrence_counts": resolved_occurrence_counts,
         "duplicate_texts": duplicate_texts,
         "unexpected_texts": unexpected,
         "passed": not unexpected and not duplicate_texts,

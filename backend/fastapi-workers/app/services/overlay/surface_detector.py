@@ -31,7 +31,89 @@ _SURFACE_CACHE_POLICY_VERSION = 3
 class SurfaceDetection:
     quad: Quad
     confidence: float
-    strategy: Literal["opencv", "heuristic", "vision"]
+    strategy: Literal["opencv", "heuristic", "vision", "semantic_region"]
+
+
+def _candidate_matches_locator(detection: SurfaceDetection, locator_region: list[float] | tuple[float, ...] | None) -> bool:
+    """후보가 의미 사물의 넓은 탐색 영역과 충분히 겹치는지 확인한다."""
+    if not isinstance(locator_region, (list, tuple)) or len(locator_region) != 4:
+        return True
+    lx, ly, lw, lh = (float(value) for value in locator_region)
+    left, top, right, bottom = lx, ly, lx + lw, ly + lh
+    xs = [point[0] for point in detection.quad]
+    ys = [point[1] for point in detection.quad]
+    c_left, c_top, c_right, c_bottom = min(xs), min(ys), max(xs), max(ys)
+    intersection = max(0.0, min(right, c_right) - max(left, c_left)) * max(
+        0.0, min(bottom, c_bottom) - max(top, c_top)
+    )
+    candidate_area = max(1e-9, (c_right - c_left) * (c_bottom - c_top))
+    center_x, center_y = (c_left + c_right) / 2, (c_top + c_bottom) / 2
+    return intersection / candidate_area >= .35 and left <= center_x <= right and top <= center_y <= bottom
+
+
+def _relative_subregion_detection(parent: SurfaceDetection, region: list[float] | tuple[float, ...]) -> SurfaceDetection:
+    """축 정렬 부모 표면의 상대 영역을 실제 합성 후보로 변환한다."""
+    if not isinstance(region, (list, tuple)) or len(region) != 4:
+        raise ValueError("공유 물리 표면의 상대 영역이 올바르지 않습니다.")
+    xs = [point[0] for point in parent.quad]
+    ys = [point[1] for point in parent.quad]
+    left, top, right, bottom = min(xs), min(ys), max(xs), max(ys)
+    x, y, width, height = (float(value) for value in region)
+    child_left = left + (right - left) * x
+    child_top = top + (bottom - top) * y
+    child_right = child_left + (right - left) * width
+    child_bottom = child_top + (bottom - top) * height
+    return SurfaceDetection(
+        (
+            (round(child_left, 5), round(child_top, 5)),
+            (round(child_right, 5), round(child_top, 5)),
+            (round(child_right, 5), round(child_bottom, 5)),
+            (round(child_left, 5), round(child_bottom, 5)),
+        ),
+        parent.confidence,
+        "semantic_region",
+    )
+
+
+def _surface_region_is_text_free(path: Path, detection: SurfaceDetection) -> bool:
+    """검증된 부모 화면 내부의 예약 영역만 무문자·저선화인지 판정한다."""
+    try:
+        import cv2
+
+        image = cv2.imread(str(path))
+        if image is None:
+            return False
+        height, width = image.shape[:2]
+        xs = [point[0] for point in detection.quad]
+        ys = [point[1] for point in detection.quad]
+        left, top = max(0, round(min(xs) * width)), max(0, round(min(ys) * height))
+        right, bottom = min(width, round(max(xs) * width)), min(height, round(max(ys) * height))
+        if right - left < width * .12 or bottom - top < height * .055:
+            return False
+        crop = image[top:bottom, left:right]
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(cv2.GaussianBlur(gray, (5, 5), 0), 35, 110)
+        if float(np.mean(edges > 0)) > .035:
+            return False
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
+            temp_path = handle.name
+        cv2.imwrite(temp_path, crop)
+        try:
+            from app.services.fal_motion_safety import _meaningful_ocr_tokens, _read_tesseract_rows
+
+            rows: list[dict] = []
+            for psm in (6, 11):
+                status, current = _read_tesseract_rows(temp_path, psm=psm)
+                if status == "completed":
+                    rows.extend(current)
+            return not _meaningful_ocr_tokens(rows)
+        finally:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+    except (ImportError, OSError, ValueError):
+        return False
 
 
 def _normalise_quad(points: np.ndarray, width: int, height: int) -> Quad | None:
@@ -431,6 +513,53 @@ def detect_surface_local(image_path: str, surface_kind: SurfaceKind) -> SurfaceD
         if detected and _surface_is_text_free(path, detected)
     ]
     return max(candidates, key=lambda value: value.confidence) if candidates else None
+
+
+def detect_surface_for_plan(
+    image_path: str,
+    surface_kind: SurfaceKind,
+    *,
+    plan_item: dict | None,
+    job_id: int | None = None,
+    scene_key: str = "",
+) -> SurfaceDetection | None:
+    """일반적인 큰 판이 아니라 계획된 의미 사물과 그 예약 영역을 찾는다.
+
+    공유 모니터는 위쪽에 승인 라벨이 이미 있어도, 아래쪽 결정론 영역만
+    무문자이면 사용할 수 있다. 부모 화면의 기하 검증과 자식 영역의 문자
+    검증을 분리해 기존 문자를 지우거나 전체 화면을 오승인하지 않는다.
+    """
+    path = Path(str(image_path or ""))
+    if not path.is_file():
+        return None
+    item = plan_item if isinstance(plan_item, dict) else {}
+    locator = item.get("locator_region")
+    region = item.get("region")
+    raw_candidates = [
+        detected
+        for detected in (_opencv_quad(path), _heuristic_quad(path), _sliding_blank_surface(path))
+        if detected
+        and _surface_geometry_is_safe(path, detected)
+        and _candidate_matches_locator(detected, locator)
+    ]
+    if region is not None:
+        region_candidates = [
+            child
+            for child in (_relative_subregion_detection(parent, region) for parent in raw_candidates)
+            if _surface_region_is_text_free(path, child)
+        ]
+        if region_candidates:
+            return max(region_candidates, key=lambda value: value.confidence)
+        return None
+    local_candidates = [candidate for candidate in raw_candidates if _surface_is_text_free(path, candidate)]
+    if local_candidates:
+        return max(local_candidates, key=lambda value: value.confidence)
+    # 의미 위치가 없는 기존 계약만 과금 가능한 일반 검출 경로와 호환한다.
+    if locator is None:
+        return detect_surface(
+            image_path, surface_kind, job_id=job_id, scene_key=scene_key,
+        )
+    return None
 
 
 def detect_surface_quad(image_path: str, surface_kind: SurfaceKind) -> Quad | None:

@@ -264,6 +264,26 @@ def test_generated_wording_prompt_does_not_present_bracket_or_json_artifacts():
     assert "brackets, braces, quotation marks" in prompt
 
 
+def test_surface_occurrence_count_rejects_duplicate_even_when_token_list_is_deduplicated():
+    scene = {
+        "screen_texts": ["엇갈림"],
+        "screen_text_plan": [{
+            "text": "엇갈림",
+            "surface": "context_sign_1",
+            "max_occurrences": 1,
+        }],
+        "screen_text_validation": {"passed": True},
+    }
+
+    result = visible_text_contract_result(
+        ["엇갈림"], scene, occurrence_counts={"엇갈림": 2},
+    )
+
+    assert result["occurrence_counts"] == {"엇갈림": 2}
+    assert result["duplicate_texts"] == ["엇갈림"]
+    assert result["passed"] is False
+
+
 def test_semantic_deterministic_values_are_not_reintroduced_into_model_prompt():
     scene = {
         "text_render_policy": "semantic_roles_v1",

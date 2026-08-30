@@ -15,7 +15,7 @@ from typing import Any, Iterable
 from PIL import Image, ImageOps
 
 
-FAL_MOTION_SAFETY_POLICY_VERSION = 1
+FAL_MOTION_SAFETY_POLICY_VERSION = 2
 _MEANINGFUL_TEXT_RE = re.compile(r"[A-Za-z가-힣]")
 _DIGIT_RE = re.compile(r"\d")
 
@@ -474,6 +474,15 @@ def _read_tesseract_surface_rows(
                     min(width, right + round(box_width * 0.24)),
                     top + round(box_height * 0.72),
                 )),
+                # 굵은 테두리·그림자까지 함께 확대하면 한글 획이 프레임과
+                # 합쳐지는 표지판이 있다. 같은 검출 표면의 안쪽 12%만 잘라
+                # 단일 행 PSM 7로도 읽을 수 있게 하되, 절대 장면 좌표는 쓰지 않는다.
+                ("tight_interior", (
+                    left + round(box_width * 0.12),
+                    top + round(box_height * 0.10),
+                    right - round(box_width * 0.12),
+                    bottom - round(box_height * 0.10),
+                )),
             )
             for variant, scan_box in scan_variants:
                 crop = grayscale.crop(scan_box)
@@ -489,7 +498,7 @@ def _read_tesseract_surface_rows(
                         temp_path = handle.name
                     prepared.save(temp_path, "PNG", optimize=True)
                     scan_rows: list[dict[str, Any]] = []
-                    for psm in (6, 11):
+                    for psm in (6, 7, 11):
                         status, rows = _read_tesseract_rows(
                             temp_path, psm=psm, languages="kor",
                         )
@@ -506,6 +515,7 @@ def _read_tesseract_surface_rows(
                     if tokens:
                         evidence.append({
                             "source": "original_surface_deskew_ocr",
+                            "candidate_index": candidate_index,
                             "variant": variant,
                             "box": list(scan_box),
                             "angle_degrees": round(candidate["angle"], 3),
@@ -659,6 +669,17 @@ def inspect_visible_text(
                 *surface_tokens,
             ]))[:40]
             rows = [*rows, *surface_rows]
+    surface_occurrence_counts: dict[str, int] = {}
+    for value in expected:
+        key = _compact_exact_text(value)
+        candidate_ids = {
+            int(item["candidate_index"])
+            for item in surface_evidence
+            if item.get("candidate_index") is not None
+            and any(_compact_exact_text(text) == key for text in item.get("texts") or [])
+        }
+        if candidate_ids:
+            surface_occurrence_counts[value] = len(candidate_ids)
     exact_texts = _exact_text_hits(rows, expected) if status == "completed" else []
     # 표면 재판독의 한 행이 승인 문자열과 완전히 같다면 주변 테두리를 별도
     # 토큰으로 읽었더라도 정확 문구로 인정한다. 접미 이탈자 `대형주수`는
@@ -707,6 +728,7 @@ def inspect_visible_text(
         "exact_text_evidence": exact_evidence,
         "surface_text_ocr_status": surface_status,
         "surface_text_evidence": surface_evidence,
+        "surface_occurrence_counts": surface_occurrence_counts,
     }
 
 

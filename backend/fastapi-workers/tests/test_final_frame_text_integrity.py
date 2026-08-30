@@ -145,7 +145,34 @@ def test_deterministic_caption_uses_the_planned_surface_kind(monkeypatch, tmp_pa
         seen["kind"] = kind
         return None
 
-    monkeypatch.setattr("app.services.overlay.surface_detector.detect_surface", fake_detect)
+    monkeypatch.setattr("app.services.overlay.surface_detector.detect_surface_for_plan", fake_detect)
     with pytest.raises(DeterministicSurfaceMissingError):
         ImagesWorker()._apply_deterministic_surface_caption(scene, str(image_path))
     assert seen["kind"] == "prop_panel"
+
+
+def test_deterministic_caption_passes_semantic_plan_to_surface_detector(monkeypatch, tmp_path: Path):
+    image_path = tmp_path / "scene.png"
+    _save_blank_panel(image_path)
+    scene = _caption_scene()
+    plan_item = {
+        "text": "PER 4배",
+        "surface": "balance_scale_plinth",
+        "surface_id": "balance_scale_plinth",
+        "surface_kind": "prop_panel",
+        "locator_region": [0.18, 0.62, 0.42, 0.36],
+        "surface_description": "front-facing inset label plate on the scale base",
+    }
+    scene["v5_render_contract"]["surface_caption"]["surface_plan"] = [plan_item]
+    scene["v5_render_contract"]["surface_caption"]["korean"] = "PER 4배"
+    seen = {}
+
+    def fake_detect(path, kind, *, plan_item=None, **kwargs):
+        seen["plan_item"] = plan_item
+        return None
+
+    monkeypatch.setattr("app.services.overlay.surface_detector.detect_surface_for_plan", fake_detect)
+    with pytest.raises(DeterministicSurfaceMissingError):
+        ImagesWorker()._apply_deterministic_surface_caption(scene, str(image_path))
+
+    assert seen["plan_item"] == plan_item

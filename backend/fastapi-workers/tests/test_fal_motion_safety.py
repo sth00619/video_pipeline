@@ -151,6 +151,30 @@ def test_real_digit_is_kept_when_second_ocr_mode_confirms_same_location(tmp_path
     assert result["visible_tokens"] == ["6813"]
 
 
+def test_surface_occurrences_count_distinct_panels_not_scan_variants(tmp_path):
+    evidence = [
+        {"candidate_index": 1, "variant": "upper", "texts": ["엇갈림"]},
+        {"candidate_index": 1, "variant": "tight_interior", "texts": ["엇갈림"]},
+        {"candidate_index": 3, "variant": "tight_interior", "texts": ["엇갈림"]},
+    ]
+    rows = [
+        {"text": "엇갈림", "conf": "96", "surface_scan": "1:upper:7"},
+        {"text": "엇갈림", "conf": "96", "surface_scan": "3:tight_interior:7"},
+    ]
+    with patch(
+        "app.services.fal_motion_safety._read_tesseract_rows",
+        return_value=("completed", []),
+    ), patch(
+        "app.services.fal_motion_safety._read_tesseract_surface_rows",
+        return_value=("completed", rows, evidence),
+    ):
+        result = inspect_visible_text(
+            str(_png(tmp_path)), expected_texts=["엇갈림"], surface_text_recall=True,
+        )
+
+    assert result["surface_occurrence_counts"] == {"엇갈림": 2}
+
+
 def test_different_digits_at_same_location_are_not_numeric_confirmation(tmp_path):
     primary = [{
         "text": "09", "conf": "69", "left": "720", "top": "72",
