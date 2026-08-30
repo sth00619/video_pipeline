@@ -20,7 +20,7 @@
 |---|---|---|---|
 | IGenBench | [논문](https://arxiv.org/abs/2601.04498), [공개 저장소](https://github.com/MisterBrookT/IGenBench) commit `f4b253a8fdb90754cacc1c7c9d0dc31503b2eaf3` | 600개·30유형, atomic yes/no, Q-ACC와 I-ACC 분리, 최상위 0.90/0.49, Data Completeness 0.21을 확인. 공개 `EvalEngine`도 질문 하나씩 판정하고 전체 질문 완료를 별도 확인한다. | 명칭은 복제하지 않고 `item_accuracy`와 `fully_accurate_scene_rate`로 이식 |
 | ArtChart | [논문](https://arxiv.org/abs/2607.16060) | 텍스트 없는 회색조 구조 조건, OCR·배치·미학 보상, 6축 평가를 확인. | 현재의 base raster → 물리 표면 → 결정론 텍스트 구조를 유지하는 근거로 사용. 모델 학습/RL은 미채택 |
-| Phantom | [논문](https://arxiv.org/abs/2502.11079), [공개 저장소](https://github.com/Phantom-video/Phantom) commit `bd84b602dcc949e23c89cbbf266b6f5975f2f025` | 다중 참조의 외형 혼동과 텍스트-이미지 정렬 개선은 확인. 그러나 “참조 이미지는 4장 이하”라는 문장이나 코드 상한은 찾지 못했다. | **4장 이하 규칙은 근거 미확인으로 미채택.** 참조별 역할 설명과 혼동 위험만 유지 |
+| Phantom | [논문](https://arxiv.org/abs/2502.11079), [공개 저장소](https://github.com/Phantom-video/Phantom) commit `bd84b602dcc949e23c89cbbf266b6f5975f2f025` | 공식 PDF 6쪽 §3.3에서 “Phantom inference can accept 1 to 4 reference images”를 확인했다. 참조 주체가 늘면 결과가 불안정해질 수 있다는 경고도 이어진다. | **사실은 확인했지만 4장 상한은 미채택.** Phantom은 MMDiT 기반 subject-to-video 모델이며, 이 수치를 Gemini 정지 이미지 파이프라인의 보편 상한으로 전이할 실증 근거가 없기 때문이다. 참조별 역할 설명과 혼동 위험은 유지 |
 | SciDraw-Bench | [논문](https://arxiv.org/abs/2606.28406) | OCR label recall/CER, 명시적 루브릭의 항목별 yes/no, 최소 2개 판정자, inter-judge agreement 보고를 확인. 사람 검증은 논문에서도 진행 중이라고 제한한다. | 사용자-자동 판정의 일치율·이견 원장으로 경량 이식 |
 | VISTAR | [논문](https://arxiv.org/abs/2508.06152) | 결정론 물리 지표와 HWPQ 구조화 의미 평가의 이중 층을 확인. 현재 공개 PDF는 본문에서 “full prompt in Appendix E”라고 말하지만 17쪽 파일에 Appendix E 원문은 포함되지 않았다. | 이중 층 원칙만 채택. 미확보 프롬프트를 재구성하거나 원문처럼 주장하지 않음 |
 | ViMax | [논문](https://arxiv.org/abs/2606.07649), [공개 저장소](https://github.com/HKUDS/ViMax) commit `05a48943878312d88fe5a016c12a9654940ecc43` | `ReferenceImageSelector`는 후보가 8개 이상이면 텍스트 1차 축소 후 멀티모달 재선택하고, 이전 프레임·캐릭터·배경 역할을 설명한다. `BestImageSelector`는 복수 후보의 캐릭터·공간·설명 일치도를 비교한다. | 참조 계보와 생성 후 별도 검수라는 단계 분리만 채택. LLM 선택기를 그대로 복제하지 않음 |
@@ -28,6 +28,15 @@
 ## 3. scene28의 새 실패와 원인
 
 scene28 실물에서 오른손의 검은 소품은 콘솔에 붙은 제어 레버처럼 보이지만 총·무전기·드릴로도 읽힌다. 프롬프트에는 특정 손소품 지시가 없고, `risk_control_room` 프로필이 `one narration-essential risk prop`라고만 요구했다. 따라서 원인은 “총을 요청함”이 아니라 **역할·형태·부착점 없는 소품 슬롯을 모델에 열어 둔 것**이다.
+
+이 문구는 사후 재구성이나 해석이 아니다. 당시 최종 송신 프롬프트
+`artifacts/wo_img02c_comprehensive_20260830_run1/scene_28_final_prompt.txt`
+(SHA-256 `2383a02668e0b3e5530ce772bc08ed5c76bf6226e44c102fa930fa881e927197`)의
+`COMPOSITION DENSITY PROFILE [risk_control_room]`에
+`foreground (physical console; one narration-essential risk prop)`로 실제 기록돼 있다.
+또한 수정 전 코드 `41944bc^:backend/fastapi-workers/app/utils/composition_density_profile.py`에도
+정확히 `("physical console", "one narration-essential risk prop")` 튜플이 있었다.
+현재 코드는 이를 콘솔에 물리적으로 결합된 레버·게이지로 교체했다.
 
 공통 프로필을 다음처럼 수정했다.
 
@@ -68,7 +77,7 @@ scene28 실물에서 오른손의 검은 소품은 콘솔에 붙은 제어 레�
 
 ## 5. 채택하지 않은 것과 한계
 
-- Phantom의 “4장 이하”는 현재 확보한 논문·코드에서 검증되지 않아 운영 상한으로 쓰지 않는다.
+- Phantom의 “1~4개 참조 이미지” 문장은 공식 PDF 6쪽 §3.3에서 확인했다. 이전 문서의 “확보 자료에서 확인되지 않았다”는 서술은 사실 오류였으므로 이 절과 2절 표에서 정정한다. 다만 논문의 대상은 subject-to-video 추론이며, Gemini 정지 이미지 생성에서도 4장이 최적 또는 안전 상한이라는 인과·실험 근거는 없다. 따라서 운영 하드 상한으로는 채택하지 않고, 참조 수가 늘수록 혼동 가능성을 별도 측정해야 한다는 위험 신호로만 사용한다.
 - VISTAR Appendix E 프롬프트 원문은 현재 PDF에서 확보하지 못했으므로 흉내 낸 프롬프트를 원문처럼 쓰지 않는다.
 - ViMax의 복수 후보 생성/선택은 비용과 지연을 크게 늘린다. 현재 운영에는 품질 실패 후 표적 재생성 구조가 이미 있으므로, 이번에는 단계 분리 원칙만 반영했다.
 - 자동 비전 판정은 사람을 대체하지 않는다. SciDraw-Bench도 사람과의 보정이 완료되지 않은 자동 지표를 calibrated measurement로 해석하지 말라고 제한한다.
