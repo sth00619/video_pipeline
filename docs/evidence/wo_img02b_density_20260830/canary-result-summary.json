@@ -1,0 +1,60 @@
+{
+  "version": "wo-img02b-density-canary-result-v1",
+  "runner_commit": "610c55d8aa196983dc76eab3bafac4adbdff6597",
+  "operational_contract_commit": "870ef9c5fc3d4e1e6e91d52e1f653fdb5cd11c34",
+  "model": "gemini-3-pro-image",
+  "service_tier": "priority",
+  "external_posts": 4,
+  "http_200": 4,
+  "automatic_gates": {
+    "text_gate_passed": 4,
+    "surface_gate_passed": 0,
+    "surface_gate_failed": 4
+  },
+  "ledger_calculated_amount_krw": 1356,
+  "three_way_sheet_sha256": "8adf904a0fe504f24a67bd756887db66cfc24edc621d2c32aec2ec8abcabdbdb",
+  "visual_judgments": [
+    {
+      "scene": 0,
+      "density_profile": "trade_calculator",
+      "density_vs_previous": "not_improved",
+      "density_vs_job52": "below",
+      "text_visual": "삼성전자·SK하이닉스 정확",
+      "decision": "rejected",
+      "reason": "책장·책상·교실 깊이가 복구되지 않았고 문구의 물리 표면 귀속도 불명확"
+    },
+    {
+      "scene": 7,
+      "density_profile": "data_lab",
+      "density_vs_previous": "improved",
+      "density_vs_job52": "below",
+      "text_visual": "삼성전자·SK하이닉스·코스피 정확",
+      "decision": "partial",
+      "reason": "장비와 깊이는 늘었으나 중앙 화면 비중이 크고 두 기업 제외 의미가 Job52만큼 직접 읽히지 않음"
+    },
+    {
+      "scene": 15,
+      "density_profile": "split_comparison",
+      "density_vs_previous": "improved",
+      "density_vs_job52": "comparable_or_above",
+      "text_visual": "엇갈림·SK하이닉스 정확, 대괄호·따옴표 없음",
+      "decision": "visual_pass_pending_surface_contract",
+      "reason": "다층 모니터·조명·기어·균열과 상승/하락 색 대비가 회복됨"
+    },
+    {
+      "scene": 28,
+      "density_profile": "risk_control_room",
+      "density_vs_previous": "improved",
+      "density_vs_job52": "comparable",
+      "text_visual": "대형주 정확, 육안상 추가 읽을 수 있는 문자·숫자 없음",
+      "decision": "visual_pass_pending_surface_contract",
+      "reason": "다중 모니터·콘솔·경광등·배선이 관제실 깊이와 위기 색 대비를 회복함"
+    }
+  ],
+  "scope_guards": {
+    "scene42_touched": false,
+    "tts_called": false,
+    "fal_called": false,
+    "assembly_called": false
+  }
+}
