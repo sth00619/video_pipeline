@@ -3695,6 +3695,22 @@ Rules:
             raise ValueError("결정론 표면 문구 계약에 한글 문구가 없습니다.")
         if not isinstance(region, (list, tuple)) or len(region) != 4:
             raise ValueError("결정론 표면 문구 계약에 물리 표면 좌표가 없습니다.")
+        surface_plan = [
+            item for item in (caption.get("surface_plan") or [])
+            if isinstance(item, dict) and any(char.isdigit() for char in str(item.get("text") or ""))
+        ] if isinstance(caption, dict) else []
+        planned_surface_kinds = {
+            str(item.get("surface_kind") or "").strip() for item in surface_plan
+            if str(item.get("surface_kind") or "").strip()
+        }
+        if len(planned_surface_kinds) > 1:
+            raise ValueError("한 번의 결정론 문구 합성에 서로 다른 표면 종류가 섞여 있습니다.")
+        planned_surface_kind = next(iter(planned_surface_kinds), "board")
+        planned_surface_ids = list(dict.fromkeys(
+            str(item.get("surface_id") or item.get("surface") or "").strip()
+            for item in surface_plan
+            if str(item.get("surface_id") or item.get("surface") or "").strip()
+        ))
         from app.postprocess.text_overlay import add_surface_caption
         from app.services.overlay.surface_detector import detect_surface
 
@@ -3703,7 +3719,7 @@ Rules:
         # 지구본·캐릭터 위에 거대한 글자가 얹히는 일을 막을 수 있다.
         detection = detect_surface(
             img_path,
-            "board",
+            planned_surface_kind,
             job_id=int(scene.get("_job_id") or 0) or None,
             scene_key=f"deterministic_surface:{scene.get('index', scene.get('scene_id', 'unknown'))}",
         )
@@ -3724,11 +3740,15 @@ Rules:
                 "confidence": detection.confidence,
                 "quad": [list(point) for point in detection.quad],
                 "resolved_region": list(region),
+                "planned_surface_kind": planned_surface_kind,
+                "planned_surface_ids": planned_surface_ids,
             }
         else:
             scene["deterministic_surface_detection"] = {
                 "strategy": "rejected_no_safe_surface",
                 "confidence": 0.0,
+                "planned_surface_kind": planned_surface_kind,
+                "planned_surface_ids": planned_surface_ids,
             }
             raise DeterministicSurfaceMissingError(
                 "캐릭터·기존 글자와 겹치지 않는 테두리 있는 빈 물리 표면을 찾지 못했습니다.",

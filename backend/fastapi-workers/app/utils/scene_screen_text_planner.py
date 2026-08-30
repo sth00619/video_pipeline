@@ -23,7 +23,8 @@ _FINANCIAL_VALUE_RE = re.compile(
     r"|" + _NUMBER + r"\s*만\s*" + _NUMBER + r"\s*원"
     r"|" + _NUMBER + r"\s*조(?:\s*" + _NUMBER + r"\s*억)?(?:\s*" + _NUMBER + r"\s*만)?\s*원?"
     r"|" + _NUMBER + r"\s*억(?:\s*" + _NUMBER + r"\s*만)?\s*(?:원|주)?"
-    r"|" + _NUMBER + r"\s*(?:퍼센트포인트|퍼센트|포인트|%p|%|만\s*원|원|배)"
+    r"|(?:PER\s*)?" + _NUMBER + r"\s*배"
+    r"|" + _NUMBER + r"\s*(?:퍼센트포인트|퍼센트|포인트|%p|%|만\s*원|원)"
     r")"
 )
 
@@ -149,7 +150,44 @@ def derive_scene_screen_text_plan(
     company_position = 0
     context_position = 0
     plan: list[dict[str, Any]] = []
+    render = scene.get("v5_render_contract") or {}
+    selection = render.get("selection") or scene.get("v5_scene_type_selection") or {}
+    archetype = str(
+        selection.get("archetype")
+        or scene.get("archetype")
+        or scene.get("visual_archetype")
+        or ""
+    ).strip()
     for text, role in classified:
+        if archetype == "trade_calculator" and company_total >= 2:
+            if role == "company":
+                company_position += 1
+                side = {1: "left", 2: "right"}.get(company_position, str(company_position))
+                plan.append({
+                    "text": text,
+                    "purpose": "information",
+                    "semantic_object_id": f"comparison_entity_{company_position}",
+                    "visual_device_id": "balance_scale",
+                    "surface_id": f"balance_scale_{side}_pan_label",
+                    "surface": f"balance_scale_{side}_pan_label",
+                    "surface_kind": "prop_panel",
+                    "capacity": 1,
+                    "max_occurrences": 1,
+                })
+                continue
+            if role == "numeric_fact":
+                plan.append({
+                    "text": text,
+                    "purpose": "information",
+                    "semantic_object_id": "comparison_metric",
+                    "visual_device_id": "balance_scale",
+                    "surface_id": "balance_scale_plinth",
+                    "surface": "balance_scale_plinth",
+                    "surface_kind": "prop_panel",
+                    "capacity": 1,
+                    "max_occurrences": 1,
+                })
+                continue
         if role == "company":
             company_position += 1
             if company_total == 1:

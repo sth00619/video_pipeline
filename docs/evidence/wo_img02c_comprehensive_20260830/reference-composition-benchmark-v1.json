@@ -1,0 +1,1544 @@
+{
+  "version": "wo-img02c-reference-composition-benchmark-v1",
+  "scope": {
+    "frame_count": 69,
+    "character_exclusion": "중앙 인물 가능 영역과 하단 자막을 제외한 주변부 통계 프록시이며 캐릭터 정밀 분할 결과가 아님",
+    "ocr_limit": "Tesseract가 읽은 화면 내 숫자의 재현율 하한이며 미검출을 숫자 부재로 해석하지 않음"
+  },
+  "group_summary": {
+    "physical_economic_metaphor": {
+      "frame_count": 20,
+      "saturation": {
+        "median": 105.4615,
+        "p10": 79.4618,
+        "p90": 138.7036
+      },
+      "luma_contrast": {
+        "median": 67.5725,
+        "p10": 60.5875,
+        "p90": 73.5089
+      },
+      "peripheral_edge_density": {
+        "median": 0.0994,
+        "p10": 0.0616,
+        "p90": 0.1327
+      },
+      "peripheral_blank_tile_ratio": {
+        "median": 0.0312,
+        "p10": 0.0,
+        "p90": 0.1593
+      },
+      "numeric_frames_detected_by_ocr": 19,
+      "largest_numeric_height_ratio": {
+        "median": 0.1069,
+        "p10": 0.055,
+        "p90": 0.157
+      },
+      "largest_numeric_center_y_ratio": {
+        "median": 0.3389,
+        "p10": 0.1214,
+        "p90": 0.7671
+      },
+      "observed_primary_device_range": [
+        1,
+        2
+      ],
+      "role_rule": "하나의 중심 사물 관계가 결론을 맡고 보조 장치는 원인·결과 중 다른 한 축만 맡는다.",
+      "duplicate_risk": "저울·칠판·그래프가 같은 비교값을 반복하면 레퍼런스보다 설명 장치가 과잉이다."
+    },
+    "classroom_briefing": {
+      "frame_count": 15,
+      "saturation": {
+        "median": 119.935,
+        "p10": 86.606,
+        "p90": 137.8616
+      },
+      "luma_contrast": {
+        "median": 66.489,
+        "p10": 60.23,
+        "p90": 78.8934
+      },
+      "peripheral_edge_density": {
+        "median": 0.1068,
+        "p10": 0.0823,
+        "p90": 0.1297
+      },
+      "peripheral_blank_tile_ratio": {
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0187
+      },
+      "numeric_frames_detected_by_ocr": 13,
+      "largest_numeric_height_ratio": {
+        "median": 0.1069,
+        "p10": 0.0481,
+        "p90": 0.2603
+      },
+      "largest_numeric_center_y_ratio": {
+        "median": 0.5326,
+        "p10": 0.3489,
+        "p90": 0.6652
+      },
+      "observed_primary_device_range": [
+        1,
+        2
+      ],
+      "role_rule": "칠판은 개념/관계를 맡고 손의 포인터·저울·실물 소품은 사례나 비교를 맡는다.",
+      "duplicate_risk": "칠판과 실물 소품이 동일 문구·동일 수치를 되풀이하지 않는다."
+    },
+    "evidence_insert": {
+      "frame_count": 9,
+      "saturation": {
+        "median": 12.256,
+        "p10": 5.3308,
+        "p90": 65.4024
+      },
+      "luma_contrast": {
+        "median": 67.431,
+        "p10": 51.3124,
+        "p90": 93.6692
+      },
+      "peripheral_edge_density": {
+        "median": 0.0233,
+        "p10": 0.0174,
+        "p90": 0.0411
+      },
+      "peripheral_blank_tile_ratio": {
+        "median": 0.3125,
+        "p10": 0.175,
+        "p90": 0.6063
+      },
+      "numeric_frames_detected_by_ocr": 9,
+      "largest_numeric_height_ratio": {
+        "median": 0.0667,
+        "p10": 0.0467,
+        "p90": 0.1322
+      },
+      "largest_numeric_center_y_ratio": {
+        "median": 0.3993,
+        "p10": 0.261,
+        "p90": 0.5681
+      },
+      "observed_primary_device_range": [
+        1,
+        1
+      ],
+      "role_rule": "검증된 기사·차트 캡처 하나가 근거의 주인공이며 생성 배경은 이를 재작성하지 않는다.",
+      "duplicate_risk": "캡처의 수치를 생성 간판에 다시 쓰면 근거 계보와 정확성이 깨진다."
+    },
+    "control_room_data_lab": {
+      "frame_count": 9,
+      "saturation": {
+        "median": 114.803,
+        "p10": 101.0362,
+        "p90": 136.6042
+      },
+      "luma_contrast": {
+        "median": 65.405,
+        "p10": 59.1786,
+        "p90": 72.4406
+      },
+      "peripheral_edge_density": {
+        "median": 0.1055,
+        "p10": 0.0924,
+        "p90": 0.1268
+      },
+      "peripheral_blank_tile_ratio": {
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0312
+      },
+      "numeric_frames_detected_by_ocr": 9,
+      "largest_numeric_height_ratio": {
+        "median": 0.0736,
+        "p10": 0.0525,
+        "p90": 0.1367
+      },
+      "largest_numeric_center_y_ratio": {
+        "median": 0.2917,
+        "p10": 0.1424,
+        "p90": 0.3645
+      },
+      "observed_primary_device_range": [
+        2,
+        6
+      ],
+      "role_rule": "여러 화면은 추세·원인·결론 등 서로 다른 정보 역할을 분담한다.",
+      "duplicate_risk": "같은 승인 문구를 여러 모니터에 복제해 장치 수를 채우지 않는다."
+    },
+    "factory_construction": {
+      "frame_count": 6,
+      "saturation": {
+        "median": 77.6355,
+        "p10": 67.5495,
+        "p90": 108.8935
+      },
+      "luma_contrast": {
+        "median": 65.4365,
+        "p10": 62.78,
+        "p90": 71.1575
+      },
+      "peripheral_edge_density": {
+        "median": 0.136,
+        "p10": 0.108,
+        "p90": 0.1553
+      },
+      "peripheral_blank_tile_ratio": {
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0156
+      },
+      "numeric_frames_detected_by_ocr": 6,
+      "largest_numeric_height_ratio": {
+        "median": 0.1409,
+        "p10": 0.034,
+        "p90": 0.1632
+      },
+      "largest_numeric_center_y_ratio": {
+        "median": 0.4334,
+        "p10": 0.4239,
+        "p90": 0.727
+      },
+      "observed_primary_device_range": [
+        1,
+        3
+      ],
+      "role_rule": "생산 설비/공정 흐름이 원인을, 한 개의 계기·표지가 상태나 결론을 맡는다.",
+      "duplicate_risk": "장식 모니터를 늘려 실제 생산 메커니즘을 대체하지 않는다."
+    },
+    "market_news_crisis": {
+      "frame_count": 5,
+      "saturation": {
+        "median": 113.978,
+        "p10": 70.7284,
+        "p90": 152.4206
+      },
+      "luma_contrast": {
+        "median": 72.017,
+        "p10": 61.9662,
+        "p90": 79.3222
+      },
+      "peripheral_edge_density": {
+        "median": 0.0782,
+        "p10": 0.0716,
+        "p90": 0.1246
+      },
+      "peripheral_blank_tile_ratio": {
+        "median": 0.0312,
+        "p10": 0.0,
+        "p90": 0.0688
+      },
+      "numeric_frames_detected_by_ocr": 5,
+      "largest_numeric_height_ratio": {
+        "median": 0.2361,
+        "p10": 0.0769,
+        "p90": 0.3319
+      },
+      "largest_numeric_center_y_ratio": {
+        "median": 0.4674,
+        "p10": 0.1728,
+        "p90": 0.5333
+      },
+      "observed_primary_device_range": [
+        2,
+        6
+      ],
+      "role_rule": "반복되는 붉은 방향선은 분위기 연출이며, 읽을 수 있는 문구·수치는 한 핵심 표면에 집중한다.",
+      "duplicate_risk": "방향성 도형의 반복과 동일 텍스트의 반복을 혼동하지 않는다."
+    },
+    "dialogue_office_library": {
+      "frame_count": 4,
+      "saturation": {
+        "median": 100.7985,
+        "p10": 80.7228,
+        "p90": 118.2989
+      },
+      "luma_contrast": {
+        "median": 67.0355,
+        "p10": 57.1248,
+        "p90": 73.5995
+      },
+      "peripheral_edge_density": {
+        "median": 0.1128,
+        "p10": 0.1066,
+        "p90": 0.1292
+      },
+      "peripheral_blank_tile_ratio": {
+        "median": 0.0,
+        "p10": 0.0,
+        "p90": 0.0875
+      },
+      "numeric_frames_detected_by_ocr": 2,
+      "largest_numeric_height_ratio": {
+        "median": 0.1021,
+        "p10": 0.0571,
+        "p90": 0.1471
+      },
+      "largest_numeric_center_y_ratio": {
+        "median": 0.4691,
+        "p10": 0.2493,
+        "p90": 0.6889
+      },
+      "observed_primary_device_range": [
+        1,
+        2
+      ],
+      "role_rule": "짧은 판단은 말풍선/책/노트북 중 한 장치가 맡고 나머지는 공간 맥락을 만든다.",
+      "duplicate_risk": "낮은 밀도를 빈 화면으로 해석하지 않고 책·창·조명 같은 비문자 공간 소품으로 채운다."
+    },
+    "channel_interstitial": {
+      "frame_count": 1,
+      "saturation": {
+        "median": 149.83,
+        "p10": 149.83,
+        "p90": 149.83
+      },
+      "luma_contrast": {
+        "median": 46.057,
+        "p10": 46.057,
+        "p90": 46.057
+      },
+      "peripheral_edge_density": {
+        "median": 0.0293,
+        "p10": 0.0293,
+        "p90": 0.0293
+      },
+      "peripheral_blank_tile_ratio": {
+        "median": 0.4062,
+        "p10": 0.4062,
+        "p90": 0.4062
+      },
+      "numeric_frames_detected_by_ocr": 1,
+      "largest_numeric_height_ratio": {
+        "median": 0.0236,
+        "p10": 0.0236,
+        "p90": 0.0236
+      },
+      "largest_numeric_center_y_ratio": {
+        "median": 0.5465,
+        "p10": 0.5465,
+        "p90": 0.5465
+      },
+      "observed_primary_device_range": [
+        1,
+        1
+      ],
+      "role_rule": "채널 전환 자산이며 일반 설명 장면의 밀도·표면 규칙 표본에서 제외한다.",
+      "duplicate_risk": "운영 설명 장면의 archetype 근거로 사용하지 않는다."
+    }
+  },
+  "frames": [
+    {
+      "frame": 1,
+      "mean_saturation": 94.86,
+      "p90_saturation": 176.0,
+      "luma_stddev": 76.088,
+      "peripheral_edge_density": 0.113167,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 13,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "24",
+        "center_x_ratio": 0.6941,
+        "center_y_ratio": 0.1944,
+        "height_ratio": 0.1583,
+        "area_ratio": 0.007051
+      },
+      "background_type": "dialogue_office_library"
+    },
+    {
+      "frame": 2,
+      "mean_saturation": 74.664,
+      "p90_saturation": 139.0,
+      "luma_stddev": 53.202,
+      "peripheral_edge_density": 0.112461,
+      "peripheral_blank_tile_ratio": 0.125,
+      "in_scene_ocr_token_count": 4,
+      "in_scene_numeric_token_count": 0,
+      "largest_numeric": null,
+      "background_type": "dialogue_office_library"
+    },
+    {
+      "frame": 3,
+      "mean_saturation": 120.639,
+      "p90_saturation": 207.0,
+      "luma_stddev": 65.574,
+      "peripheral_edge_density": 0.090945,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 17,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "2",
+        "center_x_ratio": 0.8051,
+        "center_y_ratio": 0.659,
+        "height_ratio": 0.1208,
+        "area_ratio": 0.010479
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 4,
+      "mean_saturation": 134.672,
+      "p90_saturation": 219.0,
+      "luma_stddev": 67.574,
+      "peripheral_edge_density": 0.100306,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 22,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "2026",
+        "center_x_ratio": 0.2781,
+        "center_y_ratio": 0.1646,
+        "height_ratio": 0.0569,
+        "area_ratio": 0.004894
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 5,
+      "mean_saturation": 106.737,
+      "p90_saturation": 210.0,
+      "luma_stddev": 67.793,
+      "peripheral_edge_density": 0.136019,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 0,
+      "in_scene_numeric_token_count": 0,
+      "largest_numeric": null,
+      "background_type": "dialogue_office_library"
+    },
+    {
+      "frame": 6,
+      "mean_saturation": 56.863,
+      "p90_saturation": 255.0,
+      "luma_stddev": 90.117,
+      "peripheral_edge_density": 0.023347,
+      "peripheral_blank_tile_ratio": 0.3125,
+      "in_scene_ocr_token_count": 6,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "메타2\t1\t4\t0\t0\t0\t221\t199\t128\t29\t-1\t3\t1\t4\t1\t0\t0\t221\t199\t128\t29\t-1\t4\t1\t4\t1\t1\t0\t221\t199\t128\t29\t-1\t5\t1\t4\t1\t1\t1\t221\t199\t128\t29\t48.367367\t=2\t1\t5\t0\t0\t0\t381\t197\t142\t24\t-1\t3\t1\t5\t1\t0\t0\t381\t197\t142\t24\t-1\t4\t1\t5\t1\t1\t0\t381\t197\t142\t24\t-1\t5\t1\t5\t1\t1\t1\t381\t197\t142\t24\t73.577148\tOTT5\t1\t5\t1\t1\t2\t491\t193\t35\t39\t54.989975\t=2\t1\t6\t0\t0\t0\t543\t163\t634\t58\t-1\t3\t1\t6\t1\t0\t0\t543\t163\t634\t58\t-1\t4\t1\t6\t1\t1\t0\t543\t163\t634\t58\t-1\t5\t1\t6\t1\t1\t1\t543\t166\t156\t55\t93.291893\t파5\t1\t6\t1\t1\t2\t607\t159\t48\t84\t93.218277\t워5\t1\t6\t1\t1\t3\t654\t159\t38\t84\t93.279587\t로5\t1\t6\t1\t1\t4\t722\t167\t44\t53\t93.279587\t클5\t1\t6\t1\t1\t5\t775\t166\t44\t55\t93.304703\t라5\t1\t6\t1\t1\t6\t822\t167\t49\t54\t93.291145\t우5\t1\t6\t1\t1\t7\t879\t170\t39\t27\t93.289291\t드5\t1\t6\t1\t1\t8\t932\t166\t45\t55\t93.167633\t사5\t1\t6\t1\t1\t9\t985\t166\t37\t54\t93.282417\t업5\t1\t6\t1\t1\t10\t1046\t163\t131\t57\t50.679871\tae",
+        "center_x_ratio": 0.1148,
+        "center_y_ratio": 0.2493,
+        "height_ratio": 0.1153,
+        "area_ratio": 0.012969
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 7,
+      "mean_saturation": 130.508,
+      "p90_saturation": 244.0,
+      "luma_stddev": 72.017,
+      "peripheral_edge_density": 0.127541,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 40,
+      "in_scene_numeric_token_count": 3,
+      "largest_numeric": {
+        "text": "2",
+        "center_x_ratio": 0.6973,
+        "center_y_ratio": 0.0514,
+        "height_ratio": 0.1028,
+        "area_ratio": 0.023366
+      },
+      "background_type": "market_news_crisis"
+    },
+    {
+      "frame": 8,
+      "mean_saturation": 141.961,
+      "p90_saturation": 220.0,
+      "luma_stddev": 68.114,
+      "peripheral_edge_density": 0.095304,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 22,
+      "in_scene_numeric_token_count": 6,
+      "largest_numeric": {
+        "text": "0015",
+        "center_x_ratio": 0.8227,
+        "center_y_ratio": 0.3521,
+        "height_ratio": 0.0875,
+        "area_ratio": 0.011211
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 9,
+      "mean_saturation": 5.994,
+      "p90_saturation": 4.0,
+      "luma_stddev": 51.99,
+      "peripheral_edge_density": 0.029588,
+      "peripheral_blank_tile_ratio": 0.6562,
+      "in_scene_ocr_token_count": 70,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "<[150",
+        "center_x_ratio": 0.4199,
+        "center_y_ratio": 0.3993,
+        "height_ratio": 0.0875,
+        "area_ratio": 0.02167
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 10,
+      "mean_saturation": 120.093,
+      "p90_saturation": 211.0,
+      "luma_stddev": 77.825,
+      "peripheral_edge_density": 0.103643,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 32,
+      "in_scene_numeric_token_count": 6,
+      "largest_numeric": {
+        "text": "42048.",
+        "center_x_ratio": 0.4988,
+        "center_y_ratio": 0.1382,
+        "height_ratio": 0.1958,
+        "area_ratio": 0.044215
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 11,
+      "mean_saturation": 72.789,
+      "p90_saturation": 153.0,
+      "luma_stddev": 70.64,
+      "peripheral_edge_density": 0.120065,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 14,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "08",
+        "center_x_ratio": 0.4098,
+        "center_y_ratio": 0.4361,
+        "height_ratio": 0.0278,
+        "area_ratio": 0.000499
+      },
+      "background_type": "factory_construction"
+    },
+    {
+      "frame": 12,
+      "mean_saturation": 123.254,
+      "p90_saturation": 174.0,
+      "luma_stddev": 66.278,
+      "peripheral_edge_density": 0.104062,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 41,
+      "in_scene_numeric_token_count": 15,
+      "largest_numeric": {
+        "text": "10639",
+        "center_x_ratio": 0.7531,
+        "center_y_ratio": 0.7438,
+        "height_ratio": 0.0458,
+        "area_ratio": 0.003939
+      },
+      "background_type": "dialogue_office_library"
+    },
+    {
+      "frame": 13,
+      "mean_saturation": 87.113,
+      "p90_saturation": 144.0,
+      "luma_stddev": 65.04,
+      "peripheral_edge_density": 0.094608,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 33,
+      "in_scene_numeric_token_count": 9,
+      "largest_numeric": {
+        "text": "29",
+        "center_x_ratio": 0.7211,
+        "center_y_ratio": 0.5958,
+        "height_ratio": 0.125,
+        "area_ratio": 0.016016
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 14,
+      "mean_saturation": 106.644,
+      "p90_saturation": 168.0,
+      "luma_stddev": 64.337,
+      "peripheral_edge_density": 0.096034,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 19,
+      "in_scene_numeric_token_count": 5,
+      "largest_numeric": {
+        "text": "8),",
+        "center_x_ratio": 0.809,
+        "center_y_ratio": 0.4236,
+        "height_ratio": 0.1472,
+        "area_ratio": 0.010697
+      },
+      "background_type": "factory_construction"
+    },
+    {
+      "frame": 15,
+      "mean_saturation": 5.486,
+      "p90_saturation": 0.0,
+      "luma_stddev": 54.264,
+      "peripheral_edge_density": 0.039125,
+      "peripheral_blank_tile_ratio": 0.5312,
+      "in_scene_ocr_token_count": 47,
+      "in_scene_numeric_token_count": 6,
+      "largest_numeric": {
+        "text": "33~38%",
+        "center_x_ratio": 0.3082,
+        "center_y_ratio": 0.5431,
+        "height_ratio": 0.0389,
+        "area_ratio": 0.004345
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 16,
+      "mean_saturation": 157.691,
+      "p90_saturation": 235.0,
+      "luma_stddev": 70.341,
+      "peripheral_edge_density": 0.089915,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 36,
+      "in_scene_numeric_token_count": 5,
+      "largest_numeric": {
+        "text": "23",
+        "center_x_ratio": 0.7004,
+        "center_y_ratio": 0.4201,
+        "height_ratio": 0.0681,
+        "area_ratio": 0.003562
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 17,
+      "mean_saturation": 142.633,
+      "p90_saturation": 207.0,
+      "luma_stddev": 66.29,
+      "peripheral_edge_density": 0.100095,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 41,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "99",
+        "center_x_ratio": 0.718,
+        "center_y_ratio": 0.5188,
+        "height_ratio": 0.1042,
+        "area_ratio": 0.012858
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 18,
+      "mean_saturation": 105.482,
+      "p90_saturation": 179.0,
+      "luma_stddev": 65.405,
+      "peripheral_edge_density": 0.124074,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 23,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "<2",
+        "center_x_ratio": 0.9023,
+        "center_y_ratio": 0.2479,
+        "height_ratio": 0.0903,
+        "area_ratio": 0.011708
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 19,
+      "mean_saturation": 95.702,
+      "p90_saturation": 162.0,
+      "luma_stddev": 72.387,
+      "peripheral_edge_density": 0.074732,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 14,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "6",
+        "center_x_ratio": 0.7391,
+        "center_y_ratio": 0.4354,
+        "height_ratio": 0.1847,
+        "area_ratio": 0.008659
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 20,
+      "mean_saturation": 108.176,
+      "p90_saturation": 181.0,
+      "luma_stddev": 64.2,
+      "peripheral_edge_density": 0.114894,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 37,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "0)",
+        "center_x_ratio": 0.6324,
+        "center_y_ratio": 0.4139,
+        "height_ratio": 0.0611,
+        "area_ratio": 0.004822
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 21,
+      "mean_saturation": 97.087,
+      "p90_saturation": 178.0,
+      "luma_stddev": 70.462,
+      "peripheral_edge_density": 0.156738,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 38,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "2",
+        "center_x_ratio": 0.7633,
+        "center_y_ratio": 0.3389,
+        "height_ratio": 0.0556,
+        "area_ratio": 0.005295
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 22,
+      "mean_saturation": 139.536,
+      "p90_saturation": 203.0,
+      "luma_stddev": 60.783,
+      "peripheral_edge_density": 0.106802,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 26,
+      "in_scene_numeric_token_count": 3,
+      "largest_numeric": {
+        "text": "100",
+        "center_x_ratio": 0.2961,
+        "center_y_ratio": 0.3368,
+        "height_ratio": 0.0431,
+        "area_ratio": 0.001682
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 23,
+      "mean_saturation": 116.017,
+      "p90_saturation": 196.0,
+      "luma_stddev": 63.84,
+      "peripheral_edge_density": 0.08613,
+      "peripheral_blank_tile_ratio": 0.0938,
+      "in_scene_ocr_token_count": 28,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "10000))",
+        "center_x_ratio": 0.357,
+        "center_y_ratio": 0.6625,
+        "height_ratio": 0.0472,
+        "area_ratio": 0.003099
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 24,
+      "mean_saturation": 73.814,
+      "p90_saturation": 156.0,
+      "luma_stddev": 71.675,
+      "peripheral_edge_density": 0.136705,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 39,
+      "in_scene_numeric_token_count": 6,
+      "largest_numeric": {
+        "text": "(607",
+        "center_x_ratio": 0.7441,
+        "center_y_ratio": 0.4243,
+        "height_ratio": 0.1347,
+        "area_ratio": 0.021998
+      },
+      "background_type": "factory_construction"
+    },
+    {
+      "frame": 25,
+      "mean_saturation": 132.479,
+      "p90_saturation": 195.0,
+      "luma_stddev": 57.361,
+      "peripheral_edge_density": 0.121298,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 32,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "99",
+        "center_x_ratio": 0.6824,
+        "center_y_ratio": 0.7639,
+        "height_ratio": 0.1278,
+        "area_ratio": 0.012478
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 26,
+      "mean_saturation": 62.31,
+      "p90_saturation": 134.0,
+      "luma_stddev": 61.374,
+      "peripheral_edge_density": 0.151187,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 42,
+      "in_scene_numeric_token_count": 6,
+      "largest_numeric": {
+        "text": "1",
+        "center_x_ratio": 0.2469,
+        "center_y_ratio": 0.6354,
+        "height_ratio": 0.0403,
+        "area_ratio": 0.00107
+      },
+      "background_type": "factory_construction"
+    },
+    {
+      "frame": 27,
+      "mean_saturation": 86.268,
+      "p90_saturation": 186.0,
+      "luma_stddev": 77.991,
+      "peripheral_edge_density": 0.129915,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 20,
+      "in_scene_numeric_token_count": 3,
+      "largest_numeric": {
+        "text": "6)",
+        "center_x_ratio": 0.8289,
+        "center_y_ratio": 0.5833,
+        "height_ratio": 0.1056,
+        "area_ratio": 0.005443
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 28,
+      "mean_saturation": 111.143,
+      "p90_saturation": 198.0,
+      "luma_stddev": 66.536,
+      "peripheral_edge_density": 0.135285,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 44,
+      "in_scene_numeric_token_count": 6,
+      "largest_numeric": {
+        "text": "4",
+        "center_x_ratio": 0.0484,
+        "center_y_ratio": 0.8187,
+        "height_ratio": 0.1653,
+        "area_ratio": 0.013687
+      },
+      "background_type": "factory_construction"
+    },
+    {
+      "frame": 29,
+      "mean_saturation": 81.457,
+      "p90_saturation": 171.0,
+      "luma_stddev": 64.186,
+      "peripheral_edge_density": 0.159389,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 36,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "1",
+        "center_x_ratio": 0.5602,
+        "center_y_ratio": 0.4306,
+        "height_ratio": 0.1611,
+        "area_ratio": 0.002769
+      },
+      "background_type": "factory_construction"
+    },
+    {
+      "frame": 30,
+      "mean_saturation": 92.719,
+      "p90_saturation": 151.0,
+      "luma_stddev": 68.785,
+      "peripheral_edge_density": 0.04252,
+      "peripheral_blank_tile_ratio": 0.1562,
+      "in_scene_ocr_token_count": 8,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "3S)",
+        "center_x_ratio": 0.568,
+        "center_y_ratio": 0.5056,
+        "height_ratio": 0.1194,
+        "area_ratio": 0.012504
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 31,
+      "mean_saturation": 100.276,
+      "p90_saturation": 158.0,
+      "luma_stddev": 60.946,
+      "peripheral_edge_density": 0.095992,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 23,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "02",
+        "center_x_ratio": 0.6941,
+        "center_y_ratio": 0.2701,
+        "height_ratio": 0.0597,
+        "area_ratio": 0.005272
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 32,
+      "mean_saturation": 112.121,
+      "p90_saturation": 182.0,
+      "luma_stddev": 60.166,
+      "peripheral_edge_density": 0.129422,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 38,
+      "in_scene_numeric_token_count": 5,
+      "largest_numeric": {
+        "text": "13",
+        "center_x_ratio": 0.877,
+        "center_y_ratio": 0.3271,
+        "height_ratio": 0.3792,
+        "area_ratio": 0.037028
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 33,
+      "mean_saturation": 99.56,
+      "p90_saturation": 244.0,
+      "luma_stddev": 107.878,
+      "peripheral_edge_density": 0.023239,
+      "peripheral_blank_tile_ratio": 0.125,
+      "in_scene_ocr_token_count": 23,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "7771<",
+        "center_x_ratio": 0.493,
+        "center_y_ratio": 0.6681,
+        "height_ratio": 0.2,
+        "area_ratio": 0.137187
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 34,
+      "mean_saturation": 83.152,
+      "p90_saturation": 165.0,
+      "luma_stddev": 69.736,
+      "peripheral_edge_density": 0.091634,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 34,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "$22",
+        "center_x_ratio": 0.2746,
+        "center_y_ratio": 0.3215,
+        "height_ratio": 0.1042,
+        "area_ratio": 0.006104
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 35,
+      "mean_saturation": 83.253,
+      "p90_saturation": 186.0,
+      "luma_stddev": 77.195,
+      "peripheral_edge_density": 0.137818,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 35,
+      "in_scene_numeric_token_count": 5,
+      "largest_numeric": {
+        "text": "2026",
+        "center_x_ratio": 0.3797,
+        "center_y_ratio": 0.3125,
+        "height_ratio": 0.1,
+        "area_ratio": 0.010781
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 36,
+      "mean_saturation": 135.35,
+      "p90_saturation": 189.0,
+      "luma_stddev": 58.711,
+      "peripheral_edge_density": 0.112076,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 0,
+      "in_scene_numeric_token_count": 0,
+      "largest_numeric": null,
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 37,
+      "mean_saturation": 75.217,
+      "p90_saturation": 153.0,
+      "luma_stddev": 74.509,
+      "peripheral_edge_density": 0.120191,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 28,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "1",
+        "center_x_ratio": 0.957,
+        "center_y_ratio": 0.4674,
+        "height_ratio": 0.2486,
+        "area_ratio": 0.021365
+      },
+      "background_type": "market_news_crisis"
+    },
+    {
+      "frame": 38,
+      "mean_saturation": 67.736,
+      "p90_saturation": 121.0,
+      "luma_stddev": 60.529,
+      "peripheral_edge_density": 0.074675,
+      "peripheral_blank_tile_ratio": 0.0938,
+      "in_scene_ocr_token_count": 25,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "1”",
+        "center_x_ratio": 0.6855,
+        "center_y_ratio": 0.5403,
+        "height_ratio": 0.2361,
+        "area_ratio": 0.030067
+      },
+      "background_type": "market_news_crisis"
+    },
+    {
+      "frame": 39,
+      "mean_saturation": 167.029,
+      "p90_saturation": 255.0,
+      "luma_stddev": 82.531,
+      "peripheral_edge_density": 0.069561,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 12,
+      "in_scene_numeric_token_count": 3,
+      "largest_numeric": {
+        "text": "7",
+        "center_x_ratio": 0.9422,
+        "center_y_ratio": 0.5229,
+        "height_ratio": 0.3875,
+        "area_ratio": 0.042383
+      },
+      "background_type": "market_news_crisis"
+    },
+    {
+      "frame": 40,
+      "mean_saturation": 135.265,
+      "p90_saturation": 199.0,
+      "luma_stddev": 71.252,
+      "peripheral_edge_density": 0.112597,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 30,
+      "in_scene_numeric_token_count": 3,
+      "largest_numeric": {
+        "text": "10000",
+        "center_x_ratio": 0.832,
+        "center_y_ratio": 0.2812,
+        "height_ratio": 0.0347,
+        "area_ratio": 0.001953
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 41,
+      "mean_saturation": 149.83,
+      "p90_saturation": 237.0,
+      "luma_stddev": 46.057,
+      "peripheral_edge_density": 0.029261,
+      "peripheral_blank_tile_ratio": 0.4062,
+      "in_scene_ocr_token_count": 69,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "50",
+        "center_x_ratio": 0.7957,
+        "center_y_ratio": 0.5465,
+        "height_ratio": 0.0236,
+        "area_ratio": 0.000719
+      },
+      "background_type": "channel_interstitial"
+    },
+    {
+      "frame": 42,
+      "mean_saturation": 122.903,
+      "p90_saturation": 188.0,
+      "luma_stddev": 76.343,
+      "peripheral_edge_density": 0.099834,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 19,
+      "in_scene_numeric_token_count": 3,
+      "largest_numeric": {
+        "text": "1",
+        "center_x_ratio": 0.8004,
+        "center_y_ratio": 0.6104,
+        "height_ratio": 0.1069,
+        "area_ratio": 0.006935
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 43,
+      "mean_saturation": 9.022,
+      "p90_saturation": 0.0,
+      "luma_stddev": 67.431,
+      "peripheral_edge_density": 0.022997,
+      "peripheral_blank_tile_ratio": 0.25,
+      "in_scene_ocr_token_count": 22,
+      "in_scene_numeric_token_count": 5,
+      "largest_numeric": {
+        "text": "SKo}0|",
+        "center_x_ratio": 0.1496,
+        "center_y_ratio": 0.425,
+        "height_ratio": 0.1083,
+        "area_ratio": 0.019889
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 44,
+      "mean_saturation": 138.267,
+      "p90_saturation": 195.0,
+      "luma_stddev": 66.896,
+      "peripheral_edge_density": 0.061758,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 1,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "250",
+        "center_x_ratio": 0.827,
+        "center_y_ratio": 0.0431,
+        "height_ratio": 0.0528,
+        "area_ratio": 0.002515
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 45,
+      "mean_saturation": 4.71,
+      "p90_saturation": 3.0,
+      "luma_stddev": 48.602,
+      "peripheral_edge_density": 0.017665,
+      "peripheral_blank_tile_ratio": 0.5938,
+      "in_scene_ocr_token_count": 47,
+      "in_scene_numeric_token_count": 25,
+      "largest_numeric": {
+        "text": "2,425,000",
+        "center_x_ratio": 0.3172,
+        "center_y_ratio": 0.2646,
+        "height_ratio": 0.0486,
+        "area_ratio": 0.008051
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 46,
+      "mean_saturation": 107.081,
+      "p90_saturation": 147.0,
+      "luma_stddev": 58.681,
+      "peripheral_edge_density": 0.080898,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 30,
+      "in_scene_numeric_token_count": 5,
+      "largest_numeric": {
+        "text": "“3",
+        "center_x_ratio": 0.2742,
+        "center_y_ratio": 0.3042,
+        "height_ratio": 0.2833,
+        "area_ratio": 0.051797
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 47,
+      "mean_saturation": 94.838,
+      "p90_saturation": 171.0,
+      "luma_stddev": 60.326,
+      "peripheral_edge_density": 0.120091,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 74,
+      "in_scene_numeric_token_count": 6,
+      "largest_numeric": {
+        "text": "20..0990.22",
+        "center_x_ratio": 0.8375,
+        "center_y_ratio": 0.4236,
+        "height_ratio": 0.0306,
+        "area_ratio": 0.002435
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 48,
+      "mean_saturation": 54.116,
+      "p90_saturation": 224.0,
+      "luma_stddev": 84.409,
+      "peripheral_edge_density": 0.039918,
+      "peripheral_blank_tile_ratio": 0.1875,
+      "in_scene_ocr_token_count": 27,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "57.2",
+        "center_x_ratio": 0.5039,
+        "center_y_ratio": 0.2639,
+        "height_ratio": 0.0528,
+        "area_ratio": 0.003546
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 49,
+      "mean_saturation": 134.769,
+      "p90_saturation": 190.0,
+      "luma_stddev": 62.847,
+      "peripheral_edge_density": 0.105488,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 1,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "5\t1\t1\t1\t1\t2\t1085\t27\t18\t38\t78.816391\t경5\t1\t1\t1\t1\t3\t1106\t27\t24\t38\t77.768761\t제5\t1\t1\t1\t1\t4\t1140\t27\t30\t38\t65.406036\t사5\t1\t1\t1\t1\t5\t1177\t28\t28\t38\t0.000000\t상5\t1\t1\t1\t1\t6\t1219\t28\t32\t29\t90.643730\t꾼2\t1\t2\t0\t0\t0\t424\t85\t43\t15\t-1\t3\t1\t2\t1\t0\t0\t424\t85\t43\t15\t-1\t4\t1\t2\t1\t1\t0\t424\t85\t43\t15\t-1\t5\t1\t2\t1\t1\t1\t424\t85\t43\t15\t86.126205\t부선2\t1\t3\t0\t0\t0\t557\t78\t124\t26\t-1\t3\t1\t3\t1\t0\t0\t557\t78\t124\t26\t-1\t4\t1\t3\t1\t1\t0\t557\t78\t124\t26\t-1\t5\t1\t3\t1\t1\t1\t557\t78\t39\t24\t32.377007\t(=5\t1\t3\t1\t1\t2\t625\t84\t56\t20\t24.453955\t<)2\t1\t4\t0\t0\t0\t249\t84\t137\t27\t-1\t3\t1\t4\t1\t0\t0\t249\t84\t137\t27\t-1\t4\t1\t4\t1\t1\t0\t249\t84\t137\t27\t-1\t5\t1\t4\t1\t1\t1\t249\t84\t46\t16\t96.927666\t삼성5\t1\t4\t1\t1\t2\t306\t84\t48\t27\t93.304680\t체질5\t1\t4\t1\t1\t3\t365\t85\t21\t26\t93.263107\t변2\t1\t5\t0\t0\t0\t1008\t115\t56\t23\t-1\t3\t1\t5\t1\t0\t0\t1008\t115\t56\t23\t-1\t4\t1\t5\t1\t1\t0\t1008\t115\t56\t23\t-1\t5\t1\t5\t1\t1\t1\t1008\t119\t13\t19\t30.942081\t4\\5\t1\t5\t1\t1\t2\t1056\t115\t8\t19\t41.300575\tB2\t1\t6\t0\t0\t0\t526\t136\t29\t10\t-1\t3\t1\t6\t1\t0\t0\t526\t136\t29\t10\t-1\t4\t1\t6\t1\t1\t0\t526\t136\t29\t10\t-1\t5\t1\t6\t1\t1\t1\t526\t136\t29\t10\t53.184525\tje2\t1\t7\t0\t0\t0\t724\t149\t55\t64\t-1\t3\t1\t7\t1\t0\t0\t724\t149\t55\t64\t-1\t4\t1\t7\t1\t1\t0\t724\t149\t55\t64\t-1\t5\t1\t7\t1\t1\t1\t724\t149\t55\t64\t35.324638\t\\2\t1\t8\t0\t0\t0\t610\t212\t56\t26\t-1\t3\t1\t8\t1\t0\t0\t610\t212\t56\t26\t-1\t4\t1\t8\t1\t1\t0\t610\t212\t56\t26\t-1\t5\t1\t8\t1\t1\t1\t610\t212\t56\t26\t44.569897\teen2\t1\t9\t0\t0\t0\t691\t232\t45\t11\t-1\t3\t1\t9\t1\t0\t0\t691\t232\t45\t11\t-1\t4\t1\t9\t1\t1\t0\t691\t232\t45\t11\t-1\t5\t1\t9\t1\t1\t1\t691\t232\t45\t11\t0.000000\t=e2\t1\t10\t0\t0\t0\t947\t217\t48\t13\t-1\t3\t1\t10\t1\t0\t0\t947\t217\t48\t13\t-1\t4\t1\t10\t1\t1\t0\t947\t217\t48\t13\t-1\t5\t1\t10\t1\t1\t1\t947\t217\t48\t13\t53.683655\t—2\t1\t11\t0\t0\t0\t227\t245\t111\t31\t-1\t3\t1\t11\t1\t0\t0\t227\t245\t111\t31\t-1\t4\t1\t11\t1\t1\t0\t227\t245\t111\t31\t-1\t5\t1\t11\t1\t1\t1\t223\t241\t61\t40\t34.835777\tea:5\t1\t11\t1\t1\t2\t295\t249\t43\t27\t35.408920\t>,2\t1\t12\t0\t0\t0\t461\t146\t53\t128\t-1\t3\t1\t12\t1\t0\t0\t461\t146\t53\t128\t-1\t4\t1\t12\t1\t1\t0\t461\t146\t53\t128\t-1\t5\t1\t12\t1\t1\t1\t461\t146\t53\t128\t4.892435\t(2\t1\t13\t0\t0\t0\t377\t272\t82\t37\t-1\t3\t1\t13\t1\t0\t0\t377\t272\t82\t37\t-1\t4\t1\t13\t1\t1\t0\t377\t272\t82\t37\t-1\t5\t1\t13\t1\t1\t1\t377\t272\t82\t37\t15.653715\t~2\t1\t14\t0\t0\t0\t740\t289\t50\t6\t-1\t3\t1\t14\t1\t0\t0\t740\t289\t50\t6\t-1\t4\t1\t14\t1\t1\t0\t740\t289\t50\t6\t-1\t5\t1\t14\t1\t1\t1\t740\t289\t50\t6\t42.745514\t=o2\t1\t15\t0\t0\t0\t237\t288\t107\t42\t-1\t3\t1\t15\t1\t0\t0\t237\t288\t107\t42\t-1\t4\t1\t15\t1\t1\t0\t237\t288\t107\t42\t-1\t5\t1\t15\t1\t1\t1\t237\t288\t107\t42\t0.000000\tN\\A2\t1\t16\t0\t0\t0\t941\t271\t136\t55\t-1\t3\t1\t16\t1\t0\t0\t941\t271\t136\t55\t-1\t4\t1\t16\t1\t1\t0\t941\t271\t136\t55\t-1\t5\t1\t16\t1\t1\t1\t941\t281\t75\t45\t96.831726\t근본적5\t1\t16\t1\t1\t2\t1021\t271\t56\t55\t74.976151\t체질2\t1\t17\t0\t0\t0\t997\t316\t104\t63\t-1\t3\t1\t17\t1\t0\t0\t997\t316\t104\t63\t-1\t4\t1\t17\t1\t1\t0\t997\t316\t104\t63\t-1\t5\t1\t17\t1\t1\t1\t997\t316\t46\t43\t96.928459\t증명5\t1\t17\t1\t1\t2\t1054\t333\t47\t46\t96.986153\t필요2\t1\t18\t0\t0\t0\t1016\t230\t151\t149\t-1\t3\t1\t18\t1\t0\t0\t1016\t230\t151\t149\t-1\t4\t1\t18\t1\t1\t0\t1016\t230\t151\t149\t-1\t5\t1\t18\t1\t1\t1\t1016\t230\t107\t149\t42.028664\tTa5\t1\t18\t1\t1\t2\t1150\t242\t17\t126\t58.555466\t|2\t1\t19\t0\t0\t0\t1162\t369\t4\t18\t-1\t3\t1\t19\t1\t0\t0\t1162\t369\t4\t18\t-1\t4\t1\t19\t1\t1\t0\t1162\t369\t4\t18\t-1\t5\t1\t19\t1\t1\t1\t1162\t362\t4\t25\t95.975952\ti2\t1\t20\t0\t0\t0\t364\t305\t115\t111\t-1\t3\t1\t20\t1\t0\t0\t364\t305\t117\t111\t-1\t4\t1\t20\t1\t1\t0\t364\t305\t115\t111\t-1\t5\t1\t20\t1\t1\t1\t364\t332\t17\t40\t75.211662\t\\5\t1\t20\t1\t1\t2\t456\t305\t23\t111\t89.713547\t|2\t1\t21\t0\t0\t0\t570\t299\t110\t114\t-1\t3\t1\t21\t1\t0\t0\t570\t299\t110\t114\t-1\t4\t1\t21\t1\t1\t0\t570\t299\t110\t114\t-1\t5\t1\t21\t1\t1\t1\t570\t299\t110\t114\t55.643429\t(y2\t1\t22\t0\t0\t0\t875\t368\t37\t42\t-1\t3\t1\t22\t1\t0\t0\t875\t368\t37\t42\t-1\t4\t1\t22\t1\t1\t0\t875\t368\t37\t42\t-1\t5\t1\t22\t1\t1\t1\t875\t368\t37\t42\t27.843666\tI.2\t1\t23\t0\t0\t0\t192\t382\t62\t51\t-1\t3\t1\t23\t1\t0\t0\t192\t382\t62\t51\t-1\t4\t1\t23\t1\t1\t0\t192\t382\t62\t51\t-1\t5\t1\t23\t1\t1\t1\t192\t382\t62\t51\t48.806644\ta2\t1\t24\t0\t0\t0\t616\t436\t60\t15\t-1\t3\t1\t24\t1\t0\t0\t616\t436\t60\t15\t-1\t4\t1\t24\t1\t1\t0\t616\t436\t60\t15\t-1\t5\t1\t24\t1\t1\t1\t616\t436\t60\t15\t48.318123\ta:2\t1\t25\t0\t0\t0\t748\t371\t72\t86\t-1\t3\t1\t25\t1\t0\t0\t748\t371\t72\t86\t-1\t4\t1\t25\t1\t1\t0\t748\t371\t72\t86\t-1\t5\t1\t25\t1\t1\t1\t748\t371\t72\t86\t29.154711\te2\t1\t26\t0\t0\t0\t1121\t400\t45\t48\t-1\t3\t1\t26\t1\t0\t0\t1121\t400\t45\t48\t-1\t4\t1\t26\t1\t1\t0\t1121\t400\t45\t48\t-1\t5\t1\t26\t1\t1\t1\t1121\t400\t45\t48\t76.439407\t|!2\t1\t27\t0\t0\t0\t211\t466\t47\t27\t-1\t3\t1\t27\t1\t0\t0\t211\t466\t47\t27\t-1\t4\t1\t27\t1\t1\t0\t211\t466\t47\t27\t-1\t5\t1\t27\t1\t1\t1\t211\t466\t47\t27\t86.591537\tt\\\\2\t1\t28\t0\t0\t0\t904\t428\t23\t44\t-1\t3\t1\t28\t1\t0\t0\t904\t428\t23\t44\t-1\t4\t1\t28\t1\t1\t0\t904\t428\t23\t44\t-1\t5\t1\t28\t1\t1\t1\t904\t428\t23\t44\t68.320267\tㅣ5\t1\t28\t1\t1\t2\t916\t424\t13\t66\t83.784927\t|2\t1\t29\t0\t0\t0\t296\t516\t40\t24\t-1\t3\t1\t29\t1\t0\t0\t296\t516\t40\t24\t-1\t4\t1\t29\t1\t1\t0\t296\t516\t40\t24\t-1\t5\t1\t29\t1\t1\t1\t296\t516\t40\t24\t64.187683\t~2\t1\t30\t0\t0\t0\t511\t513\t61\t38\t-1\t3\t1\t30\t1\t0\t0\t511\t513\t61\t38\t-1\t4\t1\t30\t1\t1\t0\t511\t513\t61\t38\t-1\t5\t1\t30\t1\t1\t1\t511\t513\t61\t38\t48.039623\tWe,2\t1\t31\t0\t0\t0\t653\t566\t60\t38\t-1\t3\t1\t31\t1\t0\t0\t653\t566\t60\t38\t-1\t4\t1\t31\t1\t1\t0\t653\t566\t60\t38\t-1\t5\t1\t31\t1\t1\t1\t653\t566\t60\t38\t67.443771\tGua2\t1\t32\t0\t0\t0\t710\t502\t223\t102\t-1\t3\t1\t32\t1\t0\t0\t710\t502\t223\t102\t-1\t4\t1\t32\t1\t1\t0\t710\t502\t223\t102\t-1\t5\t1\t32\t1\t1\t1\t710\t480\t223\t124\t26.292257\tCXS:2\t1\t33\t0\t0\t0\t802\t595\t156\t46\t-1\t3\t1\t33\t1\t0\t0\t802\t595\t156\t46\t-1\t4\t1\t33\t1\t1\t0\t802\t595\t156\t46\t-1\t5\t1\t33\t1\t1\t1\t802\t611\t34\t16\t84.448441\t쁘5\t1\t33\t1\t1\t2\t853\t610\t57\t31\t80.678215\t수5\t1\t33\t1\t1\t3\t922\t611\t13\t28\t89.793663\t카5\t1\t33\t1\t1\t4\t940\t595\t18\t8\t78.598679\t02\t1\t34\t0\t0\t0\t113\t547\t454\t157\t-1\t3\t1\t34\t1\t0\t0\t113\t547\t454\t157\t-1\t4\t1\t34\t1\t1\t0\t113\t547\t454\t157\t-1\t5\t1\t34\t1\t1\t1\t113\t611\t82\t38\t93.136230\t회사5\t1\t34\t1\t1\t2\t217\t611\t41\t47\t93.128899\t전5\t1\t34\t1\t1\t3\t261\t611\t27\t56\t93.286423\t체5\t1\t34\t1\t1\t4\t301\t611\t28\t38\t97.022736\t의5\t1\t34\t1\t1\t5\t301\t696\t13\t8\t9.964256\t15\t1\t34\t1\t1\t6\t351\t567\t73\t82\t14.057989\t제티5\t1\t34\t1\t1\t7\t439\t547\t128\t118\t24.405270\tersiat2\t1\t35\t0\t0\t0\t567\t584\t186\t97\t-1\t3\t1\t35\t1\t0\t0\t567\t584\t186\t97\t-1\t4\t1\t35\t1\t1\t0\t567\t584\t186\t97\t-1\t5\t1\t35\t1\t1\t1\t567\t611\t36\t70\t93.209274\t는5\t1\t35\t1\t1\t2\t628\t611\t27\t51\t36.540184\t걸5\t1\t35\t1\t1\t3\t681\t584\t72\t91\t95.622734\t증명2\t1\t36\t0\t0\t0\t741\t611\t97\t38\t-1\t3\t1\t36\t1\t0\t0\t741\t611\t97\t38\t-1\t4\t1\t36\t1\t1\t0\t741\t611\t97\t38\t-1\t5\t1\t36\t1\t1\t1\t741\t611\t97\t38\t31.336159\t하는2\t1\t37\t0\t0\t0\t799\t629\t132\t20\t-1\t3\t1\t37\t1\t0\t0\t799\t629\t132\t20\t-1\t4\t1\t37\t1\t1\t0\t799\t629\t132\t20\t-1\t5\t1\t37\t1\t1\t1\t799\t629\t38\t20\t46.303635\t=5\t1\t37\t1\t1\t2\t885\t629\t46\t20\t31.657934\t기2\t1\t38\t0\t0\t0\t929\t664\t57\t13\t-1\t3\t1\t38\t1\t0\t0\t929\t664\t57\t13\t-1\t4\t1\t38\t1\t1\t0\t929\t664\t57\t13\t-1\t5\t1\t38\t1\t1\t1\t929\t664\t74\t19\t38.047554\tSNASAS2\t1\t39\t0\t0\t0\t938\t611\t229\t38\t-1\t3\t1\t39\t1\t0\t0\t938\t611\t229\t38\t-1\t4\t1\t39\t1\t1\t0\t938\t611\t229\t38\t-1\t5\t1\t39\t1\t1\t1\t938\t611\t35\t38\t93.306252\t이5\t1\t39\t1\t1\t2\t998\t611\t31\t56\t93.091736\t오5\t1\t39\t1\t1\t3\t1038\t612\t33\t36\t93.301506\t느5\t1\t39\t1\t1\t4\t1075\t611\t92\t38\t93.041290\t냐5\t1\t39\t1\t1\t5\t1122\t607\t28\t64\t92.621933\t야5\t1\t39\t1\t1\t6\t1150\t607\t20\t64\t91.652046\t.2\t1\t40\t0\t0\t0\t305\t717\t17\t1\t-1\t3\t1\t40\t1\t0\t0\t305\t717\t17\t1\t-1\t4\t1\t40\t1\t1\t0\t305\t717\t17\t1\t-1\t5\t1\t40\t1\t1\t1\t305\t717\t17\t1\t75.864494\t42\t1\t41\t0\t0\t0\t524\t702\t78\t18\t-1\t3\t1\t41\t1\t0\t0\t524\t702\t78\t18\t-1\t4\t1\t41\t1\t1\t0\t524\t702\t78\t18\t-1\t5\t1\t41\t1\t1\t1\t524\t702\t78\t18\t22.225332\t은)2\t1\t42\t0\t0\t0\t540\t658\t94\t52\t-1\t3\t1\t42\t1\t0\t0\t540\t658\t94\t52\t-1\t4\t1\t42\t1\t1\t0\t540\t658\t94\t52\t-1\t5\t1\t42\t1\t1\t1\t540\t658\t94\t52\t33.139870\taaa",
+        "center_x_ratio": 0.8156,
+        "center_y_ratio": 0.0535,
+        "height_ratio": 0.0736,
+        "area_ratio": 0.001955
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 50,
+      "mean_saturation": 73.596,
+      "p90_saturation": 150.0,
+      "luma_stddev": 68.206,
+      "peripheral_edge_density": 0.098726,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 14,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "6",
+        "center_x_ratio": 0.6441,
+        "center_y_ratio": 0.2285,
+        "height_ratio": 0.0847,
+        "area_ratio": 0.015687
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 51,
+      "mean_saturation": 124.235,
+      "p90_saturation": 212.0,
+      "luma_stddev": 79.495,
+      "peripheral_edge_density": 0.090758,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 14,
+      "in_scene_numeric_token_count": 3,
+      "largest_numeric": {
+        "text": "-30%",
+        "center_x_ratio": 0.1812,
+        "center_y_ratio": 0.5326,
+        "height_ratio": 0.0958,
+        "area_ratio": 0.012578
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 52,
+      "mean_saturation": 96.692,
+      "p90_saturation": 174.0,
+      "luma_stddev": 66.489,
+      "peripheral_edge_density": 0.118143,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 31,
+      "in_scene_numeric_token_count": 9,
+      "largest_numeric": {
+        "text": "2",
+        "center_x_ratio": 0.5328,
+        "center_y_ratio": 0.3972,
+        "height_ratio": 0.1667,
+        "area_ratio": 0.009115
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 53,
+      "mean_saturation": 132.163,
+      "p90_saturation": 223.0,
+      "luma_stddev": 79.82,
+      "peripheral_edge_density": 0.077258,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 25,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "“6%",
+        "center_x_ratio": 0.4492,
+        "center_y_ratio": 0.6667,
+        "height_ratio": 0.0944,
+        "area_ratio": 0.008707
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 54,
+      "mean_saturation": 17.25,
+      "p90_saturation": 15.0,
+      "luma_stddev": 59.716,
+      "peripheral_edge_density": 0.016152,
+      "peripheral_blank_tile_ratio": 0.5938,
+      "in_scene_ocr_token_count": 28,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "2026",
+        "center_x_ratio": 0.3512,
+        "center_y_ratio": 0.541,
+        "height_ratio": 0.0597,
+        "area_ratio": 0.006579
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 55,
+      "mean_saturation": 76.958,
+      "p90_saturation": 156.0,
+      "luma_stddev": 64.615,
+      "peripheral_edge_density": 0.108696,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 0,
+      "in_scene_numeric_token_count": 0,
+      "largest_numeric": null,
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 56,
+      "mean_saturation": 114.803,
+      "p90_saturation": 198.0,
+      "luma_stddev": 59.303,
+      "peripheral_edge_density": 0.097886,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 8,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "|2\t1\t12\t0\t0\t0\t1148\t228\t35\t64\t-1\t3\t1\t12\t1\t0\t0\t1148\t228\t35\t64\t-1\t4\t1\t12\t1\t1\t0\t1148\t228\t35\t64\t-1\t5\t1\t12\t1\t1\t1\t1148\t228\t20\t64\t44.404049\t\\5\t1\t12\t1\t1\t2\t1177\t263\t6\t29\t71.276314\t|2\t1\t13\t0\t0\t0\t47\t357\t40\t2\t-1\t3\t1\t13\t1\t0\t0\t47\t357\t40\t2\t-1\t4\t1\t13\t1\t1\t0\t47\t357\t40\t2\t-1\t5\t1\t13\t1\t1\t1\t47\t357\t40\t2\t66.788727\t—=2\t1\t14\t0\t0\t0\t938\t200\t83\t122\t-1\t3\t1\t14\t1\t0\t0\t938\t200\t83\t122\t-1\t4\t1\t14\t1\t1\t0\t938\t200\t83\t122\t-1\t5\t1\t14\t1\t1\t1\t938\t200\t83\t122\t32.361313\tNe2\t1\t15\t0\t0\t0\t231\t355\t67\t27\t-1\t3\t1\t15\t1\t0\t0\t231\t355\t67\t27\t-1\t4\t1\t15\t1\t1\t0\t231\t355\t67\t27\t-1\t5\t1\t15\t1\t1\t1\t231\t356\t17\t26\t93.277924\t리5\t1\t15\t1\t1\t2\t266\t355\t3\t18\t92.984627\t한5\t1\t15\t1\t1\t3\t285\t364\t13\t3\t73.800110\tS2\t1\t16\t0\t0\t0\t480\t257\t295\t134\t-1\t3\t1\t16\t1\t0\t0\t480\t257\t295\t134\t-1\t4\t1\t16\t1\t1\t0\t480\t257\t295\t134\t-1\t5\t1\t16\t1\t1\t1\t480\t257\t295\t134\t39.033905\tBe2\t1\t17\t0\t0\t0\t513\t385\t721\t207\t-1\t3\t1\t17\t1\t0\t0\t513\t385\t726\t207\t-1\t4\t1\t17\t1\t1\t0\t513\t385\t721\t207\t-1\t5\t1\t17\t1\t1\t1\t513\t389\t398\t156\t42.351536\t=5\t1\t17\t1\t1\t2\t974\t385\t260\t207\t69.682869\t=>2\t1\t18\t0\t0\t0\t77\t500\t282\t107\t-1\t3\t1\t18\t1\t0\t0\t77\t500\t282\t107\t-1\t4\t1\t18\t1\t1\t0\t77\t500\t282\t107\t-1\t5\t1\t18\t1\t1\t1\t73\t496\t90\t120\t66.518051\t…2\t1\t19\t0\t0\t0\t43\t685\t115\t35\t-1\t3\t1\t19\t1\t0\t0\t43\t685\t115\t35\t-1\t4\t1\t19\t1\t1\t0\t43\t685\t115\t35\t-1\t5\t1\t19\t1\t1\t1\t43\t685\t115\t35\t19.201851\t~2\t1\t20\t0\t0\t0\t212\t647\t122\t73\t-1\t3\t1\t20\t1\t0\t0\t212\t647\t122\t73\t-1\t4\t1\t20\t1\t1\t0\t212\t647\t122\t73\t-1\t5\t1\t20\t1\t1\t1\t212\t647\t122\t73\t37.876968\t<2\t1\t21\t0\t0\t0\t322\t592\t198\t85\t-1\t3\t1\t21\t1\t0\t0\t322\t592\t198\t85\t-1\t4\t1\t21\t1\t1\t0\t322\t592\t198\t85\t-1\t5\t1\t21\t1\t1\t1\t322\t592\t85\t85\t29.281006\tyr5\t1\t21\t1\t1\t2\t445\t596\t75\t52\t41.249733\t미도2\t1\t22\t0\t0\t0\t354\t625\t127\t64\t-1\t3\t1\t22\t1\t0\t0\t354\t625\t127\t64\t-1\t4\t1\t22\t1\t1\t0\t354\t625\t127\t64\t-1\t5\t1\t22\t1\t1\t1\t354\t625\t127\t64\t23.894529\t스2\t1\t23\t0\t0\t0\t482\t496\t645\t224\t-1\t3\t1\t23\t1\t0\t0\t482\t496\t645\t224\t-1\t4\t1\t23\t1\t1\t0\t482\t496\t645\t224\t-1\t5\t1\t23\t1\t1\t1\t482\t611\t50\t38\t63.661064\t모5\t1\t23\t1\t1\t2\t537\t586\t35\t63\t93.287842\t리5\t1\t23\t1\t1\t3\t584\t611\t34\t73\t97.008286\t는5\t1\t23\t1\t1\t4\t523\t496\t604\t224\t48.426834\tee2\t1\t24\t0\t0\t0\t588\t651\t384\t55\t-1\t3\t1\t24\t1\t0\t0\t588\t651\t384\t55\t-1\t4\t1\t24\t1\t1\t0\t588\t651\t384\t55\t-1\t5\t1\t24\t1\t1\t1\t588\t651\t118\t55\t25.704075\tee5\t1\t24\t1\t1\t2\t847\t651\t125\t55\t41.801941\tES2\t1\t25\t0\t0\t0\t612\t652\t255\t28\t-1\t3\t1\t25\t1\t0\t0\t612\t652\t281\t28\t-1\t4\t1\t25\t1\t1\t0\t612\t652\t255\t28\t-1\t5\t1\t25\t1\t1\t1\t612\t652\t17\t28\t25.923496\tLr5\t1\t25\t1\t1\t2\t657\t652\t70\t28\t48.697430\tlel5\t1\t25\t1\t1\t3\t731\t652\t15\t28\t19.485960\tSr5\t1\t25\t1\t1\t4\t766\t660\t11\t10\t24.841579\ta5\t1\t25\t1\t1\t5\t799\t652\t17\t28\t19.693460\tTarn5\t1\t25\t1\t1\t6\t822\t652\t45\t28\t0.000000\tSeog2\t1\t26\t0\t0\t0\t1236\t654\t42\t61\t-1\t3\t1\t26\t1\t0\t0\t1236\t654\t44\t61\t-1\t4\t1\t26\t1\t1\t0\t1236\t654\t42\t61\t-1\t5\t1\t26\t1\t1\t1\t1236\t654\t42\t61\t79.212173\tZ",
+        "center_x_ratio": 0.8781,
+        "center_y_ratio": 0.2917,
+        "height_ratio": 0.0611,
+        "area_ratio": 0.001528
+      },
+      "background_type": "control_room_data_lab"
+    },
+    {
+      "frame": 57,
+      "mean_saturation": 12.256,
+      "p90_saturation": 13.0,
+      "luma_stddev": 67.821,
+      "peripheral_edge_density": 0.045927,
+      "peripheral_blank_tile_ratio": 0.2812,
+      "in_scene_ocr_token_count": 86,
+      "in_scene_numeric_token_count": 12,
+      "largest_numeric": {
+        "text": "4598",
+        "center_x_ratio": 0.6539,
+        "center_y_ratio": 0.2778,
+        "height_ratio": 0.0667,
+        "area_ratio": 0.017708
+      },
+      "background_type": "evidence_insert"
+    },
+    {
+      "frame": 58,
+      "mean_saturation": 113.787,
+      "p90_saturation": 178.0,
+      "luma_stddev": 57.271,
+      "peripheral_edge_density": 0.130665,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 22,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "2",
+        "center_x_ratio": 0.2582,
+        "center_y_ratio": 0.8111,
+        "height_ratio": 0.0694,
+        "area_ratio": 0.007324
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 59,
+      "mean_saturation": 134.239,
+      "p90_saturation": 230.0,
+      "luma_stddev": 75.632,
+      "peripheral_edge_density": 0.060665,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 18,
+      "in_scene_numeric_token_count": 2,
+      "largest_numeric": {
+        "text": "203044",
+        "center_x_ratio": 0.7586,
+        "center_y_ratio": 0.2493,
+        "height_ratio": 0.1514,
+        "area_ratio": 0.02531
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 60,
+      "mean_saturation": 74.622,
+      "p90_saturation": 133.0,
+      "luma_stddev": 62.325,
+      "peripheral_edge_density": 0.136081,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 33,
+      "in_scene_numeric_token_count": 8,
+      "largest_numeric": {
+        "text": "1",
+        "center_x_ratio": 0.0758,
+        "center_y_ratio": 0.684,
+        "height_ratio": 0.2792,
+        "area_ratio": 0.02181
+      },
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 61,
+      "mean_saturation": 127.001,
+      "p90_saturation": 222.0,
+      "luma_stddev": 73.273,
+      "peripheral_edge_density": 0.06546,
+      "peripheral_blank_tile_ratio": 0.1875,
+      "in_scene_ocr_token_count": 27,
+      "in_scene_numeric_token_count": 6,
+      "largest_numeric": {
+        "text": "1456!",
+        "center_x_ratio": 0.9086,
+        "center_y_ratio": 0.634,
+        "height_ratio": 0.1236,
+        "area_ratio": 0.012747
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 62,
+      "mean_saturation": 84.837,
+      "p90_saturation": 173.0,
+      "luma_stddev": 65.285,
+      "peripheral_edge_density": 0.132634,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 43,
+      "in_scene_numeric_token_count": 7,
+      "largest_numeric": {
+        "text": "902614",
+        "center_x_ratio": 0.6996,
+        "center_y_ratio": 0.1354,
+        "height_ratio": 0.0764,
+        "area_ratio": 0.005908
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 63,
+      "mean_saturation": 79.74,
+      "p90_saturation": 145.0,
+      "luma_stddev": 68.305,
+      "peripheral_edge_density": 0.13332,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 60,
+      "in_scene_numeric_token_count": 12,
+      "largest_numeric": {
+        "text": "4",
+        "center_x_ratio": 0.6188,
+        "center_y_ratio": 0.0653,
+        "height_ratio": 0.1306,
+        "area_ratio": 0.019379
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 64,
+      "mean_saturation": 113.978,
+      "p90_saturation": 212.0,
+      "luma_stddev": 64.122,
+      "peripheral_edge_density": 0.078202,
+      "peripheral_blank_tile_ratio": 0.0312,
+      "in_scene_ocr_token_count": 23,
+      "in_scene_numeric_token_count": 5,
+      "largest_numeric": {
+        "text": "0",
+        "center_x_ratio": 0.2301,
+        "center_y_ratio": 0.3549,
+        "height_ratio": 0.0597,
+        "area_ratio": 0.003406
+      },
+      "background_type": "market_news_crisis"
+    },
+    {
+      "frame": 65,
+      "mean_saturation": 172.106,
+      "p90_saturation": 241.0,
+      "luma_stddev": 63.581,
+      "peripheral_edge_density": 0.092031,
+      "peripheral_blank_tile_ratio": 0.0938,
+      "in_scene_ocr_token_count": 31,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "4",
+        "center_x_ratio": 0.8309,
+        "center_y_ratio": 0.3368,
+        "height_ratio": 0.1069,
+        "area_ratio": 0.005264
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 66,
+      "mean_saturation": 99.697,
+      "p90_saturation": 156.0,
+      "luma_stddev": 66.939,
+      "peripheral_edge_density": 0.077958,
+      "peripheral_blank_tile_ratio": 0.2188,
+      "in_scene_ocr_token_count": 19,
+      "in_scene_numeric_token_count": 4,
+      "largest_numeric": {
+        "text": "2G",
+        "center_x_ratio": 0.1656,
+        "center_y_ratio": 0.7799,
+        "height_ratio": 0.1292,
+        "area_ratio": 0.019173
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 67,
+      "mean_saturation": 119.935,
+      "p90_saturation": 196.0,
+      "luma_stddev": 70.373,
+      "peripheral_edge_density": 0.125773,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 0,
+      "in_scene_numeric_token_count": 0,
+      "largest_numeric": null,
+      "background_type": "classroom_briefing"
+    },
+    {
+      "frame": 68,
+      "mean_saturation": 106.362,
+      "p90_saturation": 187.0,
+      "luma_stddev": 70.009,
+      "peripheral_edge_density": 0.100123,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 18,
+      "in_scene_numeric_token_count": 3,
+      "largest_numeric": {
+        "text": "0",
+        "center_x_ratio": 0.7215,
+        "center_y_ratio": 0.6056,
+        "height_ratio": 0.1167,
+        "area_ratio": 0.005195
+      },
+      "background_type": "physical_economic_metaphor"
+    },
+    {
+      "frame": 69,
+      "mean_saturation": 104.561,
+      "p90_saturation": 191.0,
+      "luma_stddev": 71.57,
+      "peripheral_edge_density": 0.127598,
+      "peripheral_blank_tile_ratio": 0.0,
+      "in_scene_ocr_token_count": 21,
+      "in_scene_numeric_token_count": 1,
+      "largest_numeric": {
+        "text": "2]",
+        "center_x_ratio": 0.7203,
+        "center_y_ratio": 0.4285,
+        "height_ratio": 0.1792,
+        "area_ratio": 0.017637
+      },
+      "background_type": "physical_economic_metaphor"
+    }
+  ]
+}

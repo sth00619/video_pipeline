@@ -148,7 +148,7 @@ def test_trade_calculator_uses_one_balance_device_instead_of_a_duplicate_summary
     contracted = attach_v5_scene_contracts(planned)[0]
     surface_plan = contracted["v5_render_contract"]["surface_caption"]["surface_plan"]
 
-    assert contracted["screen_texts"] == ["PER 4배", "삼성전자", "SK하이닉스"]
+    assert contracted["screen_texts"] == ["삼성전자", "SK하이닉스", "PER 4배"]
     assert {item["visual_device_id"] for item in surface_plan} == {"balance_scale"}
     assert {item["surface_id"] for item in surface_plan} == {
         "balance_scale_plinth",

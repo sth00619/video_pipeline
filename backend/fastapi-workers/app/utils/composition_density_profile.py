@@ -24,6 +24,12 @@ class CompositionDensityProfile:
     min_information_surfaces: int
     color_contrast_rule: str
     text_surface_anchors: tuple[str, ...]
+    max_unmotivated_peripheral_blank_ratio: float = 0.10
+    max_primary_explanation_devices: int = 2
+    device_role_contract: str = (
+        "Each primary explanation device must carry a distinct part of the narration; "
+        "never duplicate the same fact or metaphor across devices."
+    )
 
     def as_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -51,6 +57,13 @@ def _profile(
     surfaces: int,
     color: str,
     anchors: tuple[str, ...],
+    *,
+    max_blank_ratio: float = 0.10,
+    max_devices: int = 2,
+    device_roles: str = (
+        "Each primary explanation device must carry a distinct part of the narration; "
+        "never duplicate the same fact or metaphor across devices."
+    ),
 ) -> CompositionDensityProfile:
     return CompositionDensityProfile(
         id=identifier,
@@ -63,6 +76,9 @@ def _profile(
         min_information_surfaces=surfaces,
         color_contrast_rule=color,
         text_surface_anchors=anchors,
+        max_unmotivated_peripheral_blank_ratio=max_blank_ratio,
+        max_primary_explanation_devices=max_devices,
+        device_role_contract=device_roles,
     )
 
 
@@ -77,7 +93,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("stacked containers", "warning beacons", "working crane structure"),
         ("cargo ship silhouette", "storm sky or distant port lights"),
         1, "cool storm blues with localized red warning light and one warm focal accent",
-        ("container face", "dock warning plate", "customs sign"),
+        ("container face", "dock warning plate", "customs sign"), max_blank_ratio=.05,
     ),
     "retail_shock": _profile(
         "retail_shock", "physical_economic_metaphor", 6,
@@ -85,7 +101,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("dense product shelf clusters", "price-change mechanism without writing"),
         ("store aisle depth", "overhead retail lighting"),
         1, "clean retail neutrals with a strong red or green causal accent",
-        ("receipt window", "shelf price tag", "product package face"),
+        ("receipt window", "shelf price tag", "product package face"), max_blank_ratio=.08,
     ),
     "classroom": _profile(
         "classroom", "classroom_briefing", 6,
@@ -93,7 +109,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("large teaching wall", "banker lamp or pinned-note cluster"),
         ("desk rows", "bookshelf or architectural classroom detail"),
         1, "warm wood and amber light against a saturated green or navy teaching surface",
-        ("chalk wall", "pinned note", "lectern face"),
+        ("chalk wall", "pinned note", "lectern face"), max_blank_ratio=.04,
     ),
     "weather_map": _profile(
         "weather_map", "classroom_briefing+market_news_crisis", 6,
@@ -101,7 +117,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("curved map wall", "storm-cloud and directional weather forms"),
         ("broadcast camera silhouettes", "ceiling spotlights or studio depth"),
         1, "clear cool-versus-warm weather contrast with directional color bands",
-        ("map region", "cloud callout", "broadcast map arrow zone"),
+        ("map region", "cloud callout", "broadcast map arrow zone"), max_blank_ratio=.08,
     ),
     "risk_control_room": _profile(
         "risk_control_room", "control_room_data_lab+market_news_crisis", 7,
@@ -109,7 +125,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("central gauge or monitor", "two supporting instrument clusters"),
         ("operations wall depth", "warning lamps and cable or circuit structure"),
         3, "deep blue control-room base with decisive red risk and restrained gold protection accents",
-        ("central gauge face", "metal warning plaque", "console screen"),
+        ("central gauge face", "metal warning plaque", "console screen"), max_blank_ratio=.08,
     ),
     "trade_calculator": _profile(
         "trade_calculator", "physical_economic_metaphor+classroom_briefing", 5,
@@ -117,7 +133,12 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("closed ledger stack", "comparison objects on separate scale pans"),
         ("chamber architecture", "focused spotlight and shadow depth"),
         2, "dark navy and brass gold with one red caution accent when required",
-        ("scale pan prop face", "engraved plinth", "wall diagram"),
+        ("scale pan prop face", "engraved plinth"), max_blank_ratio=.17,
+        max_devices=1,
+        device_roles=(
+            "Use one balance scale as the only primary explanation device: its left pan, right pan, and plinth divide the comparison labels and metric. "
+            "A chalkboard may remain only as an unlettered ambient classroom detail and must not duplicate the scale's comparison or metric."
+        ),
     ),
     "data_lab": _profile(
         "data_lab", "control_room_data_lab+factory_construction", 7,
@@ -125,7 +146,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("at least three distinct analytical equipment or information-surface clusters", "production or comparison props"),
         ("server racks, factory depth, or research-room architecture", "overhead technical lighting"),
         3, "cool cyan-blue analytical base with scene-direction green, red, or gold causal accents",
-        ("scene-planned laboratory surface", "equipment face", "solid monitor"),
+        ("scene-planned laboratory surface", "equipment face", "solid monitor"), max_blank_ratio=.05,
     ),
     "briefing_podium": _profile(
         "briefing_podium", "classroom_briefing", 6,
@@ -133,7 +154,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("embedded briefing wall", "press seating or camera cluster"),
         ("ceiling light bank", "room architecture and audience depth"),
         1, "neutral press-room blues with a warm speaker key light and one directional accent",
-        ("embedded briefing wall", "podium face"),
+        ("embedded briefing wall", "podium face"), max_blank_ratio=.04,
     ),
     "real_estate_office": _profile(
         "real_estate_office", "dialogue_office_library+physical_economic_metaphor", 6,
@@ -141,7 +162,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("wall guidance board", "banker lamp and file cluster"),
         ("window architecture", "exterior home silhouettes or shelving"),
         1, "warm office amber with cool window and board reflections",
-        ("wall guidance board", "calculator face", "window listing surface"),
+        ("wall guidance board", "calculator face", "window listing surface"), max_blank_ratio=.10,
     ),
     "job_market_hall": _profile(
         "job_market_hall", "classroom_briefing+dialogue_office_library", 7,
@@ -149,7 +170,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("booth dividers", "job-seeker and guide-light clusters"),
         ("public-hall architecture", "queue depth and distant counters"),
         1, "bright civic neutrals with welcoming blue-green accents and restrained warning color",
-        ("wall employment board", "closed folder face", "counter-integrated surface"),
+        ("wall employment board", "closed folder face", "counter-integrated surface"), max_blank_ratio=.10,
     ),
     "earnings_stage": _profile(
         "earnings_stage", "classroom_briefing+control_room_data_lab", 7,
@@ -157,7 +178,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("embedded results mural", "camera and investor-seat clusters"),
         ("stage architecture", "overhead spotlights and audience depth"),
         1, "cool corporate stage base with warm key lights and direction-specific green or red accents",
-        ("embedded results mural", "podium face"),
+        ("embedded results mural", "podium face"), max_blank_ratio=.05,
     ),
     # Job52 보존 입력에 있던 분할형은 현재 운영 archetype을 추가하거나 바꾸지
     # 않고 별도 밀도 프로필로만 해석한다.
@@ -167,7 +188,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("distinct left and right physical mechanisms", "one anchored surface per side"),
         ("continuous architectural context or matched distant depth",),
         2, "clearly separated green or gold positive side and red negative side without flattening the room into two blank cards",
-        ("left scene-native surface", "right scene-native surface"),
+        ("left scene-native surface", "right scene-native surface"), max_blank_ratio=.08,
     ),
     "evidence_insert": _profile(
         "evidence_insert", "evidence_insert", 5,
@@ -175,7 +196,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("source-context object cluster", "supporting non-textual explanation prop"),
         ("room, newsroom, or desk depth",),
         1, "neutral evidence treatment with one scene-direction accent; never regenerate source text",
-        ("verified capture asset",),
+        ("verified capture asset",), max_blank_ratio=.35,
     ),
     "generic_editorial": _profile(
         "generic_editorial", "physical_economic_metaphor", 5,
@@ -183,7 +204,7 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
         ("two distinct causal object clusters", "one scene-integrated information surface when planned"),
         ("location-specific architecture or environment depth",),
         1, "scene-direction contrast with a restrained neutral base",
-        ("scene-planned physical surface",),
+        ("scene-planned physical surface",), max_blank_ratio=.10,
     ),
 }
 
@@ -237,8 +258,10 @@ def composition_density_prompt(profile: CompositionDensityProfile) -> str:
         f"COMPOSITION DENSITY PROFILE [{profile.id}]: render at least {profile.min_background_elements} distinct scene-native non-textual background elements or coherent prop clusters outside any calm text surface. "
         f"Use all three depth layers: foreground ({foreground}); midground ({midground}); background ({background}). "
         f"{surface_requirement}. Color contrast rule: {profile.color_contrast_rule}. "
+        f"Use no more than {profile.max_primary_explanation_devices} primary explanation devices. {profile.device_role_contract} "
+        f"Outside an intentional focal margin, keep the unmotivated empty peripheral area below about {profile.max_unmotivated_peripheral_blank_ratio:.0%} of the frame; this is an archetype-specific composition budget, not an invitation to add text. "
+        "Apply the scene palette to the environment and props only; it must not recolor or reshape the mascot face, eye structure, line weight, or canonical gold material. "
         f"Approved text, when present, may anchor only to a scene-planned physical surface such as {anchors}, and remains governed by the independent approved scene-local text contract. "
         "The density requirement is visual, not typographic: do not use words, pseudo-text, digits, tick labels, equations, microprint, logos, extra blank screens, detached cards, or invented dashboards to satisfy the element count. "
         "Every counted element must explain the narration's location, causal mechanism, or economic relationship rather than act as random decoration."
     )
-

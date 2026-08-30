@@ -404,6 +404,18 @@ def plan_v5_scene_contract(scene: dict[str, Any], index: int) -> dict[str, Any]:
         or scene.get("screen_text_plan")
         or []
     )
+    if str(scene.get("screen_text_plan_source") or "").startswith(
+        "approved_narration_semantic_surface_plan_"
+    ):
+        # 화면 문구는 대본 승인 직후 추출되지만 archetype은 V5에서 확정된다.
+        # 장소가 정해진 뒤 한 번만 공통 계획을 다시 계산해야 저울 장면의
+        # 비교값을 별도 칠판/모니터로 중복 표현하는 일반 배정이 남지 않는다.
+        from app.utils.scene_screen_text_planner import derive_scene_screen_text_plan
+        text_surface_plan = derive_scene_screen_text_plan(
+            {**scene, "archetype": selection.archetype}, approved_surface_texts,
+        )
+        scene["screen_text_plan"] = text_surface_plan
+        scene["screen_text_plan_source"] = "approved_narration_semantic_surface_plan_v2"
     semantic_visual_brief = semantic_plan["prop_visuals"] if information_scene else semantic_plan["background_visuals"]
     local_visual_parts = [
         str(scene.get("visual_intent") or "").strip(),

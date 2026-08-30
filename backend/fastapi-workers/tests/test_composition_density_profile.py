@@ -23,6 +23,7 @@ def test_every_operational_archetype_has_a_separate_density_profile():
         assert profile.required_depth_layers == ("foreground", "midground", "background")
         assert profile.text_surface_anchors
         assert profile.reference_background_type
+        assert 0 < profile.max_unmotivated_peripheral_blank_ratio <= .35
 
 
 def test_density_prompt_requires_layers_without_inviting_filler_text_or_numbers():
@@ -77,3 +78,13 @@ def test_trade_calculator_has_one_explanation_device_and_does_not_duplicate_the_
     assert "must not duplicate" in profile.device_role_contract.lower()
     assert "environment and props only" in prompt
     assert "mascot face, eye structure, line weight" in prompt
+
+
+def test_reference_benchmark_drives_archetype_specific_blank_space_budgets():
+    assert COMPOSITION_DENSITY_PROFILES["classroom"].max_unmotivated_peripheral_blank_ratio == .04
+    assert COMPOSITION_DENSITY_PROFILES["data_lab"].max_unmotivated_peripheral_blank_ratio == .05
+    assert COMPOSITION_DENSITY_PROFILES["risk_control_room"].max_unmotivated_peripheral_blank_ratio == .08
+    assert COMPOSITION_DENSITY_PROFILES["evidence_insert"].max_unmotivated_peripheral_blank_ratio == .35
+    prompt = composition_density_prompt(COMPOSITION_DENSITY_PROFILES["classroom"])
+    assert "below about 4%" in prompt
+    assert "not an invitation to add text" in prompt
