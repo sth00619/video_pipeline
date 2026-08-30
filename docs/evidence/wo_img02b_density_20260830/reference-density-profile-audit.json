@@ -1,0 +1,29 @@
+{
+  "version": "wo-img02b-reference-density-profile-audit-v1",
+  "source": {
+    "file": "reference_all_frames.tar.gz",
+    "sha256": "c615e01dab921eabb63431ba630b17bb1e734cec1fc1a22640558dd7c8d1fecb",
+    "frame_count": 69,
+    "sampling_limit": "15초 간격 표본으로 보이며 장면 전환 전수 추출로 확대 해석하지 않음"
+  },
+  "background_type_counts": {
+    "physical_economic_metaphor": 20,
+    "classroom_briefing": 15,
+    "evidence_insert": 9,
+    "control_room_data_lab": 9,
+    "factory_construction": 6,
+    "market_news_crisis": 5,
+    "dialogue_office_library": 4,
+    "channel_interstitial": 1
+  },
+  "quantification_method": "69개 프레임의 기존 배타적 유형 분류를 다시 대조하고, 프롬프트 하한은 글자나 개별 픽셀 수가 아니라 서로 구분 가능한 장면 고유 소품·장치 묶음의 보수적 최소값으로 정의함",
+  "shared_findings": {
+    "depth": "생성형 장면은 근경·중경·원경을 함께 사용하며 기사 캡처·채널 인터스티셜은 별도 경로임",
+    "density": "빈 공간은 강조 대상 주변의 의도적 여백일 때만 사용하며 소품 수를 글자·숫자·빈 모니터로 채우지 않음",
+    "contrast": "상승·기회는 초록·금색, 하락·위험은 빨강, 중립 설명은 따뜻한 실내색과 차가운 정보 표면의 대비를 반복 사용함",
+    "text": "긴 내레이션은 하단 합성 자막, 짧은 강조어는 제한된 물리 표면, 금융 수치는 결정론 렌더, 실제 증거는 캡처 삽입"
+  },
+  "operational_profile_count": 11,
+  "additional_compatibility_profiles": ["split_comparison", "evidence_insert", "generic_editorial"],
+  "character_scope": "레퍼런스 캐릭터 디자인·색상·실루엣은 사용하지 않으며 배경 구성·공간 깊이·색 대비·표면 문법만 참조"
+}

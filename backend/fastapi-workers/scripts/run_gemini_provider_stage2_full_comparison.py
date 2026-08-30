@@ -148,6 +148,7 @@ def prepare_rows(spec: dict, source_scenes: list[dict]) -> list[dict]:
             "approved_texts": text_contract["approved_texts"],
             "generated_texts": text_contract["generated_texts"],
             "deterministic_texts": text_contract["deterministic_texts"],
+            "composition_density_profile": dict(scene.get("composition_density_profile") or {}),
             "bounded_prompt": bounded,
             "final_prompt": final_prompt,
             "final_prompt_sha256": _sha(final_prompt.encode("utf-8")),

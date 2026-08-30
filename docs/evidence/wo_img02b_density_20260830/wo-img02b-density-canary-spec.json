@@ -1,0 +1,30 @@
+{
+  "version": "wo-img02b-density-canary-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "basis": "사용자 2026-08-30 WO-IMG-02-B: 밀도 레이어 커밋과 회귀 후 동일 네 장면 Pro Priority 실증",
+    "approved_total_reserved_krw": 6400,
+    "reserved_per_attempt_krw": 1600,
+    "external_image_post_limit": 4,
+    "attempts_per_scene": 1,
+    "retry_on_failure": false
+  },
+  "operational_contract_commit": "870ef9c5fc3d4e1e6e91d52e1f653fdb5cd11c34",
+  "model": "gemini-3-pro-image",
+  "service_tier": "priority",
+  "image_size": "2K",
+  "scenes": [0, 7, 15, 28],
+  "expected_density_profiles": {
+    "0": "trade_calculator",
+    "7": "data_lab",
+    "15": "split_comparison",
+    "28": "risk_control_room"
+  },
+  "scene42_frozen_and_excluded": true,
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "before_images_dir": "artifacts/job52_full_audit_20260824/images",
+  "previous_after_dir": "artifacts/wo_img02a_before_after_20260830_run2"
+}
