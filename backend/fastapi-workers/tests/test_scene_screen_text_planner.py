@@ -135,3 +135,24 @@ def test_common_auto_surface_plan_reaches_final_gemini_prompt_without_financial_
     assert "comparison_prop_right" in final_prompt
     assert "summary_monitor" in final_prompt
     assert contracted["image_profile"]["model"] == "gemini-3-pro-image"
+
+
+def test_trade_calculator_uses_one_balance_device_instead_of_a_duplicate_summary_board():
+    scene = {
+        "scene_type": "metric",
+        "content": "PER 4배, 들어보셨나요? 삼성전자와 SK하이닉스 얘기입니다.",
+        "v5_scene_type_selection": {"archetype": "trade_calculator"},
+    }
+
+    planned = attach_scene_screen_texts([scene])
+    contracted = attach_v5_scene_contracts(planned)[0]
+    surface_plan = contracted["v5_render_contract"]["surface_caption"]["surface_plan"]
+
+    assert contracted["screen_texts"] == ["PER 4배", "삼성전자", "SK하이닉스"]
+    assert {item["visual_device_id"] for item in surface_plan} == {"balance_scale"}
+    assert {item["surface_id"] for item in surface_plan} == {
+        "balance_scale_plinth",
+        "balance_scale_left_pan_label",
+        "balance_scale_right_pan_label",
+    }
+    assert "summary_monitor" not in {item["surface_id"] for item in surface_plan}

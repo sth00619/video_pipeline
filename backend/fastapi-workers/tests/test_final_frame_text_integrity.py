@@ -126,3 +126,26 @@ def test_worker_refuses_static_coordinate_fallback_when_no_physical_surface_exis
 
     with pytest.raises(DeterministicSurfaceMissingError):
         ImagesWorker()._apply_deterministic_surface_caption(_caption_scene(), str(image_path))
+
+
+def test_deterministic_caption_uses_the_planned_surface_kind(monkeypatch, tmp_path: Path):
+    image_path = tmp_path / "scene.png"
+    Image.new("RGB", (1280, 720), "#20354d").save(image_path)
+    scene = _caption_scene()
+    scene["v5_render_contract"]["surface_caption"]["surface_plan"] = [{
+        "text": "PER 4배",
+        "surface": "balance_scale_plinth",
+        "surface_id": "balance_scale_plinth",
+        "surface_kind": "prop_panel",
+    }]
+    scene["v5_render_contract"]["surface_caption"]["korean"] = "PER 4배"
+    seen = {}
+
+    def fake_detect(path, kind, **kwargs):
+        seen["kind"] = kind
+        return None
+
+    monkeypatch.setattr("app.services.overlay.surface_detector.detect_surface", fake_detect)
+    with pytest.raises(DeterministicSurfaceMissingError):
+        ImagesWorker()._apply_deterministic_surface_caption(scene, str(image_path))
+    assert seen["kind"] == "prop_panel"

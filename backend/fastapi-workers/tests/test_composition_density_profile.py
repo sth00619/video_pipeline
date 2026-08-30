@@ -65,3 +65,15 @@ def test_split_comparison_legacy_scene_gets_density_without_becoming_an_archetyp
 
     assert profile.id == "split_comparison"
     assert "legacy scene" not in composition_density_prompt(profile).lower()
+
+
+def test_trade_calculator_has_one_explanation_device_and_does_not_duplicate_the_scale_on_a_board():
+    profile = COMPOSITION_DENSITY_PROFILES["trade_calculator"]
+    prompt = composition_density_prompt(profile).lower()
+
+    assert profile.max_primary_explanation_devices == 1
+    assert "one balance scale" in profile.device_role_contract.lower()
+    assert "chalkboard" in profile.device_role_contract.lower()
+    assert "must not duplicate" in profile.device_role_contract.lower()
+    assert "environment and props only" in prompt
+    assert "mascot face, eye structure, line weight" in prompt
