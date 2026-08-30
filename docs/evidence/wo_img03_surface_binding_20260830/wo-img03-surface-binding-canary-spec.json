@@ -1,0 +1,23 @@
+{
+  "version": "wo-img03-surface-binding-canary-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "basis": "사용자의 이미지 생성 재시도 상시 허용과 WO-IMG-03 공통 표면 결박 수정 실증",
+    "approved_total_reserved_krw": 6400,
+    "reserved_per_attempt_krw": 1600,
+    "external_image_post_limit": 4,
+    "attempts_per_scene": 1,
+    "retry_on_failure": false
+  },
+  "operational_contract_commit": "731ac00",
+  "model": "gemini-3-pro-image",
+  "service_tier": "priority",
+  "image_size": "2K",
+  "scenes": [0, 7, 15, 28],
+  "scene42_frozen_and_excluded": true,
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "before_images_dir": "artifacts/job52_full_audit_20260824/images"
+}
