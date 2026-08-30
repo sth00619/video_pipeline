@@ -73,6 +73,36 @@ def test_canary_visual_review_stays_blocked_until_every_user_check_passes(tmp_pa
     assert reviewed["approval_blocked"] is True
 
 
+def test_canary_requires_ambiguous_prop_and_unlisted_failure_scan(tmp_path: Path):
+    image = tmp_path / "candidate.png"
+    image.write_bytes(b"candidate")
+    import hashlib
+
+    packet = build_canary_visual_review_packet(
+        image,
+        hashlib.sha256(b"candidate").hexdigest(),
+        automated_findings={
+            "unexpected_or_ambiguous_props": True,
+            "unlisted_failure_scan": True,
+        },
+    )
+    names = {row["name"] for row in packet["required_checks"]}
+    assert "unexpected_or_ambiguous_props" in names
+    assert "unlisted_failure_scan" in names
+
+    decisions = {name: True for name in names}
+    decisions["unexpected_or_ambiguous_props"] = False
+    reviewed = record_canary_user_visual_review(
+        packet,
+        decisions,
+        reviewer="user",
+        findings=["오른손의 검은 소품이 총·무전기·레버 중 무엇인지 모호함"],
+    )
+    assert reviewed["approval_blocked"] is True
+    assert reviewed["unexpected_findings"]
+    assert reviewed["judgment_disagreements"][0]["check"] == "unexpected_or_ambiguous_props"
+
+
 def test_scene07_report_and_global_rules_record_visual_regression_and_review_hold():
     report = REPORT.read_text(encoding="utf-8")
     agents = AGENTS.read_text(encoding="utf-8")

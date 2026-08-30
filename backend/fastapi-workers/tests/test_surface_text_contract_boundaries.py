@@ -239,7 +239,10 @@ def test_resume_checks_ocr_again_without_redrawing(tmp_path, monkeypatch):
 def test_numeric_decoration_cannot_escape_information_route():
     scene = {"text_render_policy": "semantic_roles_v1", "screen_texts": ["4배", "와!"],
              "screen_text_validation": {"passed": True},
-             "screen_text_plan": [{"text": t, "purpose": "decorative"} for t in ("4배", "와!")]}
+             "screen_text_plan": [
+                 {"text": "4배", "purpose": "decorative", "surface_id": "metric_board"},
+                 {"text": "와!", "purpose": "decorative", "surface_id": "reaction_badge"},
+             ]}
     route = build_scene_text_contract(scene)
     assert [r["purpose"] for r in route["semantic_routing"]] == ["information", "decorative"]
     assert route["generated_texts"] == []

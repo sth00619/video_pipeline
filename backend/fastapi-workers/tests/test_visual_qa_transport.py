@@ -89,6 +89,7 @@ def _accepted_verdict() -> dict:
         "semantic_contradiction": False,
         "malformed_or_factual_text_error": False,
         "unsupported_numeric_or_factual_values": [],
+        "unexpected_or_ambiguous_props": [],
         "unexpected_text_regions": [],
         "white_sticker_halo_present": False,
         "missing_required_props": [],
@@ -96,6 +97,32 @@ def _accepted_verdict() -> dict:
         "decision": "accept",
         "reason": "장면 계약 일치",
     }
+
+
+def test_visual_qa_rejects_an_unexplained_weapon_like_or_ambiguous_prop(tmp_path: Path):
+    image = tmp_path / "ambiguous-prop.png"
+    Image.new("RGB", (1920, 1080), "navy").save(image)
+    verdict = _accepted_verdict()
+    verdict.update({
+        "unexpected_or_ambiguous_props": ["캐릭터 오른손의 총·무전기·레버처럼 보이는 검은 물체"],
+        "decision": "review",
+        "reason": "소품의 역할과 부착 관계를 판별할 수 없음",
+    })
+    scene = {
+        "index": 28,
+        "image_path": str(image),
+        "text": "대형주의 흐름을 점검합니다.",
+        "art_direction": {"character_required": True},
+    }
+
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}), patch(
+        "app.utils.visual_qa._post_visual_review",
+        return_value=_visual_response(verdict),
+    ):
+        report = assess_visual_alignment([scene], enabled=True, max_scenes=1)
+
+    assert "unexpected_or_ambiguous_prop" in report["reviewed"][0]["failure_categories"]
+    assert report["accuracy_metrics"]["scenes"][0]["items"]["unexpected_visual_anomaly"] == "fail"
 
 
 def test_visual_qa_rejects_long_human_proportions_but_not_job52_costume_wrap(tmp_path: Path):

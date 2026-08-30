@@ -67,7 +67,7 @@ def validate_spec(spec: dict) -> None:
         raise RuntimeError("상태판의 범위를 과장하지 않은 판정이 필요합니다.")
 
 
-def prepare_row(spec: dict) -> dict:
+def prepare_row(spec: dict, *, verify_expected_hash: bool = True) -> dict:
     """현재 공통 코드로 scene07 입력을 만들고 두 변경 외의 드리프트를 차단한다."""
     from app.v5.providers.gemini_provider import ensure_gemini_reference_contract
     from scripts.run_gemini_face_reference_pilot import prepare_rows
@@ -84,16 +84,16 @@ def prepare_row(spec: dict) -> dict:
     row["scene_key"] = SCENE_KEY
     row["scene"]["scene_key"] = SCENE_KEY
 
-    if row["prompt_sha256"] != spec["expected_prompt_sha256"]:
+    if verify_expected_hash and row["prompt_sha256"] != spec["expected_prompt_sha256"]:
         raise RuntimeError("검증한 bounded 프롬프트 해시와 현재 코드 출력이 다릅니다.")
     final_prompt = ensure_gemini_reference_contract(row["prompt"], row["reference_paths"])
-    if _sha(final_prompt.encode("utf-8")) != spec["expected_final_prompt_sha256"]:
+    if verify_expected_hash and _sha(final_prompt.encode("utf-8")) != spec["expected_final_prompt_sha256"]:
         raise RuntimeError("실제 POST 직전 프롬프트 해시가 다릅니다.")
     if row["references"] != spec["expected_references"]:
         raise RuntimeError("실제 참조 선택 또는 참조 픽셀이 검증 상태와 다릅니다.")
     if _canonical_sha(row["scene"]["screen_text_plan"]) != spec["expected_surface_plan_sha256"]:
         raise RuntimeError("의도적으로 보존한 기존 표면 계획이 바뀌었습니다.")
-    if _canonical_sha(row["scene"]) != spec["expected_scene_contract_sha256"]:
+    if verify_expected_hash and _canonical_sha(row["scene"]) != spec["expected_scene_contract_sha256"]:
         raise RuntimeError("scene07 전체 입력 계약이 검증 상태와 다릅니다.")
     if {item.get("surface") for item in row["scene"]["screen_text_plan"]} != {"main"}:
         raise RuntimeError("이번 canary에서 의미 표면 바인딩을 변경하면 안 됩니다.")

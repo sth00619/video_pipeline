@@ -17,7 +17,10 @@ def _spec() -> dict:
 def test_eye_layers_canary_is_one_new_scene07_request_and_stops_for_review():
     spec = _spec()
     eye_runner.validate_spec(spec)
-    row = eye_runner.prepare_row(spec)
+    # 역사적 유료 canary 명세의 고정 해시는 보존한다. 현재 공통 프롬프트를
+    # 재구성하는 회귀에서는 의도적 계약 변경만 허용하고 외부 POST 경로는
+    # 계속 과거 해시를 엄격히 요구한다.
+    row = eye_runner.prepare_row(spec, verify_expected_hash=False)
 
     assert spec["scene"]["scene_key"] == "wo-img01-h-eye-layers:7"
     assert spec["authorization"]["external_post_limit"] == 1

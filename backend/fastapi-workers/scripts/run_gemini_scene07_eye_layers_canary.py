@@ -33,9 +33,9 @@ def validate_spec(spec: dict) -> None:
         runner.validate_spec(spec)
 
 
-def prepare_row(spec: dict) -> dict:
+def prepare_row(spec: dict, *, verify_expected_hash: bool = True) -> dict:
     with _eye_layers_contract():
-        return runner.prepare_row(spec)
+        return runner.prepare_row(spec, verify_expected_hash=verify_expected_hash)
 
 
 def main() -> int:

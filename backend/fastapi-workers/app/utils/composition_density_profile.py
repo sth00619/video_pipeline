@@ -121,11 +121,19 @@ COMPOSITION_DENSITY_PROFILES: dict[str, CompositionDensityProfile] = {
     ),
     "risk_control_room": _profile(
         "risk_control_room", "control_room_data_lab+market_news_crisis", 7,
-        ("physical console", "one narration-essential risk prop"),
+        (
+            "physical console",
+            "one scene-relevant control lever or gauge visibly mounted to the console base",
+        ),
         ("central gauge or monitor", "two supporting instrument clusters"),
         ("operations wall depth", "warning lamps and cable or circuit structure"),
         3, "deep blue control-room base with decisive red risk and restrained gold protection accents",
         ("central gauge face", "metal warning plaque", "console screen"), max_blank_ratio=.08,
+        device_roles=(
+            "Each primary explanation device must carry a distinct part of the narration; never duplicate the same fact or metaphor across devices. "
+            "Any control lever, switch, or tool-like prop must be visibly mounted to its console and have an unambiguous operational role. "
+            "Do not place an ambiguous handheld object, weapon-like silhouette, gun, drill, or unrelated tool in the mascot's hand unless the approved narration explicitly requires that exact object."
+        ),
     ),
     "trade_calculator": _profile(
         "trade_calculator", "physical_economic_metaphor+classroom_briefing", 5,
@@ -262,6 +270,6 @@ def composition_density_prompt(profile: CompositionDensityProfile) -> str:
         f"Outside an intentional focal margin, keep the unmotivated empty peripheral area below about {profile.max_unmotivated_peripheral_blank_ratio:.0%} of the frame; this is an archetype-specific composition budget, not an invitation to add text. "
         "Apply the scene palette to the environment and props only; it must not recolor or reshape the mascot face, eye structure, line weight, or canonical gold material. "
         f"Approved text, when present, may anchor only to a scene-planned physical surface such as {anchors}, and remains governed by the independent approved scene-local text contract. "
-        "The density requirement is visual, not typographic: do not use words, pseudo-text, digits, tick labels, equations, microprint, logos, extra blank screens, detached cards, or invented dashboards to satisfy the element count. "
+        "The density requirement is visual, not typographic: do not use words, pseudo-text, digits, tick labels, equations, microprint, logos, extra unused screens, detached cards, or invented dashboards to satisfy the element count. "
         "Every counted element must explain the narration's location, causal mechanism, or economic relationship rather than act as random decoration."
     )

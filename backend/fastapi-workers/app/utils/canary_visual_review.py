@@ -5,14 +5,18 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from app.utils.visual_judgment_disagreement_log import compare_visual_judgments
 
-CANARY_VISUAL_REVIEW_VERSION = "canary-visual-review-v1"
+
+CANARY_VISUAL_REVIEW_VERSION = "canary-visual-review-v2"
 REQUIRED_VISUAL_CHECKS = (
     "character_anatomy",
     "style_fidelity",
     "scene_meaning_legibility",
     "text_and_physical_surface",
     "unexpected_visual_artifacts",
+    "unexpected_or_ambiguous_props",
+    "unlisted_failure_scan",
 )
 
 
@@ -57,6 +61,7 @@ def record_canary_user_visual_review(
     decisions: dict[str, bool],
     *,
     reviewer: str,
+    findings: list[str] | None = None,
 ) -> dict[str, Any]:
     """모든 필수 육안 항목에 대한 명시적 사용자 판정을 기록한다."""
     missing = [name for name in REQUIRED_VISUAL_CHECKS if name not in decisions]
@@ -67,10 +72,14 @@ def record_canary_user_visual_review(
         for name in REQUIRED_VISUAL_CHECKS
     ]
     passed = all(decisions[name] is True for name in REQUIRED_VISUAL_CHECKS)
+    agreement = compare_visual_judgments(packet.get("automated_findings"), decisions)
     return {
         **packet,
         "status": "user_visual_review_passed" if passed else "rejected_by_user_visual_review",
         "approval_blocked": not passed,
         "reviewer": str(reviewer),
         "required_checks": checks,
+        "unexpected_findings": [str(value) for value in (findings or []) if str(value).strip()],
+        "judgment_agreement": agreement,
+        "judgment_disagreements": agreement["disagreements"],
     }

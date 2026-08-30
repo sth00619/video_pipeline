@@ -19,7 +19,7 @@ from app.utils.scene_visual_quality_contract import build_scene_visual_quality_c
 
 logger = logging.getLogger(__name__)
 VISUAL_QA_MODEL = "gemini-3.7-flash"
-VISUAL_QA_POLICY_VERSION = 18
+VISUAL_QA_POLICY_VERSION = 19
 _VISUAL_QA_GEMINI_OPEN_UNTIL = 0.0
 _VISUAL_QA_GEMINI_COOLDOWN_SECONDS = 600.0
 
@@ -368,6 +368,7 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 "objects/action contradict or are unrelated to the narration, not for a non-strict camera or staging preference); "
                 "obvious_localized_blur_or_smear_artifact_present (boolean; true only for a conspicuous muddy blur patch, smeared ghost lettering, melted panel edge, or inpainting blob; "
                 "normal glow, motion streaks, depth-of-field, smooth cel gradients, and intentionally soft distant background are false); "
+                "unexpected_or_ambiguous_props (string array; list any visible prop whose identity or causal role cannot be inferred from the narration and set, especially a handheld object that can be mistaken for a weapon, drill, radio, or unrelated tool); "
                 "malformed_or_factual_text_error (boolean; true only when at least one listed unexpected string is visibly misspelled, pseudo-text, an unsupported financial value, "
                 "a wrong entity, or a contradictory claim; false for coherent scene-relevant labels); "
                 "unsupported_numeric_or_factual_values (string array containing exact visible strings only when the image asserts them as a real financial datum or real-world factual claim "
@@ -612,6 +613,8 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
                 hard_failures.append("scene_semantic_mismatch")
             if bool(verdict.get("obvious_localized_blur_or_smear_artifact_present")):
                 hard_failures.append("local_edit_blur_smear_artifact")
+            if any(str(value).strip() for value in verdict.get("unexpected_or_ambiguous_props") or []):
+                hard_failures.append("unexpected_or_ambiguous_prop")
             if (
                 composition_strict
                 and (expected_composition or expected_camera or expected_position or expected_occupancy)
@@ -639,4 +642,14 @@ def assess_visual_alignment(scenes: list[dict[str, Any]], *, enabled: bool, max_
     reviewed_indices = {item["index"] for item in report["reviewed"]}
     report["skipped"] = [int(scene.get("index", 0)) for scene in eligible if int(scene.get("index", 0)) not in reviewed_indices]
     report["score"] = round(sum(item["score"] for item in report["reviewed"]) / len(report["reviewed"])) if report["reviewed"] else None
+    if report["reviewed"]:
+        from app.utils.scene_accuracy_metrics import aggregate_scene_accuracy, visual_qa_item_results
+
+        report["accuracy_metrics"] = aggregate_scene_accuracy([
+            {
+                "scene_key": f"scene:{int(item['index']):02d}",
+                "items": visual_qa_item_results(item.get("failure_categories") or []),
+            }
+            for item in report["reviewed"]
+        ])
     return report

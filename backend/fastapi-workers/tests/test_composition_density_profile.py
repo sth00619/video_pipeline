@@ -91,6 +91,16 @@ def test_reference_benchmark_drives_archetype_specific_blank_space_budgets():
     assert "not an invitation to add text" in prompt
 
 
+def test_risk_control_room_does_not_invite_an_ambiguous_handheld_risk_prop():
+    profile = COMPOSITION_DENSITY_PROFILES["risk_control_room"]
+    prompt = composition_density_prompt(profile).lower()
+
+    assert "one narration-essential risk prop" not in prompt
+    assert "mounted to the console" in prompt
+    assert "ambiguous handheld" in prompt
+    assert "weapon" in prompt
+
+
 def test_explicit_operational_archetype_survives_v5_contract_attachment():
     scenes = _job52_scenes()
     planned = attach_v5_scene_contracts([scenes[0], scenes[7], scenes[28]])
