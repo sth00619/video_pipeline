@@ -120,7 +120,16 @@ def main() -> int:
     # 오버레이 계획이 없어 최종 경로를 검증할 수 없다.
     from app.utils.scene_screen_text_planner import attach_scene_screen_texts
     from app.v5.scene.runtime_contract import attach_v5_scene_contracts
-    planned_scenes = attach_v5_scene_contracts(attach_scene_screen_texts(copy.deepcopy(source_scenes)))
+    # 보존된 Job52 전체 48장에는 당시 유효했던 과거 파일럿 archetype도
+    # 포함된다. 네 장면 canary가 선택하지 않은 과거 장면까지 최신 V5 계약으로
+    # 재검증하면 외부 POST 전에 무관한 장면 때문에 실행이 중단된다. 운영 경로의
+    # 선택 장면 재생성과 동일하게 이번 실행 대상만 먼저 고른 뒤 계약을 붙인다.
+    selected_source_scenes = [
+        copy.deepcopy(scene)
+        for scene in source_scenes
+        if int(scene.get("index", -1)) in SCENES
+    ]
+    planned_scenes = attach_v5_scene_contracts(attach_scene_screen_texts(selected_source_scenes))
     rows = [row for row in prepare_rows(comparison_spec, planned_scenes) if row["index"] in SCENES]
     if tuple(row["index"] for row in rows) != SCENES:
         raise RuntimeError("네 장면의 준비 순서가 계약과 다릅니다.")
