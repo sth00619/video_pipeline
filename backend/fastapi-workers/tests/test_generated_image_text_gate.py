@@ -57,6 +57,22 @@ def test_strict_generated_text_lane_rejects_when_one_approved_label_is_missing(t
         )
 
 
+def test_strict_generated_text_lane_rejects_spaced_company_name_drift(tmp_path):
+    scene = {
+        "screen_texts": ["SK하이닉스"],
+        "screen_text_validation": {"passed": True},
+        "generated_text_ocr_policy": {
+            "version": "strict-scene-local-generated-text-v1",
+            "require_all_approved": True,
+            "reject_unapproved": True,
+        },
+    }
+    with pytest.raises(GeneratedImageTextDetectedError):
+        _inspect_generated_textless_image(
+            scene, str(_png(tmp_path)), ocr_rows=[{"text": "SK 하인스", "conf": "96"}],
+        )
+
+
 def test_strict_generated_text_lane_accepts_complete_fragmented_korean_tokens(tmp_path):
     scene = {
         "screen_texts": ["전망치"],
