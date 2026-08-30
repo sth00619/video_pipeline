@@ -1,0 +1,48 @@
+{
+  "version": "wo-img02a-docker-ocr-recheck-v1",
+  "scope": "실 API 생성 후 pipeline_fastapi 컨테이너의 실제 Tesseract 경로로 수행한 별도 사후 진단",
+  "manifest_mutated": false,
+  "command_contract": {
+    "expected_texts_are_required_for_this_diagnostic": true,
+    "targeted_exact_retry": true,
+    "surface_text_recall": true
+  },
+  "results": [
+    {
+      "scene": 0,
+      "status": "completed",
+      "expected": ["삼성전자", "SK하이닉스"],
+      "visible_tokens": ["1"],
+      "missing_generated_texts": ["SK하이닉스"],
+      "targeted_exact_ocr_status": "completed",
+      "interpretation": "육안으로는 두 회사명이 정확하지만 OCR은 SK하이닉스를 놓치고 숫자 1을 노이즈로 검출했다. 자동 실패와 육안 성공이 불일치하는 false-negative/false-positive 복합 사례다."
+    },
+    {
+      "scene": 7,
+      "status": "completed",
+      "expected": ["삼성전자", "SK하이닉스", "코스피"],
+      "visible_tokens": [],
+      "missing_generated_texts": ["삼성전자", "SK하이닉스"],
+      "targeted_exact_ocr_status": "completed",
+      "interpretation": "실물에도 코스피만 있고 두 회사명은 없다. 소품 분리는 개선됐지만 의미 라벨 배정은 미완료다."
+    },
+    {
+      "scene": 15,
+      "status": "completed",
+      "expected": ["엇갈림", "SK하이닉스"],
+      "visible_tokens": [],
+      "missing_generated_texts": ["엇갈림", "SK하이닉스"],
+      "targeted_exact_ocr_status": "completed",
+      "interpretation": "육안으로는 두 문구가 정확하고 괄호·따옴표가 없지만 OCR은 모두 놓쳤다. OCR 재현율 false negative다."
+    },
+    {
+      "scene": 28,
+      "status": "completed",
+      "expected": ["대형주"],
+      "visible_tokens": ["대형주"],
+      "missing_generated_texts": [],
+      "targeted_exact_ocr_status": "not_required",
+      "interpretation": "원본 해상도 다중 표면 재판독 경로가 정확한 대형주를 검출했다. 다만 육안상 배경 차트에 비승인 숫자가 남아 전역 수치 계약은 별도 실패다."
+    }
+  ]
+}
