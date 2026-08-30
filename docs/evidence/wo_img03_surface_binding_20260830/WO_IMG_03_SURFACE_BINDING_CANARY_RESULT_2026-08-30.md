@@ -39,3 +39,17 @@
 
 공통 구현 커밋 `731ac00`의 전체 오프라인 회귀는 격리 Docker 환경에서 `1193 passed, 0 failed`였다. 실 이미지 공급자 실패는 이 코드 회귀 결과를 반증하지 않지만, 실물 품질을 증명하지도 않는다.
 
+## 6. 2026-08-31 다른 부하 구간 scene00 단일 canary
+
+사용자 지시에 따라 네 장을 다시 한꺼번에 실행하지 않고 scene00 한 장만 허용하는 명세와 실행기 범위를 커밋 `328aca2`에 고정했다. 허용 대상은 기존 검토 장면 00·07·15·28의 부분집합뿐이며, 이번 명세의 외부 POST 상한은 1회, 예약 상한은 ₩1,600이었다. 범위 회귀는 `3 passed`, 전체 오프라인 회귀는 `1196 passed, 0 failed`였다.
+
+2026-08-31 01:34 KST 전후 공식 상태판에는 광범위 장애가 게시되지 않았다. 그 뒤 scene00을 한 번 전송했으나 10.013초 후 다시 `HTTP 503 UNAVAILABLE`을 받았다.
+
+- attempt ID: `42a9fcf78eb54cd39ea442a8c01a74aa`
+- payload SHA-256: `140100ab12034044d42a4d6aa773987d22935cca87b2b98beb557ced2816d186`
+- prompt SHA-256: `a5acb444f09133645f1d2bb8e8a7b0108f7ca77e77690fc5e950332869126a59`
+- manifest SHA-256: `cee07a58162b69a4db853914bd4f8ae79e449123349fdc842b1943dd7c68f602`
+- request ledger SHA-256: `33c7d6d74a4478e8c1d4aed224bbe7c8653f5a5f188c932516a247d681f74ad6`
+- 원장 비용 상태: `excluded_from_success_estimate_billing_unverified`, `amount_krw=0`
+
+앞선 두 시도와 payload·prompt 해시가 완전히 같다. 서로 떨어진 두 부하 구간에서 같은 구성으로 총 세 번 503이 재현됐지만, 이것만으로 모델의 상시 장애나 프롬프트 인과를 확정하지 않는다. scene00이 HTTP 200과 품질 게이트를 통과하지 못했으므로 scene07·15·28은 전송하지 않았다.
