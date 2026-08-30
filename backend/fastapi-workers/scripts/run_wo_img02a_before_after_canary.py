@@ -30,6 +30,9 @@ TOTAL_RESERVED_KRW = 6400
 
 
 def _git_head() -> str:
+    injected = os.environ.get("VIDEO_PIPELINE_RUNNER_COMMIT", "").strip()
+    if injected:
+        return injected
     return subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=REPO, text=True,
     ).strip()
