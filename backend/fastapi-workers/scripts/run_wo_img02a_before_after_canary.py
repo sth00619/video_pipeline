@@ -97,6 +97,13 @@ def main() -> int:
     if _sha(source_bytes) != spec["source"]["sha256"]:
         raise RuntimeError("Job52 보존 입력 해시가 바뀌었습니다.")
     source_scenes = json.loads(source_bytes)
+    output = args.output_dir.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    # prepare_rows()가 app 모듈을 처음 불러오기 전에 영속 상태 경로를 고정한다.
+    # 뒤에서 환경 변수를 바꾸면 image_request_control은 기본 비활성 저장소를
+    # 이미 캐시하므로 외부 POST 전에 전 장면이 보류된다.
+    os.environ["GEMINI_REQUEST_STATE_PATH"] = str(output / "request_state.sqlite3")
+    os.environ["GEMINI_PROJECT_SCOPE"] = f"wo-img02a-{_sha(spec_bytes)[:12]}"
     comparison_spec = {
         "profiles": {MODEL: {"service_tier": "priority"}},
         "common_prompt_contract": {
@@ -113,10 +120,6 @@ def main() -> int:
     if estimated_krw > Decimal(TOTAL_RESERVED_KRW):
         raise RuntimeError("중앙 가격표 예상액이 승인 예약 상한을 넘습니다.")
 
-    output = args.output_dir.resolve()
-    output.mkdir(parents=True, exist_ok=True)
-    os.environ["GEMINI_REQUEST_STATE_PATH"] = str(output / "request_state.sqlite3")
-    os.environ["GEMINI_PROJECT_SCOPE"] = f"wo-img02a-{_sha(spec_bytes)[:12]}"
     for row in rows:
         (output / f"scene_{row['index']:02d}_final_prompt.txt").write_text(row["final_prompt"], encoding="utf-8")
 
