@@ -280,6 +280,12 @@ def _korean_context_visual_brief(scene: dict[str, Any]) -> str:
 def _distinct_archetype_input(scene: dict[str, Any], previous_archetype: str) -> dict[str, Any]:
     """명시 선택은 보존하고, 바로 앞 장면과 같은 정보형 무대를 피한다."""
     candidate = dict(scene)
+    explicit = str(candidate.get("archetype") or "").strip()
+    if not candidate.get("visual_archetype") and explicit in PRESENTATION_BY_ARCHETYPE:
+        # Script/이미지 계약에서 이미 확정한 운영 archetype을 V5 추천기가
+        # 다시 다른 장소로 바꾸지 않는다. 밀도 프로필과 표면 검출기가 서로
+        # 다른 무대를 가리키는 계보 분리를 막는다.
+        candidate["visual_archetype"] = explicit
     if not previous_archetype or candidate.get("visual_archetype"):
         return candidate
     recommendation = recommend_v5_archetype(candidate)

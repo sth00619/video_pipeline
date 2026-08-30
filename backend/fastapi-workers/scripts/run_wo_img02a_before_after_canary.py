@@ -115,7 +115,13 @@ def main() -> int:
             "semantic_basis_mode": "operation_sanitized_no_narration_copy",
         },
     }
-    rows = [row for row in prepare_rows(comparison_spec, source_scenes) if row["index"] in SCENES]
+    # 운영 ImagesWorker가 생성 직전에 수행하는 V5 계약 부착을 실증 harness도
+    # 반드시 동일하게 수행한다. 이 단계가 빠지면 raw는 생성돼도 결정론 수치
+    # 오버레이 계획이 없어 최종 경로를 검증할 수 없다.
+    from app.utils.scene_screen_text_planner import attach_scene_screen_texts
+    from app.v5.scene.runtime_contract import attach_v5_scene_contracts
+    planned_scenes = attach_v5_scene_contracts(attach_scene_screen_texts(copy.deepcopy(source_scenes)))
+    rows = [row for row in prepare_rows(comparison_spec, planned_scenes) if row["index"] in SCENES]
     if tuple(row["index"] for row in rows) != SCENES:
         raise RuntimeError("네 장면의 준비 순서가 계약과 다릅니다.")
 

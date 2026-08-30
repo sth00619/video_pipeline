@@ -7,6 +7,7 @@ from app.utils.composition_density_profile import (
     composition_density_prompt,
 )
 from app.v5.scene.prompt_builder import ARCHETYPES
+from app.v5.scene.runtime_contract import attach_v5_scene_contracts
 from app.workers.images_worker import _bounded_text_generation_prompt
 
 
@@ -88,3 +89,11 @@ def test_reference_benchmark_drives_archetype_specific_blank_space_budgets():
     prompt = composition_density_prompt(COMPOSITION_DENSITY_PROFILES["classroom"])
     assert "below about 4%" in prompt
     assert "not an invitation to add text" in prompt
+
+
+def test_explicit_operational_archetype_survives_v5_contract_attachment():
+    scenes = _job52_scenes()
+    planned = attach_v5_scene_contracts([scenes[0], scenes[7], scenes[28]])
+    assert [scene["v5_render_contract"]["selection"]["archetype"] for scene in planned] == [
+        "trade_calculator", "data_lab", "risk_control_room",
+    ]
