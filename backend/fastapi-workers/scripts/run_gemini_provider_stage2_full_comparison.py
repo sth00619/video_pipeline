@@ -112,8 +112,12 @@ def prepare_rows(spec: dict, source_scenes: list[dict]) -> list[dict]:
     bindings = bind_scene_entities(planned, verified_facts=[], keyword_news=[])
     binding_by_index = {int(item.scene_index): item for item in bindings}
     by_index = {int(scene["index"]): scene for scene in planned}
+    requested_scenes = tuple(int(index) for index in (spec.get("scenes") or SCENES))
+    missing_scenes = [index for index in requested_scenes if index not in by_index]
+    if missing_scenes:
+        raise ValueError(f"요청 장면이 입력에 없습니다: {missing_scenes}")
     rows = []
-    for index in SCENES:
+    for index in requested_scenes:
         scene = copy.deepcopy(by_index[index])
         binding = binding_by_index.get(index)
         if binding is not None:

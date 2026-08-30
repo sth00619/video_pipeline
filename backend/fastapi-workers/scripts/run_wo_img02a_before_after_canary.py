@@ -109,6 +109,7 @@ def main() -> int:
     os.environ["GEMINI_REQUEST_STATE_PATH"] = str(output / "request_state.sqlite3")
     os.environ["GEMINI_PROJECT_SCOPE"] = f"wo-img02a-{_sha(spec_bytes)[:12]}"
     comparison_spec = {
+        "scenes": list(SCENES),
         "profiles": {MODEL: {"service_tier": "priority"}},
         "common_prompt_contract": {
             "approved_wording_format": "plain_prose_no_array_or_json",
