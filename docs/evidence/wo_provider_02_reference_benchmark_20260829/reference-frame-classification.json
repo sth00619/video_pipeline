@@ -1,0 +1,71 @@
+{
+  "version": "wo-provider-02-reference-background-classification-v1",
+  "source": {
+    "file": "reference_all_frames.tar.gz",
+    "sha256": "c615e01dab921eabb63431ba630b17bb1e734cec1fc1a22640558dd7c8d1fecb",
+    "frame_count": 69,
+    "frame_size": [1280, 720],
+    "sampling_note": "사용자 제공 15초 간격 표본으로 보이며 원본 영상의 장면 전환 전수 추출로 확대 해석하지 않는다."
+  },
+  "classification_scope": "배경 연출만 분류하며 초록 카드 캐릭터의 디자인·실루엣·색상은 참조하지 않는다.",
+  "primary_background_types": [
+    {
+      "id": "physical_economic_metaphor",
+      "name_ko": "물리적 경제 은유형",
+      "frames": [10, 17, 21, 23, 25, 30, 31, 34, 44, 50, 55, 58, 59, 61, 62, 63, 65, 66, 68, 69]
+    },
+    {
+      "id": "classroom_briefing",
+      "name_ko": "교실·브리핑형",
+      "frames": [3, 13, 16, 19, 22, 27, 32, 36, 42, 47, 51, 52, 53, 60, 67]
+    },
+    {
+      "id": "evidence_insert",
+      "name_ko": "실제 기사·화면 증거 삽입형",
+      "frames": [6, 9, 15, 33, 43, 45, 48, 54, 57]
+    },
+    {
+      "id": "control_room_data_lab",
+      "name_ko": "관제실·데이터랩형",
+      "frames": [4, 8, 18, 20, 35, 40, 46, 49, 56]
+    },
+    {
+      "id": "factory_construction",
+      "name_ko": "공장·건설형",
+      "frames": [11, 14, 24, 26, 28, 29]
+    },
+    {
+      "id": "market_news_crisis",
+      "name_ko": "시장·뉴스 위기형",
+      "frames": [7, 37, 38, 39, 64]
+    },
+    {
+      "id": "dialogue_office_library",
+      "name_ko": "대화·사무실·서재형",
+      "frames": [1, 2, 5, 12]
+    },
+    {
+      "id": "channel_interstitial",
+      "name_ko": "채널 인터스티셜",
+      "frames": [41]
+    }
+  ],
+  "text_number_layers": [
+    {
+      "id": "subtitle_overlay",
+      "observation": "긴 내레이션은 검은 하단 띠와 흰 자막으로 이미지 바깥 합성 레이어에 분리된다."
+    },
+    {
+      "id": "short_emphasis",
+      "observation": "짧은 핵심어·감탄은 큰 말풍선·배너·표지판으로 제한한다."
+    },
+    {
+      "id": "physical_surface_information",
+      "observation": "지수명·날짜·가격·비교 라벨은 모니터·칠판·가격표·간판 같은 의미 있는 물리 표면에 결합한다."
+    },
+    {
+      "id": "evidence_capture",
+      "observation": "뉴스 기사·실제 차트·기업 화면은 생성 모델이 재작성하지 않고 캡처 자산을 삽입한다."
+    }
+  ]
+}

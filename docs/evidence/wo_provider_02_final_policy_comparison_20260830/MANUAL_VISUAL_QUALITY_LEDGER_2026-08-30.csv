@@ -1,0 +1,95 @@
+scene,model,http_status,raw_present,visual_grade,defect_types,visual_note,pairwise_choice
+00,pro_priority,200,yes,pass,none,"승인 엔티티와 저울 비유가 명확하고 캐릭터·화풍이 안정적",preferred
+00,flash_high,200,yes,review,text_placement,"승인 엔티티는 정확하지만 칠판에 몰리고 저울 표면은 비어 의미 연결이 약함",alternate
+01,pro_priority,200,yes,pass,none,"계산기·그래프·표정이 대본의 배수 판단을 밀도 있게 표현",preferred
+01,flash_high,200,yes,pass,composition,"구조는 정상이나 큰 빈 모니터로 정보 밀도가 낮음",alternate
+02,pro_priority,200,yes,reject,pseudotext|duplicate_text,"경고 중복과 붉은 태그 의사문자 발생",none
+02,flash_high,200,yes,reject,duplicate_text|composition,"경고 반복과 빈 태그, 장면 의미가 약함",none
+03,pro_priority,200,yes,review,duplicate_text,"경고가 표지와 통에 중복",alternate
+03,flash_high,200,yes,pass,none,"경고 1회와 상승·하락 대비가 명확",preferred
+04,pro_priority,200,yes,review,invented_numbers,"승인 코스피는 정확하지만 여러 전광판에 임의 숫자",preferred
+04,flash_high,200,yes,review,invented_numbers,"승인 코스피는 정확하지만 다수의 임의 숫자",alternate
+05,pro_priority,200,yes,pass,none,"반도체 생산·스택 비교와 얼굴이 안정적",preferred
+05,flash_high,200,yes,pass,none,"반도체 라벨과 생산 장면이 정확",alternate
+06,pro_priority,200,yes,review,pseudotext,"코스피와 기록 상승 의미는 좋으나 상단 의사기호",preferred
+06,flash_high,200,yes,review,pseudotext,"코스피는 정확하지만 상단 장식 의사문자",alternate
+07,pro_priority,200,yes,pass,none,"세 승인 엔티티와 두 용기, 데이터랩 의미가 가장 명확",preferred
+07,flash_high,200,yes,reject,duplicate_text|invented_symbols,"승인 엔티티 반복과 통화기호 삽입",none
+08,pro_priority,200,yes,pass,none,"코스피 급락 관제 장면과 캐릭터가 일관됨",preferred
+08,flash_high,200,yes,pass,none,"코스피 급락 의미와 해부학이 정상",alternate
+09,pro_priority,200,yes,reject,unapproved_text,"METEOROLOGIST 등 비승인 영문",none
+09,flash_high,200,yes,reject,unapproved_text,"FORECAST 비승인 영문",none
+10,pro_priority,200,yes,pass,none,"저울·자료 묶음·하락 화면이 대본 의미를 충실히 표현",preferred
+10,flash_high,200,yes,pass,none,"저울과 자료 비교가 명확",alternate
+11,pro_priority,200,yes,pass,none,"질문과 과거 실적 부정 기호를 단순하게 표현",preferred
+11,flash_high,200,yes,reject,pseudotext|formula_noise,"보드에 읽을 수 없는 공식과 문자 과밀",none
+12,pro_priority,200,yes,reject,unapproved_text|pseudotext,"BARGAIN BIN과 제품 표면 의사문자",none
+12,flash_high,200,yes,reject,invented_symbols,"할인율·상품 기호가 승인 없이 생성",none
+13,pro_priority,200,yes,reject,typo,"SK하이닉스 오탈자",none
+13,flash_high,200,yes,pass,none,"삼성전자·SK하이닉스·외국인과 매수·매도 대비가 정확",preferred
+14,pro_priority,200,yes,pass,none,"상승·하락 대비와 질문 구도가 명확",preferred
+14,flash_high,network_error,no,not_generated,transport_failure,"raw 없음",none
+15,pro_priority,network_error,no,not_generated,transport_failure,"raw 없음",none
+15,flash_high,200,yes,reject,typo|missing_approved_text,"SK하이니스 오탈자와 엇갈림 정확 재현 실패",none
+16,pro_priority,200,yes,pass,none,"기록 상승과 발표 구도가 안정적",preferred
+16,flash_high,200,yes,pass,none,"기록 상승 의미는 정상",alternate
+17,pro_priority,200,yes,pass,none,"다양한 상승 흐름과 발표 장면의 정보 밀도가 좋음",preferred
+17,flash_high,200,yes,pass,none,"상승 흐름과 발표 구도 정상",alternate
+18,pro_priority,200,yes,review,eye_structure,"반도체 폭풍 의미는 좋으나 흰자 없는 눈 구조",alternate
+18,flash_high,200,yes,pass,none,"반도체와 폭풍 전망, 얼굴 구조가 명확",preferred
+19,pro_priority,200,yes,reject,unapproved_text|pseudotext,"NEWS와 티커 의사문자",none
+19,flash_high,200,yes,pass,none,"코스피와 날씨형 전망 의미가 명확",preferred
+20,pro_priority,200,yes,pass,none,"급락 관제실과 비상 표정이 안정적",preferred
+20,flash_high,200,yes,pass,none,"급락 관제실 의미 정상",alternate
+21,pro_priority,200,yes,reject,invented_numbers,"대형 전광판에 임의 숫자",none
+21,flash_high,200,yes,reject,invented_numbers,"게이지와 장치의 임의 수치",none
+22,pro_priority,200,yes,pass,none,"분기 실적 붕괴를 그래프와 파편으로 명확히 표현",preferred
+22,flash_high,200,yes,pass,none,"붕괴 그래프와 캐릭터 반응 정상",alternate
+23,pro_priority,200,yes,reject,invented_numbers,"결정론 대상 지수 숫자를 직접 생성",none
+23,flash_high,200,yes,reject,invented_numbers,"대형 지수 숫자를 직접 생성",none
+24,pro_priority,200,yes,pass,none,"저점과 회복 구도를 여백 없이 명확히 표현",preferred
+24,flash_high,200,yes,pass,none,"회복 그래프와 실험실 장면 정상",alternate
+25,pro_priority,200,yes,pass,none,"코스닥·반도체와 생산라인 의미가 정확",alternate
+25,flash_high,200,yes,pass,none,"코스닥·반도체, 생산 장비와 눈 구조가 우수",preferred
+26,pro_priority,200,yes,reject,invented_numbers|pseudotext,"순위 숫자와 의사기호를 직접 생성",none
+26,flash_high,200,yes,reject,invented_numbers|pseudotext,"순위·메달·의사기호를 직접 생성",none
+27,pro_priority,200,yes,pass,none,"기업 발표와 세 개 패널 구도가 명확",preferred
+27,flash_high,200,yes,pass,none,"발표 장면과 데이터 패널 정상",alternate
+28,pro_priority,200,yes,pass,none,"대형주 1회와 관제실 구도가 정확",preferred
+28,flash_high,200,yes,pass,none,"대형주 1회와 하락 관제실 의미 정상",alternate
+29,pro_priority,200,yes,reject,unapproved_text|typo,"SAMSUNG ELECTRONICS와 SK HYNYX 비승인·오탈자",none
+29,flash_high,200,yes,pass,none,"삼성전자·SK하이닉스가 정확하고 실험실 구도 정상",preferred
+30,pro_priority,200,yes,pass,none,"대형주를 정확히 한 번 표시하고 제외 의미를 전달",preferred
+30,flash_high,200,yes,reject,missing_approved_text,"대형주 승인 문구 누락",none
+31,pro_priority,200,yes,reject,unapproved_text,"비승인 한국어 배너 추가",none
+31,flash_high,200,yes,pass,none,"삼성전자·SK하이닉스만 물리 태그에 정확히 표시",preferred
+32,pro_priority,200,yes,pass,none,"데이터 흐름과 실험실 구도가 밀도 있게 연결",preferred
+32,flash_high,200,yes,pass,none,"데이터 흐름과 얼굴 구조 정상",alternate
+33,pro_priority,200,yes,pass,none,"반도체와 상하 대비가 명확",preferred
+33,flash_high,200,yes,pass,none,"반도체와 양분된 전망 의미 정상",alternate
+34,pro_priority,200,yes,reject,unapproved_text|pseudotext,"NEWS와 신문 의사문자",none
+34,flash_high,200,yes,reject,pseudotext,"신문 다발의 의사문자",none
+35,pro_priority,200,yes,pass,none,"전망치·경고가 서로 다른 표면에 정확",alternate
+35,flash_high,200,yes,pass,none,"전망치·경고의 표면 배치와 날씨 대비가 가장 명확",preferred
+36,pro_priority,200,yes,review,style_drift,"캐릭터 얼굴이 인간형에 가까워 채널 정체성 약화",alternate
+36,flash_high,200,yes,pass,none,"분할 시장과 캐릭터 실루엣이 안정적",preferred
+37,pro_priority,200,yes,pass,none,"탐정·저울·증거 비교를 깨끗하게 표현",preferred
+37,flash_high,http_504,no,not_generated,transport_failure,"raw 없음",none
+38,pro_priority,200,yes,reject,invented_numbers,"계산기에 임의 의사수치",none
+38,flash_high,200,yes,reject,invented_numbers,"계산기에 임의 의사수치",none
+39,pro_priority,200,yes,reject,invented_numbers,"디지털 계기에 임의 숫자",none
+39,flash_high,200,yes,reject,invented_numbers,"디지털 계기에 임의 숫자",none
+40,pro_priority,200,yes,reject,unapproved_text|invented_numbers,"PROFIT과 계산기 숫자 직접 생성",none
+40,flash_high,200,yes,reject,invented_numbers,"계산기와 대시보드의 임의 숫자",none
+41,pro_priority,200,yes,pass,none,"검증 완료와 비교 발표를 균형 있게 표현",preferred
+41,flash_high,200,yes,pass,none,"검증 완료와 비교 패널 정상",alternate
+43,pro_priority,200,yes,review,duplicate_text,"외국인 문구가 여러 장치에 반복",preferred
+43,flash_high,200,yes,reject,duplicate_text,"외국인 문구가 다수 표면에 반복",none
+44,pro_priority,200,yes,reject,unapproved_text|duplicate_text,"TICKER 등 비승인 영문과 반도체 반복",none
+44,flash_high,200,yes,reject,unapproved_text,"WALL STREET TICKER 비승인 영문",none
+45,pro_priority,200,yes,review,unapproved_text,"DATA 비승인 영문",alternate
+45,flash_high,200,yes,pass,none,"코스피와 상승 데이터랩을 깨끗하게 표현",preferred
+46,pro_priority,200,yes,pass,none,"코스닥·반도체와 단계적 상승을 밀도 있게 표현",preferred
+46,flash_high,200,yes,pass,composition,"승인 문구는 정확하지만 중앙 빈 화면으로 정보 밀도 저하",alternate
+47,pro_priority,200,yes,reject,speech_bubble|unapproved_text,"질문형 연기 말풍선과 UNSTABLE VALUATION",none
+47,flash_high,200,yes,reject,speech_bubble,"계획되지 않은 질문 말풍선",none

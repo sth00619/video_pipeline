@@ -257,6 +257,11 @@ _RAW_ENTITY_LIST: list[EntityInfo] = [
     EntityInfo("신재생에너지", "Renewable Energy", "RENEWABLE ENERGY", "derivatives_industry"),
 ]
 
+
+def all_entity_infos() -> tuple[EntityInfo, ...]:
+    """프롬프트 경계 검증에서 사용할 불변 엔티티 레지스트리 뷰를 반환한다."""
+    return tuple(_RAW_ENTITY_LIST)
+
 # ---------------------------------------------------------------------------
 # SSOT 레지스트리 맵 구축 (중복 키 방지)
 # ---------------------------------------------------------------------------

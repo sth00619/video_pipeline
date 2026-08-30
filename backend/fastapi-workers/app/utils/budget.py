@@ -43,6 +43,20 @@ _GEMINI_IMAGE_RATE_KEYS = {
 }
 
 
+def _gemini_rate_key(model: str, service_tier: str | None = None) -> str | None:
+    """모델과 실제 요청 tier에 맞는 중앙 단가 키를 반환한다."""
+    if model == "gemini-3-pro-image" and str(service_tier or "").lower() == "priority":
+        return "img_cost_pro_priority_2k_usd"
+    return _GEMINI_IMAGE_RATE_KEYS.get(model)
+
+
+def _pro_rate(cfg: dict[str, Any]) -> float:
+    """운영 Pro tier의 단가를 선택하되 과거 테스트 설정과 호환한다."""
+    if str(cfg.get("gemini_service_tier") or "priority").lower() == "priority":
+        return float(cfg.get("img_cost_pro_priority_2k_usd", cfg["img_cost_pro_2k_usd"]))
+    return float(cfg["img_cost_pro_2k_usd"])
+
+
 class ProviderRequestBudgetExceeded(RuntimeError):
     """외부 이미지 요청 한 건을 예약할 수 없을 때 발생한다."""
 
@@ -83,12 +97,14 @@ class ProviderRequestAudit:
 
     @classmethod
     def for_job(cls, *, job_id: int, scene_key: str, model: str,
-                contract_fingerprint: str | None = None, run_id: str | None = None) -> "ProviderRequestAudit":
+                contract_fingerprint: str | None = None, run_id: str | None = None,
+                service_tier: str | None = None) -> "ProviderRequestAudit":
         """V4 공용 비용 원장에 Gemini 시도를 기록한다."""
-        rate_key = _GEMINI_IMAGE_RATE_KEYS.get(model)
+        rates = runtime_config.get()
+        requested_tier = str(service_tier or rates.get("gemini_service_tier") or "priority").lower()
+        rate_key = _gemini_rate_key(model, requested_tier)
         if rate_key is None:
             raise ValueError(f"지원하지 않는 Gemini 이미지 생성 모델입니다: {model}")
-        rates = runtime_config.get()
         preflight = load_preflight(job_id) or {}
         return cls(
             path=_job_path(job_id, "cost_ledger.json"),
@@ -100,11 +116,12 @@ class ProviderRequestAudit:
                 if model == "gemini-3-pro-image"
                 else "gemini_flash_image_request"
             ),
-            unit_usd=float(rates[rate_key]),
+            unit_usd=float(rates.get(rate_key, rates[_GEMINI_IMAGE_RATE_KEYS[model]])),
             usd_krw=float(rates["usd_krw"]),
             budget_limit_krw=int(preflight.get("budget_limit_krw") or rates["max_budget_per_video_krw"]),
             request_metadata={"policy_version": preflight.get("policy_version", "runtime-default"), "job_id": job_id,
-                              "contract_fingerprint": contract_fingerprint, "run_id": run_id},
+                              "contract_fingerprint": contract_fingerprint, "run_id": run_id,
+                              "service_tier_requested": requested_tier},
         )
 
     @classmethod
@@ -344,6 +361,7 @@ class ProviderRequestAudit:
         image_sha256: str | None = None,
         usage_metadata: dict[str, Any] | None = None,
         usage_metadata_status: str | None = None,
+        service_tier_observed: str | None = None,
     ) -> dict:
         """응답과 성공 비용 추정치를 기록한다. 실제 청구/보수적 예약 노출액은 별개다."""
         with _ledger_lock(self._path):
@@ -373,6 +391,10 @@ class ProviderRequestAudit:
                     item["status_code"] = int(status_code)
                 if request_id:
                     item["request_id"] = str(request_id)[:256]
+                if service_tier_observed:
+                    # Priority 요청이 Standard로 graceful downgrade될 수 있어
+                    # 요청값과 실제 처리 tier를 별도로 감사한다.
+                    item["service_tier_observed"] = str(service_tier_observed)[:32].lower()
 
                 # 성공 추정 합계에서 제외할 뿐 실제 청구 여부는 콘솔 대조 전까지 미확정이다.
                 is_success = outcome in ("http_200", "succeeded", "http_201") or (status_code is not None and 200 <= status_code < 300)
@@ -450,7 +472,7 @@ def _krw(usd: float, rate: float) -> int:
 
 def _estimate(pro_count: int, kling_count: int, cfg: dict[str, Any]) -> int:
     usd = (
-        pro_count * float(cfg["img_cost_pro_2k_usd"])
+        pro_count * _pro_rate(cfg)
         + kling_count * float(cfg["kling_cost_per_clip_usd"])
     )
     return round(_krw(usd, float(cfg["usd_krw"])) * (1 + float(cfg["budget_retry_buffer_pct"]) / 100))
@@ -484,7 +506,7 @@ def plan_preflight(
 
     # 템플릿 장면은 보드 검출 실패 시 한 번만 재생성할 수 있으므로,
     # 해당 장면 tier 비용의 25%를 사전 예비비로 잡는다.
-    retry_unit = float(cfg["img_cost_pro_2k_usd"])
+    retry_unit = _pro_rate(cfg)
     template_retry_reserve = round(_krw(template_scene_count * retry_unit * .25, float(cfg["usd_krw"])))
     estimated_with_reserve = estimated + template_retry_reserve
     allowed = estimated_with_reserve <= max_budget
@@ -498,7 +520,12 @@ def plan_preflight(
         "actions": [], "reason": None if allowed else "pro_only_plan_exceeds_budget",
         "template_scene_count": template_scene_count, "template_retry_reserve_krw": template_retry_reserve,
         "template_regeneration_enabled": regen_enabled,
-        "rates": {key: cfg[key] for key in ("img_cost_pro_2k_usd", "kling_cost_per_clip_usd", "usd_krw")},
+        "rates": {
+            "img_cost_pro_2k_usd": _pro_rate(cfg),
+            "gemini_service_tier": str(cfg.get("gemini_service_tier") or "priority"),
+            "kling_cost_per_clip_usd": cfg["kling_cost_per_clip_usd"],
+            "usd_krw": cfg["usd_krw"],
+        },
     }
 
 
@@ -612,7 +639,7 @@ def record_cost(job_id: int, kind: str, count: int = 1, *, scene_key: str | None
     if kind == "flash":
         raise ValueError("Flash 비용 기록은 Pro-only 이미지 정책에서 허용되지 않습니다.")
     unit_usd = {
-        "pro": float(rates["img_cost_pro_2k_usd"]),
+        "pro": _pro_rate(rates),
         "kling": float(rates["kling_cost_per_clip_usd"]),
         "overlay_vision": float(os.getenv("OVERLAY_VISION_COST_USD", "0.03")),
     }.get(kind, 0.0)

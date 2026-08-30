@@ -113,7 +113,9 @@ GEMINI_PRO_BATCH_ENABLED = os.getenv("GEMINI_PRO_BATCH_ENABLED", "false").lower(
 # Batch has a separate prepaid-credit contract. Never switch an interactive
 # long-form job onto it unless an operator explicitly enables it.
 GEMINI_PRO_BATCH_FALLBACK_ENABLED = os.getenv("GEMINI_PRO_BATCH_FALLBACK_ENABLED", "false").lower() in {"1", "true", "yes"}
-GEMINI_SERVICE_TIER = os.getenv("GEMINI_SERVICE_TIER", "standard").lower()
+GEMINI_SERVICE_TIER = os.getenv("GEMINI_SERVICE_TIER", "priority").lower()
+if GEMINI_SERVICE_TIER not in {"priority", "standard"}:
+    raise RuntimeError("GEMINI_SERVICE_TIER는 priority 또는 standard만 허용합니다.")
 # Pace and retry synchronous Pro 2K requests without changing their model.
 GEMINI_PRO_MAX_ATTEMPTS = int(os.getenv("GEMINI_PRO_MAX_ATTEMPTS", "5"))
 GEMINI_PRO_RETRY_BASE_SECONDS = float(os.getenv("GEMINI_PRO_RETRY_BASE_SECONDS", "10"))
@@ -196,11 +198,12 @@ MAX_IMAGE_HOLD_SECONDS = int(os.getenv("MAX_IMAGE_HOLD_SECONDS", "8"))
 IMG_COST_FLASH_1K_USD = float(os.getenv("IMG_COST_FLASH_1K_USD", "0.045"))
 IMG_COST_FLASH_2K_USD = float(os.getenv("IMG_COST_FLASH_2K_USD", "0.101"))
 IMG_COST_PRO_2K_USD = float(os.getenv("IMG_COST_PRO_2K_USD", "0.134"))
+IMG_COST_PRO_PRIORITY_2K_USD = float(os.getenv("IMG_COST_PRO_PRIORITY_2K_USD", "0.24192"))
 KLING_COST_PER_CLIP_USD = float(os.getenv("KLING_COST_PER_CLIP_USD", "0.35"))  # 5 sec × $0.07/sec, audio off
 USD_KRW = float(os.getenv("USD_KRW", "1400"))
-# 작업별 실제 상한은 Spring PricingConfig가 전달한다. 20분 미만: ₩40,000 / 20분 이상: ₩80,000.
-# 이 값은 그 정책에서 허용한 최대치(80,000원)를 넘는 런타임 설정만 차단한다.
-MAX_BUDGET_PER_VIDEO_KRW = min(80_000, int(os.getenv("MAX_BUDGET_PER_VIDEO_KRW", "80000")))
+# 작업별 실제 상한은 Spring PricingConfig가 전달한다. 20분 미만: ₩40,000 / 20분 이상: ₩70,000.
+# 이 값은 전역 계약에서 허용한 최대치(70,000원)를 넘는 런타임 설정을 차단한다.
+MAX_BUDGET_PER_VIDEO_KRW = min(70_000, int(os.getenv("MAX_BUDGET_PER_VIDEO_KRW", "70000")))
 GEMINI_TEST_IMAGE_BUDGET_KRW = int(os.getenv("GEMINI_TEST_IMAGE_BUDGET_KRW", "5000"))
 BUDGET_RETRY_BUFFER_PCT = float(os.getenv("BUDGET_RETRY_BUFFER_PCT", "10"))
 

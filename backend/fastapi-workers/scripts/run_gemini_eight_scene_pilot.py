@@ -17,7 +17,7 @@ import time
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-REPO = ROOT.parents[1]
+REPO = ROOT.parents[1] if len(ROOT.parents) > 1 else ROOT
 sys.path.insert(0, str(ROOT))
 
 

@@ -62,6 +62,9 @@ from app.utils.image_text_contract import (
     build_scene_text_contract,
     contains_financial_number,
     detected_deterministic_texts,
+    redact_financial_values_for_visual_direction,
+    redact_financial_values_from_model_prompt,
+    redact_unapproved_entity_literals_from_model_prompt,
     require_sanitized_generated_text_prompt,
     visible_text_contract_result,
 )
@@ -299,6 +302,15 @@ def _bounded_text_generation_prompt(
         text_contract=text_contract,
     )
     generated_texts = list(text_contract["generated_texts"])
+    cleaned, financial_redaction = redact_financial_values_from_model_prompt(
+        cleaned,
+        deterministic_values=text_contract["deterministic_texts"],
+    )
+    cleaned, entity_redaction = redact_unapproved_entity_literals_from_model_prompt(
+        cleaned,
+        core_entities=(audit_target or {}).get("core_entities") if isinstance(audit_target, dict) else [],
+        allowed_texts=generated_texts,
+    )
     cleaned, report = require_sanitized_generated_text_prompt(
         cleaned,
         allowed_texts=generated_texts,
@@ -309,31 +321,49 @@ def _bounded_text_generation_prompt(
         audit_target["scene_visual_quality_contract"] = visual_quality_contract
         audit_target["image_prompt_text_contract"] = {
             **report,
+            "financial_redaction": financial_redaction,
+            "entity_redaction": entity_redaction,
             "retry_contract": bool(retry),
             "retry_failure_categories": list((retry_feedback or {}).get("failure_categories") or []),
         }
     deterministic = list(text_contract["deterministic_texts"])
     if generated_texts:
-        exact_values = " | ".join(generated_texts)
         surface_plan = list(text_contract.get("surface_plan") or [])
-        placement_note = (
-            " Follow these scene-specific text placements: "
-            + json.dumps(surface_plan, ensure_ascii=False)
-            + ". Unless that plan explicitly declares a holographic surface_style or material, render the wording on a solid opaque "
-            "scene-mounted monitor, opaque wall-mounted information board, machine gauge, or painted or engraved prop face that already belongs to the set."
-            if surface_plan else
-            " No text-surface layout was explicitly planned: keep each used string visually subordinate and place it once on an existing "
-            "solid opaque scene-native monitor, opaque wall-mounted information board, machine gauge, or painted or engraved prop face only when it helps the narration. "
-            "Do not create a new board, panel, title card, oversized sign, safe zone, detached glass card, translucent floating UI, or hologram for it."
-        )
+        plan_by_text = {
+            str(item.get("text") or ""): item
+            for item in surface_plan
+            if isinstance(item, dict) and str(item.get("text") or "")
+        }
+        wording_rules = []
+        for position, value in enumerate(generated_texts, start=1):
+            item = plan_by_text.get(value) or {}
+            surface = str(item.get("surface") or "an existing subordinate scene-native physical surface")
+            purpose = str(item.get("purpose") or "scene information")
+            max_occurrences = max(1, int(item.get("max_occurrences") or 1))
+            wording_rules.append(
+                f"Approved wording {position} is {value}. Render those Korean characters exactly, no more than "
+                f"{max_occurrences} time, as {purpose} on {surface}. Do not render the English instruction words, "
+                "the item number, punctuation, brackets, braces, quotation marks, or field labels."
+            )
+        placement_note = " " + " ".join(wording_rules)
+        if surface_plan:
+            placement_note += (
+                " Unless an approved wording rule explicitly declares a holographic material, render it on a solid opaque "
+                "scene-mounted monitor, opaque wall-mounted information board, machine gauge, or painted or engraved prop face that already belongs to the set."
+            )
+        else:
+            placement_note += (
+                " Keep each wording visually subordinate on an existing solid opaque scene-native monitor, opaque wall-mounted information board, "
+                "machine gauge, or painted or engraved prop face only when it helps the narration. Do not create a new board, panel, title card, "
+                "oversized sign, safe zone, detached glass card, translucent floating UI, or hologram for it."
+            )
         suffix = (
-            " FINAL SCENE-LOCAL TEXT CONTRACT: the only readable text that may appear is the following exact "
-            f"case-sensitive string list: [{exact_values}]. Copy each selected string exactly without translation, "
-            "abbreviation, missing characters, extra characters, or pseudo-text."
+            " FINAL SCENE-LOCAL TEXT CONTRACT: only the approved Korean wording described below may be readable. "
+            "Copy it exactly without translation, abbreviation, missing characters, extra characters, or pseudo-text."
             f"{placement_note} The script-specific physical objects, action, and causal relationship determine the visual hierarchy. "
             "Do not force all scenes into one giant board or one fixed typography layout. "
             "No unapproved fake ticker, invented company, logo, watermark, or secondary number. "
-            "On documents, books, cheques, certificates, newspapers, and equipment labels, do not add microprint, serial numbers, dates, currency symbols, or filler lettering outside this exact list. "
+            "On documents, books, cheques, certificates, newspapers, and equipment labels, do not add microprint, serial numbers, dates, currency symbols, or filler lettering outside the approved wording. "
             "A detached translucent or holographic text card is forbidden unless the explicit scene-local surface plan requests that exact material."
         )
     elif deterministic:
@@ -945,6 +975,7 @@ class ImagesWorker:
         - 매 씬마다 대사가 다르면 반드시 다른 프롬프트가 나와야 함
         """
         composition = ARCHETYPE_COMPOSITION.get(scene_type, ARCHETYPE_COMPOSITION["general"])
+        visual_narration = redact_financial_values_for_visual_direction(narration)
         is_news_mode = (visual_mode == "article_evidence") or (scene_type in ("news_context", "reporter_worried", "news_anchor"))
 
         if is_news_mode:
@@ -1008,9 +1039,8 @@ class ImagesWorker:
             if core_figures:
                 fig_list = [f.get("raw") for f in core_figures if isinstance(f, dict) and f.get("raw")]
                 if fig_list:
-                    fig_str = ", ".join(fig_list)
                     figures_clause = (
-                        f"- Core Verified Numerical Figures for semantic direction only: {fig_str}. Do NOT render these values unless they also appear in the scene-local approved screen-text list.\n"
+                        "- Verified financial quantities are relevant to the scene, but their literal values are withheld from image generation and will be rendered deterministically later.\n"
                         f"- Let one storyboard-essential existing physical prop contain a calm in-perspective region for deterministic post-production; never add a separate blank placard, floating card, or safe-zone panel.\n"
                         f"- Do NOT invent or guess secondary numbers, dates, labels, or fake tick marks.\n"
                     )
@@ -1040,9 +1070,9 @@ class ImagesWorker:
             screen_text_clause = "- This scene has no approved image-model text. Do not invent labels or pseudo-text.\n"
         if deterministic_texts:
             screen_text_clause += (
-                "- Use a calm region of an existing storyboard-essential, perspective-correct physical prop for deterministic values: "
-                + " | ".join(deterministic_texts)
-                + ". Do not draw those financial numbers in the base raster, and do not add a separate blank placard, floating card, or safe-zone panel.\n"
+                "- Verified financial values are withheld from this visual-direction request and will be rendered deterministically later. "
+                "Use a calm region of an existing storyboard-essential, perspective-correct physical prop for them. "
+                "Do not guess or draw any financial number in the base raster, and do not add a separate blank placard, floating card, or safe-zone panel.\n"
             )
 
         from app.utils.scene_content_classifier import classify_narration_content_type
@@ -1053,7 +1083,7 @@ class ImagesWorker:
             f"- Background Narrative Rule: {strategy.background_narrative_rule}\n"
         )
 
-        user_content = f"""Korean narration: "{narration}"
+        user_content = f"""Korean narration semantic copy with literal financial values withheld: "{visual_narration}"
 Scene type: {scene_type}
 Composition hint: {composition}
 Visual mode: {visual_mode or "general"}
@@ -2104,6 +2134,9 @@ Rules:
                                     job_id=job_id,
                                     scene_key=f"image:{i}",
                                     model=str(image_profile.get("model") or "gemini-3-pro-image"),
+                                    service_tier=str(provider_options.get(
+                                        "gemini_service_tier", runtime_config.value("gemini_service_tier")
+                                    )),
                                 ),
                                 style_locked=bool(spec) or bool(provider_options.get("style_locked")),
                                 suppress_legacy_style_lock=bool(provider_options.get("suppress_legacy_style_lock")),
@@ -2929,6 +2962,9 @@ Rules:
                                 scene_key=f"image:{index}",
                                 model=str(image_profile.get("model") or "gemini-3-pro-image"),
                                 contract_fingerprint=scene_fingerprint, run_id=request_run_id,
+                                service_tier=str(provider_options.get(
+                                    "gemini_service_tier", runtime_config.value("gemini_service_tier")
+                                )),
                             ),
                             style_locked=bool(ctx["spec"]) or bool(provider_options.get("style_locked")),
                             suppress_legacy_style_lock=bool(provider_options.get("suppress_legacy_style_lock")),

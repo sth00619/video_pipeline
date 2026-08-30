@@ -1,0 +1,27 @@
+{
+  "version": "wo-provider-02-stage2-full47-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "basis": "사용자 WO-PROVIDER-02 Stage 2: scene42를 제외한 Job52 전 장면 Pro/Flash 비교 승인",
+    "external_image_post_limit": 94,
+    "attempts_per_model_scene": 1,
+    "retry_on_failure": false,
+    "approved_total_budget_cap_krw": 20000,
+    "budget_interpretation": "중앙 PricingConfig의 모델별 2K 단가를 사용하는 비교 실행 상한이며 영상 1건 40000원 상한을 넘지 않는다."
+  },
+  "models": ["gemini-3-pro-image", "gemini-3.1-flash-image"],
+  "service_tier": "standard",
+  "image_size": "2K",
+  "scene42_frozen_and_excluded": true,
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "common_prompt_contract": {
+    "approved_wording_format": "plain_prose_no_array_or_json",
+    "screen_text_source": "approved_narration_exact_extract_v2",
+    "numeric_policy": "deterministic_surface_only",
+    "same_prompt_and_references_between_models": true,
+    "user_visual_review_required": true
+  }
+}

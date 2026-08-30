@@ -30,6 +30,14 @@ def test_gemini_estimate_requires_explicit_approved_rate():
             os.environ["V5_GEMINI_PRO_IMAGE_2K_ESTIMATE_USD"] = prior
 
 
+def test_flash_estimate_requires_its_own_explicit_approved_rate(monkeypatch):
+    monkeypatch.setenv("V5_GEMINI_FLASH_IMAGE_2K_ESTIMATE_USD", "0.101")
+
+    assert GeminiProvider(api_key="test-key").estimate_cost_usd(
+        GeminiModel.FLASH, 2048, 1152
+    ) == 0.101
+
+
 def test_p1_comparison_forces_one_provider_attempt(tmp_path: Path, monkeypatch):
     observed = {}
 
@@ -60,6 +68,70 @@ def test_p1_comparison_forces_one_provider_attempt(tmp_path: Path, monkeypatch):
     assert "explicitly selected character reference" in observed["prompt"]
     assert "let the written scene choose expression, costume, action, headwear, and framing" in observed["prompt"]
     assert "do not force every scene into one studio template" in observed["prompt"].lower()
+
+
+def test_flash_comparison_is_explicit_and_keeps_one_attempt(tmp_path: Path, monkeypatch):
+    observed = {}
+
+    class FakeNanaBananaProvider:
+        def generate(self, **kwargs):
+            observed.update(kwargs)
+            Path(kwargs["output_path"]).write_bytes(b"flash-image")
+
+    import app.providers.real.image as image_module
+    monkeypatch.setattr(image_module, "NanaBananaProvider", FakeNanaBananaProvider)
+    reference = tmp_path / "reference.png"
+    reference.write_bytes(b"reference")
+
+    class Audit:
+        def summary(self):
+            return {"entries": []}
+
+    result = GeminiProvider(api_key="test-key").generate(
+        "prompt",
+        model=GeminiModel.FLASH,
+        reference_image_paths=[str(reference)],
+        request_audit=Audit(),
+    )
+
+    assert result.model == "gemini-3.1-flash-image"
+    assert observed["gemini_model"] == "gemini-3.1-flash-image"
+    assert observed["gemini_max_attempts"] == 1
+
+
+def test_policy_comparison_propagates_pro_priority_and_flash_high(tmp_path: Path, monkeypatch):
+    observed = []
+
+    class FakeNanaBananaProvider:
+        def generate(self, **kwargs):
+            observed.append(dict(kwargs))
+            Path(kwargs["output_path"]).write_bytes(b"comparison-image")
+
+    import app.providers.real.image as image_module
+    monkeypatch.setattr(image_module, "NanaBananaProvider", FakeNanaBananaProvider)
+
+    class Audit:
+        def summary(self):
+            return {"entries": []}
+
+    provider = GeminiProvider(api_key="test-key")
+    provider.generate(
+        "pro prompt",
+        model=GeminiModel.PRO,
+        service_tier="priority",
+        request_audit=Audit(),
+    )
+    provider.generate(
+        "flash prompt",
+        model=GeminiModel.FLASH,
+        thinking_level="high",
+        request_audit=Audit(),
+    )
+
+    assert observed[0]["gemini_service_tier"] == "priority"
+    assert observed[0]["gemini_thinking_level"] is None
+    assert observed[1]["gemini_service_tier"] == "standard"
+    assert observed[1]["gemini_thinking_level"] == "high"
 
 
 def test_provider_selects_scene_relevant_job52_references_when_callers_omit_them(tmp_path: Path, monkeypatch):
@@ -190,6 +262,27 @@ def test_goggles_scene_uses_scene05_face_anchor_without_freezing_costume(tmp_pat
         "channel_character_face_range_v2.png",
         "channel_character_face_scene05_v1.png",
         "channel_style_job52_data_lab.png",
+    ]
+
+
+def test_generic_goggles_safety_clause_does_not_select_goggles_anchor(tmp_path: Path):
+    face_range = tmp_path / "channel_character_face_range_v2.png"
+    face_anchor = tmp_path / "channel_character_face_scene05_v1.png"
+    risk = tmp_path / "channel_style_job52_risk_map.png"
+    market = tmp_path / "channel_style_job52_market_flow.png"
+    for path in (face_range, face_anchor, risk, market):
+        path.write_bytes(path.name.encode())
+
+    selected = select_contextual_reference_paths(
+        "market risk control room\nCOMMON CROSS-SCENE ACCEPTANCE FLOOR: "
+        "goggles or glasses must not erase eye layers",
+        [str(face_range), str(face_anchor), str(risk), str(market)],
+    )
+
+    assert [Path(path).name for path in selected] == [
+        "channel_character_face_range_v2.png",
+        "channel_style_job52_risk_map.png",
+        "channel_style_job52_market_flow.png",
     ]
 
 

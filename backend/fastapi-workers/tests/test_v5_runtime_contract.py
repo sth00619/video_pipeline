@@ -45,7 +45,7 @@ def test_runtime_contract_uses_gemini_for_general_and_information_scenes():
         "image_provider": "gemini",
         "gemini_model": "gemini-3-pro-image",
         "gemini_image_size": "2K",
-        "gemini_service_tier": "standard",
+        "gemini_service_tier": "priority",
         "gemini_max_attempts": 2,
         "suppress_legacy_style_lock": True,
         "style_locked": True,

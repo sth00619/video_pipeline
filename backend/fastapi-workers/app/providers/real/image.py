@@ -202,7 +202,8 @@ class NanaBananaProvider(ImageProvider):
         gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         gemini_model = str(kwargs.get("gemini_model") or "gemini-3-pro-image")
         gemini_image_size = str(kwargs.get("gemini_image_size") or "2K")
-        gemini_service_tier = str(kwargs.get("gemini_service_tier") or "standard").lower()
+        gemini_service_tier = str(kwargs.get("gemini_service_tier") or "priority").lower()
+        gemini_thinking_level = kwargs.get("gemini_thinking_level")
 
         def try_fal() -> bool:
             if not fal_key or self.__class__._fal_disabled:
@@ -240,6 +241,7 @@ class NanaBananaProvider(ImageProvider):
                     base_prompt, output_path, gemini_key, character_image_paths,
                     model=gemini_model, image_size=gemini_image_size,
                     service_tier=gemini_service_tier,
+                    thinking_level=gemini_thinking_level,
                     max_attempts=kwargs.get("gemini_max_attempts"),
                     retry_base_seconds=kwargs.get("gemini_retry_base_seconds"),
                     request_audit=kwargs.get("gemini_request_audit"),
@@ -503,6 +505,7 @@ class NanaBananaProvider(ImageProvider):
         self, prompt: str, output_path: str, api_key: str,
         character_image_paths: list[str] | None = None, *, model: str, image_size: str,
         service_tier: str = "standard",
+        thinking_level: str | None = None,
         max_attempts: int | None = None,
         retry_base_seconds: float | None = None,
         request_audit=None,
@@ -519,6 +522,13 @@ class NanaBananaProvider(ImageProvider):
             raise ValueError(f"Unsupported Gemini image model: {model}")
         if image_size not in {"1K", "2K", "4K"}:
             image_size = "1K"
+        if thinking_level is not None:
+            thinking_level = str(thinking_level).strip().lower()
+        if model == "gemini-3.1-flash-image":
+            if thinking_level not in {None, "minimal", "high"}:
+                raise ValueError("Flash thinking level은 minimal/high만 허용합니다.")
+        elif thinking_level is not None:
+            raise ValueError("thinking level 명시는 gemini-3.1-flash-image에서만 허용합니다.")
 
         input_parts: list[dict] = []
         # V5 벤치마크는 캐릭터·스타일·구도 가이드 3장을 의도적으로 함께 쓴다.
@@ -562,6 +572,13 @@ class NanaBananaProvider(ImageProvider):
                 "imageConfig": {"aspectRatio": "16:9", "imageSize": image_size},
             },
         }
+        if model == "gemini-3.1-flash-image" and thinking_level is not None:
+            payload["generationConfig"]["thinkingConfig"] = {
+                # GenerateContent REST 공식 예시는 enum 표기를 High/Minimal로
+                # 보낸다. 내부 계약은 비교하기 쉬운 소문자로 유지하되 실제
+                # 공급자 payload만 공식 표기로 정규화한다.
+                "thinkingLevel": {"minimal": "Minimal", "high": "High"}[thinking_level],
+            }
         # Priority is an explicit caller choice for urgent Pro renders. Keep
         # standard as the default because it carries a premium price.
         if service_tier in {"priority", "flex"}:
@@ -624,6 +641,7 @@ class NanaBananaProvider(ImageProvider):
         usage_metadata = response_body.get("usageMetadata") if usage_present else None
         usage_status = "present" if isinstance(usage_metadata, dict) else "invalid" if usage_present else "absent"
         common = {"status_code": response.status_code, "request_id": request_id,
+                  "service_tier_observed": response.headers.get("x-gemini-service-tier"),
                   "duration_seconds": time.monotonic() - started,
                   "usage_metadata": usage_metadata if isinstance(usage_metadata, dict) else None,
                   "usage_metadata_status": usage_status}

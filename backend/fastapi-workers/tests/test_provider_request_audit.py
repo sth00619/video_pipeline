@@ -127,6 +127,32 @@ def test_flash_2k_attempt_uses_its_own_model_rate_and_kind(tmp_path: Path, monke
     assert ledger["items"][0]["estimated_usd"] == 0.101
 
 
+def test_pro_priority_attempt_uses_priority_rate_and_records_requested_tier(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(budget, "_job_path", lambda _job_id, _name: tmp_path / _name)
+    monkeypatch.setattr(budget.runtime_config, "get", lambda: {
+        "gemini_service_tier": "standard",
+        "img_cost_flash_2k_usd": 0.101,
+        "img_cost_pro_2k_usd": 0.134,
+        "img_cost_pro_priority_2k_usd": 0.24192,
+        "usd_krw": 1400,
+        "max_budget_per_video_krw": 1000,
+    })
+
+    audit = ProviderRequestAudit.for_job(
+        job_id=55,
+        scene_key="image:0",
+        model="gemini-3-pro-image",
+        service_tier="priority",
+    )
+    token = audit.before_attempt(attempt=1)
+    audit.after_attempt(token, status_code=200, outcome="http_200")
+
+    ledger = json.loads((tmp_path / "cost_ledger.json").read_text(encoding="utf-8"))
+    assert ledger["total_krw"] == 339
+    assert ledger["items"][0]["estimated_usd"] == 0.24192
+    assert ledger["items"][0]["request_metadata"]["service_tier_requested"] == "priority"
+
+
 def test_kling_success_record_does_not_duplicate_a_reserved_request(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(budget, "_job_path", lambda _job_id, _name: tmp_path / _name)
     monkeypatch.setattr(budget.runtime_config, "get", lambda: {
@@ -347,6 +373,45 @@ def test_priority_service_tier_is_a_top_level_generate_content_field(tmp_path: P
     )
     assert captured["payload"]["serviceTier"] == "priority"
     assert "serviceTier" not in captured["payload"]["generationConfig"]
+    ledger = json.loads((tmp_path / "audit.json").read_text(encoding="utf-8"))
+    assert ledger["items"][0]["service_tier_observed"] == "priority"
+
+
+def test_flash_high_uses_official_thinking_level_enum(tmp_path: Path, monkeypatch):
+    import base64
+    from io import BytesIO
+
+    from PIL import Image
+
+    source = BytesIO()
+    Image.new("RGB", (2, 2), "white").save(source, "PNG")
+    generated = base64.b64encode(source.getvalue()).decode()
+    captured = {}
+
+    class Response:
+        status_code = 200
+        headers = {"x-gemini-service-tier": "standard"}
+        text = "ok"
+
+        @staticmethod
+        def json():
+            return {"candidates": [{"content": {"parts": [{"inlineData": {"data": generated}}]}}]}
+
+    def fake_post(_endpoint, *, json, **_kwargs):
+        captured["payload"] = json
+        return Response()
+
+    monkeypatch.setattr("requests.post", fake_post)
+    output = tmp_path / "flash-high.png"
+
+    assert NanaBananaProvider()._generate_gemini_api(
+        "flash high contract", str(output), "not-a-real-key", [],
+        model="gemini-3.1-flash-image", image_size="2K", thinking_level="high",
+        max_attempts=1, request_audit=_audit(tmp_path, "gemini-3.1-flash-image"),
+    )
+    assert captured["payload"]["generationConfig"]["thinkingConfig"] == {
+        "thinkingLevel": "High",
+    }
 
 
 def test_flash_image_uses_the_same_reference_edit_contract(tmp_path: Path, monkeypatch):

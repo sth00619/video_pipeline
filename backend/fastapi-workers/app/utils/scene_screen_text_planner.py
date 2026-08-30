@@ -10,6 +10,8 @@ import re
 import unicodedata
 from typing import Any
 
+from app.utils.entity_english_map import get_entity_info
+
 
 _QUOTED_PHRASE_RE = re.compile(r"['\"“”‘’](?P<text>[^'\"“”‘’\n]{2,32})['\"“”‘’]")
 _NUMBER = r"[+-]?\d[\d,]*(?:\.\d+)?"
@@ -39,6 +41,13 @@ _DISPLAY_TERMS = (
     "거래량",
     "반도체",
     "IR",
+    # 시장 전망·리스크 설명에서 장면의 핵심 대비를 이루는 일반 용어다.
+    # 특정 작업 번호용 문구가 아니라 승인 내레이션에 실제로 있을 때만
+    # 선택되는 공통 화면 어휘이며, 임의 문구 생성에는 사용하지 않는다.
+    "엇갈림",
+    "대형주",
+    "경고",
+    "전망치",
 )
 
 
@@ -91,6 +100,103 @@ def derive_scene_screen_texts(scene: dict[str, Any], *, limit: int = 4) -> list[
     return selected
 
 
+_COMPANY_CATEGORIES = {"kospi_large", "kosdaq_mid", "us_tech"}
+
+
+def _shared_surface_regions(count: int) -> list[list[float]]:
+    """한 물리 화면 안에서 문구 수만큼 겹치지 않는 상대 영역을 만든다."""
+    count = max(1, int(count))
+    gap = 0.04
+    outer_y = 0.08
+    usable = 1.0 - outer_y * 2 - gap * (count - 1)
+    height = usable / count
+    return [
+        [0.08, round(outer_y + index * (height + gap), 4), 0.84, round(height, 4)]
+        for index in range(count)
+    ]
+
+
+def derive_scene_screen_text_plan(
+    scene: dict[str, Any],
+    screen_texts: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """승인 문구를 장면 의미 사물과 그 물리 표면에 결정론적으로 배정한다.
+
+    이 함수는 픽셀 좌표를 추측하지 않는다. 이미지 생성 전 프롬프트가 필요한
+    사물과 표면을 만들도록 의미 ID를 부여하고, 실제 좌표는 생성 후 표면 검출과
+    attestation이 담당한다. 특정 작업·scene 번호는 사용하지 않는다.
+    """
+    texts = [str(value).strip() for value in (screen_texts or []) if str(value).strip()]
+    if not texts:
+        return []
+
+    classified: list[tuple[str, str]] = []
+    for text in texts:
+        info = get_entity_info(text)
+        if any(character.isdigit() for character in text):
+            role = "numeric_fact"
+        elif info and info.category in _COMPANY_CATEGORIES:
+            role = "company"
+        elif info and info.category == "index_exchange":
+            role = "market_index"
+        else:
+            role = "context_label"
+        classified.append((text, role))
+
+    company_total = sum(role == "company" for _, role in classified)
+    summary_total = sum(role in {"market_index", "numeric_fact"} for _, role in classified)
+    summary_regions = iter(_shared_surface_regions(summary_total))
+    company_position = 0
+    context_position = 0
+    plan: list[dict[str, Any]] = []
+    for text, role in classified:
+        if role == "company":
+            company_position += 1
+            if company_total == 1:
+                object_id, surface_id = "subject_entity", "subject_prop"
+            else:
+                side = {1: "left", 2: "right"}.get(company_position, str(company_position))
+                object_id = f"comparison_entity_{company_position}"
+                surface_id = f"comparison_prop_{side}"
+            item = {
+                "text": text,
+                "purpose": "information",
+                "semantic_object_id": object_id,
+                "surface_id": surface_id,
+                "surface": surface_id,
+                "surface_kind": "prop_panel",
+                "capacity": 1,
+                "max_occurrences": 1,
+            }
+        elif role in {"market_index", "numeric_fact"}:
+            item = {
+                "text": text,
+                "purpose": "information",
+                "semantic_object_id": "market_summary",
+                "surface_id": "summary_monitor",
+                "surface": "summary_monitor",
+                "surface_kind": "device_screen",
+                "capacity": summary_total,
+                "max_occurrences": 1,
+            }
+            if summary_total > 1:
+                item["region"] = next(summary_regions)
+        else:
+            context_position += 1
+            item = {
+                "text": text,
+                "purpose": "information",
+                "semantic_object_id": f"context_concept_{context_position}",
+                "surface_id": f"context_sign_{context_position}",
+                "surface": f"context_sign_{context_position}",
+                "surface_kind": "signboard",
+                "capacity": 1,
+                "max_occurrences": 1,
+            }
+        plan.append(item)
+    return plan
+
+
 def attach_scene_screen_texts(scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """장면 순서와 승인 내레이션을 바꾸지 않고 화면 문구 계약만 보완한다."""
     planned: list[dict[str, Any]] = []
@@ -106,7 +212,15 @@ def attach_scene_screen_texts(scenes: list[dict[str, Any]]) -> list[dict[str, An
         scene["screen_text_source"] = (
             "explicit_scene_contract"
             if source.get("screen_texts") and not previous_source.startswith("approved_narration_exact_extract_")
-            else "approved_narration_exact_extract_v2"
+            else "approved_narration_exact_extract_v3"
         )
+        previous_plan_source = str(source.get("screen_text_plan_source") or "")
+        explicit_plan = source.get("screen_text_plan")
+        if explicit_plan and not previous_plan_source.startswith("approved_narration_semantic_surface_plan_"):
+            scene["screen_text_plan"] = [dict(item) for item in explicit_plan if isinstance(item, dict)]
+            scene["screen_text_plan_source"] = "explicit_scene_contract"
+        else:
+            scene["screen_text_plan"] = derive_scene_screen_text_plan(scene, scene["screen_texts"])
+            scene["screen_text_plan_source"] = "approved_narration_semantic_surface_plan_v1"
         planned.append(scene)
     return planned

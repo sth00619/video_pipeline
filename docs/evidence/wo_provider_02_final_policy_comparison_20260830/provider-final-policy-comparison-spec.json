@@ -1,0 +1,41 @@
+{
+  "version": "wo-provider-02-final-policy-full47-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "basis": "사용자가 비용보다 최종 모델 확정을 우선하여 Pro Priority와 Flash High를 수십 장 실 API로 검증하도록 승인함",
+    "external_image_post_limit": 94,
+    "attempts_per_model_scene": 1,
+    "retry_on_failure": false,
+    "approved_total_budget_cap_krw": 40000,
+    "budget_interpretation": "5분 미만 영상 1건 전역 상한 40000원 안에서 47장 쌍대 비교를 수행한다."
+  },
+  "models": ["gemini-3-pro-image", "gemini-3.1-flash-image"],
+  "profiles": {
+    "gemini-3-pro-image": {
+      "service_tier": "priority",
+      "thinking_level": null
+    },
+    "gemini-3.1-flash-image": {
+      "service_tier": "standard",
+      "thinking_level": "high"
+    }
+  },
+  "image_size": "2K",
+  "scene42_frozen_and_excluded": true,
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "reference_channel_benchmark": {
+    "path": "docs/evidence/wo_provider_02_reference_benchmark_20260829/reference-frame-classification.json",
+    "role": "육안 평가 유형·정보 밀도·텍스트 표현 기준이며 초록 캐릭터 자체는 참조하지 않음"
+  },
+  "common_prompt_contract": {
+    "approved_wording_format": "plain_prose_no_array_or_json",
+    "screen_text_source": "approved_narration_exact_extract_v3",
+    "numeric_policy": "deterministic_surface_only",
+    "semantic_basis_mode": "operation_sanitized_no_narration_copy",
+    "same_prompt_and_references_between_models": true,
+    "user_visual_review_required": true
+  }
+}

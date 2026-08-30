@@ -113,8 +113,22 @@ def test_exact_narration_term_is_allowed_but_derived_word_and_number_are_not():
     assert result["narration_grounded_texts"] == ["자사주"]
     assert result["review_required_nonnumeric_texts"] == ["배당금"]
     assert result["review_required_numeric_texts"] == ["2021"]
-    assert result["unexpected_texts"] == []
-    assert result["passed"] is True
+    assert result["unexpected_texts"] == ["2021"]
+    assert result["passed"] is False
+
+
+def test_common_image_gate_rejects_unapproved_numeric_display_without_strict_lane(tmp_path):
+    scene = {
+        "text": "실적 전망이 엇갈리며 시장의 경계감이 커졌습니다.",
+        "screen_texts": ["엇갈림"],
+    }
+    rows = [
+        {"text": "엇갈림", "conf": "96", "word_num": "1"},
+        {"text": "0000.000", "conf": "96", "word_num": "2"},
+    ]
+
+    with pytest.raises(GeneratedImageTextDetectedError, match="0000.000"):
+        _inspect_generated_textless_image(scene, str(_png(tmp_path)), ocr_rows=rows)
 
 
 def test_visual_gate_rejects_only_reported_scene_categories(tmp_path, monkeypatch):
@@ -209,15 +223,41 @@ def test_explicit_opaque_equipment_surface_is_binding_without_global_layout():
     assert "unlettered scene-integrated visual surface" not in prompt
 
 
+def test_generated_wording_prompt_does_not_present_bracket_or_json_artifacts():
+    scene = {
+        "screen_texts": ["엇갈림"],
+        "screen_text_plan": [{
+            "text": "엇갈림",
+            "surface": "existing split-stage monitor",
+            "purpose": "decorative emphasis",
+            "max_occurrences": 1,
+        }],
+        "screen_text_validation": {"passed": True},
+    }
+
+    prompt = _bounded_text_generation_prompt(
+        "A split market stage with opposing arrows.",
+        audit_target=scene,
+    )
+
+    assert "case-sensitive string list" not in prompt
+    assert "Follow these scene-specific text placements" not in prompt
+    assert '[{"text"' not in prompt
+    assert "[엇갈림]" not in prompt
+    assert "Approved wording 1 is 엇갈림." in prompt
+    assert "brackets, braces, quotation marks" in prompt
+
+
 def test_semantic_deterministic_values_are_not_reintroduced_into_model_prompt():
     scene = {
         "text_render_policy": "semantic_roles_v1",
         "screen_texts": ["코스피", "143조 원"],
         "screen_text_validation": {"passed": True},
         "screen_text_plan": [
-            {"text": "코스피", "surface": "main", "purpose": "information"},
-            {"text": "143조 원", "surface": "main", "purpose": "information",
-             "source_ref": "facts[0]"},
+            {"text": "코스피", "surface": "profit_monitor", "purpose": "information",
+             "region": [0.08, 0.08, 0.84, 0.28]},
+            {"text": "143조 원", "surface": "profit_monitor", "purpose": "information",
+             "source_ref": "facts[0]", "region": [0.08, 0.48, 0.84, 0.36]},
         ],
     }
     prompt = _bounded_text_generation_prompt(
@@ -230,6 +270,58 @@ def test_semantic_deterministic_values_are_not_reintroduced_into_model_prompt():
     assert "exactly one storyboard-essential physical" in prompt.lower()
     assert "calm uniform interior" in prompt.lower()
     assert "other props remain detailed" in prompt.lower()
+
+
+def test_existing_prompt_cannot_leak_translated_financial_values_to_gemini():
+    scene = {
+        "screen_texts": ["PER 4배", "6860포인트"],
+        "screen_text_validation": {"passed": True},
+        "core_figures": [{"raw": "4배"}, {"raw": "6860포인트"}],
+    }
+
+    prompt = _bounded_text_generation_prompt(
+        "A 2D classroom balance compares PER 4x while a market screen shows 6,860 points.",
+        audit_target=scene,
+    )
+
+    assert "2D classroom" in prompt
+    assert "4x" not in prompt
+    assert "6,860" not in prompt
+    assert "verified financial multiple" in prompt
+    assert "verified market level" in prompt
+
+
+def test_numeric_display_sanitizer_does_not_leave_decimal_suffix_fragment():
+    scene = {
+        "screen_texts": [],
+        "screen_text_validation": {"passed": True},
+    }
+
+    prompt = _bounded_text_generation_prompt(
+        "A monitor with 8888.11 and rising bars.",
+        audit_target=scene,
+    )
+
+    assert "8888.11" not in prompt
+    assert ".11" not in prompt
+    assert "unlettered scene-integrated" in prompt
+    assert "digits" in prompt
+
+
+def test_semantic_entity_name_is_removed_when_not_approved_for_the_current_scene():
+    scene = {
+        "screen_texts": ["외국인"],
+        "screen_text_validation": {"passed": True},
+    }
+
+    prompt = _bounded_text_generation_prompt(
+        "A KOSPI monitoring panel with arrows showing investor flow.",
+        audit_target=scene,
+    )
+
+    assert "KOSPI" not in prompt
+    assert "the relevant scene entity monitoring panel" in prompt
+    assert "Approved wording 1 is 외국인." in prompt
 
 
 def test_sanitized_deterministic_surface_does_not_keep_conflicting_diagram_marks():

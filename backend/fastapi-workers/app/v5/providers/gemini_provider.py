@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class GeminiModel(str, Enum):
     PRO = "gemini-3-pro-image"
+    FLASH = "gemini-3.1-flash-image"
 
 
 class GeminiProviderError(RuntimeError):
@@ -122,14 +123,22 @@ def select_contextual_reference_paths(
         and not Path(path).name.startswith("channel_style_")
         and Path(path).name not in system_identity_names
     ]
-    source = str(prompt or "").casefold()
+    # 공통 얼굴 계약에는 "goggles or glasses must not erase..." 같은 일반
+    # 안전 문구가 들어 있다. 이를 장면 지시로 해석하면 모든 장면이 고글 얼굴
+    # 앵커를 받으므로, 참조 선택은 공통 하한선 앞의 장면 로컬 구간만 읽는다.
+    source = str(prompt or "").split(
+        "COMMON CROSS-SCENE ACCEPTANCE FLOOR:", 1
+    )[0].casefold()
     if any(token in source for token in ("semiconductor", "wafer", "microchip", "chip sample", "production line")):
         group = "semiconductor"
     elif any(token in source for token in ("data laboratory", "data lab", "data-lab", "data_lab", "earnings laboratory", "lab coat")):
         group = "data_lab"
     elif any(token in source for token in ("market-flow", "market flow", "inflow", "outflow", "foreign investor", "매수", "매도")):
         group = "market_flow"
-    elif any(token in source for token in ("weather-map", "weather map", "storm", "forecast", "outlook", "downgrade", "risk map")):
+    elif any(token in source for token in (
+        "weather-map", "weather map", "storm", "forecast", "outlook", "downgrade",
+        "risk map", "risk control", "warning signal", "warning lamp",
+    )):
         group = "risk_weather"
     else:
         group = "briefing"
@@ -269,9 +278,11 @@ class GeminiProvider:
         Gemini가 응답으로 실비를 주지 않으므로 기본값을 코드에 숨기지 않는다.
         P1-b 실행 전 현재 계약 단가를 환경변수로 명시해야 한다.
         """
-        if model != GeminiModel.PRO:
-            raise GeminiProviderError("V5 이미지는 gemini-3-pro-image만 허용합니다.")
-        name = "V5_GEMINI_PRO_IMAGE_2K_ESTIMATE_USD"
+        name = (
+            "V5_GEMINI_PRO_IMAGE_2K_ESTIMATE_USD"
+            if model == GeminiModel.PRO
+            else "V5_GEMINI_FLASH_IMAGE_2K_ESTIMATE_USD"
+        )
         raw = os.environ.get(name, "").strip()
         if not raw:
             raise GeminiProviderError(f"{name}가 필요합니다. 승인된 현재 계약 단가를 설정하세요.")
@@ -286,13 +297,24 @@ class GeminiProvider:
     def generate(
         self, prompt: str, *, model: GeminiModel = GeminiModel.PRO, width: int = 2048,
         height: int = 1152, seed: Optional[int] = None, reference_image_paths: Optional[list[str]] = None,
-        request_audit=None,
+        request_audit=None, service_tier: str = "standard", thinking_level: str | None = None,
     ) -> ImageResult:
         if not self._key:
             raise GeminiProviderError("GEMINI_API_KEY 미설정")
         if self._use_batch:
             raise GeminiProviderError("V5 Gemini batch 생성은 P1-b 비교 범위 밖입니다.")
         reference_image_paths = select_contextual_reference_paths(prompt, reference_image_paths)
+        service_tier = str(service_tier or "standard").strip().lower()
+        if model == GeminiModel.PRO and service_tier not in {"standard", "priority", "flex"}:
+            raise GeminiProviderError("Pro service tier는 standard/priority/flex만 허용합니다.")
+        if model == GeminiModel.FLASH and service_tier != "standard":
+            raise GeminiProviderError("Flash Image는 현재 Standard tier만 허용합니다.")
+        if model == GeminiModel.FLASH:
+            thinking_level = str(thinking_level or "minimal").strip().lower()
+            if thinking_level not in {"minimal", "high"}:
+                raise GeminiProviderError("Flash thinking level은 minimal/high만 허용합니다.")
+        elif thinking_level is not None:
+            raise GeminiProviderError("Pro Image에는 Flash thinking level을 전달하지 않습니다.")
 
         # 기존 이미지 프로바이더는 image_provider=gemini + Pro 조합에서 FAL/Pollinations
         # 하향 폴백을 거부한다. 따라서 비교 결과의 공급자가 섞이지 않는다.
@@ -330,7 +352,8 @@ class GeminiProvider:
                     image_provider="gemini",
                     gemini_model=model.value,
                     gemini_image_size="2K",
-                    gemini_service_tier="standard",
+                    gemini_service_tier=service_tier,
+                    gemini_thinking_level=thinking_level,
                     # P1 비교는 승인된 장면 수와 실제 HTTP 요청 수가 같아야 한다.
                     # 재시도는 상위 승인 절차가 별도로 새 요청을 예약할 때만 허용한다.
                     gemini_max_attempts=1,
@@ -349,10 +372,10 @@ class GeminiProvider:
                     raise
                 detail = str(exc).strip().replace("\n", " ")[:500]
                 raise GeminiProviderError(
-                    f"Gemini Pro 이미지 생성 실패: {type(exc).__name__}: {detail or '상세 메시지 없음'}"
+                    f"{model.value} 이미지 생성 실패: {type(exc).__name__}: {detail or '상세 메시지 없음'}"
                 ) from exc
             if not output_path.exists() or not output_path.read_bytes():
-                raise GeminiProviderError("Gemini Pro가 이미지 파일을 반환하지 않았습니다.")
+                raise GeminiProviderError(f"{model.value}가 이미지 파일을 반환하지 않았습니다.")
             image_bytes = output_path.read_bytes()
 
         request_lineage = {}

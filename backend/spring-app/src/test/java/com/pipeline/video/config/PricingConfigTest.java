@@ -14,8 +14,8 @@ class PricingConfigTest {
     }
 
     @Test
-    void appliesEightyThousandWonAtAndAboveTwentyMinutes() {
-        assertEquals(BigDecimal.valueOf(80_000L), PricingConfig.budgetCapForTargetMinutes(20));
-        assertEquals(BigDecimal.valueOf(80_000L), PricingConfig.budgetCapForTargetMinutes(30));
+    void appliesSeventyThousandWonAtAndAboveTwentyMinutes() {
+        assertEquals(BigDecimal.valueOf(70_000L), PricingConfig.budgetCapForTargetMinutes(20));
+        assertEquals(BigDecimal.valueOf(70_000L), PricingConfig.budgetCapForTargetMinutes(30));
     }
 }

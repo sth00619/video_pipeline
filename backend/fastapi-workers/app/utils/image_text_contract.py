@@ -16,7 +16,15 @@ _QUOTED_TEXT_RE = re.compile(r"(?P<quote>['\"])(?P<value>[^'\"\n]{1,100})(?P=quo
 _DISPLAY_VALUE_RE = re.compile(
     r"\b(?:display|screen|monitor|board|banner|sign|placard|speech\s+bubble)\b"
     r"[^.;\n]{0,80}\b(?:show(?:ing|s)?|contain(?:ing|s)?|with)\b"
-    r"[^.;\n]{0,80}(?:\d|(?-i:[A-Z]{2,})|[가-힣])",
+    # 값의 첫 글자만 소비하면 ``8888.11``을 지운 뒤 ``.11``이 남아 모델에
+    # 새로운 숫자처럼 전달된다. 숫자·대문자 라벨·한국어 낱말을 하나의 완전한
+    # 토큰으로 소비하고, 앞부분의 탐욕 매칭이 토큰 중간에서 시작하지 못하게
+    # 경계를 둔다.
+    r"[^.;\n]{0,80}(?:"
+    r"(?<![\w.])[+-]?\d[\d,]*(?:\.\d+)?(?![\w.])|"
+    r"(?<![A-Za-z0-9])(?-i:[A-Z][A-Z0-9 _&/-]{1,40})(?![A-Za-z0-9])|"
+    r"(?<![가-힣])[가-힣]{2,40}(?![가-힣])"
+    r")",
     re.IGNORECASE,
 )
 _EXACT_VALUE_RE = re.compile(
@@ -31,6 +39,21 @@ _NEGATIVE_CONTEXT_RE = re.compile(
 _NUMERIC_FACT_RE = re.compile(
     r"(?<![A-Za-z가-힣])(?:[+-]?\d[\d,.]*(?:\.\d+)?)\s*"
     r"(?:%|퍼센트|포인트|pt|배|x|×|조|억|만|원|달러|년|월|일)?",
+    re.IGNORECASE,
+)
+
+# 이미지 모델에 전달되는 시각 지시 복사본에서만 금융 수치를 제거한다.
+# ``2D``·``16:9`` 같은 제작 규격을 보존하면서 금액·비율·배수·지수 수준만
+# 차단하려고 단위가 있는 숫자에 한정한다. 승인 내레이션 원문은 수정하지 않는다.
+_VISUAL_FINANCIAL_VALUE_RE = re.compile(
+    r"(?<![A-Za-z0-9가-힣])"
+    r"[+-]?\d[\d,.]*(?:\.\d+)?\s*"
+    r"(?:%|퍼센트|포인트|pt|배|x|×|조(?:\s*원)?|억(?:\s*원)?|만(?:\s*원)?|원|달러|"
+    r"percent|percentage|points?|times?|trillion(?:\s+won)?|billion(?:\s+won)?|"
+    r"million(?:\s+won)?|won|dollars?)"
+    # 한국어 조사(입니다/이고/에서)가 단위 바로 뒤에 붙는 정상 문장을
+    # 허용하되 영문·숫자 식별자 내부의 일부는 매치하지 않는다.
+    r"(?![A-Za-z0-9])",
     re.IGNORECASE,
 )
 
@@ -68,6 +91,97 @@ def contains_financial_number(value: str) -> bool:
     return bool(_NUMERIC_FACT_RE.search(str(value or "")))
 
 
+def _financial_placeholder(value: str, *, korean: bool) -> str:
+    lowered = str(value or "").casefold()
+    if any(token in lowered for token in ("%", "퍼센트", "percent")):
+        return "검증된 비율" if korean else "verified financial rate"
+    if any(token in lowered for token in ("포인트", "point", "pt")):
+        return "검증된 지수 수준" if korean else "verified market level"
+    if any(token in lowered for token in ("배", "×", "times")) or re.search(r"\d\s*x\b", lowered):
+        return "검증된 배수" if korean else "verified financial multiple"
+    return "검증된 금액" if korean else "verified financial magnitude"
+
+
+def redact_financial_values_for_visual_direction(value: str) -> str:
+    """승인 내레이션을 바꾸지 않고 시각 연출용 복사본의 수치만 가린다."""
+    return _VISUAL_FINANCIAL_VALUE_RE.sub(
+        lambda match: _financial_placeholder(match.group(0), korean=True),
+        str(value or ""),
+    )
+
+
+def redact_financial_values_from_model_prompt(
+    prompt: str,
+    *,
+    deterministic_values: Iterable[str] | None = None,
+) -> tuple[str, dict[str, Any]]:
+    """Gemini 경계에서 승인 결정론 수치와 번역된 금융 수치를 제거한다."""
+    source = str(prompt or "")
+    cleaned = source
+    exact_redactions: list[str] = []
+    for raw in _dedupe(deterministic_values or []):
+        if raw and re.search(re.escape(raw), cleaned, flags=re.IGNORECASE):
+            cleaned = re.sub(
+                re.escape(raw),
+                _financial_placeholder(raw, korean=False),
+                cleaned,
+                flags=re.IGNORECASE,
+            )
+            exact_redactions.append(raw)
+    translated_redactions = [match.group(0) for match in _VISUAL_FINANCIAL_VALUE_RE.finditer(cleaned)]
+    cleaned = _VISUAL_FINANCIAL_VALUE_RE.sub(
+        lambda match: _financial_placeholder(match.group(0), korean=False),
+        cleaned,
+    )
+    return cleaned, {
+        "version": "gemini-financial-value-redaction-v1",
+        "changed": cleaned != source,
+        "exact_deterministic_values_redacted": exact_redactions,
+        "translated_financial_values_redacted": translated_redactions,
+    }
+
+
+def redact_unapproved_entity_literals_from_model_prompt(
+    prompt: str,
+    *,
+    core_entities: Iterable[str] | None = None,
+    allowed_texts: Iterable[str] | None = None,
+) -> tuple[str, dict[str, Any]]:
+    """의미용 엔티티가 이미지의 무단 라벨로 복제되지 않게 이름만 중립화한다."""
+    from app.utils.entity_english_map import all_entity_infos, get_entity_english_name
+
+    cleaned = str(prompt or "")
+    allowed_keys = {_compact(value) for value in (allowed_texts or []) if _compact(value)}
+    redacted: list[str] = []
+    candidates: list[str] = []
+    for entity in _dedupe(core_entities or []):
+        mapped, confidence = get_entity_english_name(entity)
+        candidates.append(entity)
+        if confidence != "uncertain" and mapped:
+            candidates.append(mapped)
+    # 과거 저장 프롬프트에는 현재 내레이션과 무관한 KOSPI·PER·회사명이
+    # 그대로 남아 있을 수 있다. 기업·지수·금융용어 레지스트리의 정확한
+    # 이름도 검사하되, gold/silver 같은 일반 재료 단어가 필요한 장면은
+    # 훼손하지 않도록 원자재 범주는 전역 정리에 포함하지 않는다.
+    for info in all_entity_infos():
+        if info.category == "macro_commodity":
+            continue
+        candidates.extend((info.korean, info.english_official, info.fictional_label))
+    for literal in sorted(_dedupe(candidates), key=len, reverse=True):
+        if _compact(literal) in allowed_keys:
+            continue
+        # Goldie/golden처럼 다른 단어에 포함된 짧은 원자재 이름은 건드리지 않는다.
+        boundary = rf"(?<![A-Za-z0-9가-힣]){re.escape(literal)}(?![A-Za-z0-9가-힣])"
+        if re.search(boundary, cleaned, flags=0):
+            cleaned = re.sub(boundary, "the relevant scene entity", cleaned, flags=0)
+            redacted.append(literal)
+    return cleaned, {
+        "version": "gemini-unapproved-entity-literal-redaction-v1",
+        "changed": cleaned != str(prompt or ""),
+        "redacted_literals": redacted,
+    }
+
+
 def build_scene_text_contract(scene: dict[str, Any] | None) -> dict[str, Any]:
     """장면 메타데이터에서 생성 가능 문자와 결정론 문자를 분리한다.
 
@@ -103,6 +217,46 @@ def build_scene_text_contract(scene: dict[str, Any] | None) -> dict[str, Any]:
                 raise ValueError("표면 계획의 문구가 장면 승인 목록에 없습니다.")
             if item.get("purpose", "information") not in {"information", "decorative"}:
                 raise ValueError("문구 성격은 information/decorative만 허용합니다.")
+            surface_id = str(item.get("surface_id") or item.get("surface") or "").strip()
+            if not surface_id:
+                raise ValueError("각 승인 문구에는 장면 사물의 물리 표면 ID가 필요합니다.")
+            item["surface"] = surface_id
+            item["surface_id"] = surface_id
+            item["semantic_object_id"] = str(
+                item.get("semantic_object_id") or surface_id
+            ).strip()
+
+        # 여러 문구가 같은 모니터·보드에 들어가는 것은 정상이다. 다만 과거
+        # scene07처럼 서로 다른 네 문구를 모두 ``main`` 하나로 뭉쳐 모델과
+        # 렌더러가 위치를 추측하게 두지 않는다. 공유 표면은 각 문구의 상대
+        # 영역을 명시하고 서로 겹치지 않을 때만 허용한다.
+        by_surface: dict[str, list[dict[str, Any]]] = {}
+        for item in plan:
+            by_surface.setdefault(item["surface_id"], []).append(item)
+        for surface_id, items in by_surface.items():
+            if len(items) < 2:
+                continue
+            regions: list[tuple[float, float, float, float]] = []
+            for item in items:
+                region = item.get("region")
+                if not isinstance(region, (list, tuple)) or len(region) != 4:
+                    raise ValueError(
+                        f"공유 표면 {surface_id}의 각 문구에는 비중첩 상대 영역이 필요합니다."
+                    )
+                x, y, width, height = (float(value) for value in region)
+                if not (
+                    0 <= x < 1 and 0 <= y < 1 and width > 0 and height > 0
+                    and x + width <= 1 and y + height <= 1
+                ):
+                    raise ValueError(f"공유 표면 {surface_id}의 문구 영역이 범위를 벗어났습니다.")
+                regions.append((x, y, x + width, y + height))
+            for index, first in enumerate(regions):
+                for second in regions[index + 1:]:
+                    if (
+                        max(first[0], second[0]) < min(first[2], second[2])
+                        and max(first[1], second[1]) < min(first[3], second[3])
+                    ):
+                        raise ValueError(f"공유 표면 {surface_id}의 문구 영역이 서로 겹칩니다.")
         generated = []
         deterministic = approved.copy()
         for value in approved:
@@ -376,6 +530,12 @@ def visible_text_contract_result(
             review_required_numeric.append(token)
         else:
             review_required_nonnumeric.append(token)
+    # 비수치 문구는 일반 레인에서 후단 멀티모달 검수로 넘길 수 있지만,
+    # 숫자는 이미지 모델이 직접 만들 수 없는 전역 계약이다. 따라서 엄격
+    # 문자 레인 여부와 무관하게 승인 목록에 없는 숫자는 항상 즉시 거절한다.
+    # 이 경계가 없으면 OCR이 ``0000.000``·임의 연도·가짜 계기값을 읽고도
+    # review_required에만 남긴 채 기본 래스터를 통과시킬 수 있었다.
+    unexpected = _dedupe(review_required_numeric)
     if reject_unapproved:
         unexpected = _dedupe([
             *review_required_nonnumeric,

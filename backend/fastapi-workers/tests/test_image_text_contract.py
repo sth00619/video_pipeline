@@ -1,7 +1,10 @@
+import pytest
+
 from app.utils.image_text_contract import (
     build_scene_text_contract,
     detected_deterministic_texts,
     prompt_text_contract_violations,
+    redact_financial_values_for_visual_direction,
     require_sanitized_generated_text_prompt,
     visible_text_contract_result,
 )
@@ -35,6 +38,19 @@ def test_financial_number_is_reserved_for_deterministic_surface_renderer():
     assert contract["hierarchy_policy"] == "script_objects_and_action_above_supporting_text"
     assert contract["surface_material_policy"] == "integrated_opaque_scene_surface"
     assert contract["detached_translucent_card_allowed"] is False
+
+
+def test_visual_direction_copy_redacts_financial_values_without_changing_stored_narration():
+    narration = "코스피 영업이익은 143조 원이고 PER은 4배입니다. 반도체 생산라인을 비교합니다."
+
+    redacted = redact_financial_values_for_visual_direction(narration)
+
+    assert narration == "코스피 영업이익은 143조 원이고 PER은 4배입니다. 반도체 생산라인을 비교합니다."
+    assert "143조" not in redacted
+    assert "4배" not in redacted
+    assert "검증된 금액" in redacted
+    assert "검증된 배수" in redacted
+    assert "반도체 생산라인" in redacted
 
 
 def test_generated_base_raster_financial_number_is_detected_even_when_approved():
@@ -144,6 +160,60 @@ def test_strict_generated_text_lane_rejects_every_unapproved_word_and_number():
     assert result["review_required_numeric_texts"] == ["2021"]
     assert result["unexpected_texts"] == ["RISK", "2021"]
     assert result["passed"] is False
+
+
+def test_unapproved_numeric_display_is_rejected_even_without_strict_text_lane():
+    """일반 장면도 모델이 임의로 그린 숫자 디스플레이를 승인하면 안 된다."""
+    scene = {
+        "text": "실적 전망이 엇갈리며 시장의 경계감이 커졌습니다.",
+        "screen_texts": ["엇갈림"],
+        "screen_text_validation": {"passed": True},
+    }
+
+    result = visible_text_contract_result(["엇갈림", "0000.000", "2027"], scene)
+
+    assert result["review_required_numeric_texts"] == ["0000.000", "2027"]
+    assert result["unexpected_texts"] == ["0000.000", "2027"]
+    assert result["passed"] is False
+
+
+def test_semantic_surface_plan_rejects_multiple_texts_on_ambiguous_main_surface():
+    scene = {
+        "text_render_policy": "semantic_roles_v1",
+        "screen_texts": ["코스피", "143조 원"],
+        "screen_text_validation": {"passed": True},
+        "screen_text_plan": [
+            {"text": "코스피", "surface": "main", "purpose": "information"},
+            {"text": "143조 원", "surface": "main", "purpose": "information"},
+        ],
+    }
+
+    with pytest.raises(ValueError, match="공유 표면.*영역"):
+        build_scene_text_contract(scene)
+
+
+def test_semantic_surface_plan_allows_shared_surface_with_distinct_regions():
+    scene = {
+        "text_render_policy": "semantic_roles_v1",
+        "screen_texts": ["코스피", "143조 원"],
+        "screen_text_validation": {"passed": True},
+        "screen_text_plan": [
+            {"text": "코스피", "surface": "profit_monitor", "purpose": "information",
+             "region": [0.08, 0.08, 0.84, 0.28]},
+            {"text": "143조 원", "surface": "profit_monitor", "purpose": "information",
+             "region": [0.08, 0.48, 0.84, 0.36]},
+        ],
+    }
+
+    contract = build_scene_text_contract(scene)
+
+    assert contract["surface_count"] == 1
+    assert [item["surface_id"] for item in contract["surface_plan"]] == [
+        "profit_monitor", "profit_monitor",
+    ]
+    assert [item["semantic_object_id"] for item in contract["surface_plan"]] == [
+        "profit_monitor", "profit_monitor",
+    ]
 
 
 def test_strict_generated_text_lane_rejects_canary_suffix_variant_when_ocr_reads_it():

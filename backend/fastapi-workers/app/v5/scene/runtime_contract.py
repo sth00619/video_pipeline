@@ -590,7 +590,9 @@ def v5_provider_options(scene: dict[str, Any]) -> dict[str, Any]:
         "image_provider": "gemini",
         "gemini_model": "gemini-3-pro-image",
         "gemini_image_size": "2K",
-        "gemini_service_tier": "standard",
+        # 2026-08-30 동일 47장 비교에서 실제 Priority 응답 46/46을 확인했다.
+        # Flash High는 장면별 우열을 사전에 예측할 공통 규칙이 없어 운영 혼합하지 않는다.
+        "gemini_service_tier": "priority",
         # 일시적인 5xx는 품질과 무관한 공급자 오류이므로, 예약된 재시도 버퍼 안에서
         # 같은 프롬프트를 한 번만 추가 시도한다. 그 외 임의 변형 재생성은 허용하지 않는다.
         "gemini_max_attempts": 2,

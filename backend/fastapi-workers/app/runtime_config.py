@@ -110,6 +110,7 @@ _state = {
     "img_cost_flash_1k_usd": _cfg.IMG_COST_FLASH_1K_USD,
     "img_cost_flash_2k_usd": _cfg.IMG_COST_FLASH_2K_USD,
     "img_cost_pro_2k_usd": _cfg.IMG_COST_PRO_2K_USD,
+    "img_cost_pro_priority_2k_usd": _cfg.IMG_COST_PRO_PRIORITY_2K_USD,
     "kling_cost_per_clip_usd": _cfg.KLING_COST_PER_CLIP_USD,
     "usd_krw": _cfg.USD_KRW,
     "max_budget_per_video_krw": _cfg.MAX_BUDGET_PER_VIDEO_KRW,

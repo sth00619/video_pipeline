@@ -1,4 +1,10 @@
-from app.utils.scene_screen_text_planner import attach_scene_screen_texts, derive_scene_screen_texts
+from app.utils.scene_screen_text_planner import (
+    attach_scene_screen_texts,
+    derive_scene_screen_text_plan,
+    derive_scene_screen_texts,
+)
+from app.v5.scene.runtime_contract import attach_v5_scene_contracts, prompt_for_scene
+from app.workers.images_worker import _bounded_text_generation_prompt
 
 
 def test_extracts_only_exact_scene_local_terms_and_values():
@@ -43,6 +49,18 @@ def test_keeps_three_entity_labels_and_one_scene_local_numeric_range():
     assert derive_scene_screen_texts(scene) == ["반도체", "삼성전자", "SK하이닉스", "3~4퍼센트"]
 
 
+def test_extracts_general_outlook_and_risk_terms_from_approved_narration():
+    scenes = [
+        {"content": "이 엇갈림 자체가 불확실성을 보여줍니다. SK하이닉스 이야기를 더 해봅니다."},
+        {"content": "왜 이 종목들이 부각된 걸까요? 대형주에 대한 불안감이 존재합니다."},
+        {"content": "하지만 동시에 경고도 공존합니다. 전망치가 하향 조정된다는 경고입니다."},
+    ]
+
+    assert derive_scene_screen_texts(scenes[0]) == ["엇갈림", "SK하이닉스"]
+    assert derive_scene_screen_texts(scenes[1]) == ["대형주"]
+    assert derive_scene_screen_texts(scenes[2]) == ["경고", "전망치"]
+
+
 def test_rederives_old_automatic_screen_texts_but_preserves_explicit_contracts():
     old_auto = {
         "content": "종가는 25만 7000원을 기록했습니다.",
@@ -57,6 +75,63 @@ def test_rederives_old_automatic_screen_texts_but_preserves_explicit_contracts()
 
     planned_auto, planned_explicit = attach_scene_screen_texts([old_auto, explicit])
     assert planned_auto["screen_texts"] == ["25만 7000원"]
-    assert planned_auto["screen_text_source"] == "approved_narration_exact_extract_v2"
+    assert planned_auto["screen_text_source"] == "approved_narration_exact_extract_v3"
     assert planned_explicit["screen_texts"] == ["승인 표기"]
     assert planned_explicit["screen_text_source"] == "explicit_scene_contract"
+
+
+def test_auto_plan_maps_comparison_entities_and_summary_to_distinct_scene_objects():
+    scene = {
+        "content": (
+            "삼성전자와 SK하이닉스를 제외해도 코스피 전체 영업이익은 "
+            "143조 원으로 집계됐습니다."
+        ),
+    }
+    texts = ["삼성전자", "SK하이닉스", "코스피", "143조 원"]
+
+    plan = derive_scene_screen_text_plan(scene, texts)
+
+    assert [(item["text"], item["semantic_object_id"], item["surface_id"]) for item in plan] == [
+        ("삼성전자", "comparison_entity_1", "comparison_prop_left"),
+        ("SK하이닉스", "comparison_entity_2", "comparison_prop_right"),
+        ("코스피", "market_summary", "summary_monitor"),
+        ("143조 원", "market_summary", "summary_monitor"),
+    ]
+    assert plan[2]["region"] == [0.08, 0.08, 0.84, 0.4]
+    assert plan[3]["region"] == [0.08, 0.52, 0.84, 0.4]
+    assert plan[3]["purpose"] == "information"
+
+
+def test_attach_adds_common_auto_surface_plan_without_enabling_unready_renderer():
+    scene = {
+        "content": "삼성전자와 SK하이닉스를 제외해도 코스피는 143조 원입니다.",
+    }
+
+    planned = attach_scene_screen_texts([scene])[0]
+
+    assert planned["screen_text_plan_source"] == "approved_narration_semantic_surface_plan_v1"
+    assert len(planned["screen_text_plan"]) == 4
+    assert "text_render_policy" not in planned
+
+
+def test_common_auto_surface_plan_reaches_final_gemini_prompt_without_financial_value():
+    scene = {
+        "scene_type": "metric",
+        "content": (
+            "삼성전자와 SK하이닉스를 제외해도 코스피 전체 영업이익은 "
+            "143조 원으로 집계됐습니다."
+        ),
+    }
+
+    planned = attach_scene_screen_texts([scene])
+    contracted = attach_v5_scene_contracts(planned)[0]
+    final_prompt = _bounded_text_generation_prompt(
+        prompt_for_scene(contracted) or "",
+        audit_target=contracted,
+    )
+
+    assert "143조" not in final_prompt
+    assert "comparison_prop_left" in final_prompt
+    assert "comparison_prop_right" in final_prompt
+    assert "summary_monitor" in final_prompt
+    assert contracted["image_profile"]["model"] == "gemini-3-pro-image"

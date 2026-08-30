@@ -1,0 +1,42 @@
+{
+  "version": "wo-provider-02-bracket-isolation-v1",
+  "paid_execution_authorized": true,
+  "authorization": {
+    "basis": "WO-PROVIDER-02 Stage 2 alpha.3: scene15 대괄호 원인 격리 Pro/Flash 각 1회 승인",
+    "approved_total_reserved_krw": 3200,
+    "reserved_per_attempt_krw": 1600,
+    "external_image_post_limit": 2,
+    "attempts_per_model_scene": 1,
+    "retry_on_failure": false
+  },
+  "models": ["gemini-3-pro-image", "gemini-3.1-flash-image"],
+  "service_tier": "standard",
+  "image_size": "2K",
+  "scene42_frozen_and_excluded": true,
+  "source": {
+    "path": "artifacts/job52_full_audit_20260824/metadata/scene_generation_contracts.json",
+    "sha256": "72dd95c1f577acca6793d850567d045c28c7a0e5cd05f3229d9d105c8dc8cdf6"
+  },
+  "face_reference": {
+    "name": "channel_character_face_range_v2.png",
+    "sha256": "7e7981e389d07c4c3eca908708365cdcc809226c0f9a039f7ff7f62bbad8e40e"
+  },
+  "provider_status_check": {
+    "source": "https://status.cloud.google.com/",
+    "checked_at": "2026-08-29T10:43:00+09:00",
+    "result": "no_broad_severe_incidents_model_capacity_unverified"
+  },
+  "scenes": [{
+    "index": 15,
+    "lane": "pilot_only_short_approved_label_measurement",
+    "exact_texts": ["엇갈림"],
+    "scene_spec_override": {
+      "character_costume": "sharp analyst blazer and tilted detective cap",
+      "character_emotion": "bewildered concern about contradictory signals",
+      "character_action": "standing between opposing outlooks with two coherent open-hand gestures",
+      "setting": "dense split-outcome semiconductor market analysis stage",
+      "wardrobe_strict": true
+    },
+    "visual_contract": "Opposing semiconductor outlooks are physically contrasted through rising and falling market machinery while one analyst mascot explains that the disagreement itself signals uncertainty."
+  }]
+}

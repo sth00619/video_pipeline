@@ -66,7 +66,7 @@
   },
   "expected_prompt_sha256": "4eb7d08d86be67841ff6041f39f731657f7154e23ba16e2c154aceb0d80baf5c",
   "expected_final_prompt_sha256": "5c117fad51214e6cd4b66953b3d8717066dd0f454bd39e2959a41edcb9555595",
-  "expected_scene_contract_sha256": "8bfc06d61ac529437a31f3990fc5bb1d25c2f43095ad5c7599b4dff7f5ba157a",
+  "expected_scene_contract_sha256": "5ace33272ff22ed5a98a9a1b35e04c4c600e1aa1c26ec792cd7893554340ee96",
   "expected_surface_plan_sha256": "2606e0b98cd8d661d86d2f774f225e05122a06a8cf294fada1fd99fe76b1ffa9",
   "expected_references": [
     {
