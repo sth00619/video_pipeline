@@ -9,6 +9,7 @@ from decimal import Decimal
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -72,7 +73,7 @@ def _before_after_sheet(output: Path, results: list[dict], source_dir: Path) -> 
         for column, label in enumerate(("Job52 before", "current Pro Priority after")):
             draw.text((column * cell_w + 12, y + 12), f"scene {index:02d} | {label}", fill="white", font=font)
         before = source_dir / f"scene_{index:03d}.png"
-        after_value = by_scene.get(index, {}).get("raw_path")
+        after_value = by_scene.get(index, {}).get("final_path") or by_scene.get(index, {}).get("raw_path")
         for column, path in enumerate((before, Path(after_value) if after_value else None)):
             if path is None or not path.is_file():
                 draw.text((column * cell_w + 20, y + 100), "생성 결과 없음", fill="#fca5a5", font=font)
@@ -161,10 +162,9 @@ def main() -> int:
     claim.write_text(datetime.now(timezone.utc).isoformat(), encoding="utf-8")
 
     from app import runtime_config
-    from app.services.surface_binding_attestation import attest_scene_surfaces, bind_single_local_surface
     from app.utils.budget import ProviderRequestAudit
     from app.v5.providers.gemini_provider import GeminiModel, GeminiProvider
-    from app.workers.images_worker import _inspect_generated_textless_image
+    from app.workers.images_worker import ImagesWorker, _inspect_generated_textless_image, _inspect_generated_visual_image
 
     runtime_config.update(gemini_scene_request_limit=1)
     ledger = output / "request_ledger.json"
@@ -211,19 +211,45 @@ def main() -> int:
             if row["generated_texts"]:
                 result["ocr_measurement"] = _measure_generated_labels(raw, row["generated_texts"])
             try:
-                result["text_gate"] = {
+                result["base_raster_text_gate"] = {
                     "status": "passed",
                     "result": _inspect_generated_textless_image(copy.deepcopy(row["scene"]), str(raw)),
                 }
             except Exception as exc:
-                result["text_gate"] = {"status": "failed", "error_type": type(exc).__name__, "error": str(exc)}
-            surface_scene = copy.deepcopy(row["scene"])
-            try:
-                bind_single_local_surface(str(raw), surface_scene)
-                attest_scene_surfaces(str(raw), surface_scene)
-                result["surface_gate"] = {"status": "passed", "surface_bindings": surface_scene.get("surface_bindings")}
-            except Exception as exc:
-                result["surface_gate"] = {"status": "failed", "error_type": type(exc).__name__, "error": str(exc)}
+                result["base_raster_text_gate"] = {"status": "failed", "error_type": type(exc).__name__, "error": str(exc)}
+
+            # 승인 문구가 실제 모니터·팻말에 붙었는지는 현재 자동 좌표 계약이
+            # 완성되지 않았다. 단일 표면 검사기를 다중 표면 장면에 적용해 0/4를
+            # 만드는 대신, 육안 보류를 명시하고 결정론 수치 표면과 분리한다.
+            result["generated_text_anchor_gate"] = {
+                "status": "pending_user_visual_review" if row["generated_texts"] else "not_applicable",
+                "reason": "다중 생성문자 표면의 픽셀 좌표 결박은 아직 자동 승인하지 않습니다.",
+            }
+
+            final_scene = copy.deepcopy(row["scene"])
+            final = output / f"scene_{index:02d}_pro_priority_final.png"
+            shutil.copyfile(raw, final)
+            if row["deterministic_texts"]:
+                try:
+                    ImagesWorker()._apply_image_overlays(final_scene, str(final))
+                    visual_result = _inspect_generated_visual_image(final_scene, str(final))
+                    result["deterministic_surface_gate"] = {
+                        "status": "passed",
+                        "surface_detection": final_scene.get("deterministic_surface_detection"),
+                        "final_frame_text_integrity": final_scene.get("final_frame_text_integrity"),
+                        "visual_result": visual_result,
+                    }
+                    result.update(final_path=str(final), final_sha256=_sha(final.read_bytes()))
+                except Exception as exc:
+                    final.unlink(missing_ok=True)
+                    result["deterministic_surface_gate"] = {
+                        "status": "failed", "error_type": type(exc).__name__, "error": str(exc),
+                        "surface_detection": final_scene.get("deterministic_surface_detection"),
+                    }
+                    result["status"] = "rejected_finalization_failed"
+            else:
+                result["deterministic_surface_gate"] = {"status": "not_applicable"}
+                result.update(final_path=str(final), final_sha256=_sha(final.read_bytes()))
         except Exception as exc:
             result.update(status="provider_request_failed", error_type=type(exc).__name__, error=str(exc))
         result["request_summary"] = audit.summary()
