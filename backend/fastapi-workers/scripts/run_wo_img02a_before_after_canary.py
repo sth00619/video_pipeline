@@ -25,9 +25,8 @@ from scripts.run_gemini_provider_stage2_full_comparison import _model_prices, pr
 
 
 MODEL = "gemini-3-pro-image"
-SCENES = (0, 7, 15, 28)
+ALLOWED_SCENES = (0, 7, 15, 28)
 UNIT_RESERVED_KRW = 1600
-TOTAL_RESERVED_KRW = 6400
 
 
 def _git_head() -> str:
@@ -39,36 +38,39 @@ def _git_head() -> str:
     ).strip()
 
 
-def _validate_spec(spec: dict) -> None:
+def _validate_spec(spec: dict) -> tuple[int, ...]:
     auth = spec.get("authorization") or {}
+    scenes = tuple(int(index) for index in (spec.get("scenes") or ()))
+    expected_cap = UNIT_RESERVED_KRW * len(scenes)
     if spec.get("paid_execution_authorized") is not True:
         raise RuntimeError("WO-IMG-02-A 유료 실행 승인이 없습니다.")
     if spec.get("model") != MODEL or spec.get("service_tier") != "priority":
         raise RuntimeError("실증 모델은 Pro Priority로 고정합니다.")
-    if tuple(spec.get("scenes") or ()) != SCENES:
-        raise RuntimeError("실증 장면은 00·07·15·28입니다.")
-    if auth.get("external_image_post_limit") != 4 or auth.get("attempts_per_scene") != 1:
-        raise RuntimeError("장면별 1회, 총 4회만 허용합니다.")
+    if not scenes or len(set(scenes)) != len(scenes) or any(index not in ALLOWED_SCENES for index in scenes):
+        raise RuntimeError("실증 장면은 00·07·15·28의 중복 없는 부분집합이어야 합니다.")
+    if auth.get("external_image_post_limit") != len(scenes) or auth.get("attempts_per_scene") != 1:
+        raise RuntimeError("장면별 1회만 허용하며 총 POST 상한은 장면 수와 같아야 합니다.")
     if auth.get("retry_on_failure") is not False:
         raise RuntimeError("자동 재시도를 허용하지 않습니다.")
-    if auth.get("approved_total_reserved_krw") != TOTAL_RESERVED_KRW:
-        raise RuntimeError("총 예약 상한은 ₩6,400이어야 합니다.")
+    if auth.get("approved_total_reserved_krw") != expected_cap:
+        raise RuntimeError(f"총 예약 상한은 장면 수 기준 ₩{expected_cap:,}이어야 합니다.")
     if auth.get("reserved_per_attempt_krw") != UNIT_RESERVED_KRW:
         raise RuntimeError("시도당 예약액은 ₩1,600이어야 합니다.")
     if spec.get("scene42_frozen_and_excluded") is not True:
         raise RuntimeError("scene42 동결 계약이 필요합니다.")
+    return scenes
 
 
-def _before_after_sheet(output: Path, results: list[dict], source_dir: Path) -> Path:
+def _before_after_sheet(output: Path, results: list[dict], source_dir: Path, scenes: tuple[int, ...]) -> Path:
     cell_w, cell_h, header = 768, 432, 54
-    canvas = Image.new("RGB", (cell_w * 2, (cell_h + header) * len(SCENES)), "#111827")
+    canvas = Image.new("RGB", (cell_w * 2, (cell_h + header) * len(scenes)), "#111827")
     draw = ImageDraw.Draw(canvas)
     try:
         font = ImageFont.truetype("/System/Library/Fonts/AppleSDGothicNeo.ttc", 25)
     except OSError:
         font = ImageFont.load_default()
     by_scene = {int(row["index"]): row for row in results}
-    for position, index in enumerate(SCENES):
+    for position, index in enumerate(scenes):
         y = position * (cell_h + header)
         for column, label in enumerate(("Job52 before", "current Pro Priority after")):
             draw.text((column * cell_w + 12, y + 12), f"scene {index:02d} | {label}", fill="white", font=font)
@@ -95,7 +97,8 @@ def main() -> int:
 
     spec_bytes = args.spec.read_bytes()
     spec = json.loads(spec_bytes)
-    _validate_spec(spec)
+    scenes = _validate_spec(spec)
+    total_reserved_krw = UNIT_RESERVED_KRW * len(scenes)
     source_path = REPO / spec["source"]["path"]
     source_bytes = source_path.read_bytes()
     if _sha(source_bytes) != spec["source"]["sha256"]:
@@ -109,7 +112,7 @@ def main() -> int:
     os.environ["GEMINI_REQUEST_STATE_PATH"] = str(output / "request_state.sqlite3")
     os.environ["GEMINI_PROJECT_SCOPE"] = f"wo-img02a-{_sha(spec_bytes)[:12]}"
     comparison_spec = {
-        "scenes": list(SCENES),
+        "scenes": list(scenes),
         "profiles": {MODEL: {"service_tier": "priority"}},
         "common_prompt_contract": {
             "approved_wording_format": "plain_prose_no_array_or_json",
@@ -128,16 +131,16 @@ def main() -> int:
     selected_source_scenes = [
         copy.deepcopy(scene)
         for scene in source_scenes
-        if int(scene.get("index", -1)) in SCENES
+        if int(scene.get("index", -1)) in scenes
     ]
     planned_scenes = attach_v5_scene_contracts(attach_scene_screen_texts(selected_source_scenes))
-    rows = [row for row in prepare_rows(comparison_spec, planned_scenes) if row["index"] in SCENES]
-    if tuple(row["index"] for row in rows) != SCENES:
+    rows = [row for row in prepare_rows(comparison_spec, planned_scenes) if row["index"] in scenes]
+    if tuple(row["index"] for row in rows) != scenes:
         raise RuntimeError("네 장면의 준비 순서가 계약과 다릅니다.")
 
     prices, fx, pricing_sha = _model_prices(comparison_spec)
     estimated_krw = prices[MODEL] * fx * len(rows)
-    if estimated_krw > Decimal(TOTAL_RESERVED_KRW):
+    if estimated_krw > Decimal(total_reserved_krw):
         raise RuntimeError("중앙 가격표 예상액이 승인 예약 상한을 넘습니다.")
 
     for row in rows:
@@ -155,7 +158,7 @@ def main() -> int:
         "model": MODEL,
         "service_tier": "priority",
         "central_price_estimate_krw": float(estimated_krw),
-        "approved_reserved_cap_krw": TOTAL_RESERVED_KRW,
+        "approved_reserved_cap_krw": total_reserved_krw,
         "scene42_frozen_and_excluded": True,
         "scenes": [
             {
@@ -168,7 +171,7 @@ def main() -> int:
     }
     _write_json(output / "preflight.json", manifest)
     if not args.execute:
-        print(json.dumps({"status": manifest["status"], "scenes": list(SCENES), "estimated_krw": float(estimated_krw)}, ensure_ascii=False, indent=2))
+        print(json.dumps({"status": manifest["status"], "scenes": list(scenes), "estimated_krw": float(estimated_krw)}, ensure_ascii=False, indent=2))
         return 0
     if not os.environ.get("GEMINI_API_KEY"):
         raise RuntimeError("GEMINI_API_KEY 미설정. 유료 실행을 시작하지 않습니다.")
@@ -205,7 +208,7 @@ def main() -> int:
             model=MODEL,
             unit_usd=float(prices[MODEL]),
             usd_krw=float(fx),
-            budget_limit_krw=TOTAL_RESERVED_KRW,
+            budget_limit_krw=total_reserved_krw,
             request_metadata={
                 "operational_contract_commit": spec["operational_contract_commit"],
                 "runner_commit": manifest["runner_commit"],
@@ -273,7 +276,7 @@ def main() -> int:
         _write_json(output / "manifest.json", manifest)
 
     source_images = REPO / spec["before_images_dir"]
-    sheet = _before_after_sheet(output, manifest["results"], source_images)
+    sheet = _before_after_sheet(output, manifest["results"], source_images, scenes)
     manifest.update(
         status="pending_user_visual_review",
         completed_at=datetime.now(timezone.utc).isoformat(),
